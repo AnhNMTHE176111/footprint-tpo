@@ -1,0 +1,55 @@
+# 00 — Lộ trình học Footprint / Order Flow
+
+> Học tuần tự. Đánh dấu `[x]` khi hoàn thành. Mỗi mục: **học → xem chart ví dụ → trả lời câu hỏi kiểm tra**.
+> Ảnh chart: `course/images/bai-N/pNNN.png` · Text: `course/text/bai-N-*.md`
+
+## 🧱 Bài 0 — Nền tảng (làm rõ nhanh trước khi vào Bài 1)
+*(Người học đã biết nến/xu hướng/S-R. Phần này chỉ chốt các viên gạch của order flow.)*
+- [ ] Bid vs Ask (chào mua / chào bán) — giá khớp ở đâu
+- [ ] Lệnh **thị trường (market)** = chủ động vs lệnh **giới hạn (limit)** = thụ động
+- [ ] Vì sao "luôn có người mua = người bán" nhưng giá vẫn di chuyển (ai là người *chủ động*)
+- [ ] Một **ô (cell) Footprint** đọc thế nào: `Bid x Ask`
+
+## 📗 Bài 1 — Delta Giải thích *(trang 1–41)*
+- [ ] Delta là gì: `Delta = KL mua chủ động (ở Ask) − KL bán chủ động (ở Bid)`
+- [ ] Delta dương / âm nói lên điều gì
+- [ ] Delta của 1 nến vs toàn thị trường
+- [ ] Tại sao Delta "kể câu chuyện" đằng sau cây nến
+- [ ] **Kiểm tra Bài 1**
+
+## 📗 Bài 2 — Cách đọc Delta *(trang 42–68)*
+- [ ] Đọc Delta trên từng nến
+- [ ] Delta thuận xu hướng vs ngược xu hướng
+- [ ] **Phân kỳ Delta (Delta divergence)** — giá tăng nhưng delta yếu / ngược lại
+- [ ] **Kiểm tra Bài 2**
+
+## 📗 Bài 3 — Số Delta *(trang 69–117)*
+- [ ] Ý nghĩa con số Delta lớn/nhỏ
+- [ ] Delta tích lũy (Cumulative Delta / CVD)
+- [ ] Kết hợp Delta với khối lượng & vùng giá
+- [ ] **Kiểm tra Bài 3**
+
+## 📗 Bài 4 — Thiết lập Delta Trade *(trang 118–197)*
+- [ ] Các tín hiệu vào lệnh dựa trên Delta/Footprint
+- [ ] Điểm vào, dừng lỗ (SL), chốt lời (TP)
+- [ ] Lọc tín hiệu xấu / xác nhận
+- [ ] **Kiểm tra Bài 4**
+
+## 📗 Bài 5 — Bài tập Delta & Tóm tắt *(trang 198–229)*
+- [ ] Làm bài tập đọc chart
+- [ ] Tổng ôn toàn khóa
+- [ ] **Kiểm tra tổng hợp**
+
+---
+
+## 📙 Tham chiếu Ebook Order Flow *(đọc kèm khi cần đào sâu — `ebook/text/`)*
+Các chủ đề chính (mục lục đầy đủ ở `ebook/text/00-muc-luc.md`):
+- Thành phần thị trường: chủ động & thụ động
+- Mô tả biểu đồ Footprint · ô xanh/đỏ · **HVN (High Volume Node)** · Delta
+- **Volume Profile (Hồ sơ khối lượng)** · POC · Value Area · các hình dạng D/P/b/thin
+- Tính năng: **Volume Cluster, Imbalance, Stacked Imbalance, Unfinished Business, Cumulative Delta**
+- **5 setup giao dịch:** Volume Cluster · Multiple Nodes · Trade Filter · Stacked Imbalance · Unfinished Business
+- **4 setup xác nhận:** Large Limit Orders · Absorption · Flow Orders & Delta · Cumulative Delta Divergence
+- Chốt lời (theo volume / trailing) · Dừng lỗ · tìm Hỗ trợ/Kháng cự bằng Volume Profile
+
+> Gợi ý ghép: học **Delta** ở khóa chính (Bài 1-3) → khi tới **setup** (Bài 4) thì mở ebook phần "5 setup giao dịch" + "4 setup xác nhận" để đối chiếu chi tiết.

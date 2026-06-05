@@ -1,0 +1,110 @@
+# Order Flow eBook — Muc luc (Table of Contents)
+> Trich tu Oder Flow vietsub.pdf. So trang ben phai la so trang trong SACH (co the lech vai trang so voi so trang PDF).
+
+- Nội dung
+- Tải xuống sách điện tử 7
+- Câu chuyện của tôi số 8
+- Tại sao tôi bắt đầu sử dụng luồng đơn hàng 10
+- Bạn sẽ học cái gì? 11
+- Thông báo quan trọng 12
+- Thiết lập luồng đơn hàng 13
+- Nền tảng giao dịch NinjaTrader 8 13
+- Các nền tảng giao dịch khác 13
+- Nguồn cấp dữ liệu cho luồng đơn hàng 14
+- CQG – Nguồn cấp dữ liệu tương lai ..14
+- Nơi nhận đơn hàng 15
+- Bạn có thể giao dịch những công cụ nào với dòng lệnh? 16
+- Bạn nên bắt đầu với công cụ giao dịch nào? 16
+- Luồng lệnh: Forex so với hợp đồng tương lai 0,16
+- Chuyển cấp độ giao dịch từ hợp đồng tương lai tiền tệ sang ngoại hối 18
+- Luồng lệnh – Những người tham gia thị trường 19
+- Những người tham gia thị trường thụ động và chủ động (tích cực) 19
+- Những người tham gia thị trường thụ động 20
+- Những người tham gia thị trường tích cực 0,21
+- Chủ động và thụ động trong một biểu đồ 22
+- Quan điểm lớn hơn (THƯỞNG) 0,23
+- Luồng lệnh – Mô tả biểu đồ cơ bản 24
+- Dấu chân 24
+- Tế bào xanh/đỏ 25
+- Nút âm lượng cao (HVN) 25
+- Đồng bằng 26
+- VÍ DỤ: Giá và sự phân kỳ Delta 27
+- Tóm tắt dấu chân 29
+- Hồ sơ khối lượng 31
+- Luồng lệnh TD – Tính năng đặc biệt 32
+- Luồng đặt lệnh cho Forex 32
+- Cụm khối lượng 33
+- Nhiều nút âm lượng cao (HVN) 34
+- Sự mất cân bằng 35
+- Mất cân bằng xếp chồng 36
+- Công việc chưa hoàn thành 37
+- VÍ DỤ: Công việc chưa hoàn thành 38
+- Bộ lọc giao dịch 40
+- Delta tích lũy 41
+- VÍ DỤ: Delta tích lũy 42
+- Luồng lệnh – Không gian làm việc giao dịch 43
+- Luồng lệnh – Thiết lập giao dịch 45
+- Thiết lập giao dịch số 1: Cụm khối lượng 45
+- Cụm khối lượng (trong XU HƯỚNG) 45
+- VÍ DỤ: Cụm khối lượng (trong XU HƯỚNG) 48
+- Cụm khối lượng (trong TỪ CHỐI) 50
+- VÍ DỤ: Cụm khối lượng (trong TỪ CHỐI) 52
+- Thiết lập giao dịch số 2: Nhiều nút 54
+- VÍ DỤ: Nhiều nút 56
+- Thiết lập giao dịch số 3: Bộ lọc giao dịch 59
+- VÍ DỤ: Bộ lọc giao dịch ..61
+- Thiết lập giao dịch số 4: Mất cân bằng xếp chồng lên nhau 64
+- VÍ DỤ: Sự mất cân bằng xếp chồng lên nhau 67
+- Thiết lập giao dịch số 5: Công việc chưa hoàn thành 70
+- Thu lợi nhuận 71
+- Chặn đứng tổn thất 72
+- Xác nhận 72
+- Cảnh báo khi tham gia một giao dịch xấu 73
+- VÍ DỤ: Công việc chưa hoàn thành 75
+- Quy trình đặt hàng – Xác nhận 79
+- Thiết lập xác nhận số 1: Lệnh giới hạn lớn 80
+- VÍ DỤ: Lệnh giới hạn lớn 83
+- Thiết lập xác nhận #2: Hấp thụ 86
+- VÍ DỤ: Sự hấp thụ 88
+- Thiết lập xác nhận số 3: Lệnh linh hoạt và Delta 91
+- VÍ DỤ: Lệnh linh hoạt và Delta 95
+- Thiết lập xác nhận số 4: Phân kỳ Delta tích lũy 98
+- VÍ DỤ: Phân kỳ Delta tích lũy 102
+- Kiếm lợi nhuận từ dòng lệnh 104
+- Chốt lời dựa trên khối lượng ..104
+- VÍ DỤ: Chốt lời dựa trên khối lượng 106
+- Chốt lời – Trailing 109
+- Trailing TP - Tín hiệu cảnh báo 110
+- VÍ DỤ: Chốt lãi - Trailing 112
+- Dừng lỗ với luồng lệnh 114
+- VÍ DỤ: Dừng lỗ với luồng lệnh 116
+- Cách tìm mức hỗ trợ và kháng cự bằng hồ sơ khối lượng 120
+- Giới thiệu hồ sơ khối lượng 120
+- Hồ sơ Khối lượng trông như thế nào? 121
+- Cấu hình Khối lượng khác với Chỉ báo Khối lượng Tiêu chuẩn trong MT4 như thế nào? 121
+- Hồ sơ khối lượng cho chúng tôi biết điều gì? 122
+- Các hình dạng hồ sơ khối lượng khác nhau 124
+- Biên dạng hình chữ D 124
+- Hồ sơ hình chữ P 125
+- Hồ sơ hình b 126
+- Hồ sơ mỏng 127
+- Điều gì làm cho hồ sơ khối lượng khác với các chỉ số giao dịch khác? 128
+- Tại sao lại quan tâm đến khối lượng và những gì các tổ chức lớn đang làm? 128
+- Hồ sơ khối lượng - Thiết lập giao dịch 129
+- Thiết lập Hồ sơ Ổ đĩa số 1: Thiết lập Tích lũy Ổ đĩa 130
+- Logic đằng sau việc thiết lập tích lũy khối lượng 131
+- VÍ DỤ: Thiết lập tích lũy khối lượng 134
+- Thiết lập hồ sơ khối lượng số 2: Thiết lập xu hướng 136
+- Logic đằng sau việc thiết lập xu hướng: 137
+- VÍ DỤ: Thiết lập xu hướng 138
+- Thiết lập Hồ sơ Khối lượng số 3: Thiết lập Từ chối 140
+- VÍ DỤ: Thiết lập từ chối 143
+- Nơi nhận thêm thông tin về hồ sơ khối lượng 145
+- Ví dụ về giao dịch trực tiếp - Liên kết 145
+- Phải làm gì tiếp theo 146
+- Đẩy nhanh quá trình học tập của bạn! 146
+- Gói ưu tú 147
+- Gói luồng đơn hàng 149
+- Chỉ một vài lời chứng thực về các khóa học giao dịch của tôi 151
+- Bảng chú giải 155
+- Cảm ơn! 159

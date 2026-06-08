@@ -5,17 +5,17 @@
 
 ## 🧱 Bài 0 — Nền tảng (làm rõ nhanh trước khi vào Bài 1)
 *(Người học đã biết nến/xu hướng/S-R. Phần này chỉ chốt các viên gạch của order flow.)*
-- [ ] Bid vs Ask (chào mua / chào bán) — giá khớp ở đâu
-- [ ] Lệnh **thị trường (market)** = chủ động vs lệnh **giới hạn (limit)** = thụ động
-- [ ] Vì sao "luôn có người mua = người bán" nhưng giá vẫn di chuyển (ai là người *chủ động*)
-- [ ] Một **ô (cell) Footprint** đọc thế nào: `Bid x Ask`
+- [x] Bid vs Ask (chào mua / chào bán) — giá khớp ở đâu
+- [x] Lệnh **thị trường (market)** = chủ động vs lệnh **giới hạn (limit)** = thụ động
+- [x] Vì sao "luôn có người mua = người bán" nhưng giá vẫn di chuyển (ai là người *chủ động*)
+- [x] Một **ô (cell) Footprint** đọc thế nào: `Bid x Ask`
 
 ## 📗 Bài 1 — Delta Giải thích *(trang 1–41)*
-- [ ] Delta là gì: `Delta = KL mua chủ động (ở Ask) − KL bán chủ động (ở Bid)`
-- [ ] Delta dương / âm nói lên điều gì
-- [ ] Delta của 1 nến vs toàn thị trường
-- [ ] Tại sao Delta "kể câu chuyện" đằng sau cây nến
-- [ ] **Kiểm tra Bài 1**
+- [x] Delta là gì: `Delta = KL mua chủ động (ở Ask) − KL bán chủ động (ở Bid)`
+- [x] Delta dương / âm nói lên điều gì
+- [x] Delta của 1 nến vs toàn thị trường
+- [x] Tại sao Delta "kể câu chuyện" đằng sau cây nến
+- [x] **Kiểm tra Bài 1** — Đạt 4/5 (2026-06-08)
 
 ## 📗 Bài 2 — Cách đọc Delta *(trang 42–68)*
 - [ ] Đọc Delta trên từng nến

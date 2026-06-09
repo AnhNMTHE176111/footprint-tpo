@@ -18,10 +18,10 @@
 - [x] **Kiểm tra Bài 1** — Đạt 4/5 (2026-06-08)
 
 ## 📗 Bài 2 — Cách đọc Delta *(trang 42–68)*
-- [ ] Đọc Delta trên từng nến
-- [ ] Delta thuận xu hướng vs ngược xu hướng
-- [ ] **Phân kỳ Delta (Delta divergence)** — giá tăng nhưng delta yếu / ngược lại
-- [ ] **Kiểm tra Bài 2**
+- [x] Đọc Delta theo 2 tầm: 1 nến đơn vs chuỗi nhiều nến
+- [x] 4 kiểu hiển thị Delta: ở-đáy · Nến Delta · Delta Footprint · Diagonal Footprint
+- [x] Diagonal Footprint dùng để lọc Imbalance (mất cân đối)
+- [x] **Kiểm tra Bài 2** — Đạt 3/3 + khởi động đúng (2026-06-09)
 
 ## 📗 Bài 3 — Số Delta *(trang 69–117)*
 - [ ] Ý nghĩa con số Delta lớn/nhỏ

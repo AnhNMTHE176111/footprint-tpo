@@ -24,10 +24,12 @@
 - [x] **Kiểm tra Bài 2** — Đạt 3/3 + khởi động đúng (2026-06-09)
 
 ## 📗 Bài 3 — Số Delta *(trang 69–117)*
-- [ ] Ý nghĩa con số Delta lớn/nhỏ
-- [ ] Delta tích lũy (Cumulative Delta / CVD)
-- [ ] Kết hợp Delta với khối lượng & vùng giá
-- [ ] **Kiểm tra Bài 3**
+- [x] 5 con số Delta: Delta · Max Delta · Min Delta · Cumulative · Delta/Volume
+- [x] Delta "sống" khi nến chưa đóng → không vào lệnh sớm
+- [x] Đọc Max/Min vs Delta cuối để biết phe nào thống trị
+- [x] Cumulative Delta là chỉ báo chậm — đừng dùng làm công tắc vào lệnh
+- [x] Delta/Volume ≈0 = hấp thụ/đi ngang; >0,05 = mạnh
+- [x] **Kiểm tra Bài 3** — Đạt 4/4 (2026-06-09)
 
 ## 📗 Bài 4 — Thiết lập Delta Trade *(trang 118–197)*
 - [ ] Các tín hiệu vào lệnh dựa trên Delta/Footprint

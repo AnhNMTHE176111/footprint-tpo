@@ -3,9 +3,9 @@
 > Nơi ghi lại bạn đã học tới đâu, điểm chưa rõ, câu hỏi mở. Claude cập nhật file này sau mỗi buổi.
 
 ## 📍 Đang ở đâu
-- **Bài hiện tại:** ✅ **HOÀN THÀNH Bài 2** (kiểm tra 3/3 + câu khởi động đúng). Đang chuẩn bị vào **Bài 3 — Số Delta / Cumulative Delta**.
-- **Buổi tới:** học **Bài 3 — Số Delta** (trang 69–117): ý nghĩa con số Delta lớn/nhỏ, **Cumulative Delta / CVD** ("cuốn phim"), kết hợp Delta với khối lượng & vùng giá.
-- **Lần học gần nhất:** 2026-06-09 — học trọn Bài 2 (4 kiểu hiển thị Delta). ✅ Đã KHÓA điểm yếu chiều công thức Delta (khởi động trả lời đúng hoàn toàn).
+- **Bài hiện tại:** ✅ **HOÀN THÀNH Bài 3** (3 phần + kiểm tra tổng 4/4). Đang chuẩn bị vào **Bài 4 — Thiết lập Delta Trade** (trang 118–197).
+- **Buổi tới:** học **Bài 4 — Thiết lập Delta Trade**: các tín hiệu vào lệnh dựa trên Delta/Footprint, điểm vào – SL – TP, lọc tín hiệu xấu. Mở kèm ebook "5 setup + 4 setup xác nhận" khi cần đối chiếu.
+- **Lần học gần nhất:** 2026-06-09 — học trọn Bài 2 + Bài 3 trong cùng buổi. Học viên tiếp thu nhanh, trả lời chính xác.
 
 ## 🎯 Kế hoạch tổng
 - **Mục tiêu:** học xong toàn bộ lý thuyết — 5 bài khóa chính + ebook bổ trợ (Volume Profile, Imbalance, các setup) — trong ~5 ngày.
@@ -14,6 +14,10 @@
 - **Lưu ý thực tế:** 5 bài = nền tảng Delta, **không phải toàn bộ** order flow; **"hiểu" ≠ "thành thạo"** (còn cần screen time + thực chiến).
 
 ## ✅ Đã nắm chắc
+- **(Bài 3) 5 con số Delta:** Delta (1 nến, chốt khi đóng) · **Max Delta** (đỉnh mua chủ động theo THỜI GIAN trong nến) · **Min Delta** (đáy bán chủ động) · **Cumulative Delta** (cộng dồn cả phiên = "cuốn phim", nhưng CHẬM/lagging) · **Delta/Volume** (≈0 = hấp thụ/đi ngang; >0,05 = mạnh; tác giả ít dùng).
+- **(Bài 3) Đọc Max/Min:** Delta cuối sát Max → mua thống trị; sát Min → bán thống trị; lửng lơ giữa = giằng co, tín hiệu yếu. Nối nhiều nến cùng đóng-gần-Max (hoặc Min) = xu hướng mạnh.
+- **(Bài 3) Bẫy Cumulative Delta:** ĐỪNG "giao dịch thuận chiều Cumulative Delta" — nó chậm, dễ bỏ lỡ lệnh tốt ngược chiều. Dùng để hiểu BỐI CẢNH, không phải công tắc vào lệnh.
+- **(Bài 3) Delta sống khi nến chưa đóng** → không vào lệnh sớm dựa trên Delta đang nhảy.
 - Giá di chuyển do **bên chủ động (sốt ruột)**, không phải do bên nào đông hơn.
 - Phân biệt **chủ động (market, khớp ngay)** vs **thụ động (limit, đặt chờ)**.
 - **Bid** = giá chào mua (bán chủ động khớp vào đây) · **Ask** = giá chào bán (mua chủ động khớp vào đây).
@@ -35,3 +39,4 @@
 |----|------|---------|---------|
 | 1 | 2026-06-08 | ✅ Đạt (4/5) | Khái niệm rất vững (kiểm soát, hấp thụ, tích lũy/phân phối). Cần khóa CHIỀU công thức Delta = mua − bán. |
 | 2 | 2026-06-09 | ✅ Đạt (3/3 + khởi động) | Nắm chắc 4 kiểu hiển thị Delta. Khởi động đúng → đã khóa điểm yếu công thức Delta. |
+| 3 | 2026-06-09 | ✅ Đạt (4/4) | Ban đầu nhầm Max/Min Delta theo MỨC GIÁ; đã sửa → hiểu đúng là đỉnh/đáy theo THỜI GIAN. Nắm chắc bẫy Cumulative Delta. |

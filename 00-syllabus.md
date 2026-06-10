@@ -31,10 +31,11 @@
 - [x] Delta/Volume ≈0 = hấp thụ/đi ngang; >0,05 = mạnh
 - [x] **Kiểm tra Bài 3** — Đạt 4/4 (2026-06-09)
 
-## 📗 Bài 4 — Thiết lập Delta Trade *(trang 118–197)*
-- [ ] Các tín hiệu vào lệnh dựa trên Delta/Footprint
-- [ ] Điểm vào, dừng lỗ (SL), chốt lời (TP)
-- [ ] Lọc tín hiệu xấu / xác nhận
+## 📗 Bài 4 — Thiết lập Delta Trade *(trang 118–197)* — 7 setup, chia 4 phần
+- [x] **P1:** Tổng quan 7 setup · Delta Surge · Delta Divergence (2026-06-10)
+- [ ] **P2:** Delta Flip · Delta Transition
+- [ ] **P3:** Delta Tails · Delta Bulges
+- [ ] **P4:** Delta Reversal · chốt bài
 - [ ] **Kiểm tra Bài 4**
 
 ## 📗 Bài 5 — Bài tập Delta & Tóm tắt *(trang 198–229)*

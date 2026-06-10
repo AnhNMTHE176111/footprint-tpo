@@ -12,6 +12,7 @@
 2. **Luôn dùng thuật ngữ chuẩn.** Hai PDF **dịch bằng máy nên sai thuật ngữ** (vd "Đồng bằng" = Delta, "Nút âm lượng cao" = High Volume Node, "âm lượng" = volume/khối lượng). Mỗi khi gặp từ dịch sai, **dùng từ đúng** và đối chiếu theo `glossary.md`.
 3. **Bám lộ trình** `00-syllabus.md`. Sau mỗi mục: tóm tắt → ví dụ trên chart → 1-3 câu hỏi kiểm tra.
 4. **Cập nhật tiến độ** vào `progress.md` (đã học tới đâu, câu hỏi mở, điểm người học chưa rõ). Tick trạng thái trong `00-syllabus.md`.
+   - **Mỗi lần cập nhật tiến độ học → commit ngay** để tạo lịch sử học. Commit gộp các file vừa đổi (`progress.md`, `00-syllabus.md`, và file khác nếu có), message tiếng Việt mô tả buổi học (vd `Bai 4 P1: hoc Delta Surge + Divergence`). KHÔNG tự push trừ khi người học yêu cầu.
 5. Liên hệ kiến thức với cái người học đã biết (nến, S/R) để dễ tiếp thu.
 
 ## 📂 Cấu trúc thư mục

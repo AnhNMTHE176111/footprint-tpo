@@ -3,9 +3,15 @@
 > Nơi ghi lại bạn đã học tới đâu, điểm chưa rõ, câu hỏi mở. Claude cập nhật file này sau mỗi buổi.
 
 ## 📍 Đang ở đâu
-- **Bài hiện tại:** ✅ **HOÀN THÀNH Bài 3** (3 phần + kiểm tra tổng 4/4). Đang chuẩn bị vào **Bài 4 — Thiết lập Delta Trade** (trang 118–197).
-- **Buổi tới:** học **Bài 4 — Thiết lập Delta Trade**: các tín hiệu vào lệnh dựa trên Delta/Footprint, điểm vào – SL – TP, lọc tín hiệu xấu. Mở kèm ebook "5 setup + 4 setup xác nhận" khi cần đối chiếu.
-- **Lần học gần nhất:** 2026-06-09 — học trọn Bài 2 + Bài 3 trong cùng buổi. Học viên tiếp thu nhanh, trả lời chính xác.
+- **Bài hiện tại:** 🔄 **Bài 4 — Thiết lập Delta Trade** (trang 118–197). Chia làm 4 phần (2 setup/phần). **Đã xong P1** (tổng quan 7 setup + Setup 1 Delta Surge + Setup 2 Delta Divergence).
+- **Buổi tới:** **Bài 4 — P2**: Setup 3 **Delta Flip** + Setup 4 **Delta Transition**. Mở kèm ebook "5 setup + 4 setup xác nhận" để đối chiếu.
+- **Lần học gần nhất:** 2026-06-10 — học Bài 4 P1. Lưu ý: học viên nhầm CHIỀU Delta Surge (thấy |Delta| tăng tưởng là "mua tăng tốc" dù dấu âm). Đã sửa: **đọc DẤU trước, độ lớn sau**. Cần khóa lại phản xạ này.
+
+### 7 setup Bài 4 (lộ trình 4 phần)
+- P1 ✅ Delta Surge · Delta Divergence
+- P2 ⏳ Delta Flip · Delta Transition
+- P3 ⏳ Delta Tails · Delta Bulges
+- P4 ⏳ Delta Reversal · chốt bài + kiểm tra
 
 ## 🎯 Kế hoạch tổng
 - **Mục tiêu:** học xong toàn bộ lý thuyết — 5 bài khóa chính + ebook bổ trợ (Volume Profile, Imbalance, các setup) — trong ~5 ngày.

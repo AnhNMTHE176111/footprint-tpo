@@ -3,13 +3,16 @@
 > Nơi ghi lại bạn đã học tới đâu, điểm chưa rõ, câu hỏi mở. Claude cập nhật file này sau mỗi buổi.
 
 ## 📍 Đang ở đâu
-- **Bài hiện tại:** 🔄 **Bài 4 — Thiết lập Delta Trade** (trang 118–197). Chia làm 4 phần (2 setup/phần). **Đã xong P1** (tổng quan 7 setup + Setup 1 Delta Surge + Setup 2 Delta Divergence).
-- **Buổi tới:** **Bài 4 — P2**: Setup 3 **Delta Flip** + Setup 4 **Delta Transition**. Mở kèm ebook "5 setup + 4 setup xác nhận" để đối chiếu.
-- **Lần học gần nhất:** 2026-06-10 — học Bài 4 P1. Lưu ý: học viên nhầm CHIỀU Delta Surge (thấy |Delta| tăng tưởng là "mua tăng tốc" dù dấu âm). Đã sửa: **đọc DẤU trước, độ lớn sau**. Cần khóa lại phản xạ này.
+- **Bài hiện tại:** 🔄 **Bài 4 — Thiết lập Delta Trade** (trang 118–197). Chia 4 phần. **Đã xong P1 + P2** (4/7 setup).
+- **Buổi tới:** **Bài 4 — P3**: Setup 5 **Delta Tails** + Setup 6 **Delta Bulges** (cần dùng Delta Footprint chart). Mở kèm ebook "Imbalance / Stacked Imbalance / từ chối giá" để đối chiếu.
+- **Lần học gần nhất:** 2026-06-10 — học Bài 4 P1 + P2.
+  - P1: nhầm CHIỀU Delta Surge (|Delta| tăng tưởng "mua" dù dấu âm) → đã sửa: **đọc DẤU trước, độ lớn sau**. Đã khóa.
+  - P2: nhầm phe trong Flip (nhãn đúng, gán sai phe) → đã sửa: **Max Delta = 0 = nến thuần BÁN; Min Delta = 0 = nến thuần MUA**.
+  - ⚠️ Học viên góp ý 2 việc (đã lưu memory): (1) dùng tiếng Việt tự nhiên, không dịch thô word-by-word; (2) ĐỌC SỐ thật trên chart trước khi diễn giải, không mô tả chung chung cho khớp lý thuyết.
 
 ### 7 setup Bài 4 (lộ trình 4 phần)
 - P1 ✅ Delta Surge · Delta Divergence
-- P2 ⏳ Delta Flip · Delta Transition
+- P2 ✅ Delta Flip · Delta Transition
 - P3 ⏳ Delta Tails · Delta Bulges
 - P4 ⏳ Delta Reversal · chốt bài + kiểm tra
 

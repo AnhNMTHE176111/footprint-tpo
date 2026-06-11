@@ -34,7 +34,7 @@
 ## 📗 Bài 4 — Thiết lập Delta Trade *(trang 118–197)* — 7 setup, chia 4 phần
 - [x] **P1:** Tổng quan 7 setup · Delta Surge · Delta Divergence (2026-06-10)
 - [x] **P2:** Delta Flip · Delta Transition (2026-06-10)
-- [ ] **P3:** Delta Tails · Delta Bulges
+- [x] **P3:** Delta Tails · Delta Bulges (2026-06-11)
 - [ ] **P4:** Delta Reversal · chốt bài
 - [ ] **Kiểm tra Bài 4**
 

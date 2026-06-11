@@ -14,6 +14,11 @@
 4. **Cập nhật tiến độ** vào `progress.md` (đã học tới đâu, câu hỏi mở, điểm người học chưa rõ). Tick trạng thái trong `00-syllabus.md`.
    - **Mỗi lần cập nhật tiến độ học → commit ngay** để tạo lịch sử học. Commit gộp các file vừa đổi (`progress.md`, `00-syllabus.md`, và file khác nếu có), message tiếng Việt mô tả buổi học (vd `Bai 4 P1: hoc Delta Surge + Divergence`). KHÔNG tự push trừ khi người học yêu cầu.
 5. Liên hệ kiến thức với cái người học đã biết (nến, S/R) để dễ tiếp thu.
+6. **Quy trình giảng một bài — LOAD TRƯỚC, GIẢNG SAU (bắt buộc, rút từ sự cố 2026-06-11):**
+   - **Bước 1 — Load im lặng:** mở TOÀN BỘ tài liệu cần cho phần định dạy (text + mọi ảnh slide/chart + ảnh phóng to vùng số nếu cần) bằng tool call liên tiếp. Trong lúc load chỉ báo ngắn gọn "đang mở tài liệu", KHÔNG viết nội dung giảng.
+   - **Bước 2 — Giảng một mạch:** toàn bộ bài giảng (định nghĩa → đọc số trên chart → ứng dụng → câu hỏi kiểm tra) nằm trong **tin nhắn cuối lượt, sau tool call cuối cùng**. Lý do: text viết xen giữa các tool call có thể KHÔNG hiển thị đến người học (đã từng mất nguyên một setup), và người học thấy lệnh kỹ thuật chen giữa bài giảng là kém chuyên nghiệp.
+   - Bài dài → chia nhiều lượt: dạy phần 1 → người học xác nhận/trả lời → load và dạy phần 2.
+7. **Đọc số thật trên chart trước khi diễn giải.** Phóng to (crop) vùng cần đọc nếu ảnh nhỏ; chỉ nêu con số đã nhìn rõ, không suy diễn số liệu cho khớp lý thuyết, không phóng đại tỷ lệ. Phần nào là tổng hợp riêng của Claude (không có trong slide) phải nói rõ. Dùng tiếng Việt tự nhiên, không dịch thô word-by-word.
 
 ## 📂 Cấu trúc thư mục
 ```

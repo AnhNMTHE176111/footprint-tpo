@@ -35,8 +35,8 @@
 - [x] **P1:** Tổng quan 7 setup · Delta Surge · Delta Divergence (2026-06-10)
 - [x] **P2:** Delta Flip · Delta Transition (2026-06-10)
 - [x] **P3:** Delta Tails · Delta Bulges (2026-06-11)
-- [ ] **P4:** Delta Reversal · chốt bài
-- [ ] **Kiểm tra Bài 4**
+- [x] **P4:** Delta Reversal · chốt bài (2026-06-15) — + đọc ô Footprint (Bid×Ask)
+- [ ] **Kiểm tra Bài 4** (tổng hợp 7 setup)
 
 ## 📗 Bài 5 — Bài tập Delta & Tóm tắt *(trang 198–229)*
 - [ ] Làm bài tập đọc chart

@@ -4,7 +4,8 @@
 
 ## 📍 Đang ở đâu
 - **Bài hiện tại:** ✅ **Bài 5 — Bài tập & Tóm tắt** đã học xong phần cốt lõi (khung 3 trạng thái + 2 exercise + tổng ôn). 5/5 bài khóa chính XONG.
-- **Buổi tới:** **EBOOK Order Flow** — bắt đầu Volume Profile (POC/Value Area) + Imbalance/Stacked Imbalance, rồi "5 setup giao dịch + 4 setup xác nhận". (Tùy chọn: làm thêm exercise #1/#2/#4/#6 luyện mắt nếu muốn.) Mục tiêu: đủ vốn để cuối tuần tiếp thu system của bạn trader.
+- **Buổi tới (sáng mai 2026-06-22 — KH của người học):** **luyện thêm exercise đọc chart cho chắc mắt TRƯỚC** (Exercise #1/#2/#4/#6 — phóng to panel đọc số thật), **RỒI MỚI sang EBOOK** Order Flow (Volume Profile POC/Value Area → Imbalance/Stacked Imbalance → 5 setup giao dịch + 4 setup xác nhận). Mục tiêu: đủ vốn để cuối tuần tiếp thu system của bạn trader.
+  - 🕗 Nghỉ qua đêm (chat hôm nay 21/6, hẹn sáng mai) → đầu buổi sau **khởi động lại vài câu** rồi mới vào exercise (xem memory [[time-aware-teaching]]).
 - **Lần học gần nhất:** 2026-06-21 — học Bài 5. Học khung tổng kết **3 trạng thái delta–giá**: (1) cùng hướng = xác nhận; (2) delta mạnh + giá ĐỨNG = hấp thụ; (3) giá đi + delta yếu = đuối/đảo. Câu chốt phân biệt: **"GIÁ có đi không?"**. Đọc số thật trên Exercise #3 (climax +1807 → Sell Flip → đảo) và #5 (downtrend được delta xác nhận; nến Delta +378/MaxDelta +1144 = mua bắt đáy bị nuốt).
   - 💪 **Điểm mạnh mới:** tư duy quản trị rủi ro tốt — ở tình huống absorption trong downtrend, tự nhận ra KHÔNG mua bừa (bối cảnh còn giảm, dễ chỉ là nhịp hồi). Đã chốt đúng: absorption = ĐỔI BIAS sang canh mua, vào lệnh chỉ khi GIÁ XÁC NHẬN đi lên (stop dưới đáy hấp thụ → RR thực ra rất tốt). Absorption thuộc nhóm "4 setup xác nhận" bên ebook.
   - **Lỗi lặp cần để mắt (từ KT Bài 4):** hướng lệnh Tail/Bulge (theo phe thắng; ô ngược = S/R). Bulge = absorption. Reversal = 1 nến.

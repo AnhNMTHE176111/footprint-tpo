@@ -39,9 +39,11 @@
 - [x] **Kiểm tra Bài 4** (tổng hợp 7 setup) — Đạt (2026-06-20)
 
 ## 📗 Bài 5 — Bài tập Delta & Tóm tắt *(trang 198–229)*
-- [ ] Làm bài tập đọc chart
-- [ ] Tổng ôn toàn khóa
-- [ ] **Kiểm tra tổng hợp**
+- [x] Khung tư duy tổng kết: 3 trạng thái delta–giá (xác nhận / hấp thụ / đuối-đảo) (2026-06-21)
+- [x] Làm bài tập đọc chart — Exercise #3 (climax→Flip→đảo) + Exercise #5 (downtrend xác nhận + absorption) (2026-06-21)
+- [x] Tổng ôn toàn khóa (2026-06-21)
+- [ ] (tùy chọn) Làm thêm exercise #1/#2/#4/#6 để luyện mắt
+- [ ] **Kiểm tra tổng hợp** (có thể gộp khi học ebook)
 
 ---
 

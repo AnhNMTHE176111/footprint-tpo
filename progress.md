@@ -3,11 +3,11 @@
 > Nơi ghi lại bạn đã học tới đâu, điểm chưa rõ, câu hỏi mở. Claude cập nhật file này sau mỗi buổi.
 
 ## 📍 Đang ở đâu
-- **Bài hiện tại:** ✅ **Bài 4 — Thiết lập Delta Trade** XONG (đã học 7/7 setup + **Kiểm tra Bài 4 ĐẠT** 2026-06-20).
-- **Buổi tới:** **Bài 5 — Bài tập Delta & Tóm tắt** (trang 198–229): làm bài tập đọc chart + tổng ôn toàn khóa. Sau đó mở ebook (Volume Profile, Imbalance, các setup) để đào sâu.
-- **Lần học gần nhất:** 2026-06-20 — **Kiểm tra Bài 4** (8 câu, cả 7 setup). Đạt. Tự lực ~5/8; sau khi vá lý thuyết thì trả lời đúng phần còn lại.
-  - **Lỗi lặp cần để mắt:** **hướng lệnh của Tail/Bulge** — bạn vẫn dễ đảo hướng. Nhớ chặt: *tên đuôi/bulge gì → giao dịch hướng đó (theo phe thắng); ô ngược chiều chỉ là mức S/R, KHÔNG phải hướng lệnh.* (Đuôi bán → BÁN.)
-  - **Quên rồi nhớ lại trong buổi:** cơ chế **Bulge = absorption** (ô ngược chiều khổng lồ bị tường thụ động nuốt, KHÔNG phải "phe kia đông hơn"); **Reversal = setup 1 nến** (lúc đầu nhầm là Bulge).
+- **Bài hiện tại:** ✅ **Bài 5 — Bài tập & Tóm tắt** đã học xong phần cốt lõi (khung 3 trạng thái + 2 exercise + tổng ôn). 5/5 bài khóa chính XONG.
+- **Buổi tới:** **EBOOK Order Flow** — bắt đầu Volume Profile (POC/Value Area) + Imbalance/Stacked Imbalance, rồi "5 setup giao dịch + 4 setup xác nhận". (Tùy chọn: làm thêm exercise #1/#2/#4/#6 luyện mắt nếu muốn.) Mục tiêu: đủ vốn để cuối tuần tiếp thu system của bạn trader.
+- **Lần học gần nhất:** 2026-06-21 — học Bài 5. Học khung tổng kết **3 trạng thái delta–giá**: (1) cùng hướng = xác nhận; (2) delta mạnh + giá ĐỨNG = hấp thụ; (3) giá đi + delta yếu = đuối/đảo. Câu chốt phân biệt: **"GIÁ có đi không?"**. Đọc số thật trên Exercise #3 (climax +1807 → Sell Flip → đảo) và #5 (downtrend được delta xác nhận; nến Delta +378/MaxDelta +1144 = mua bắt đáy bị nuốt).
+  - 💪 **Điểm mạnh mới:** tư duy quản trị rủi ro tốt — ở tình huống absorption trong downtrend, tự nhận ra KHÔNG mua bừa (bối cảnh còn giảm, dễ chỉ là nhịp hồi). Đã chốt đúng: absorption = ĐỔI BIAS sang canh mua, vào lệnh chỉ khi GIÁ XÁC NHẬN đi lên (stop dưới đáy hấp thụ → RR thực ra rất tốt). Absorption thuộc nhóm "4 setup xác nhận" bên ebook.
+  - **Lỗi lặp cần để mắt (từ KT Bài 4):** hướng lệnh Tail/Bulge (theo phe thắng; ô ngược = S/R). Bulge = absorption. Reversal = 1 nến.
   - ⚠️ Góp ý cũ vẫn áp dụng (đã lưu memory): (1) tiếng Việt tự nhiên; (2) ĐỌC SỐ thật trên chart; (3) KHÔNG trích số trang slide cho định nghĩa đã đúc kết.
 
 ### 7 setup Bài 4 (lộ trình 4 phần)

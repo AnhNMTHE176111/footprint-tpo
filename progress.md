@@ -3,12 +3,12 @@
 > Nơi ghi lại bạn đã học tới đâu, điểm chưa rõ, câu hỏi mở. Claude cập nhật file này sau mỗi buổi.
 
 ## 📍 Đang ở đâu
-- **Bài hiện tại:** 🔄 **Bài 4 — Thiết lập Delta Trade** (trang 118–197). Chia 4 phần. **Đã xong P1 + P2 + P3 + P4** (7/7 setup).
-- **Buổi tới:** **Kiểm tra Bài 4** tổng hợp cả 7 setup → rồi sang **Bài 5** (bài tập đọc chart + tổng ôn).
-- **Lần học gần nhất:** 2026-06-15 — học Bài 4 P4: Delta Reversal. Kiểm tra P4 đạt 3/3 (lập luận rất sắc). Khởi động lại Max/Min Delta=0 → ĐÃ KHÓA HẲN (trả lời đúng ngay).
-  - Bonus buổi này: học cách **đọc ô Footprint thô** (xem mục "Đã nắm chắc"). Verify delta khớp chính xác trên chart p190.
-  - ⚠️ Góp ý cũ vẫn áp dụng (đã lưu memory): (1) tiếng Việt tự nhiên; (2) ĐỌC SỐ thật trên chart (crop/phóng to vùng số trước khi giảng).
-  - 🆕 Góp ý mới (đã lưu memory): trong file md/giảng, **KHÔNG trích dẫn số trang slide cho phần định nghĩa đã đúc kết** (vd "ảnh slide định nghĩa — p188"). Người học chỉ mở ảnh khi đó là CHART để đọc số; thông tin lý thuyết Claude đã chốt thì khỏi chỉ nguồn slide.
+- **Bài hiện tại:** ✅ **Bài 4 — Thiết lập Delta Trade** XONG (đã học 7/7 setup + **Kiểm tra Bài 4 ĐẠT** 2026-06-20).
+- **Buổi tới:** **Bài 5 — Bài tập Delta & Tóm tắt** (trang 198–229): làm bài tập đọc chart + tổng ôn toàn khóa. Sau đó mở ebook (Volume Profile, Imbalance, các setup) để đào sâu.
+- **Lần học gần nhất:** 2026-06-20 — **Kiểm tra Bài 4** (8 câu, cả 7 setup). Đạt. Tự lực ~5/8; sau khi vá lý thuyết thì trả lời đúng phần còn lại.
+  - **Lỗi lặp cần để mắt:** **hướng lệnh của Tail/Bulge** — bạn vẫn dễ đảo hướng. Nhớ chặt: *tên đuôi/bulge gì → giao dịch hướng đó (theo phe thắng); ô ngược chiều chỉ là mức S/R, KHÔNG phải hướng lệnh.* (Đuôi bán → BÁN.)
+  - **Quên rồi nhớ lại trong buổi:** cơ chế **Bulge = absorption** (ô ngược chiều khổng lồ bị tường thụ động nuốt, KHÔNG phải "phe kia đông hơn"); **Reversal = setup 1 nến** (lúc đầu nhầm là Bulge).
+  - ⚠️ Góp ý cũ vẫn áp dụng (đã lưu memory): (1) tiếng Việt tự nhiên; (2) ĐỌC SỐ thật trên chart; (3) KHÔNG trích số trang slide cho định nghĩa đã đúc kết.
 
 ### 7 setup Bài 4 (lộ trình 4 phần)
 - P1 ✅ Delta Surge · Delta Divergence
@@ -23,6 +23,8 @@
 - **Lưu ý thực tế:** 5 bài = nền tảng Delta, **không phải toàn bộ** order flow; **"hiểu" ≠ "thành thạo"** (còn cần screen time + thực chiến).
 
 ## ✅ Đã nắm chắc
+- **(Bài 4 — mnemonic "số nến" phân biệt 3 setup delta đổi chiều):** **1 nến → Reversal** · **2 nến, dứt khoát → Flip** (nến trước Max≈0 đóng gần Min, nến sau Min≈0 đóng gần Max) · **nhiều nến, đuối dần → Transition** (delta yếu dần trong xu hướng rồi quay đầu; phân tích tại swing high/low).
+- **(Bài 4 — quy tắc HƯỚNG của Tail/Bulge):** tên setup (đuôi/bulge mua hay bán) = hướng lệnh, theo **phe thắng**. **Ô ngược chiều = chỉ đánh dấu mức S/R**, KHÔNG phải hướng vào lệnh. Bulge mua = ô ÂM to gần đáy nến TĂNG (bán bị hấp thụ → mua); Bulge bán = ô DƯƠNG to gần đỉnh nến GIẢM (mua bị hấp thụ → bán).
 - **(Bài 4 P4) Delta Reversal:** setup **MỘT nến duy nhất** tại đỉnh/đáy swing. Trong cùng nến, delta đi mạnh một hướng rồi đóng cửa mạnh hướng ngược lại. Buy Reversal = đầu nến âm mạnh → đóng dương mạnh (đáy swing → MUA); Sell Reversal = đầu nến dương mạnh → đóng âm mạnh (đỉnh swing → BÁN). **Chìa khóa: CẢ Max Delta lẫn Min Delta đều phải mạnh** (biên độ lớn, hàng nghìn). Một bên yếu = loại. Phân biệt với **Delta Flip** (P2): Flip = 2–3 nến, Reversal = 1 nến.
 - **(Bài 4 — đọc ô Footprint):** mỗi mức giá là 1 ô dạng **Bid × Ask = TRÁI | PHẢI**. **Cột TRÁI = Bid = BÁN chủ động** (khớp ở giá chào mua); **cột PHẢI = Ask = MUA chủ động** (khớp ở giá chào bán). **Delta nến = Σ(cột phải) − Σ(cột trái)**. Verify trên chart p190: nến reversal Σphải 5525 − Σtrái 4369 = **+1156** (khớp đúng panel). **Max/Min Delta** không nằm trong từng ô — chúng là đỉnh/đáy của delta tích lũy theo THỜI GIAN trong nến (đọc ở panel dưới chart, không cộng từ ô). **Ô màu xám = POC của nến** = mức giá có TỔNG khối lượng (trái+phải) lớn nhất trong nến đó.
 - **(Bài 4 P3) Delta Tails:** trên Delta Footprint — đuôi MUA = nến tăng toàn ô dương, sót đúng 1 ô ÂM ở đáy; đuôi BÁN = nến giảm toàn ô âm, sót 1 ô DƯƠNG ở đỉnh. Ô lạc loài = phe thua thử lần cuối và bị kẹt → mức đó thành S/R, thiên hướng theo phe thắng.
@@ -57,3 +59,4 @@
 | 3 | 2026-06-09 | ✅ Đạt (4/4) | Ban đầu nhầm Max/Min Delta theo MỨC GIÁ; đã sửa → hiểu đúng là đỉnh/đáy theo THỜI GIAN. Nắm chắc bẫy Cumulative Delta. |
 | 4-P3 | 2026-06-11 | ✅ Đạt (3/3) | Tails + Bulges. Sửa 2 lỗi: tên đuôi đặt theo phe thắng (không theo ô lạc loài); Max/Min Delta=0 nhầm lần 2 → đã khóa lại, cần hỏi xoẹt buổi sau. |
 | 4-P4 | 2026-06-15 | ✅ Đạt (3/3 + khởi động) | Delta Reversal. Lập luận rất sắc (tự nhận ra Min Delta bé = không có lực để bị nuốt). Max/Min=0 khởi động đúng ngay → KHÓA HẲN. Bonus: học đọc ô Footprint Bid×Ask. |
+| 4 (tổng hợp) | 2026-06-20 | ✅ Đạt | Kiểm tra 7 setup. Vững: Surge, Divergence, Flip/Transition, Reversal(1 nến). Cần khóa: HƯỚNG của Tail (đảo nhầm 2 lần — đuôi bán = BÁN) + cơ chế Bulge = absorption. Sau khi vá lý thuyết, vế Bulge/Reversal trả lời đúng. |

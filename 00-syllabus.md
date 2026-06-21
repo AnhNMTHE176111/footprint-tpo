@@ -42,7 +42,8 @@
 - [x] Khung tư duy tổng kết: 3 trạng thái delta–giá (xác nhận / hấp thụ / đuối-đảo) (2026-06-21)
 - [x] Làm bài tập đọc chart — Exercise #3 (climax→Flip→đảo) + Exercise #5 (downtrend xác nhận + absorption) (2026-06-21)
 - [x] Tổng ôn toàn khóa (2026-06-21)
-- [ ] (tùy chọn) Làm thêm exercise #1/#2/#4/#6 để luyện mắt
+- [x] Exercise #1 (delta xác nhận uptrend + Sell Reversal đỉnh) + #2 (V-bottom: climax→absorption→Flip) (2026-06-21)
+- [ ] (tùy chọn) Làm thêm exercise #4/#6 để luyện mắt
 - [ ] **Kiểm tra tổng hợp** (có thể gộp khi học ebook)
 
 ---

@@ -20,11 +20,12 @@
 - P3 ✅ Delta Tails · Delta Bulges
 - P4 ✅ Delta Reversal
 
-## 🎯 Kế hoạch tổng
-- **Mục tiêu:** học xong toàn bộ lý thuyết — 5 bài khóa chính + ebook bổ trợ (Volume Profile, Imbalance, các setup) — trong ~5 ngày.
-- **Cuối tuần (T7–CN):** một người bạn trader sẽ dạy **system thực chiến** của bạn ấy. Khóa này tạo "ngôn ngữ chung" để tiếp thu system đó.
-- **Nhịp gợi ý:** N1 Bài 1-2 · N2 Bài 3 · N3 Bài 4 · N4 Bài 5 + ebook (Volume Profile, Imbalance) · N5 ebook setups + soạn câu hỏi mang đi hỏi bạn trader.
-- **Lưu ý thực tế:** 5 bài = nền tảng Delta, **không phải toàn bộ** order flow; **"hiểu" ≠ "thành thạo"** (còn cần screen time + thực chiến).
+## 🎯 Kế hoạch tổng *(cập nhật 2026-06-22 — BỎ deadline "cuối tuần" cũ, đã lỗi thời; không còn gấp)*
+- **Lộ trình 3 giai đoạn (theo ý người học):**
+  1. **Học xong lý thuyết** — 5 bài khóa chính ✅ + ebook nâng cao (Volume Profile → Imbalance/Stacked → 5 setup + 4 setup xác nhận → quản lý lệnh). Còn ~5–7 buổi. KHÔNG gấp → học kỹ, đầy đủ, KHÔNG lướt phần quản lý lệnh.
+  2. **Tự setup phần mềm + thực hành / screen time** một thời gian cho quen tay (nhận diện setup trên chart thật; nên demo/paper trade trước).
+  3. **RỒI mới nhờ bạn trader** dạy **system thực chiến** của bạn ấy. Lý thuyết + screen time = "ngôn ngữ chung" để tiếp thu system đó nhanh.
+- **Lưu ý thực tế:** lý thuyết = nền tảng, **không phải toàn bộ** order flow; **"hiểu" ≠ "thành thạo"** → giai đoạn 2 (screen time) mới là chỗ lên tay. Vì sẽ TỰ trade trước khi gặp bạn trader, phần **quản lý lệnh (chốt lời/dừng lỗ) giờ quan trọng — học kỹ, không bỏ.**
 
 ## ✅ Đã nắm chắc
 - **(Ebook — Volume Profile cơ bản):** VP = khối lượng gom theo **GIÁ** ("volume at price", thanh nằm ngang) — khác volume thường theo **THỜI GIAN** ("volume at time", thanh đứng). **POC** = mức giá thanh DÀI NHẤT = trung tâm hấp dẫn, S/R mạnh nhất. **Value Area** = dải ~70% khối lượng quanh POC. **HVN** (profile dày) = S/R mạnh (tổ chức dồn tiền) · **LVN** (profile mỏng) = giá TRƯỢT nhanh qua. Cách dùng: **VP = ĐỊA ĐIỂM** (vùng S/R, khung 30') → **Delta/Footprint = THỜI ĐIỂM bấm cò** (giá chạm vùng rồi soi absorption/phản ứng để xác nhận). Phân biệt **Market Profile/TPO** = profile theo THỜI GIAN (≠ Volume Profile).

@@ -52,7 +52,7 @@
 Các chủ đề chính (mục lục đầy đủ ở `ebook/text/00-muc-luc.md`):
 - Thành phần thị trường: chủ động & thụ động
 - Mô tả biểu đồ Footprint · ô xanh/đỏ · **HVN (High Volume Node)** · Delta
-- **Volume Profile (Hồ sơ khối lượng)** · POC · Value Area · HVN/LVN ✅ *(P1)* · các hình dạng D/P/b/thin ✅ *(P2 — 2026-06-22)* · *(còn 3 setup VP: tích lũy/xu hướng/từ chối — học ở cụm setup)*
+- **Volume Profile (Hồ sơ khối lượng)** · POC · Value Area · HVN/LVN ✅ *(P1)* · các hình dạng D/P/b/thin ✅ *(P2 — 2026-06-22)* · **3 setup VP (tích lũy/xu hướng/từ chối) ✅ *(2026-06-24)***
 - Tính năng: **Volume Cluster, Imbalance, Stacked Imbalance, Unfinished Business, Cumulative Delta**
 - **5 setup giao dịch:** Volume Cluster · Multiple Nodes · Trade Filter · Stacked Imbalance · Unfinished Business
 - **4 setup xác nhận:** Large Limit Orders · Absorption · Flow Orders & Delta · Cumulative Delta Divergence

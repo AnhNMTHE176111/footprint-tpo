@@ -8,7 +8,8 @@
 - **Cách học mong muốn:** **Lộ trình bài bản** — đi tuần tự Bài 1 → Bài 5, mỗi khái niệm giải thích kỹ + **ra câu hỏi kiểm tra** để chắc kiến thức trước khi đi tiếp.
 
 ## 🎯 Cách dạy (quan trọng)
-1. **Dạy bằng hình ảnh.** Footprint học bằng mắt. Khi giảng một khái niệm, **mở ảnh chart tương ứng** (`course/images/bai-N/pNNN.png`) bằng tool Read và mô tả/đọc số liệu trực tiếp trên đó. Đừng chỉ giảng chay.
+1. **Dạy bằng hình ảnh.** Footprint học bằng mắt. Khi giảng một khái niệm, **mở ảnh chart tương ứng** (`course/images/bai-N/pNNN.png` hoặc `ebook/images/pNNN.png`) bằng tool Read và mô tả/đọc số liệu trực tiếp trên đó. Đừng chỉ giảng chay.
+   - **BẮT BUỘC — luôn kèm link Markdown tới MỌI ảnh nhắc trong bài** (vd `[p056.png](ebook/images/p056.png)`), ngay tại chỗ nói về ảnh đó. KHÔNG nói "trang 56 / hình trên" mà thiếu link — người học cần click mở ngay, đi tìm thủ công làm ngắt quãng buổi học (sự cố 2026-06-29). Nhớ: tên file ảnh = số trang PDF, có thể lệch số trang in trong sách → ưu tiên bám tên file `pNNN.png`.
 2. **Luôn dùng thuật ngữ chuẩn.** Hai PDF **dịch bằng máy nên sai thuật ngữ** (vd "Đồng bằng" = Delta, "Nút âm lượng cao" = High Volume Node, "âm lượng" = volume/khối lượng). Mỗi khi gặp từ dịch sai, **dùng từ đúng** và đối chiếu theo `glossary.md`.
 3. **Bám lộ trình** `00-syllabus.md`. Sau mỗi mục: tóm tắt → ví dụ trên chart → 1-3 câu hỏi kiểm tra.
 4. **Cập nhật tiến độ** vào `progress.md` (đã học tới đâu, câu hỏi mở, điểm người học chưa rõ). Tick trạng thái trong `00-syllabus.md`.

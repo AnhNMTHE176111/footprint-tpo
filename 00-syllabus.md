@@ -56,6 +56,6 @@ Các chủ đề chính (mục lục đầy đủ ở `ebook/text/00-muc-luc.md`
 - Tính năng: Volume Cluster · **Imbalance ✅ · Stacked Imbalance ✅ *(2026-06-25)*** · Unfinished Business · Cumulative Delta
 - **5 setup giao dịch:** Volume Cluster ✅ · Multiple Nodes ✅ · Trade Filter ✅ · Stacked Imbalance ✅ · Unfinished Business ✅ *(2026-06-29 — XONG cả 5)*
 - **4 setup xác nhận ✅ XONG (2026-07-01):** Large Limit Orders ✅ · Absorption ✅ · Flow Orders & Delta ✅ · Cumulative Delta Divergence ✅
-- **Quản lý lệnh (CÒN LẠI — buổi tới):** Chốt lời theo volume · Chốt lời trailing (+ tín hiệu cảnh báo) · Dừng lỗ với order flow · (Volume Profile tìm S/R đã học)
+- **Quản lý lệnh ✅ XONG (2026-07-02):** Chốt lời theo volume ✅ · Chốt lời trailing (+ tín hiệu cảnh báo) ✅ · Dừng lỗ với order flow (3 cách + 10–20% ADR/ATR) ✅ · (Volume Profile tìm S/R đã học) → 🎉 **HẾT LÝ THUYẾT EBOOK → chuyển Giai đoạn 2: screen time**
 
 > Gợi ý ghép: học **Delta** ở khóa chính (Bài 1-3) → khi tới **setup** (Bài 4) thì mở ebook phần "5 setup giao dịch" + "4 setup xác nhận" để đối chiếu chi tiết.

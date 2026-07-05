@@ -11,28 +11,7 @@ Sau buổi này bạn:
 - Nhận diện buying/selling tail, single print giữa profile (minus development), ledge — biết vùng nào sẽ thành S/R tương lai và có playbook chờ retest thay vì đuổi giá.
 - Nối được poor high/low với Unfinished Business đã học.
 
-## 🔑 Thuật ngữ mới
-
-| EN | VN | Cơ chế 1 dòng |
-|---|---|---|
-| TPO (Time Price Opportunity) | Cơ hội Giá–Thời gian | 1 chữ cái = mức giá đó ĐƯỢC CHẠM ít nhất 1 lần trong bracket 30'; chạm 100 lần vẫn chỉ in 1 chữ |
-| Bracket / Period | Khung 30 phút | Mỗi 30' đổi sang chữ cái kế tiếp: A, B, C, D… |
-| Initial Balance (IB) | Cân bằng ban đầu | Range của 2 bracket đầu A+B (60 phút đầu phiên) |
-| Range Extension (RE) | Mở rộng phạm vi | Giá vượt ra ngoài IB → dấu hiệu trader khung lớn nhập cuộc |
-| OTF trader (Other Timeframe) | Trader khung thời gian khác | Chơi dài hơn 1 phiên, không bị ép đóng lệnh cuối ngày → là người tạo trend |
-| Day timeframe trader | Trader trong phiên | Bị ép đóng lệnh trước khi phiên đóng cửa → sống bằng thanh khoản quanh giá hợp lý, tạo balance |
-| Fair price / Advantageous price | Giá công bằng / giá có lợi | Fair = nơi 2 phe khớp nhiều nhất (vol lớn); advantageous = xa giá trị, vol mỏng, chỉ OTF thèm |
-| Acceptance / Rejection | Chấp nhận / từ chối vùng giá | Giá ở LẠI đủ lâu để xếp TPO = chấp nhận; bật đi nhanh trong <30' = từ chối |
-| Buying / Selling Tail | Đuôi mua / đuôi bán | Chuỗi ô in đơn ở đáy/đỉnh profile = OTF phản ứng (responsive) từ chối giá bất công |
-| Single Print | Vùng in đơn | Đoạn giá cả phiên chỉ có đúng 1 cột chữ chạm qua |
-| Minus Development | Phát triển thiếu | Single print nằm GIỮA profile — vết giá chạy quá nhanh, không kịp xây giá trị |
-| Ledge | Gờ | ≥3 TPO cùng dừng phẳng ở 1 mức giá → nền hỗ trợ/kháng cự |
-| Poor High / Poor Low | Đỉnh/đáy dở dang | Đỉnh/đáy phẳng ≥2 TPO, KHÔNG có tail = đấu giá chưa xong ở cực trị |
-| Composite / Split Profile | Profile gộp / tách | Gộp: chồng các cột chữ thành 1 phân phối; tách: mỗi bracket đứng riêng như bar chart |
-| TPO-POC vs Volume-POC (VPOC) | POC theo thời gian vs theo khối lượng | TPO-POC = hàng chữ dài nhất (nhiều bracket ghé nhất); VPOC = mức giá khớp volume lớn nhất |
-| Pioneer Range | Phạm vi tiên phong | Vùng giá được in TPO LẦN ĐẦU trong phiên — nơi quan sát thị trường chấp nhận hay từ chối giá mới |
-
-**Ghi chú lỗi dịch máy trong tài liệu nguồn** (khi bạn tự tra lại sách): bản dịch Keppler hay ghi "Hồ sơ thị trường" = Market Profile, "số dư ban đầu / khoảng cân bằng ban đầu" = Initial Balance, "phần mở rộng / phạm vi mở rộng" = Range Extension, "sự phát triển trừ/âm" = Minus Development, "gờ" = Ledge, "bản in đơn" = Single Print; các mốc kiểu "mở cửa lúc 12 giờ 32 phút" thực ra là MỨC GIÁ 1232.x chứ không phải giờ. Bài này dùng thuật ngữ tiếng Anh chuẩn, đối chiếu thêm ở `glossary.md`.
+> 📖 **Khi tự tra lại sách:** bản dịch máy sai nhiều thuật ngữ (đối chiếu `glossary.md`); đặc biệt cảnh giác các mốc kiểu "mở cửa lúc 12 giờ 32 phút" — đó là MỨC GIÁ 1232.x, không phải giờ.
 
 ---
 
@@ -48,7 +27,13 @@ Hai khái niệm then chốt còn lại:
 - **Acceptance (chấp nhận)**: giá đến vùng mới và Ở LẠI — TPO xếp dày dần, volume duy trì → thị trường đồng ý đây là giá trị mới.
 - **Rejection (từ chối)**: giá đến vùng mới và bị đá đi ngay trong vòng chưa đầy 1 bracket → để lại tail hoặc single print. Sách gói gọn: *nếu thị trường từ chối mức cao/thấp bất công, giá sẽ quay về vùng giá trị*.
 
-**Nối với order flow đã học:** cẩn thận một điểm — "phản ứng" (responsive) ở đây KHÔNG đồng nghĩa "thụ động". Responsive nghĩa là phản ứng với GIÁ BẤT CÔNG và kéo giá VỀ vùng giá trị; Keppler mô tả người mua responsive "nhanh chóng tìm đến và MUA những giá hời" — họ có thể chặn giá bằng tường limit thụ động (như Large Limit Orders bạn đã học) HOẶC vồ hàng bằng market order chủ động. Chữ "responsive" nói về VỊ TRÍ so với giá trị, không nói về chủ động/thụ động. Còn OTF "chủ động đẩy giá" (initiative) là phe market order quét thanh khoản tạo Imbalance/Stacked khi nhận thức giá trị của họ thay đổi. TPO không cho bạn thấy TỪNG lệnh như footprint — nó cho thấy **hậu quả tích lũy theo thời gian** của các hành vi đó.
+**Nối với order flow đã học:** chữ "responsive" nói về VỊ TRÍ so với giá trị, KHÔNG nói về chủ động/thụ động — cẩn thận đừng đánh đồng "phản ứng" với "thụ động":
+
+- **Responsive** = phản ứng với GIÁ BẤT CÔNG, kéo giá VỀ vùng giá trị.
+- Người mua responsive (Keppler: "nhanh chóng tìm đến và MUA những giá hời") có thể chặn giá bằng tường limit thụ động (như Large Limit Orders bạn đã học) HOẶC vồ hàng bằng market order chủ động.
+- **Initiative** = OTF "chủ động đẩy giá": phe market order quét thanh khoản tạo Imbalance/Stacked.
+
+TPO không cho bạn thấy TỪNG lệnh như footprint — nó cho thấy **hậu quả tích lũy theo thời gian** của các hành vi đó.
 
 ### 📊 Đọc chart thật
 
@@ -57,7 +42,7 @@ Hai khái niệm then chốt còn lại:
 
 ### 🥇 Áp cho vàng MGC
 
-- Vàng chạy gần 23h/ngày trên Globex (mở 18:00 ET = **05:00 VN**, giờ mùa hè), nhưng OTF của vàng hoạt động đậm nhất quanh 2 mốc: COMEX floor 8:20 ET = **19:20 VN** và US equities open 9:30 ET = **20:30 VN**. Trước 19:20 VN (phiên Á/Âu sáng-chiều VN) chart TPO vàng thường là day trader xây balance; sau 19:20–20:30 VN là lúc OTF quyết định chấp nhận hay từ chối vùng giá trị đó **[GIẢ THUYẾT — suy luận của người soạn từ giờ COMEX/US, chưa backtest]**.
+- Vàng chạy gần 23h/ngày trên Globex (mở 18:00 ET = **05:00 VN**, giờ mùa hè), nhưng OTF của vàng hoạt động đậm nhất quanh 2 mốc: COMEX floor 8:20 ET = **19:20 VN** và US equities open 9:30 ET = **20:30 VN**. Trước 19:20 VN (phiên Á/Âu sáng-chiều VN) chart TPO vàng thường là day trader xây balance; sau đó mới là giờ OTF quyết định chấp nhận hay từ chối vùng giá trị **[GT-7]**.
 - Câu hỏi thường trực khi nhìn chart TPO vàng mỗi tối: "range hiện tại là do day trader xoay quanh giá trị, hay OTF đã nhúng tay (range bị kéo giãn một phía)?"
 
 *— Nguồn: TraderViet tr.7–10; Keppler tr.33, 40–43.*
@@ -100,8 +85,7 @@ Hai POC **thường gần nhau nhưng không trùng nhau** — giá có thể "n
 ### 🥇 Áp cho vàng MGC
 
 - Trên ATAS bạn đã có chart TPO: để đúng chuẩn buổi này, đặt bracket = **30 phút**, bật **cả TPO-POC lẫn Volume-POC** (ATAS cho hiện song song). Tick MGC = 0.1 = $1 → mỗi ô giá trên profile là 0.1.
-- Quy tắc đọc kép: TPO-POC và VPOC **trùng nhau** → vùng giá trị rất "thật", S/R đáng tin (thời gian + tiền cùng xác nhận). Hai POC **lệch xa nhau** → tự hỏi: giá ngồi lâu ở đâu, tiền thật đổ ở đâu — một cách nghiêng phổ biến (heuristic của người soạn, tự kiểm khi backtest) là ưu tiên VPOC vì bạn đã biết volume là dấu chân tiền thật.
-- Data delayed 15' của gói free không ảnh hưởng việc HỌC cấu trúc phiên (profile hình thành chậm theo bracket 30'); chỉ cần nhớ khi sang thực chiến entry theo footprint thì độ trễ mới thành vấn đề.
+- Quy tắc đọc kép: TPO-POC và VPOC **trùng nhau** → vùng giá trị rất "thật", S/R đáng tin (thời gian + tiền cùng xác nhận). Hai POC **lệch xa nhau** → tự hỏi: giá ngồi lâu ở đâu, tiền thật đổ ở đâu — một cách nghiêng phổ biến là ưu tiên VPOC vì bạn đã biết volume là dấu chân tiền thật **[GT-10]**.
 - Bài tập tại chart tối nay: mở TPO phiên gần nhất của MGC ở dạng composite, tự xác định bằng mắt: chữ cái bracket hiện tại, TPO-POC, VPOC, và trả lời "hai POC cách nhau bao nhiêu tick?" — thao tác 2 phút này lặp mỗi tối sẽ thành phản xạ.
 
 *— Nguồn: Keppler tr.9–14, 26, 35–38; TraderViet tr.10–14, 43–44.*
@@ -114,7 +98,7 @@ Hai POC **thường gần nhau nhưng không trùng nhau** — giá có thể "n
 
 **IB = range của 2 bracket đầu A+B (60 phút đầu phiên).** *(Chuẩn hóa: tài liệu TraderViet chỗ ghi 1 giờ, chỗ dùng ví dụ khác — ta cố định theo Keppler/Dalton: A+B, 60 phút.)* Vẽ 2 đường ngang tại IB High và IB Low ngay khi bracket B đóng — đó là khung tham chiếu cho phần còn lại của phiên.
 
-Vì sao 60' đầu quan trọng? Keppler dùng khái niệm **Pioneer Range** để giải thích: vùng giá được in TPO LẦN ĐẦU trong phiên là nơi quan sát thị trường chấp nhận hay từ chối giá mới — và giá mở cửa/IB chính là Pioneer Range đầu tiên của cả phiên, nên nó cho ta tín hiệu SỚM nhất về tâm lý ngày hôm đó. Đó cũng là lúc day trader dò tìm vùng giá hợp lý để mua bán hai chiều. Thực tế nhiều ngày, high hoặc low CỦA CẢ NGÀY được lập ngay trong IB. Quy tắc đọc quyền kiểm soát:
+Vì sao 60' đầu quan trọng? Theo Keppler, IB là vùng giá được in TPO LẦN ĐẦU trong phiên — nơi quan sát xem thị trường chấp nhận hay từ chối giá mới — nên nó cho ta tín hiệu SỚM nhất về tâm lý ngày hôm đó. Đó cũng là lúc day trader dò tìm vùng giá hợp lý để mua bán hai chiều. Thực tế nhiều ngày, high hoặc low CỦA CẢ NGÀY được lập ngay trong IB. Quy tắc đọc quyền kiểm soát:
 
 - **High/low lập trong IB và GIỮ được suốt phiên** → day trader kiểm soát ngày hôm đó (không ai đủ lực kéo giá đi).
 - **OTF vào đủ khối lượng** → IB bị phá, range bị kéo giãn → quyền kiểm soát đổi chủ.
@@ -135,11 +119,11 @@ Vì sao 60' đầu quan trọng? Keppler dùng khái niệm **Pioneer Range** đ
 | RE cả 2 phía | Biến động cao, chưa ai thắng — thường là dạo đầu cho một cú định hướng |
 | Không RE phía nào | Thị trường chưa sẵn sàng rời vùng giá — nghỉ ngơi hoặc chuyển tiếp |
 
-**Failed auction (đấu giá thất bại):** giá phá ra ngoài IB nhưng không giữ được — theo note thực chiến, không giữ được động lượng **quá ~30 phút [GIẢ THUYẾT — tự kiểm khi backtest]** rồi chui lại vào IB → kỳ vọng giá quay sang test **mặt kia** của IB. Cơ chế đấu giá: phá biên mà không ai theo (không có acceptance) = từ chối, đám đông kẹt hàng phía sai phải thoát → nhiên liệu cho chiều ngược lại. Đây chính là logic "phá tường thất bại" bạn đã gặp ở Absorption, nhìn bằng cấu trúc TPO.
+**Failed auction (đấu giá thất bại):** giá phá ra ngoài IB nhưng không giữ được — theo note thực chiến, không giữ được động lượng **quá ~30 phút [GT-1]** rồi chui lại vào IB → kỳ vọng giá quay sang test **mặt kia** của IB. Cơ chế đấu giá: phá biên mà không ai theo (không có acceptance) = từ chối, đám đông kẹt hàng phía sai phải thoát → nhiên liệu cho chiều ngược lại. Đây chính là logic "phá tường thất bại" bạn đã gặp ở Absorption, nhìn bằng cấu trúc TPO.
 
 ### Chiếu mục tiêu từ độ rộng IB
 
-Công thức Keppler dùng trong ví dụ AAPL: khi RE xác nhận một hướng, mục tiêu tối thiểu = **biên IB phía đó ± đúng 1 lần độ rộng IB** (RE lên: IB High + độ rộng IB; RE xuống: IB Low − độ rộng IB). Trong ví dụ sách: IB của AAPL rộng ~$2, IB High 335.40 → mục tiêu 337.40; stop đặt theo CẤU TRÚC (đáy bracket B = 333.90), không đặt theo con số đô la tùy hứng. *(Chú thích nếu bạn tra lại sách: text ghi IB 332.80–335.40, tức ≈$2.60, nhưng khi chiếu mục tiêu lại dùng tròn "$2" — số minh họa của sách hơi vênh nội bộ; cái cần giữ là LOGIC: mục tiêu tối thiểu = biên IB + đúng độ rộng IB.)*
+Công thức Keppler dùng trong ví dụ AAPL: khi RE xác nhận một hướng, mục tiêu tối thiểu = **biên IB phía đó ± đúng 1 lần độ rộng IB** (RE lên: IB High + độ rộng IB; RE xuống: IB Low − độ rộng IB). Trong ví dụ sách: IB của AAPL rộng ~$2, IB High 335.40 → mục tiêu 337.40; stop đặt theo CẤU TRÚC (đáy bracket B = 333.90), không đặt theo con số đô la tùy hứng. *(Số minh họa của sách hơi vênh nội bộ — bám LOGIC, đừng bám số.)*
 
 **Lọc bằng ADR/ATR đã học:** mục tiêu chiếu chỉ đáng tin khi ngày hôm đó CÒN "quỹ đạn". Sách cũng đối chiếu mục tiêu với ADR (AAPL chạy trung bình ~$6/ngày nên +$2 là khả thi). Quy trình cho bạn: lấy ATR(Daily) → trừ đi quãng đường giá đã chạy trong ngày → nếu mục tiêu chiếu vượt quá phần còn lại, hạ kỳ vọng hoặc bỏ kèo.
 
@@ -152,10 +136,10 @@ Công thức Keppler dùng trong ví dụ AAPL: khi RE xác nhận một hướn
 
 ### 🥇 Áp cho vàng MGC
 
-- **Mốc tính IB cho vàng là LỰA CHỌN QUY ƯỚC** (vàng chạy gần 24h, không có "mở cửa" duy nhất như cổ phiếu). Khuyến nghị test cả 2 mốc khi backtest: IB từ **19:20 VN** (COMEX floor: A = 19:20–19:50, B = 19:50–20:20) và IB từ **20:30 VN** (US equities open: A = 20:30–21:00, B = 21:00–21:30). Chọn mốc nào cho tín hiệu RE/failed auction sạch hơn trên dữ liệu vàng thì cố định mốc đó.
-- Độ rộng IB đo bằng tick 0.1 = $1: ví dụ IB rộng 4.0 giá (40 tick) thì mục tiêu chiếu = biên IB ± 4.0, tương đương ±$40/hợp đồng MGC — luôn đối chiếu với ATR(Daily) của vàng trước khi tin mục tiêu.
-- Note thực chiến có quy tắc: **IB có range ≤1% (biên độ rất hẹp) → xác suất cao phiên sau breakout [GIẢ THUYẾT — tự kiểm khi backtest]** — với vàng hãy quy đổi "hẹp" theo phân vị độ rộng IB lịch sử thay vì % cứng.
-- Khung giờ canh failed auction đáng chú ý nhất với mốc 19:20: cú phá IB đầu tiên hay rơi vào bracket 20:20–21:30 VN (trùng US equities open 20:30) **[GIẢ THUYẾT — suy luận của người soạn từ giờ mở cửa Mỹ, chưa backtest]** — đây là lúc OTF chứng khoán Mỹ đổ tiền, quan sát acceptance/rejection kỹ nhất ở đó.
+- **Mốc tính IB cho vàng là LỰA CHỌN QUY ƯỚC** (vàng chạy gần 24h, không có "mở cửa" duy nhất như cổ phiếu). Khuyến nghị test cả 2 mốc khi backtest: IB từ **19:20 VN** (COMEX floor: A = 19:20–19:50, B = 19:50–20:20) và IB từ **20:30 VN** (US equities open: A = 20:30–21:00, B = 21:00–21:30). Chọn mốc nào cho tín hiệu RE/failed auction sạch hơn trên dữ liệu vàng thì cố định mốc đó **[GT-6]**.
+- Ví dụ IB rộng 4.0 giá (40 tick) thì mục tiêu chiếu = biên IB ± 4.0, tương đương ±$40/hợp đồng MGC.
+- Note thực chiến có quy tắc: **IB có range ≤1% (biên độ rất hẹp) → xác suất cao phiên sau breakout [GT-2]** — với vàng hãy quy đổi "hẹp" theo phân vị độ rộng IB lịch sử thay vì % cứng.
+- Khung giờ canh failed auction đáng chú ý nhất với mốc 19:20: cú phá IB đầu tiên hay rơi vào bracket 20:20–21:30 VN (trùng US equities open 20:30) **[GT-7]** — đây là lúc OTF chứng khoán Mỹ đổ tiền, quan sát acceptance/rejection kỹ nhất ở đó.
 
 *— Nguồn: Keppler tr.15–19, 69, 74, 78–79, 142–143; TraderViet tr.15–16; Note tr.9 + slide đấu giá thất bại.*
 
@@ -186,7 +170,7 @@ Keppler mô tả đúng cái bẫy mà trader hay dính khi thị trường ch�
 3. Vùng giữ được vai trò S/R (giá chạm và bị đẩy đi) → **vào lệnh theo hướng cú chạy ban đầu** ở giá đẹp hơn hẳn.
 4. **SL đặt theo cấu trúc**: bên kia vùng single print — nếu giá lấp hẳn vùng in đơn (từng mức bắt đầu in chữ thứ hai) thì tiền đề "giá bất công" sụp, thoát. Khớp nguyên tắc SL "sau lưng tường" bạn đã học ở quản lý lệnh.
 
-Note thực chiến bổ sung góc nhìn thanh khoản: trong single print tồn tại **liquidation/lệnh limit chưa khớp**, và SP hay nằm ở vùng thanh khoản (chỗ break kháng cự/hỗ trợ) **[kinh nghiệm tác giả note]**; để "fix" (lấp) một SP cần **volume + thời gian** — vol to mà không lấp nổi thì lực đẩy đó "lởm", giá không đi **[GIẢ THUYẾT — tự kiểm khi backtest]**. Trong trend mạnh, SP ít khả năng được lấp sớm **[GIẢ THUYẾT]**.
+Note thực chiến bổ sung góc nhìn thanh khoản: trong single print tồn tại **liquidation/lệnh limit chưa khớp**, và SP hay nằm ở vùng thanh khoản (chỗ break kháng cự/hỗ trợ) **[GT-3]**; để "fix" (lấp) một SP cần **volume + thời gian** — nếu phe đi ngược cú chạy đổ volume lớn mà vẫn không lấp nổi vùng in đơn thì lực hồi đó yếu, giá khó đi tiếp theo hướng lấp, SP giữ nguyên vai trò S/R **[GT-4]**. Trong trend mạnh, SP ít khả năng được lấp sớm **[GT-5]**.
 
 ### Ledge — nhắc nhanh
 
@@ -209,9 +193,9 @@ Bạn đã học đúng khái niệm này rồi: **Unfinished Business** — ở
 
 ### 🥇 Áp cho vàng MGC
 
-- Vàng quanh tin (CPI, FOMC, Non-farm ~19:30 VN mùa hè) rất hay in minus development: cú chạy 1–2 bracket xuyên $5–10. Playbook chuẩn: KHÔNG đuổi nến tin — đánh dấu vùng single print, đặt cảnh báo giá (alert) tại mép vùng, chờ retest ở các bracket sau hoặc phiên sau.
-- SL theo cấu trúc trên MGC: bên kia vùng single print + đệm vài tick (mỗi tick 0.1 = $1); vùng SP rộng quá thì bỏ kèo — tinh thần khớp nguyên tắc lọc SL theo ADR/ATR bạn đã học, còn ngưỡng cụ thể ">1/3 ATR ngày" là **con số người soạn tự đặt [GIẢ THUYẾT — tự kiểm khi backtest]**, không có trong nguồn nào và cũng KHÔNG trùng quy tắc SL 10–20% ADR đã học.
-- Poor high/low của phiên Mỹ hôm trước là mục tiêu ưa thích của phiên Á/Âu hôm sau **[GIẢ THUYẾT — suy luận của người soạn, chưa backtest]**: ghi lại các đỉnh/đáy phẳng ≥2 TPO vào watchlist mỗi sáng.
+- Vàng quanh tin (CPI, FOMC, Non-farm ~19:30 VN mùa hè) rất hay in minus development: cú chạy 1–2 bracket xuyên $5–10. Chạy đúng playbook ở trên, thêm một thao tác: đặt cảnh báo giá (alert) tại mép vùng single print — retest có thể rơi vào bracket sau hoặc phiên sau.
+- SL theo cấu trúc trên MGC: bên kia vùng single print + đệm vài tick. Vùng SP rộng **>1/3 ATR ngày** → bỏ kèo **[GT-9]**.
+- Poor high/low của phiên Mỹ hôm trước là mục tiêu ưa thích của phiên Á/Âu hôm sau **[GT-8]**: ghi lại các đỉnh/đáy phẳng ≥2 TPO vào watchlist mỗi sáng.
 
 *— Nguồn: Keppler tr.19–25, 154–160; Note tr.3–4, 9.*
 
@@ -238,17 +222,40 @@ Toàn bộ buổi 1 chỉ mới trả lời "thị trường ĐANG ở đâu, ai
 
 ## ⚠️ Tổng hợp giả thuyết cần kiểm khi backtest
 
-Kiến thức chuẩn Dalton/Keppler ở trên dùng thẳng. Các con số/quy tắc sau là **kinh nghiệm cá nhân tác giả note/TraderViet HOẶC suy luận riêng của người soạn bài** (ghi rõ từng dòng) — backtest trên dữ liệu MGC trước khi tin:
+Kiến thức chuẩn Dalton/Keppler ở trên dùng thẳng. Các quy tắc dưới đây là **kinh nghiệm cá nhân tác giả note/TraderViet HOẶC suy luận riêng của người soạn bài** — thân bài chỉ gắn mã **[GT-n]**, phát biểu đầy đủ nằm tại đây; backtest trên dữ liệu MGC trước khi tin:
 
-1. Failed auction: phá IB mà không giữ được động lượng **quá ~30 phút** → kỳ vọng test mặt kia của IB (phần "30 phút" là số của note).
-2. **IB range ≤1%** (rất hẹp) → phiên sau xác suất cao breakout (số của note).
-3. Single print hay nằm ở vùng thanh khoản (break S/R) và chứa lệnh limit chưa khớp → giá quay lại "fix" (kinh nghiệm tác giả note).
-4. Fix single print cần **volume + thời gian**; vol to mà không lấp nổi SP → lực đẩy yếu, giá không đi tiếp (kinh nghiệm tác giả note).
-5. Trong trend mạnh, SP ít khả năng được lấp sớm (kinh nghiệm tác giả note).
-6. Mốc tính IB cho vàng (19:20 vs 20:30 VN) — bản thân việc chọn mốc là quy ước, phải test cả hai.
-7. Cú phá IB đầu tiên của vàng (mốc 19:20) hay rơi vào bracket **20:20–21:30 VN** — suy luận của người soạn từ giờ US equities open, chưa backtest.
-8. Poor high/low của phiên Mỹ hôm trước là mục tiêu ưa thích của phiên Á/Âu hôm sau — suy luận của người soạn, chưa backtest.
-9. Bỏ kèo khi vùng SP rộng **>1/3 ATR ngày** — con số người soạn tự đặt, không có trong nguồn nào; đối chiếu thêm với quy tắc SL 10–20% ADR đã học trước khi dùng.
+- **GT-1** — Failed auction: phá IB mà không giữ được động lượng **quá ~30 phút** → kỳ vọng test mặt kia của IB (phần "30 phút" là số của note).
+- **GT-2** — **IB range ≤1%** (rất hẹp) → phiên sau xác suất cao breakout (số của note).
+- **GT-3** — Single print hay nằm ở vùng thanh khoản (break S/R) và chứa lệnh limit chưa khớp → giá quay lại "fix" (kinh nghiệm tác giả note).
+- **GT-4** — Fix single print cần **volume + thời gian**; phe đi ngược đổ vol to mà vẫn không lấp nổi SP → lực hồi yếu, SP giữ vai trò S/R (kinh nghiệm tác giả note).
+- **GT-5** — Trong trend mạnh, SP ít khả năng được lấp sớm (kinh nghiệm tác giả note).
+- **GT-6** — Mốc tính IB cho vàng (19:20 vs 20:30 VN) là quy ước — vàng chạy gần 24h, không có "mở cửa" duy nhất như cổ phiếu — phải test cả hai mốc.
+- **GT-7** — OTF vàng vào đậm quanh giờ Mỹ: trước 19:20 VN thường là day trader xây balance, sau 19:20–20:30 VN mới là lúc OTF quyết định; cú phá IB đầu tiên (mốc 19:20) hay rơi vào bracket **20:20–21:30 VN** — suy luận của người soạn từ giờ COMEX/US equities open, chưa backtest.
+- **GT-8** — Poor high/low của phiên Mỹ hôm trước là mục tiêu ưa thích của phiên Á/Âu hôm sau — suy luận của người soạn, chưa backtest.
+- **GT-9** — Bỏ kèo khi vùng SP rộng **>1/3 ATR ngày** — con số người soạn tự đặt, không có trong nguồn nào.
+- **GT-10** — Hai POC lệch xa nhau → ưu tiên VPOC làm nam châm chính, vì volume là dấu chân tiền thật — heuristic của người soạn.
+
+## 🔑 Thẻ ôn thuật ngữ
+
+Thẻ tra cứu sau buổi học — che cột "Cơ chế 1 dòng" để tự kiểm trước khi làm bài:
+
+| EN | VN | Cơ chế 1 dòng |
+|---|---|---|
+| TPO (Time Price Opportunity) | Cơ hội Giá–Thời gian | 1 chữ cái = mức giá đó ĐƯỢC CHẠM ít nhất 1 lần trong bracket 30'; chạm 100 lần vẫn chỉ in 1 chữ |
+| Bracket / Period | Khung 30 phút | Mỗi 30' đổi sang chữ cái kế tiếp: A, B, C, D… |
+| Initial Balance (IB) | Cân bằng ban đầu | Range của 2 bracket đầu A+B (60 phút đầu phiên) |
+| Range Extension (RE) | Mở rộng phạm vi | Giá vượt ra ngoài IB → dấu hiệu trader khung lớn nhập cuộc |
+| OTF trader (Other Timeframe) | Trader khung thời gian khác | Chơi dài hơn 1 phiên, không bị ép đóng lệnh cuối ngày → là người tạo trend |
+| Day timeframe trader | Trader trong phiên | Bị ép đóng lệnh trước khi phiên đóng cửa → sống bằng thanh khoản quanh giá hợp lý, tạo balance |
+| Fair price / Advantageous price | Giá công bằng / giá có lợi | Fair = nơi 2 phe khớp nhiều nhất (vol lớn); advantageous = xa giá trị, vol mỏng, chỉ OTF thèm |
+| Acceptance / Rejection | Chấp nhận / từ chối vùng giá | Giá ở LẠI đủ lâu để xếp TPO = chấp nhận; bật đi nhanh trong <30' = từ chối |
+| Buying / Selling Tail | Đuôi mua / đuôi bán | Chuỗi ô in đơn ở đáy/đỉnh profile = OTF phản ứng (responsive) từ chối giá bất công |
+| Single Print | Vùng in đơn | Đoạn giá cả phiên chỉ có đúng 1 cột chữ chạm qua |
+| Minus Development | Phát triển thiếu | Single print nằm GIỮA profile — vết giá chạy quá nhanh, không kịp xây giá trị |
+| Ledge | Gờ | ≥3 TPO cùng dừng phẳng ở 1 mức giá → nền hỗ trợ/kháng cự |
+| Poor High / Poor Low | Đỉnh/đáy dở dang | Đỉnh/đáy phẳng ≥2 TPO, KHÔNG có tail = đấu giá chưa xong ở cực trị |
+| Composite / Split Profile | Profile gộp / tách | Gộp: chồng các cột chữ thành 1 phân phối; tách: mỗi bracket đứng riêng như bar chart |
+| TPO-POC vs Volume-POC (VPOC) | POC theo thời gian vs theo khối lượng | TPO-POC = hàng chữ dài nhất (nhiều bracket ghé nhất); VPOC = mức giá khớp volume lớn nhất |
 
 ## ✅ Kiểm tra cuối buổi
 
@@ -266,13 +273,13 @@ Kiến thức chuẩn Dalton/Keppler ở trên dùng thẳng. Các con số/quy 
 
 **Câu 1.** (a) IB = 1302.75 → 1310.00 (hộp trên chart, độ rộng 7.25 điểm). (b) RE xuống dưới đáy IB — cột D-E in tiếp từ 1302.50 xuống 1300.00 và giữ dưới đó → người bán (OTF) kiểm soát. (c) Mục tiêu = IB Low − độ rộng IB = 1302.75 − 7.25 = **1295.50** (sau đó lọc bằng ADR còn lại của ngày).
 
-**Câu 2.** TPO-POC đếm THỜI GIAN (hàng chữ dài nhất — mức giá được nhiều bracket ghé nhất); VPOC đếm KHỐI LƯỢNG (mức khớp vol lớn nhất). Trên ảnh: TPO-POC = 1339.50, VPOC = 1339.00 (đỉnh TPO-VA 1341.50 cũng cao hơn đỉnh Volume-VA 1341.00). Lệch xa → một cách nghiêng phổ biến (heuristic của người soạn, tự kiểm khi backtest) là ưu tiên VPOC làm nam châm chính vì volume là dấu chân tiền thật (giá "ngồi lâu" mà không có tiền thì giá trị đó rỗng); điều chắc chắn hơn: vùng nơi cả hai trùng nhau mới là S/R mạnh nhất.
+**Câu 2.** TPO-POC đếm THỜI GIAN (hàng chữ dài nhất — mức giá được nhiều bracket ghé nhất); VPOC đếm KHỐI LƯỢNG (mức khớp vol lớn nhất). Trên ảnh: TPO-POC = 1339.50, VPOC = 1339.00 (đỉnh TPO-VA 1341.50 cũng cao hơn đỉnh Volume-VA 1341.00). Lệch xa → nghiêng về VPOC làm nam châm chính vì volume là dấu chân tiền thật (giá "ngồi lâu" mà không có tiền thì giá trị đó rỗng) **[GT-10]**; điều chắc chắn hơn: vùng nơi cả hai trùng nhau mới là S/R mạnh nhất.
 
 **Câu 3.** Đuôi 1 TPO gần như vô nghĩa — ô cuối của range hầu như luôn là in đơn về mặt kỹ thuật, nên không nói lên phe phản ứng nào cả. Đuôi 8 TPO nghĩa là 8 mức giá liên tiếp bị từ chối nhanh đến mức không mức nào giữ được giá quá 1 bracket → phe mua phản ứng (OTF) vào mạnh và dứt khoát ở vùng thấp bất công → niềm tin của người mua tại vùng đó lớn, mức đuôi thành ứng viên hỗ trợ khi giá quay lại test.
 
 **Câu 4.** Poor high (đỉnh dở dang): cực trị phẳng ≥2 TPO, không có selling tail = không có phe bán phản ứng đá giá đi dứt khoát = đấu giá tại đỉnh CHƯA hoàn tất. Đây chính là Unfinished Business nhìn bằng cấu trúc TPO thay vì ô Bid×Ask (ở footprint: đỉnh còn Bid khớp = chưa xong). Kỳ vọng: giá có "món nợ" ở đỉnh đó — xác suất cao sẽ quay lại phá/quét qua poor high trước khi đảo chiều thật; đưa mức đó vào watchlist làm mục tiêu/vùng canh phản ứng.
 
-**Câu 5.** A = 19:20–19:50 VN, B = 19:50–20:20 VN → IB chốt lúc 20:20 VN. Cú phá đáy IB lúc 20:35 nhưng ~25–30 phút sau đã quay vào trong IB = failed auction (phá không có acceptance) → kỳ vọng giá đi test MẶT KIA (đỉnh IB). Lưu ý nhãn: cơ chế "phá thất bại → quay về vùng giá trị" là chuẩn auction theory, còn ngưỡng "không giữ quá ~30 phút" và kỳ vọng "test mặt kia" theo cách note diễn đạt là **[GIẢ THUYẾT — tự kiểm khi backtest]**; và bản thân mốc 19:20 là quy ước cần test song song với 20:30.
+**Câu 5.** A = 19:20–19:50 VN, B = 19:50–20:20 VN → IB chốt lúc 20:20 VN. Cú phá đáy IB lúc 20:35 nhưng ~25–30 phút sau đã quay vào trong IB = failed auction (phá không có acceptance) → kỳ vọng giá đi test MẶT KIA (đỉnh IB). Nhãn: cơ chế "phá thất bại → quay về vùng giá trị" là chuẩn auction theory; ngưỡng ~30 phút là **GT-1**, mốc 19:20 là quy ước **GT-6**.
 
 </details>
 

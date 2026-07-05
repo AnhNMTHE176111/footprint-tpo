@@ -90,6 +90,6 @@
 | **Spike** | Cú nhọn cuối phiên | Đợt giá cuối phiên chưa kịp xây value → phân xử bằng vị trí mở cửa hôm sau |
 | **OTF (Other Timeframe) trader** | Dòng tiền khung lớn | Người chơi dài hạn — kẻ tạo trend, phá IB, để lại tail/single print |
 
-> ⚠️ Lỗi dịch riêng của tài liệu TPO: sách Keppler bản dịch có chỗ biến **mức giá thành giờ** (vd "13 giờ 10 phút" thực ra là **giá 1310**), số liệu chép sai — luôn đối chiếu hình gốc. Sách TraderViet: định nghĩa IB tự mâu thuẫn (đã chuẩn hóa = 60'), quy tắc Spike viết sai chiều.
+> ⚠️ Lỗi dịch riêng của tài liệu TPO: sách Keppler bản dịch có chỗ biến **mức giá thành giờ** (vd "13 giờ 10 phút" thực ra là **giá 1310**), số liệu chép sai — luôn đối chiếu hình gốc. Sách TraderViet: định nghĩa IB tự mâu thuẫn (đã chuẩn hóa = 60'), quy tắc Spike viết sai chiều. Cụm dịch máy hay gặp trong bản Keppler: "Hồ sơ thị trường" = Market Profile, "số dư ban đầu / khoảng cân bằng ban đầu" = Initial Balance, "phần mở rộng / phạm vi mở rộng" = Range Extension, "sự phát triển trừ/âm" = Minus Development, "bản in đơn" = Single Print, "gờ" = Ledge.
 
 > Thiếu từ nào trong lúc học, mình sẽ bổ sung vào đây.

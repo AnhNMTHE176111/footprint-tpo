@@ -6,27 +6,9 @@
 
 - Sau buổi này bạn chia được một ngày giao dịch thành các phân đoạn có "tính cách" riêng, biết settlement là mốc neo và đọc được phiên overnight so với nó (gap lấp hay không lấp nói lên điều gì).
 - Đọc được QUAN HỆ giữa các phiên: VA nâng dần / hạ dần / chồng nhau / thu hẹp, và tìm POC clustering — mức đặt lệnh chờ chất lượng cao.
-- Hiểu vì sao TPO-POC và VPOC trên ATAS không luôn trùng nhau, và lệch nhau là thông tin chứ không phải lỗi.
+- Hiểu vì sao TPO-POC và VPOC trên ATAS không luôn trùng nhau.
 - Đọc được 2 ca thực chiến vàng trong note: break range 2 lần + retest vùng supply bị hấp thụ, và buyer chủ động + delta âm không đè được giá.
 - Có trong tay bộ khung thực hành: công thức sizing 2%, scaling out 3 mục tiêu, nguyên tắc đặt SL theo cấu trúc, nguyên tắc hợp lưu, mẫu nhật ký backtest và checklist trước phiên.
-
-## 🔑 Thuật ngữ mới
-
-| EN | VN | Cơ chế 1 dòng |
-|---|---|---|
-| Split Profile | Profile tách phân đoạn | Tách profile ngày thành từng cột 30' (hoặc từng phân đoạn phiên) để so sánh từng nhịp đấu giá |
-| Settlement | Khung/giá thanh toán | 15' chốt ngày — cơ hội thanh khoản cuối của day trader → thành mốc neo cho phiên đêm và mở cửa hôm sau |
-| Overnight Session | Phiên qua đêm | Đấu giá ngoài giờ Mỹ; đọc bằng vị trí của nó SO VỚI vùng settlement hôm trước |
-| Gap Fill | Lấp khoảng trống | Mở cửa lệch khỏi settlement tạo gap; không lấp = phe theo hướng gap tự tin, quay về lấp = phe đó yếu |
-| Big Smile / Frown | Nụ cười lớn / Cau mày | Vòng cung: đêm volume nhẹ → mở phiên volume nổ → move lên (Smile) hoặc xuống (Frown) |
-| Composite Profile | Profile gộp | Gộp 5 profile ngày = profile tuần, gộp 20 ngày = profile tháng; các mức lớn hiện rõ dần |
-| Knob | "Núm" | Mức giá có số TPO vượt trội nhô ra trên composite → thường thành S/R khi giá quay lại |
-| Value Migration | Dịch chuyển vùng giá trị | Cách VA phiên sau đặt so với phiên trước — đó là câu trả lời của đấu giá: chấp nhận hay từ chối giá mới |
-| POC Clustering | POC tụ chùm | POC của nhiều phiên nằm sát nhau = thị trường nhiều lần đồng ý cùng một giá → mức tham chiếu mạnh |
-| TPO-POC vs VPOC | POC thời gian vs POC khối lượng | Nơi giá Ở LÂU nhất vs nơi TRAO TAY nhiều nhất — hai câu hỏi khác nhau, lệch nhau là thông tin |
-| Delta fresh / tested | Vùng delta còn mới / đã test | Vùng cung–cầu delta chưa bị giá quay lại chạm = còn "đạn"; đã test rồi thì giá trị giảm |
-| Scaling out | Chốt lời từng phần | Vào nhiều hợp đồng, mỗi mục tiêu đạt → đóng 1 phần + dời SL theo |
-| Position sizing 2% | Khối lượng theo rủi ro 2% | Mỗi lệnh chỉ được thua tối đa 2% tài khoản → size tính NGƯỢC từ SL, không chọn tùy hứng |
 
 ---
 
@@ -44,7 +26,7 @@ Hoạt động thị trường đi theo thói quen hằng ngày của trader chu
 
 Số phân đoạn thay đổi theo từng thị trường — trước khi phân đoạn cho vàng phải quan sát nhịp riêng của vàng, không bê nguyên lịch ES sang.
 
-**📊 Đọc chart thật** — [tpo/images/keppler/p084-0.png](tpo/images/keppler/p084-0.png): profile ngày của ES được tách thành các cột chữ cái A→N, đóng khung theo 5 phân đoạn: First Hour 9:30–10:30 (A,B), Morning 10:30–12:00 (C,D,E), Lunch 12:00–14:00 (F,G,H,I), Afternoon 14:00–16:00 (J,K,L,M), Settlement 16:00–16:15 (N). Trên chart này cột N in dấu `N*` sát đỉnh ngày quanh 1363.50, trong khi POC ngày nằm 1359.50 (panel trái) — ngày đóng cửa mạnh, trên vùng giá trị.
+**📊 Đọc chart thật** — [tpo/images/keppler/p084-0.png](tpo/images/keppler/p084-0.png): profile ngày của ES được tách thành các cột chữ cái A→N (kỹ thuật **Split Profile** — tách profile ngày thành từng cột 30'/từng phân đoạn để so sánh từng nhịp đấu giá), đóng khung theo 5 phân đoạn: First Hour 9:30–10:30 (A,B), Morning 10:30–12:00 (C,D,E), Lunch 12:00–14:00 (F,G,H,I), Afternoon 14:00–16:00 (J,K,L,M), Settlement 16:00–16:15 (N). Trên chart này cột N in dấu `N*` sát đỉnh ngày quanh 1363.50, trong khi POC ngày nằm 1359.50 (panel trái) — ngày đóng cửa mạnh, trên vùng giá trị.
 
 ### 1.2 Overnight session — đọc bằng mốc settlement
 
@@ -69,10 +51,10 @@ Chú ý: "đuối sức" chưa chắc là đảo chiều — chỉ là đà hi�
 
 ### 🥇 Áp cho vàng MGC
 
-- **Quy giờ VN (mùa hè):** phiên **Á 07:00–14:00**, **Âu 14:00–19:20**, **Mỹ 19:20 (COMEX floor 8:20 ET) / 20:30 (chứng khoán Mỹ mở 9:30 ET) → ~02:00 VN**. Globex mở lại 18:00 ET = **05:00 VN**.
-- Vàng là hàng 23h/ngày nên "overnight" của vàng thực chất là phiên Á+Âu — và theo note thực chiến: **phiên Á build range cho Âu, Âu build range cho CME** **[GIẢ THUYẾT — tự kiểm khi backtest]**. Kèm theo: VA nằm gọn trong IB phiên Âu với biên độ thấp → phiên Mỹ dễ có trend **[GIẢ THUYẾT]**.
+- **Quy giờ VN (mùa hè):** phiên **Á 07:00–14:00**, **Âu 14:00–19:20**, **Mỹ** chạy tới ~02:00 VN — mốc mở có 2 cách tính: **19:20 VN** (COMEX floor 8:20 ET) hoặc **20:30 VN** (chứng khoán Mỹ mở 9:30 ET). Globex mở lại 18:00 ET = **05:00 VN**.
+- Vàng là hàng 23h/ngày nên "overnight" của vàng thực chất là phiên Á+Âu — và theo note thực chiến: **phiên Á build range cho Âu, Âu build range cho CME** **[GT-2]**. Kèm theo: VA nằm gọn trong IB phiên Âu với biên độ thấp → phiên Mỹ dễ có trend **[GT-4]**.
 - Khung settlement của vàng rơi vào quãng sau nửa đêm giờ VN (~00:30 mùa hè) — *đây là tổng hợp riêng của Claude, không có trong 3 nguồn; tự xác nhận mốc chính xác trên ATAS*.
-- IB (chuẩn hóa từ buổi trước): **2 bracket đầu A+B = 60 phút**. Mốc bắt đầu tính IB cho vàng là lựa chọn quy ước — backtest cả hai mốc **19:20** và **20:30** rồi giữ mốc nào cho cấu trúc sạch hơn.
+- IB = A+B 60′, mốc bắt đầu 19:20/20:30 theo quy ước đã chốt ở buổi 1 (→ **GT-8**).
 
 *— Keppler tr.84-89, 127-128; note tr.5, 13*
 
@@ -86,7 +68,7 @@ Một profile đơn lẻ trả lời "hôm nay đấu giá thế nào". Nhiều 
 
 | Quan hệ | Đấu giá đang nói gì |
 |---|---|
-| **VA nâng dần** (đáy VA sau ≥ giữa range phiên trước, đóng cửa trên VAH) | Người mua chấp nhận giá trị cao hơn → thuận xu hướng tăng |
+| **VA nâng dần** (đáy VA phiên sau nằm từ nửa trên range phiên trước trở lên, và đóng cửa trên VAH phiên trước) | Người mua chấp nhận giá trị cao hơn → thuận xu hướng tăng |
 | **VA hạ dần** | Người bán kéo nhận thức giá trị xuống → thuận xu hướng giảm |
 | **VA chồng lên nhau** (đặc biệt khi đáy VA mới rơi đúng POC phiên trước) | Đà yếu đi, có chốt lời; thị trường quay về "kiểm định" giá trị cũ |
 | **VA thu hẹp** | Biên độ đồng thuận co lại — dấu hiệu đà không còn khỏe như các phiên trước, và range hẹp thì dễ break ở phiên sau |
@@ -101,7 +83,7 @@ POC là giá được thị trường "đồng ý" nhiều nhất trong một ph
 
 **📊 Đọc chart thật** — [tpo/images/keppler/p153-0.png](tpo/images/keppler/p153-0.png): 10 phiên EURUSD, các phiên đánh chữ A→J. Ellipse lớn "Area of Price Acceptance" khoanh dải quanh ~1.408–1.411: POC của A, G, H nằm sát nhau (sách ghi POC của H và I chỉ cách nhau vài pip). Cũng trên ảnh này đọc luôn **hình dạng**: A và J dài-hẹp = phiên trend; B, G, I ngắn, TPO túm quanh POC = phiên balance — đúng logic hình dạng D/P/b/thin bạn đã học ở Volume Profile, giờ nhìn bằng TPO.
 
-Note thực chiến bổ sung 2 ý cùng hướng: **POC trùng hoặc gần S/R thì rất hay được test**; và kinh nghiệm TraderViet: **POC cũ một khi bị breakout thì "90%" thành cản mới rất tốt** (kháng cự thủng → thành hỗ trợ) **[GIẢ THUYẾT — con số 90% là kinh nghiệm cá nhân tác giả]**.
+Note thực chiến bổ sung 2 ý cùng hướng: **POC trùng hoặc gần S/R thì rất hay được test**; và kinh nghiệm TraderViet: **POC cũ một khi bị breakout thường thành cản mới rất tốt** **[GT-5]**.
 
 ### 2.3 Composite tuần/tháng và các "núm"
 
@@ -110,7 +92,7 @@ Gộp 5 profile ngày → **profile tuần**; gộp 20 ngày → **profile thán
 **📊 Đọc chart thật:**
 - [tpo/images/keppler/p095-0.png](tpo/images/keppler/p095-0.png) — composite tuần của ES, POC tuần **1342.25** (header, kèm phân bổ TPO 635/486 trên/dưới). Bốn mũi tên đánh số khoanh 4 núm: quanh ~1355.5, ~1353 (có cặp đường gióng 1352.75/1353.25), ~1347.5 và ~1337.5; dưới cùng thêm hai đường 1334.75 và 1333.00. Đây chính là bộ level kẻ sẵn cho tuần sau.
 - [tpo/images/keppler/p097-0.png](tpo/images/keppler/p097-0.png) — composite tháng (trục 1325.50–1367.50): POC tháng **1343.00** (TPO 981/749), đường gióng trên 1356.50/1355.00, dưới 1335.25/1335.00. So với composite tuần ở trên: POC tuần 1342.25 và POC tháng 1343.00 gần như dính nhau — POC clustering liên khung thời gian.
-- [tpo/images/keppler/p098-0.png](tpo/images/keppler/p098-0.png) — hai profile 20 ngày cạnh nhau: tháng trước POC **1328.25**, VAH 1335.75, VAL 1295.25 (panel trái); tháng hiện tại VAL rơi xuống đúng vùng POC tháng trước (đường gióng ~1329.00). Sách: nếu thủng ~1329 thì hỗ trợ kế tiếp là núm dưới của profile trước quanh **1310.50**; số TPO tại POC hai tháng gần bằng nhau (~39 vs ~44) nhưng CẤU TRÚC khác — tháng trước POC nép sát VAH, tháng này POC giữa range → thị trường cần "phát triển cân bằng" thêm trước khi có chân tăng mới. Mức lớn của composite cũ **không hết hạn** khi sang tháng mới.
+- [tpo/images/keppler/p098-0.png](tpo/images/keppler/p098-0.png) — hai profile 20 ngày cạnh nhau: tháng trước POC **1328.25**, VAH 1335.75, VAL 1295.25 (panel trái); tháng hiện tại VAL rơi xuống đúng vùng POC tháng trước (đường gióng ~1329.00). Sách: nếu thủng ~1329 thì hỗ trợ kế tiếp là núm dưới của profile trước quanh **1310.50**; số TPO tại POC hai tháng gần bằng nhau (~39 vs ~44) nhưng CẤU TRÚC khác — tháng trước POC nép sát VAH, tháng này POC giữa range (POC nép sát VAH = người mua chấp nhận trả vùng giá cao, lực đẩy sẵn; POC giữa range = hai phe còn giằng co đúng giữa, chưa phe nào thắng để làm bàn đạp trend) → thị trường cần "phát triển cân bằng" thêm trước khi có chân tăng mới. Mức lớn của composite cũ **không hết hạn** khi sang tháng mới.
 
 ### 2.4 Cùng kỹ thuật, thu nhỏ vào trong phiên: value tracking 30'
 
@@ -131,7 +113,7 @@ Trùng nhau = thời gian và tiền đồng thuận, mức rất chắc. **Lệ
 ### 🥇 Áp cho vàng MGC
 
 - Trước phiên Mỹ (trước 19:20 VN) kẻ VA của **3 phiên gần nhất** (Á/Âu hôm nay + Mỹ hôm qua, hoặc 3 ngày gần nhất) và trả lời 1 câu: giá trị đang **nâng / hạ / chồng / thu hẹp**? Đó là kịch bản nền.
-- Tìm **POC tụ chùm**: các POC cách nhau ≤ 5–10 tick MGC (0.5–1.0 điểm giá = $5–10/hợp đồng) → gộp thành 1 level đặt lệnh chờ, ưu tiên level trùng thêm núm của composite tuần.
+- Tìm **POC tụ chùm**: các POC cách nhau ≤ 5–10 tick MGC (0.5–1.0 điểm giá) → gộp thành 1 level đặt lệnh chờ, ưu tiên level trùng thêm núm của composite tuần.
 - Trên ATAS: bật đồng thời TPO và fixed Volume Profile kéo 5 ngày làm composite tuần; khi TPO-POC lệch VPOC, dùng câu hỏi "close nằm đâu so với VPOC" như ví dụ trên để đoán khối lượng lệch về phe nào.
 
 *— Keppler tr.92-98, 104-106, 113-116, 152-154; note tr.13; mp-vn tr.53*
@@ -142,23 +124,23 @@ Trùng nhau = thời gian và tiền đồng thuận, mức rất chắc. **Lệ
 
 Đây là 17 trang note của một trader vàng thật, viết quanh các phiên GCQ23 (hợp đồng vàng tháng 8/2023). Ngôn ngữ đời thường, nhưng cơ chế bám sát những gì bạn đã học — nhiệm vụ của mình là dịch nó về đúng khung.
 
-### 3.1 Hai nguyên tắc "fix profile" **[GIẢ THUYẾT — tự kiểm khi backtest]**
+### 3.1 Hai nguyên tắc "fix profile" **[GT-7]**
 
-Buổi trước đã học: đấu giá bất thường để lại single print / vùng thiếu mở rộng, và thị trường sẽ quay lại "fix" (sửa) chúng. Note cho 2 nguyên tắc chọn CÁI NÀO được fix — đây là kinh nghiệm cá nhân của tác giả note, chưa phải chuẩn Dalton/Keppler:
+Buổi trước đã học: đấu giá bất thường để lại single print / vùng thiếu mở rộng, và thị trường sẽ quay lại "fix" (sửa) chúng. Note cho 2 nguyên tắc chọn CÁI NÀO được fix:
 
 1. **Market vận hành tuần tự** — cái xuất hiện TRƯỚC fix trước, cái xuất hiện SAU fix sau. Đừng kỳ vọng giá nhảy cóc sang vùng dang dở mới nhất khi vùng cũ hơn còn treo.
 2. **Tôn trọng trend hiện hữu** — trend tăng thì các IB/SP phía TRÊN giá hiện tại được sửa; trend giảm thì fix phía dưới. Trend ở đây lấy theo **khung Daily** (khi đối tượng fix là IB).
 
-Nối cầu: poor high/low (đỉnh/đáy có ≥2 TPO) chính là **Unfinished Business** nhìn bằng cấu trúc TPO thay vì ô Bid×Ask — cùng một cơ chế "đấu giá chưa xong thì phải quay lại làm nốt", nên nó nằm trong danh sách "việc chờ fix" này.
+Poor high/low (đỉnh/đáy có ≥2 TPO) — tức **Unfinished Business** bản TPO như đã nối ở buổi 1 — cũng nằm trong danh sách "việc chờ fix" này.
 
-### 3.2 Quy tắc break 2 lần **[GIẢ THUYẾT — tự kiểm khi backtest]**
+### 3.2 Quy tắc break 2 lần **[GT-1]**
 
-Nguyên văn cơ chế của note: **VA mà move khỏi range thì chỉ có 2 mục đích — break hoặc reject. Break lần 1 bị từ chối thì lần break thứ 2 luôn là lần clean break. Chỉ cần chờ giá retest các vùng canh để vào lệnh.**
+Cơ chế của note (diễn đạt lại cho rõ): khi VA của các cột 30' mới trượt ra khỏi range đang có, chỉ có 2 kết cục — **break thật**, hoặc **bị từ chối** đẩy ngược vào trong. **Break lần 1 bị từ chối → lần break thứ 2 mới là clean break; chỉ việc chờ giá retest các vùng canh để vào lệnh.**
 
 - Lưu ý chiều: lần 2 không bắt buộc cùng chiều lần 1 — ca thật bên dưới break lần 1 LÊN thất bại, lần 2 XUỐNG mới là clean break. Cái "clean" là ở chỗ *ý định rời range đã lộ và phe chặn đã kiệt*, không phải ở hướng.
-- Kèm tip giờ: **18h–19h (giờ VN, ngay trước mốc 19:20 mở COMEX floor) rất hay có fake break VA** **[GIẢ THUYẾT]** — khớp với caveat "volume mở cửa giật ngược trước khi đi thật" ở khối 1.
+- Kèm tip giờ: **18h–19h VN rất hay có fake break VA** **[GT-3]** — khớp với caveat "volume mở cửa giật ngược trước khi đi thật" ở khối 1.
 
-**📊 Đọc chart thật** — [tpo/images/note/p013-0.png](tpo/images/note/p013-0.png): minh họa "Á build range cho Âu, Âu build cho CME": hộp đỏ trên khoanh chuỗi ~8 profile 30' xếp ngang cùng độ cao (range Á–Âu), mũi tên đỏ chéo xuống chỉ lúc VA move khỏi range, rồi hộp đỏ dưới khoanh chuỗi profile mới thấp hơn hẳn — VA đã "di cư" xong, range mới hình thành. Ảnh này cắt mất trục giá nên chỉ đọc cấu trúc, không đọc số.
+**📊 Đọc chart thật** — [tpo/images/note/p013-0.png](tpo/images/note/p013-0.png): minh họa **GT-2** (Á/Âu build range): hộp đỏ trên khoanh chuỗi ~8 profile 30' xếp ngang cùng độ cao (range Á–Âu), mũi tên đỏ chéo xuống chỉ lúc VA move khỏi range, rồi hộp đỏ dưới khoanh chuỗi profile mới thấp hơn hẳn — VA đã "di cư" xong, range mới hình thành. Ảnh này cắt mất trục giá nên chỉ đọc cấu trúc, không đọc số.
 
 ### 3.3 Vùng hấp thụ supply/demand trên TPO + delta fresh vs tested
 
@@ -167,7 +149,7 @@ Cơ chế (note mô tả — chính là **Absorption** bạn đã học, giờ n
 - **Cột delta DƯƠNG lớn ở đỉnh** mà giá **đóng cửa phiên bên dưới** = một lượng buy market lớn đẩy vào mà giá không lên nổi → đã bị sell hấp thụ hết → vùng đó là **supply**.
 - **Cột delta ÂM lớn ở đáy** mà giá **đóng cửa bên trên** = sell market bị nuốt → **demand**.
 
-Không phải vùng nào cũng dùng được. Khi giá quay về, note check 3 thứ: (a) price action có dấu hiệu đảo chiều chưa; (b) order flow tại đó nói gì — kiệt sức, hấp thụ, thanh khoản (note gọi tắt là "BM", nhiều khả năng là Bookmap — *suy đoán của Claude*; với bạn vai trò này do footprint ATAS đảm nhận); (c) vùng đó **fresh hay tested** — vùng delta **fresh** (giá chưa quay lại chạm lần nào) mới còn nguyên giá trị, tested rồi thì hạ độ tin cậy. Note ưu tiên entry trong "mây VA" nếu trade scalp.
+Không phải vùng nào cũng dùng được. Khi giá quay về, note check 3 thứ: (a) price action có dấu hiệu đảo chiều chưa; (b) order flow tại đó nói gì — kiệt sức, hấp thụ, thanh khoản (note gọi tắt là "BM", nhiều khả năng là Bookmap — *suy đoán của Claude*; với bạn vai trò này do footprint ATAS đảm nhận); (c) vùng đó **fresh hay tested** — vùng delta **fresh** (giá chưa quay lại chạm lần nào) mới còn nguyên giá trị, tested rồi thì hạ độ tin cậy **[GT-6]**. Note ưu tiên entry trong "mây VA" nếu trade scalp.
 
 **📊 Đọc chart thật** — [tpo/images/note/p014-0.png](tpo/images/note/p014-0.png): chuỗi TPO có cột delta từng mức giá. Hộp ĐỎ = supply (cụm delta dương ở đỉnh, close phiên dưới đó), hộp XANH = demand ở đáy/giữa. Hai hàng số dưới chân mỗi phiên là tổng delta / tổng volume — đọc thử vài phiên: **-7281/156.507**, **-1800/53.526**, **-1055/106.399**. Chú ý phiên delta -7281 trên volume 156.507: bán ròng lớn nhưng nhìn vị trí các hộp xanh phía dưới — nhiều cụm sell đã bị hấp thụ, đó là các demand zone được khoanh.
 
@@ -198,7 +180,7 @@ Cảnh giác đi kèm trong note: hôm đó có tin lãi suất FED, thị trư�
 
 ### 🥇 Áp cho vàng MGC
 
-- Hai ca trên là chart GC — MGC đi cùng giá, tick 0.1 = $1, áp nguyên xi.
+- Hai ca trên là chart GC — MGC đi cùng giá, áp nguyên xi.
 - Giờ trên hai chart này khớp logic "break gần giờ mở CME 19:20 VN" → chart của note nhiều khả năng để múi giờ VN (GMT+7); kiểm tra lại múi giờ ATAS của bạn trước khi so mốc **[lưu ý của Claude]**.
 - Quy trình tái hiện: (1) đánh dấu range Á/Âu; (2) khoanh vùng hấp thụ supply/demand (cột delta lớn ngược hướng close) và ghi chú fresh/tested; (3) nếu break lần 1 fail → phục kích lần 2 + retest; (4) trigger bằng footprint tại vùng đã kẻ.
 
@@ -210,7 +192,7 @@ Cảnh giác đi kèm trong note: hôm đó có tin lãi suất FED, thị trư�
 
 ### 4.1 Sizing theo quy tắc 2%
 
-Quy tắc bất di bất dịch của tác giả TraderViet: **mỗi lệnh chỉ được lỗ tối đa 2% tài khoản** — nhờ nó "không quan tâm chuyện ăn thua từng lệnh, chỉ tập trung phân tích cho tốt". Ví dụ gốc của tác giả: tài khoản 1.000 USD → lỗ tối đa 20 USD/lệnh, SL 10 pip → 0.2 lot forex. Chuyển sang MGC (tick 0.1 = $1):
+Quy tắc bất di bất dịch của tác giả TraderViet: **mỗi lệnh chỉ được lỗ tối đa 2% tài khoản** — nhờ nó "không quan tâm chuyện ăn thua từng lệnh, chỉ tập trung phân tích cho tốt". Công thức cho MGC:
 
 ```
 Số hợp đồng = (Vốn × 2%) / (SL tính bằng tick × $1)
@@ -233,7 +215,7 @@ Mỗi target đạt → **đóng 1 hợp đồng + dời SL** về gần mức v
 
 Nguyên tắc Keppler, đúng một câu hỏi: **"Mức giá nào trên cấu trúc profile cho ta biết giao dịch đã thất bại?"** — đặt SL ở đó, không bao giờ chọn SL theo một con số tiền tùy tiện.
 
-- Ví dụ trong sách (cổ phiếu AAPL): entry ~$335.20, SL đặt **$333.90** = đáy chu kỳ B — mức hỗ trợ hình thành trong IB; thủng nó là tiền đề lệnh sụp, ở lại vô nghĩa.
+- Đây chính là "SL sau lưng tường" bạn đã học ở ebook, phát biểu bằng ngôn ngữ profile: mức cấu trúc (đáy IB, biên VA, biên vùng hấp thụ) bị thủng = tiền đề của lệnh sụp đổ, ở lại vô nghĩa.
 - Muốn rủi ro nhỏ hơn? **Giảm size hoặc chọn kèo khác có SL cấu trúc gần hơn — tuyệt đối không bóp stop**. Keppler: dùng size nhỏ tốt hơn nhiều so với một cái stop đặt sai chỗ; stop sai chỗ chỉ đẻ ra những khoản lỗ không cần thiết.
 - Tỷ lệ tối thiểu **RR 1:2**, và phải đánh giá cùng xác suất thắng của chiến lược.
 - Bị quét stop rồi giá chạy đúng hướng ≠ "cần stop xa hơn" — thường là vào sai thời điểm/giá vào xấu.
@@ -242,7 +224,7 @@ Nguyên tắc Keppler, đúng một câu hỏi: **"Mức giá nào trên cấu t
 
 Keppler định nghĩa hợp lưu chiến lược: nhiều yếu tố từ **các nguồn thông tin khác nhau** cùng ủng hộ một lệnh. Bẫy kinh điển: *"giá đang tăng" + "giá vượt kháng cự"* trông như 2 yếu tố nhưng là **một** — cả hai đều rút ra từ cùng biến giá. Thêm volume tăng + xu hướng trung gian cùng chiều thì mới thành hợp lưu thật.
 
-Áp vào bộ công cụ của bạn: **TPO cho context** (kịch bản ngày, VA migration, vùng hấp thụ, mức chờ) + **footprint cho trigger** (absorption, stacked imbalance, delta tại mức chờ) = hai nguồn độc lập — thời gian/cấu trúc vs dòng lệnh. Còn "TPO nói lên + đường MA cũng dốc lên" thì chưa chắc, vì cả hai cùng ăn từ giá.
+Áp vào bộ công cụ của bạn: **TPO cho context** (kịch bản ngày, VA migration, vùng hấp thụ, mức chờ) + **footprint cho trigger** (absorption, stacked imbalance, delta tại mức chờ) — đúng cặp nguồn độc lập của Ca 1: thời gian/cấu trúc vs dòng lệnh. Còn "TPO nói lên + đường MA cũng dốc lên" thì chưa chắc, vì cả hai cùng ăn từ giá.
 
 ### 4.5 Nhật ký backtest
 
@@ -259,11 +241,11 @@ Cột cuối là cột quan trọng nhất của giai đoạn này: mỗi phiên
 ### 4.6 ✅ CHECKLIST TRƯỚC PHIÊN (in ra, dán cạnh màn hình)
 
 1. **Kẻ 5 mức của phiên/ngày hôm qua**: High — VAH — POC — VAL — Low.
-2. Kẻ thêm nếu có: POC clustering nhiều phiên, núm composite tuần, vùng supply/demand delta còn **fresh**, single print chưa fix (2 nguyên tắc fix — giả thuyết ⚠️ mục 7, vừa dùng vừa kiểm: tuần tự + theo trend Daily).
-3. **Đánh dấu IB** khi đủ 60' (A+B) — ghi mốc đang dùng (19:20 hay 20:30 VN).
+2. Kẻ thêm nếu có: POC clustering nhiều phiên, núm composite tuần, vùng supply/demand delta còn **fresh** (GT-6), single print chưa fix (GT-7).
+3. **Đánh dấu IB** khi đủ 60' (A+B) — ghi mốc đang dùng: 19:20 hay 20:30 VN (GT-8).
 4. **Xác định kiểu mở cửa** so với value hôm qua (trong/ngoài VA, gap có lấp không).
 5. **Chọn kịch bản ngày** (balance hay trend, hướng nghiêng) — viết ra TRƯỚC, phiên xong đối chiếu vào nhật ký.
-6. Nhắc bản thân: volume mở cửa có thể giật ngược; 18–19h VN hay fake break; tin lớn có quyền phủ quyết.
+6. Nhắc bản thân: volume mở cửa có thể giật ngược; 18–19h VN hay fake break (GT-3); tin lớn có quyền phủ quyết.
 
 *— mp-vn tr.53-54; Keppler tr.131-144*
 
@@ -271,18 +253,37 @@ Cột cuối là cột quan trọng nhất của giai đoạn này: mỗi phiên
 
 ## ⚠️ Tổng hợp giả thuyết cần kiểm khi backtest
 
-Mục 1–7 là kinh nghiệm cá nhân tác giả note/TraderViet — chưa phải chuẩn Dalton/Keppler; riêng mục 8 là quy ước do giáo trình tự đặt để backtest. Mỗi phiên backtest hãy chấm ĐÚNG/SAI ít nhất một mục:
+GT-1 đến GT-7 là kinh nghiệm cá nhân tác giả note/TraderViet — chưa phải chuẩn Dalton/Keppler; riêng GT-8 là quy ước do giáo trình tự đặt để backtest. Mỗi phiên backtest hãy chấm ĐÚNG/SAI ít nhất một mục:
 
-1. **Break 2 lần**: VA break khỏi range lần 1 bị từ chối → lần 2 là clean break; entry chờ ở retest. (Lưu ý: lần 2 có thể ngược chiều lần 1.)
-2. **Á build range cho Âu, Âu build range cho CME** — chỉ cần canh lúc VA move khỏi range.
-3. **18h–19h VN hay có fake break VA** (ngay trước mở COMEX floor 19:20 VN).
-4. **VA nằm gọn trong IB phiên Âu + biên độ thấp → phiên Mỹ có trend**.
-5. **POC cũ bị breakout → "90%" thành cản mới tốt** (kháng cự thủng thành hỗ trợ).
-6. **Vùng delta fresh đáng tin hơn hẳn vùng đã tested** — đo bằng tỷ lệ phản ứng tại chạm lần 1 vs lần 2+.
-7. **Hai nguyên tắc fix profile**: SP/IB cũ hơn được fix trước SP mới; trend Daily quyết định phía được fix — chấm ĐÚNG/SAI mỗi lần thấy giá quay lại vùng dang dở.
-8. **Mốc tính IB cho vàng**: 19:20 vs 20:30 VN — mốc nào cho cấu trúc IB/RE sạch hơn trên dữ liệu MGC của bạn.
+1. **GT-1 · Break 2 lần**: VA break khỏi range lần 1 bị từ chối → lần 2 là clean break; entry chờ ở retest. (Lưu ý: lần 2 có thể ngược chiều lần 1.)
+2. **GT-2 · Á build range cho Âu, Âu build range cho CME** — chỉ cần canh lúc VA move khỏi range.
+3. **GT-3 · 18h–19h VN hay có fake break VA** (ngay trước mở COMEX floor 19:20 VN).
+4. **GT-4 · VA nằm gọn trong IB phiên Âu + biên độ thấp → phiên Mỹ có trend**.
+5. **GT-5 · POC cũ bị breakout → "90%" thành cản mới tốt** (kháng cự thủng thành hỗ trợ; con số 90% là kinh nghiệm cá nhân tác giả).
+6. **GT-6 · Vùng delta fresh đáng tin hơn hẳn vùng đã tested** — đo bằng tỷ lệ phản ứng tại chạm lần 1 vs lần 2+.
+7. **GT-7 · Hai nguyên tắc fix profile**: SP/IB cũ hơn được fix trước SP mới; trend Daily quyết định phía được fix — chấm ĐÚNG/SAI mỗi lần thấy giá quay lại vùng dang dở.
+8. **GT-8 · Mốc tính IB cho vàng**: 19:20 vs 20:30 VN — mốc nào cho cấu trúc IB/RE sạch hơn trên dữ liệu MGC của bạn.
 
 ---
+
+## 🔑 Thẻ ôn thuật ngữ
+
+Tra nhanh sau khi học — mỗi thuật ngữ 1 dòng cơ chế:
+
+| EN | VN | Cơ chế 1 dòng |
+|---|---|---|
+| Settlement | Khung/giá thanh toán | 15' chốt ngày — cơ hội thanh khoản cuối của day trader → thành mốc neo cho phiên đêm và mở cửa hôm sau |
+| Overnight Session | Phiên qua đêm | Đấu giá ngoài giờ Mỹ; đọc bằng vị trí của nó SO VỚI vùng settlement hôm trước |
+| Gap Fill | Lấp khoảng trống | Mở cửa lệch khỏi settlement tạo gap; không lấp = phe theo hướng gap tự tin, quay về lấp = phe đó yếu |
+| Big Smile / Frown | Nụ cười lớn / Cau mày | Vòng cung: đêm volume nhẹ → mở phiên volume nổ → move lên (Smile) hoặc xuống (Frown) |
+| Composite Profile | Profile gộp | Gộp 5 profile ngày = profile tuần, gộp 20 ngày = profile tháng; các mức lớn hiện rõ dần |
+| Knob | "Núm" | Mức giá có số TPO vượt trội nhô ra trên composite → thường thành S/R khi giá quay lại |
+| Value Migration | Dịch chuyển vùng giá trị | Cách VA phiên sau đặt so với phiên trước — đó là câu trả lời của đấu giá: chấp nhận hay từ chối giá mới |
+| POC Clustering | POC tụ chùm | POC của nhiều phiên nằm sát nhau = thị trường nhiều lần đồng ý cùng một giá → mức tham chiếu mạnh |
+| TPO-POC vs VPOC | POC thời gian vs POC khối lượng | Nơi giá Ở LÂU nhất vs nơi TRAO TAY nhiều nhất — hai câu hỏi khác nhau |
+| Delta fresh / tested | Vùng delta còn mới / đã test | Vùng cung–cầu delta chưa bị giá quay lại chạm = còn "đạn"; đã test rồi thì giá trị giảm |
+| Scaling out | Chốt lời từng phần | Vào nhiều hợp đồng, mỗi mục tiêu đạt → đóng 1 phần + dời SL theo |
+| Position sizing 2% | Khối lượng theo rủi ro 2% | Mỗi lệnh chỉ được thua tối đa 2% tài khoản → size tính NGƯỢC từ SL, không chọn tùy hứng |
 
 ## ✅ Kiểm tra cuối buổi
 

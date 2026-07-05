@@ -59,3 +59,11 @@ Các chủ đề chính (mục lục đầy đủ ở `ebook/text/00-muc-luc.md`
 - **Quản lý lệnh ✅ XONG (2026-07-02):** Chốt lời theo volume ✅ · Chốt lời trailing (+ tín hiệu cảnh báo) ✅ · Dừng lỗ với order flow (3 cách + 10–20% ADR/ATR) ✅ · (Volume Profile tìm S/R đã học) → 🎉 **HẾT LÝ THUYẾT EBOOK → chuyển Giai đoạn 2: screen time**
 
 > Gợi ý ghép: học **Delta** ở khóa chính (Bài 1-3) → khi tới **setup** (Bài 4) thì mở ebook phần "5 setup giao dịch" + "4 setup xác nhận" để đối chiếu chi tiết.
+
+---
+
+## 📕 Phụ lục TPO — Market Profile *(3 buổi nén, học ngay trước/đầu giai đoạn thực hành — soạn 2026-07-05)*
+> Nguồn: sách Keppler *Profit With the Market Profile* bản dịch (`TPO - Market ProFile.pdf`) + tuyển tập TraderViet (`Market Profile _Vn.pdf`) + note thực chiến vàng 17 trang (`TPO.pdf`). Giáo trình đã soạn sẵn tại `tpo/text/`, ảnh chart tại `tpo/images/{keppler,tv,note}/` (tên file = trang PDF). Kiến thức trùng Volume Profile/order flow đã lược bỏ — chỉ còn phần MỚI.
+- [ ] **Buổi 1 — Nền TPO & bản đồ trong phiên:** auction theory tinh gọn · cơ chế chart TPO (bracket 30', TPO-POC vs VPOC) · Initial Balance + Range Extension + chiếu mục tiêu IB/ADR · Tails + Single Print + playbook chờ retest · poor high/low (= UB nhìn bằng TPO) — `tpo/text/buoi-1-nen-tpo-ban-do-phien.md`
+- [ ] **Buổi 2 — Hôm nay là ngày gì:** 6 day types + tiêu chí định lượng (A>B>C>D, quy tắc 5 TPO, bẫy DD vs Neutral) · 3 kịch bản giá mở vs VA hôm trước + 4 kiểu mở cửa Dalton · quy tắc 80% · xử lý phiên tin — `tpo/text/buoi-2-day-types-mo-cua-80.md`
+- [ ] **Buổi 3 — Đa phiên & thực chiến vàng:** overnight/gap + quy giờ VN + logic Á→Âu→CME · value migration + POC clustering + composite · note thực chiến (fix profile, break 2 lần, delta fresh/tested, 2 ca GCQ23) · kick-off thực hành (sizing 2%, scaling out, SL cấu trúc, checklist trước phiên, nhật ký backtest) — `tpo/text/buoi-3-da-phien-thuc-chien-vang.md`

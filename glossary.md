@@ -68,4 +68,28 @@
 | CQG | Nguồn cấp dữ liệu (data feed) hợp đồng tương lai |
 | Futures / Forex | Hợp đồng tương lai / Ngoại hối |
 
+## 🕐 TPO / Market Profile *(Phụ lục TPO — bổ sung 2026-07-05)*
+| EN | VN | Giải thích ngắn |
+|---|---|---|
+| **Market Profile / TPO chart** | Hồ sơ thị trường / biểu đồ TPO | Profile gom theo **THỜI GIAN** (≠ Volume Profile gom theo khối lượng): mỗi mức giá đếm số **bracket 30'** giá ghé qua |
+| **TPO (Time Price Opportunity)** | Cơ hội giá theo thời gian | 1 chữ cái = giá chạm mức đó trong 1 bracket 30'; nhiều lệnh cùng giá cùng bracket vẫn chỉ in 1 TPO |
+| **Bracket / Period** | Chu kỳ chữ cái | Mỗi 30 phút = 1 chữ (A, B, C…); `O` = giá mở cửa |
+| **Initial Balance (IB)** | Khoảng cân bằng ban đầu | Phạm vi giá của **60 phút đầu phiên (bracket A+B)** — chuẩn hóa của mình, vì tài liệu tự mâu thuẫn |
+| **Range Extension (RE)** | Mở rộng phạm vi | Giá vượt ra ngoài IB → đọc "ai kiểm soát phiên" |
+| **Single Print** | Bản in đơn | Đoạn profile chỉ 1 TPO → giá đi quá nhanh, vết chân dòng tiền lớn → S/R tương lai |
+| **Buying / Selling Tail** | Đuôi mua / đuôi bán | Single print ở **đáy/đỉnh** profile = từ chối giá quyết liệt; **đuôi càng dài càng ý nghĩa, đuôi 1 TPO vô nghĩa** |
+| **Minus Development** | Phát triển thiếu | Single print ở **giữa** profile (tên của Steidlmayer) |
+| **Poor High / Poor Low** | Đỉnh/đáy "đểu" | Đỉnh/đáy ≥2 TPO = đấu giá chưa ngã ngũ, dễ bị phá — chính là **Unfinished Business** nhìn bằng TPO |
+| **Day types** | Phân loại ngày | Trend Day · Normal · Normal Variation · Neutral · Non-trend · Double Distribution — quyết định fade hay follow |
+| **Open Drive / Open Test Drive / Open Rejection Reverse / Open Auction** | 4 kiểu mở cửa (Dalton) | Độ conviction của dòng tiền lớn giảm dần từ trái sang phải; đỉnh/đáy 30' đầu Open Drive = mốc invalidation ngày |
+| **80% Rule** | Quy tắc 80% | Giá mở ngoài VA rồi quay vào + giữ 2 bracket → xu hướng xuyên hết VA sang mép đối diện |
+| **Value Migration** | Dịch chuyển vùng giá trị | VA các phiên nâng dần/hạ dần/chồng nhau → đọc xu hướng đa phiên |
+| **Composite Profile** | Profile gộp | Gộp nhiều phiên thành 1 profile (tuần/tháng) → level lớn |
+| **TPO-POC vs VPOC** | POC theo thời gian vs theo khối lượng | Hai POC **không luôn trùng** — lệch nhau cũng là thông tin |
+| **Ledge** | Gờ | ≥3 TPO bằng nhau tạo mép phẳng → level phụ |
+| **Spike** | Cú nhọn cuối phiên | Đợt giá cuối phiên chưa kịp xây value → phân xử bằng vị trí mở cửa hôm sau |
+| **OTF (Other Timeframe) trader** | Dòng tiền khung lớn | Người chơi dài hạn — kẻ tạo trend, phá IB, để lại tail/single print |
+
+> ⚠️ Lỗi dịch riêng của tài liệu TPO: sách Keppler bản dịch có chỗ biến **mức giá thành giờ** (vd "13 giờ 10 phút" thực ra là **giá 1310**), số liệu chép sai — luôn đối chiếu hình gốc. Sách TraderViet: định nghĩa IB tự mâu thuẫn (đã chuẩn hóa = 60'), quy tắc Spike viết sai chiều.
+
 > Thiếu từ nào trong lúc học, mình sẽ bổ sung vào đây.

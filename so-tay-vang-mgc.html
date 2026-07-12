@@ -362,6 +362,22 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
 .foot{margin-top:56px; border-top:1px solid var(--line); padding-top:14px; font-size:12px; color:var(--faint)}
 .foot b{color:var(--muted)}
 
+/* ====== MOBILE POLISH ====== */
+@media (max-width:480px){
+  body{padding:0 12px 60px; -webkit-text-size-adjust:100%}
+  header.hero{padding-top:22px}
+  .card,.layer,.setup{padding:12px 12px}
+  table{font-size:12.5px}
+  th,td{padding:7px 9px}
+  .calc-out .co .co-v{font-size:17px}
+  .sec-head .sec-hint{display:none}
+}
+@media (pointer:coarse){
+  label.chk input{width:20px; height:20px}
+  nav.chips a{padding:7px 13px}
+  details summary{padding:11px 12px}
+}
+
 /* ====== PRINT ====== */
 @media print{
   :root{

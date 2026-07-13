@@ -10,7 +10,7 @@
 
 - **Khung Daily → bracket 30′.** ✅ Đây là convention CHUẨN (Steidlmayer/Dalton) và là khung ta dùng. Phiên Mỹ vàng ~ nhiều giờ → hàng chục bracket, đủ nén thành hình chuông.
 - **Khung M30 → chu kỳ M1?** Chạy được về cơ học (30 bracket 1′) nhưng **KHÔNG phải Market Profile chuẩn** — nó là micro-profile. Ở thang 1 phút biến mất cái neo "ngày" và động lực OTF-vs-day-trader; và nó **trùng việc mà footprint/delta đã làm tốt hơn**. → Muốn soi 1 phút thì mở **footprint/delta trên ATAS** (bạn đã thành thạo), đừng gọi TPO-1′ là "MP chuẩn".
-- **IB = 2 bracket ĐẦU** (định nghĩa gốc). Con số phút là HỆ QUẢ của thang: ở Daily/M30 = **A+B = 60′**; nếu ép xuống M30/M1 thì IB = 2′ (quá ít data để đọc "ai kiểm soát"). → Với vàng: **giữ bracket 30′, IB = 60′**, neo mốc mở giờ Mỹ (19:20 hoặc 20:30 VN — chốt 1 mốc khi backtest).
+- **IB = 2 bracket ĐẦU** (định nghĩa gốc). Con số phút là HỆ QUẢ của thang: ở Daily/M30 = **A+B = 60′**; nếu ép xuống M30/M1 thì IB = 2′ (quá ít data để đọc "ai kiểm soát"). → Với vàng: **giữ bracket 30′, dùng IB của khung DAILY** (bạn ấy: *"dùng IB Daily"*) = 2 bracket đầu của cây Daily. Vàng/forex chạy ~24h, không có "mở cửa" trung tâm → **giờ phiên chỉ tương đối, đừng chỉnh ly ti mốc**; lấy IB theo cây Daily chart bạn vẽ, miễn nhất quán.
 
 ---
 
@@ -63,7 +63,7 @@ Thay cho taxonomy Latin, đọc 3 nhánh niềm tin:
 4. **Niềm tin mở:** Drive / Rotation / Rejection-Reverse? Nếu Drive → kẻ ngay **cực trị bracket A = mốc invalidation**. (Câu 3)
 5. Setup nào khớp (mục 2)? Chờ **trigger footprint/delta** đúng vùng (hợp lưu nguồn độc lập).
 6. **Sizing 2%**, SL = điểm cấu trúc (chỗ chứng minh lệnh SAI), không phải số đô tùy hứng.
-7. Đánh giá lại một lần **sau 20:30 VN** — vàng hay "mở ảo" 19:20 rồi mới chạy thật khi chứng khoán Mỹ mở.
+7. **Giờ phiên chỉ tương đối** (vàng/forex 24h) — đừng cứng mốc giờ. Nhưng move thật của vàng thường đến trong **phiên Mỹ**, nên cú **IB break giờ Mỹ đáng tin hơn** IB break lúc Á/Âu mỏng.
 
 *Phiên tin (NFP/CPI 19:30, FOMC ~01:00 VN):* **flat trước tin**, không trade lúc tin ra (ATAS free trễ 15′ → chart chưa hiện nến tin); ~sau 15′ đánh dấu POC/vùng tích lũy trước tin + LVN nến tin → **fade về vùng đó** khi có hợp lưu.
 

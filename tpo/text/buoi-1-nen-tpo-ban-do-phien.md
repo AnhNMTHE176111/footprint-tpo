@@ -136,7 +136,7 @@ Công thức Keppler dùng trong ví dụ AAPL: khi RE xác nhận một hướn
 
 ### 🥇 Áp cho vàng MGC
 
-- **Mốc tính IB cho vàng là LỰA CHỌN QUY ƯỚC** (vàng chạy gần 24h, không có "mở cửa" duy nhất như cổ phiếu). Khuyến nghị test cả 2 mốc khi backtest: IB từ **19:20 VN** (COMEX floor: A = 19:20–19:50, B = 19:50–20:20) và IB từ **20:30 VN** (US equities open: A = 20:30–21:00, B = 21:00–21:30). Chọn mốc nào cho tín hiệu RE/failed auction sạch hơn trên dữ liệu vàng thì cố định mốc đó **[GT-6]**.
+- **Dùng IB của khung DAILY** (theo bạn trader: *"dùng IB Daily"*) = 2 bracket đầu của cây Daily. Vàng/forex chạy ~24h, không có "mở cửa" trung tâm như cổ phiếu → **giờ phiên chỉ tương đối, đừng chỉnh ly ti mốc giờ**; lấy IB theo cây Daily mà chart vẽ, miễn giữ nhất quán. *(Ghi chú riêng của Claude: điểm rollover Daily của chart quyết định bracket A rơi vào đâu — nếu IB rơi trúng giờ Á/Âu mỏng thì cú IB break kém tin hơn IB break trong phiên Mỹ; nhưng đúng tinh thần bạn ấy, đừng biến việc này thành bài toán tối ưu mốc giờ.)* **[GT-6 — rút gọn]**
 - Ví dụ IB rộng 4.0 giá (40 tick) thì mục tiêu chiếu = biên IB ± 4.0, tương đương ±$40/hợp đồng MGC.
 - Note thực chiến có quy tắc: **IB có range ≤1% (biên độ rất hẹp) → xác suất cao phiên sau breakout [GT-2]** — với vàng hãy quy đổi "hẹp" theo phân vị độ rộng IB lịch sử thay vì % cứng.
 - Khung giờ canh failed auction đáng chú ý nhất với mốc 19:20: cú phá IB đầu tiên hay rơi vào bracket 20:20–21:30 VN (trùng US equities open 20:30) **[GT-7]** — đây là lúc OTF chứng khoán Mỹ đổ tiền, quan sát acceptance/rejection kỹ nhất ở đó.

@@ -495,7 +495,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <div class="tl-body">
         <div class="tl-t">COMEX floor mở — phiên Mỹ bắt đầu <span class="badge b-gold">bracket A</span></div>
         <ul>
-          <li>Nếu dùng mốc IB 19:20: A = 19:20–19:50, B = 19:50–20:20 <a class="gt" href="#gt-06">GT-06</a>.</li>
+          <li>IB = 2 bracket đầu của <b>cây Daily</b> (chốt 2026-07-13 theo bạn trader: “dùng IB Daily” — giờ phiên vàng/forex chỉ tương đối, đừng chỉnh li ti mốc <a class="gt" href="#gt-06">GT-06</a>).</li>
           <li>Giá mở nằm đâu so với <b>VA/range hôm qua</b>? → chọn 1 trong 3 kịch bản mở cửa (§3).</li>
           <li>Đếm TPO trên/dưới giá mở trong bracket A: <b>lệch hẳn về phía nào = phe đó đang thắng phiên mở</b>. Đối chiếu Delta 30′: TPO và Delta cùng phe → tin kịch bản; lệch phe → chưa rõ, chờ bracket B.</li>
         </ul>
@@ -609,7 +609,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
     <div class="d-body">
       <ul class="tight">
         <li><b>Chart 1 — TPO khung ngày:</b> TPO chart, composite/gộp nhiều phiên; bật cả TPO-POC lẫn VPOC (ATAS cho hiện song song). Dùng cho tầng T1.</li>
-        <li><b>Chart 2 — TPO M30 phiên hiện tại:</b> bracket 30′, chữ cái A từ mốc phiên đã chọn (19:20 hoặc 20:30 <a class="gt" href="#gt-06">GT-06</a>); kẻ sẵn VAH/POC/VAL hôm qua. Dùng cho tầng T2.</li>
+        <li><b>Chart 2 — TPO M30 phiên hiện tại:</b> bracket 30′, IB = 2 bracket đầu của cây <b>Daily</b> (“dùng IB Daily” <a class="gt" href="#gt-06">GT-06</a>); kẻ sẵn VAH/POC/VAL hôm qua. Dùng cho tầng T2.</li>
         <li><b>Chart 3 — Footprint M30, ô = Volume</b> (không cần Bid×Ask): nhìn Volume Cluster / HVN / tường để đặt TP-SL. Dùng cho tầng T3.</li>
         <li><b>Chart 4 — Footprint M1, ô = Bid×Ask</b> + bật Imbalance 300% chéo + đường <b>Cumulative Delta 1′</b> ở panel dưới. Dùng cho tầng T4 (bấm cò).</li>
         <li class="small">Data ATAS free trễ 15′ — đủ cho backtest/demo và playbook cấu trúc; không scalp theo giây.</li>
@@ -654,9 +654,9 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <div class="layer-cols">
         <div>
           <ul class="tight">
-            <li><b>Mở cửa:</b> giá mở vs VA hôm qua (3 kịch bản §3) + kiểu mở Dalton → mức conviction của OTF. Open Drive → <b>cực trị bracket A = mốc invalidation cả ngày</b> <a class="gt" href="#gt-09">GT-09</a>.</li>
+            <li><b>Mở cửa:</b> giá mở vs VA hôm qua (3 kịch bản §3) + niềm tin cú mở: <b>Drive / Rotation / Rejection-Reverse</b> (đọc cơ chế, bỏ 4 tên Dalton). Drive → <b>cực trị bracket A = mốc invalidation cả ngày</b> <a class="gt" href="#gt-09">GT-09</a>.</li>
             <li><b>IB + Range Extension:</b> phá phía nào, acceptance (TPO xếp dày ngoài IB) hay failed auction (~30′ không giữ được → test mặt kia IB <a class="gt" href="#gt-01">GT-01</a>)?</li>
-            <li><b>Day type đang lộ dần</b> (bảng §3): trend, DD, neutral…? RE xác nhận → chiếu mục tiêu = biên IB ± độ rộng IB, lọc bằng ATR còn lại.</li>
+            <li><b>Day type đang lộ dần</b> (bảng §3): trend, DD, neutral…? RE có acceptance → đi theo hướng phá; target theo <b>vùng volume phía trước</b> (VAH/POC/VAL, HVN kế tiếp — chốt TRƯỚC mép), đối chiếu ATR còn lại.</li>
             <li><b>Hai playbook trực chiến</b> (chi tiết + điều kiện vào/ra đầy đủ ở §3): <b>80% rule</b> — mở ngoài VA rồi tái nhập giữ được; <b>Break 2 lần</b> — lần 1 fail, phục kích lần 2 <a class="gt" href="#gt-11">GT-11</a>.</li>
             <li><b>Vùng hấp thụ trên TPO:</b> cột delta dương lớn ở đỉnh + close phiên dưới = supply; delta âm lớn ở đáy + close trên = demand. Chỉ dùng vùng còn <b>fresh</b> (chưa bị test lại) <a class="gt" href="#gt-12">GT-12</a>.</li>
           </ul>
@@ -1316,7 +1316,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <tr id="gt-03"><td class="mono">GT-03</td><td>18–19h VN hay fake break VA (ngay trước COMEX floor) <span class="small">(B3)</span></td><td>Đếm break VA 18–19h: bao nhiêu % thật</td></tr>
       <tr id="gt-04"><td class="mono">GT-04</td><td>VA gọn trong IB phiên Âu + biên độ thấp → phiên Mỹ có trend <span class="small">(B3)</span></td><td>So ngày thỏa điều kiện vs RE phiên Mỹ</td></tr>
       <tr id="gt-05"><td class="mono">GT-05</td><td>IB &lt; ~20% ADR = "IB hẹp" → tiềm năng trend/DD <span class="small">(B2, ngưỡng tự đặt)</span></td><td>Đo phân phối IB/ADR 30–50 phiên, tìm ngưỡng tách</td></tr>
-      <tr id="gt-06"><td class="mono">GT-06</td><td>Mốc IB cho vàng: 19:20 vs 20:30 VN — quy ước phải test <span class="small">(B1/B2)</span></td><td>Chạy song song 2 mốc, giữ mốc cho cấu trúc sạch hơn</td></tr>
+      <tr id="gt-06"><td class="mono">GT-06</td><td>✅ ĐÃ CHỐT (bạn trader 2026-07-13): dùng <b>IB Daily</b> = 2 bracket đầu của cây Daily; giờ phiên chỉ tương đối — khỏi test 19:20 vs 20:30 <span class="small">(B1/B2)</span></td><td>Giữ 1 kiểu neo Daily nhất quán; IB break trong giờ Mỹ vẫn đáng tin hơn giờ Á/Âu mỏng</td></tr>
       <tr id="gt-07"><td class="mono">GT-07</td><td>Vàng "mở ảo" 19:20, chạy thật sau 20:30; cú phá IB đầu hay rơi 20:20–21:30 <span class="small">(B2)</span></td><td>So biên độ/RE theo giờ trong ngày</td></tr>
       <tr id="gt-08"><td class="mono">GT-08</td><td>Fix profile: cái cũ hơn fix trước; trend Daily quyết định phía được fix <span class="small">(B3)</span></td><td>Chấm mỗi lần giá quay lại vùng dang dở</td></tr>
       <tr id="gt-09"><td class="mono">GT-09</td><td>Cực trị 30′ đầu của Open Drive không bị phá trong ngày <span class="small">(B2)</span></td><td>Thống kê ngày Open Drive giữ được cực trị A</td></tr>

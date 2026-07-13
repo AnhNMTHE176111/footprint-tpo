@@ -34,6 +34,13 @@ Mất cân bằng tăng dần (⇒ cơ hội có ngày trend tăng dần):
 - **Failed break (đấu giá thất bại):** phá biên nhưng **không giữ nổi ~30′** rồi chui lại vào IB → đám kẹt phía sai phải thoát = nhiên liệu chiều ngược → **fade, kỳ vọng quay test MÉP KIA của IB.**
 - **Chất lượng IB làm nền:** IB xoay 2 chiều dày dặn (đấu giá cân bằng) → biên sạch, cú phá đáng tin hơn; IB chỉ là 1 cú đẩy mỏng 1 chiều → biên yếu, dễ **phá giả**.
 
+**Luật đánh cú IB break** *(mặc định Claude tổng hợp từ note thực chiến + nguyên tắc đã học — bạn trader chưa xác nhận, đối chiếu khi bạn ấy rảnh)*:
+1. **Đừng đuổi cú phá đầu tiên.** Ưu tiên 2 điểm vào: **(a) chờ retest biên IB vừa phá** (biên cũ đổi vai thành tường — cùng logic playbook single print), hoặc **(b) quy tắc break 2 lần** của note thực chiến [GT]: cú break thứ 2 cùng một biên đáng tin hơn cú đầu.
+2. **Xác nhận "đấu giá thật" bằng 2 nguồn độc lập:** cấu trúc TPO (giá TRỤ ngoài biên, TPO in dày tiếp — acceptance) **+** footprint (delta/imbalance cùng hướng phá, vùng delta **fresh** chưa bị test lại). Chỉ 1 trong 2 → giảm size hoặc bỏ.
+3. **Failed break → chỉ fade khi có trigger footprint** tại cú chui lại (absorption/delta lật ngược ở biên); không có trigger → đứng ngoài. Target ưu tiên: **mép IB đối diện**.
+4. **Stop = cấu trúc:** bên kia biên IB vừa phá (break-follow) hoặc ngoài cực trị cú phá hụt (fade) — đúng nguyên tắc "SL sau lưng tường", độ rộng đối chiếu 10–20% ADR.
+5. **Target break-follow:** không dùng chiếu IB±width nữa — dùng **scaling-out theo vùng volume**: VAH/POC/VAL phía trước + HVN kế tiếp, chốt TRƯỚC vùng nặng một chút.
+
 ### Câu 3 — Cú mở mang NIỀM TIN gì? (đọc cơ chế, bỏ 4 cái tên)
 Thay cho taxonomy Latin, đọc 3 nhánh niềm tin:
 - **DRIVE** — mở ngoài value, đi **một chiều** không quay lại giá mở = niềm tin OTF cao nhất, **đừng fade** (chính là cú *IB break* ngay từ bracket A — dạng break uy tín nhất). ⭐ **Cực trị bracket A (30′ đầu) = mốc invalidation CẢ NGÀY** [GT-3]: giá xuyên ngược qua nó = kịch bản chết → thoát, cân nhắc đảo. (Đúng logic "SL sau lưng tường".)

@@ -517,7 +517,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
     <div class="tl-row" data-from="20:20" data-to="20:30">
       <div class="tl-time">20:20<span class="et">9:20 ET</span></div>
       <div class="tl-body">
-        <div class="tl-t">IB chốt (mốc 19:20) — kẻ IB High / IB Low</div>
+        <div class="tl-t">Rà khung IB Daily trước giờ equities — IB High / IB Low đã kẻ chưa?</div>
         <ul>
           <li>IB hẹp hay rộng? Quy theo %ADR: IB &lt; ~20% ADR = hẹp → tiềm năng Trend/DD day <a class="gt" href="#gt-05">GT-05</a>.</li>
           <li>Từ đây theo dõi <b>Range Extension</b>: phá phía nào, có acceptance không, hay failed auction chui lại IB? Mỗi bracket đóng → chạy <b>3 câu hỏi 30′</b> (cuối §3).</li>
@@ -752,42 +752,44 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       </tr>
       <tr>
         <td class="mono">c</td><td><b>Ngoài range</b> hôm qua</td><td>Mất cân bằng rõ — OTF đã ra tay từ trước giờ mở</td>
-        <td>Xác suất tiếp diễn cao nhất; ưu tiên đánh THUẬN hướng mở, chờ nhịp test đầu (Open Test Drive) thay vì đuổi.</td>
+        <td>Xác suất tiếp diễn cao nhất; ưu tiên đánh THUẬN hướng mở, chờ nhịp test đầu về mép value thay vì đuổi.</td>
       </tr>
     </table></div>
   </div>
 
   <div class="card">
-    <h3>Bước 2 · Kiểu mở cửa — niềm tin OTF giảm dần</h3>
+    <h3>Bước 2 · Niềm tin cú mở — 3 nhánh <span class="small">(đọc cơ chế; 4 tên Dalton đã bỏ cho gọn)</span></h3>
     <div class="tblwrap"><table>
-      <thead><tr><th scope="col">Kiểu mở</th><th scope="col">Nhận diện</th><th scope="col">Hành động</th></tr></thead>
+      <thead><tr><th scope="col">Nhánh</th><th scope="col">Nhận diện</th><th scope="col">Hành động</th></tr></thead>
       <tr>
-        <td><b>Open Drive</b> <span class="badge b-gold">mạnh nhất</span></td>
-        <td>Mở ngoài value, đi MỘT hướng ngay, không quay lại giá mở; volume/Delta lớn đi kèm</td>
-        <td>Bám theo, không chờ "hồi về giá mở". <b>Cực trị 30′ đầu = mốc invalidation cả ngày</b> — giá xuyên lại qua đó là kịch bản chết, thoát/cân nhắc đảo <a class="gt" href="#gt-09">GT-09</a>.</td>
+        <td><b>DRIVE</b> <span class="badge b-gold">niềm tin cao nhất</span></td>
+        <td>Mở ngoài value, đi MỘT hướng ngay, không quay lại giá mở; volume/Delta lớn đi kèm — chính là <b>IB break ngay từ bracket A</b>. Biến thể: "ngoái lại" test VA/cực trị cũ một nhịp rồi mới bung theo hướng mở → vẫn là Drive, điểm test = điểm vào đẹp nhất ngày.</td>
+        <td>Bám theo, không chờ "hồi về giá mở", tuyệt đối không fade. <b>Cực trị 30′ đầu = mốc invalidation cả ngày</b> — giá xuyên lại qua đó là kịch bản chết, thoát/cân nhắc đảo <a class="gt" href="#gt-09">GT-09</a>.</td>
       </tr>
       <tr>
-        <td><b>Open Test Drive</b></td>
-        <td>Mở ngoài value, "ngoái lại" test VA/cực trị cũ một nhịp rồi mới drive</td>
-        <td>Điểm test = điểm vào đẹp nhất của ngày nếu kịp nhận ra. Vẫn rất mạnh.</td>
+        <td><b>ROTATION</b></td>
+        <td>Xoay 2 chiều quanh giá mở/VA cũ, biến động thấp — OTF vắng mặt hoặc còn dò giá (mở ngoài range mà xoay tại chỗ = đang dò).</td>
+        <td>Ngày của day trader: chờ ở mép VA/IB, kỳ vọng mỏng; nếu mở ngoài range → chờ giá chọn hướng, đừng đoán hộ.</td>
       </tr>
       <tr>
-        <td><b>Open Auction</b> (ngoài range)</td>
-        <td>Mở ngoài VA cũ nhưng xoay qua lại quanh giá mở nhiều lần rồi mới rời đi</td>
-        <td>OTF có mặt nhưng còn dò — chờ giá chọn hướng, đừng đoán hộ.</td>
-      </tr>
-      <tr>
-        <td><b>Open Rejection Reverse</b></td>
-        <td>Mở ở vùng cực trị hôm trước rồi bị đánh bật quay đầu</td>
-        <td>Phe NGƯỢC ra tay — sóng hiện tại dễ tàn. Không phải "niềm tin thấp" mà là tín hiệu đảo.</td>
-      </tr>
-      <tr>
-        <td><b>Open Auction In Range</b></td>
-        <td>Mở và xoay quanh VA cũ, biến động thấp</td>
-        <td>OTF vắng mặt — ngày khó có cơ hội lớn. Giảm kỳ vọng, hoặc nghỉ chờ mai.</td>
+        <td><b>REJECTION-REVERSE</b> <span class="badge b-short">tín hiệu đảo</span></td>
+        <td>Mở ở vùng cực trị hôm trước rồi bị đánh bật quay đầu (mở đỉnh, bracket xếp thấp dần → đóng đáy hoặc ngược lại).</td>
+        <td><b>Phe NGƯỢC ra tay</b> — sóng hiện tại dễ tàn. Không phải "niềm tin thấp" mà là read ĐẢO CHIỀU riêng — đừng gộp vào Rotation.</td>
       </tr>
     </table></div>
-    <p class="small">⚠ Với vàng: kết luận kiểu mở ở 19:20 chỉ là nháp — <b>đánh giá lại sau 20:30</b> khi equities kéo dòng tiền vào <a class="gt" href="#gt-07">GT-07</a>.</p>
+    <p class="small">⚠ Với vàng: kết luận nhánh mở ở 19:20 chỉ là nháp — <b>đánh giá lại sau 20:30</b> khi equities kéo dòng tiền vào <a class="gt" href="#gt-07">GT-07</a>.</p>
+  </div>
+
+  <div class="card">
+    <h3>Playbook · IB BREAK — trục chính của phiên <span class="badge b-gold">IB Daily</span> <a class="gt" href="#gt-06">GT-06</a></h3>
+    <ul class="tight">
+      <li><b>Dựng khung:</b> IB = 2 bracket đầu của cây <b>Daily</b> ("dùng IB Daily"); kẻ IB High/Low. Cả phiên canh đúng một chuyện: <b>cú phá IB có được đấu giá chấp nhận không?</b></li>
+      <li><b>Chất lượng IB làm nền:</b> IB xoay 2 chiều dày dặn = biên sạch, break đáng tin; IB chỉ là một cú đẩy mỏng 1 chiều = biên yếu, dễ phá giả. IB break trong <b>giờ Mỹ</b> đáng tin hơn break lúc Á/Âu mỏng.</li>
+      <li><b>Break UY TÍN (đấu giá thật):</b> phá biên + GIỮ được — TPO in dày tiếp phía ngoài (acceptance) <b>+</b> delta/imbalance cùng hướng còn fresh trên footprint → OTF nhập cuộc → đi THEO hướng phá. Chỉ có 1 trong 2 nguồn → giảm size hoặc bỏ.</li>
+      <li><b>Failed break:</b> phá nhưng không giữ nổi ~30′ rồi chui lại IB <a class="gt" href="#gt-01">GT-01</a> → kỳ vọng test <b>MẶT KIA</b> của IB (đám đu break kẹt hàng = nhiên liệu chiều ngược); chỉ fade khi có xác nhận X1–X4 tại cú chui lại — không có trigger thì đứng ngoài.</li>
+      <li><b>Entry:</b> đừng đuổi cú phá đầu — chờ <b>retest biên vừa phá</b>, hoặc phục kích <b>break lần 2</b> <a class="gt" href="#gt-11">GT-11</a>. <b>SL:</b> cấu trúc bên kia biên vừa phá, kiểm khung 10–20% ADR. <b>Target:</b> scaling-out theo vùng volume (VAH/POC/VAL, HVN kế tiếp — chốt TRƯỚC mép).</li>
+      <li class="small">⚠ Khối entry/xác nhận ở trên là mặc định tổng hợp từ note thực chiến + nguyên tắc của sổ này — <b>chưa được bạn trader xác nhận</b>; hỏi được thì đối chiếu lại.</li>
+    </ul>
   </div>
 
   <div class="grid2">
@@ -814,7 +816,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
   </div>
 
   <div class="card">
-    <h3>Bước 3 · Hôm nay là ngày gì? — 6 day types</h3>
+    <h3>Bước 3 · Hôm nay là ngày gì? — 4 loại ngày đáng hành động <span class="small">(2 nhãn Normal/Normal Variation đã cắt — bội thực, hiếm khi đổi quyết định)</span></h3>
     <div class="tblwrap"><table>
       <thead><tr><th scope="col">Loại ngày</th><th class="mono" scope="col">IB</th><th class="mono" scope="col">RE</th><th scope="col">Dấu hiệu nhận biết</th><th scope="col">Cách đánh</th></tr></thead>
       <tr>
@@ -828,16 +830,6 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
         <td>Vệt SP ngăn cách = S/R cho pullback; kém tự tin hơn trend chuẩn — giá hay hồi về vòm 2 trước khi đi tiếp.</td>
       </tr>
       <tr>
-        <td><b>Normal Variation</b></td><td class="mono">vừa</td><td class="mono">1 chiều, ~≤2× IB</td>
-        <td>Cân bằng trong IB vài bracket → OTF mở rộng MỘT hướng → lập VA mới ngoài IB rồi cân bằng lại</td>
-        <td>Đánh theo hướng RE tới mục tiêu chiếu IB; cuối phiên giá xoay quanh VA mới.</td>
-      </tr>
-      <tr>
-        <td><b>Normal Day</b></td><td class="mono">rất rộng</td><td class="mono">nhỏ/không</td>
-        <td>Tin sớm tạo cú đẩy → IB chiếm phần lớn (~85% — số cộng đồng MP, chưa kiểm) range ngày; chiều cân bằng lại trong IB</td>
-        <td>Coi 2 biên IB là 2 mép range — fade biên về POC. Tên gọi đánh lừa: thực tế hiếm.</td>
-      </tr>
-      <tr>
         <td><b>Neutral Day</b></td><td class="mono">vừa</td><td class="mono">CẢ 2 phía</td>
         <td>RE hai hướng nhưng luôn bị kéo về giá trị; TPO dày liên tục, KHÔNG có vệt SP</td>
         <td>Đọc close: gần tâm = mai tiếp tục cân bằng; sát cực trị = giá trị đang dịch về phía đó.</td>
@@ -848,6 +840,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
         <td>Scalp 2 biên kỳ vọng mỏng hoặc nghỉ. Giá trị thật = <b>dự báo</b>: nén càng chặt break càng xa → chuẩn bị playbook trend cho mai <a class="gt" href="#gt-14">GT-14</a>.</td>
       </tr>
     </table></div>
+    <p class="small">Ngày không khớp 4 loại trên = ngày cân bằng thường (RE một chiều nhẹ ≤2× IB, hoặc IB rộng ôm cả ngày) → đánh như Rotation: fade 2 mép về POC với kỳ vọng mỏng, hoặc đứng ngoài — không cần nhãn riêng.</p>
     <div class="grid2" style="margin-top:12px">
       <div class="layer-out" style="border-left:3px solid var(--gold)">
         <div class="lo-t">Nghi thức mỗi bracket 30′ đóng — 3 câu hỏi</div>
@@ -1227,7 +1220,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
         <li><b>TP đặt TRƯỚC vùng volume nặng kế tiếp</b> (soi footprint M30 ô=Volume) — giá hay phản ứng sớm vài tick trước khi chạm tường, chốt sớm một chút.</li>
         <li><b>Scaling out 3 mục tiêu</b> (khi size ≥2–3 HĐ): T1 = mép VA/vùng volume gần → T2 = POC → T3 = mép đối diện/vùng nặng xa. Mỗi target đạt → đóng 1 phần + dời SL: <b>Long dời lên ngay DƯỚI target vừa đạt, Short dời xuống ngay TRÊN</b> (sau T1 lệnh hết lỗ). <b>Size do 2% quyết định TRƯỚC</b> — chỉ đủ 1 HĐ thì chọn 1 target duy nhất (thường POC), không bao giờ nâng size để "được chia target".</li>
         <li><b>UB kéo dài TP:</b> giá đang chạy về một UB/poor high-low ở GẦN → giữ thêm vài tick cho giá "trả nợ" xong.</li>
-        <li>Mục tiêu chiếu từ IB (biên IB ± độ rộng IB) chỉ đáng tin khi ATR ngày còn "quỹ đạn".</li>
+        <li>Check "quỹ đạn": ATR ngày trừ quãng giá đã chạy — target xa hơn phần còn lại → hạ kỳ vọng hoặc bỏ kèo. (Chiếu IB ± độ rộng IB chỉ dùng ước lượng nhanh; target chính vẫn theo vùng volume.)</li>
       </ul>
     </div>
 
@@ -1259,7 +1252,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
     <div class="card">
       <h3>💀 Hủy kịch bản — viết trước, làm đúng</h3>
       <ul class="tight">
-        <li><b>Open Drive:</b> giá xuyên lại qua cực trị bracket A → kịch bản chết, thoát/cân nhắc đảo <a class="gt" href="#gt-09">GT-09</a>.</li>
+        <li><b>Mở kiểu Drive:</b> giá xuyên lại qua cực trị bracket A → kịch bản chết, thoát/cân nhắc đảo <a class="gt" href="#gt-09">GT-09</a>.</li>
         <li><b>Kèo retest SP:</b> vùng single print bị LẤP hẳn (các mức bắt đầu in chữ thứ 2) → tiền đề "giá bất công" sụp → thoát.</li>
         <li><b>Kèo 80% rule:</b> giá bật ngược ra khỏi VA qua mép vừa tái nhập → sai, ra.</li>
         <li><b>Kèo break-2-lần:</b> chỉ chết khi giá ĐÓNG M30 vượt vùng hấp thụ XA NHẤT theo hướng ngược — hồi sâu trong range cũ chưa phải hủy, đó là cú retest mình chờ.</li>
@@ -1319,7 +1312,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <tr id="gt-06"><td class="mono">GT-06</td><td>✅ ĐÃ CHỐT (bạn trader 2026-07-13): dùng <b>IB Daily</b> = 2 bracket đầu của cây Daily; giờ phiên chỉ tương đối — khỏi test 19:20 vs 20:30 <span class="small">(B1/B2)</span></td><td>Giữ 1 kiểu neo Daily nhất quán; IB break trong giờ Mỹ vẫn đáng tin hơn giờ Á/Âu mỏng</td></tr>
       <tr id="gt-07"><td class="mono">GT-07</td><td>Vàng "mở ảo" 19:20, chạy thật sau 20:30; cú phá IB đầu hay rơi 20:20–21:30 <span class="small">(B2)</span></td><td>So biên độ/RE theo giờ trong ngày</td></tr>
       <tr id="gt-08"><td class="mono">GT-08</td><td>Fix profile: cái cũ hơn fix trước; trend Daily quyết định phía được fix <span class="small">(B3)</span></td><td>Chấm mỗi lần giá quay lại vùng dang dở</td></tr>
-      <tr id="gt-09"><td class="mono">GT-09</td><td>Cực trị 30′ đầu của Open Drive không bị phá trong ngày <span class="small">(B2)</span></td><td>Thống kê ngày Open Drive giữ được cực trị A</td></tr>
+      <tr id="gt-09"><td class="mono">GT-09</td><td>Cực trị 30′ đầu của ngày mở kiểu Drive không bị phá trong ngày <span class="small">(B2)</span></td><td>Thống kê ngày mở kiểu Drive giữ được cực trị A</td></tr>
       <tr id="gt-10"><td class="mono">GT-10</td><td>Hai POC lệch xa → ưu tiên VPOC làm nam châm chính <span class="small">(B1, heuristic)</span></td><td>Đo phản ứng giá tại TPO-POC vs VPOC khi lệch</td></tr>
       <tr id="gt-11"><td class="mono">GT-11</td><td>Break 2 lần: lần 1 fail → lần 2 clean (có thể ngược chiều) <span class="small">(B3)</span></td><td>Đếm chuỗi break range Á/Âu: lần 2 đi tiếp bao nhiêu %</td></tr>
       <tr id="gt-12"><td class="mono">GT-12</td><td>Vùng delta fresh đáng tin hơn hẳn vùng tested <span class="small">(B3)</span></td><td>Tỷ lệ phản ứng chạm lần 1 vs lần 2+</td></tr>
@@ -1329,7 +1322,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <tr id="gt-16"><td class="mono">GT-16</td><td>POC cũ bị breakout → thành cản mới tốt ("90%") <span class="small">(B3)</span></td><td>Đo phản ứng tại POC cũ sau breakout</td></tr>
       <tr id="gt-17"><td class="mono">GT-17</td><td>Poor high/low phiên Mỹ hôm trước = mục tiêu ưa thích của Á/Âu hôm sau <span class="small">(B1)</span></td><td>Watchlist mỗi sáng, chấm cuối ngày</td></tr>
       <tr id="gt-18"><td class="mono">GT-18</td><td>Bỏ kèo retest khi vùng SP rộng &gt; 1/3 ATR ngày <span class="small">(B1, tự đặt)</span></td><td>Đo phân phối độ rộng SP/ATR</td></tr>
-      <tr id="gt-19"><td class="mono">GT-19</td><td>RE &gt; 2× IB → nghiêng Trend Day; RE ~≤2× IB → Normal Variation <span class="small">(B2)</span></td><td>Đo tỉ số RE/IB từng ngày, xem phân phối tách ở đâu</td></tr>
+      <tr id="gt-19"><td class="mono">GT-19</td><td>RE &gt; 2× IB → nghiêng Trend Day; RE ~≤2× IB → ngày cân bằng thường, kỳ vọng mỏng <span class="small">(B2)</span></td><td>Đo tỉ số RE/IB từng ngày, xem phân phối tách ở đâu</td></tr>
       <tr id="gt-20"><td class="mono">GT-20</td><td>Ngưỡng Trade Filter cho MGC: khởi điểm dò ~20–30 lô/lệnh trong phiên Mỹ <span class="small">(tự đặt để bắt đầu dò, chưa kiểm)</span></td><td>Chỉnh tới khi ra ~5–10 tín hiệu/ngày, ghi lại ngưỡng ổn định</td></tr>
     </table></div>
     <p class="small" style="margin-top:10px"><b>Nhật ký mỗi phiên (5′):</b> kịch bản dự đoán trước phiên → loại ngày thực tế → setup đã vào → kết quả (R) → <b>1 mã GT đã kiểm + ĐÚNG/SAI</b>. 3/5 lần thắng chưa phải 60% — mẫu nhỏ, lặp đủ nhiều. Test trên sim/demo trước, không test bằng tiền thật.</p>

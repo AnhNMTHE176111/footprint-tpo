@@ -28,15 +28,15 @@ Mất cân bằng tăng dần (⇒ cơ hội có ngày trend tăng dần):
 
 *Đọc số:* trong bracket A, đếm **số ô TPO trên vs dưới giá mở** — lệch hẳn bên nào = bên đó thắng phiên mở. (Đây là "Delta của người không có footprint"; đối chiếu luôn Delta 30′ trên ATAS.)
 
-### Câu 2 — IB có ĐẤU GIÁ (được chấp nhận) không?
-Cụm từ "IB đấu giá" có **2 nghĩa ngược nhau — kiểm CẢ HAI:**
-- **(a) Acceptance BÊN TRONG IB:** giá xoay 2 chiều, TPO tích lũy dày qua thời gian → giá trị được chấp nhận → **mép IB là biên đáng tin để fade.** Ngược lại IB chỉ là một cú đẩy mỏng 1 chiều → mép yếu, đừng tin làm biên.
-- **(b) Range Extension VƯỢT IB:** giá phá biên IB và **giữ được** → **OTF nhập cuộc**, đi theo hướng đó (RE lên giữ = người mua kiểm soát; RE xuống giữ = người bán). RE là dấu chân OTF số một — luôn đọc rõ, đừng để chìm trong chữ "đấu giá".
-- **Failed auction:** phá IB nhưng **không giữ nổi ~30′** rồi chui lại → kỳ vọng quay test **mép kia** của IB (đám kẹt hàng phía sai phải thoát = nhiên liệu chiều ngược).
+### Câu 2 — IB BREAK: cú phá IB có "đấu giá thật" không? ⭐
+Đây đúng trục bạn ấy gọi **"IB break"**: dựng IB (A+B, 60′), rồi canh **giá phá biên IB** (= range extension). Cả bài toán gói trong 1 câu — **cú phá có được đấu giá / chấp nhận không?**
+- **Break UY TÍN (đấu giá thật):** phá biên IB và **giữ được** — có follow-through, TPO in tiếp phía ngoài, delta/volume cùng phe (soi footprint để xác nhận) → **OTF nhập cuộc → đi THEO hướng phá.**
+- **Failed break (đấu giá thất bại):** phá biên nhưng **không giữ nổi ~30′** rồi chui lại vào IB → đám kẹt phía sai phải thoát = nhiên liệu chiều ngược → **fade, kỳ vọng quay test MÉP KIA của IB.**
+- **Chất lượng IB làm nền:** IB xoay 2 chiều dày dặn (đấu giá cân bằng) → biên sạch, cú phá đáng tin hơn; IB chỉ là 1 cú đẩy mỏng 1 chiều → biên yếu, dễ **phá giả**.
 
 ### Câu 3 — Cú mở mang NIỀM TIN gì? (đọc cơ chế, bỏ 4 cái tên)
 Thay cho taxonomy Latin, đọc 3 nhánh niềm tin:
-- **DRIVE** — mở ngoài value, đi **một chiều** không quay lại giá mở = niềm tin OTF cao nhất, **đừng fade.** ⭐ **Cực trị bracket A (30′ đầu) = mốc invalidation CẢ NGÀY** [GT-3]: giá xuyên ngược qua nó = kịch bản chết → thoát, cân nhắc đảo. (Đúng logic "SL sau lưng tường".)
+- **DRIVE** — mở ngoài value, đi **một chiều** không quay lại giá mở = niềm tin OTF cao nhất, **đừng fade** (chính là cú *IB break* ngay từ bracket A — dạng break uy tín nhất). ⭐ **Cực trị bracket A (30′ đầu) = mốc invalidation CẢ NGÀY** [GT-3]: giá xuyên ngược qua nó = kịch bản chết → thoát, cân nhắc đảo. (Đúng logic "SL sau lưng tường".)
 - **ROTATION** — xoay 2 chiều quanh giá mở/VA cũ, biến động thấp = ngày của day-trader, chờ ở mép, ít cơ hội lớn.
 - **REJECTION-REVERSE** — mở ở **cực trị hôm qua** rồi bị đánh bật quay đầu = **phe ngược ra tay**, sóng/xu hướng hiện tại sắp tàn. Đây là read ĐẢO CHIỀU (mở đỉnh đóng đáy hoặc ngược lại).
 

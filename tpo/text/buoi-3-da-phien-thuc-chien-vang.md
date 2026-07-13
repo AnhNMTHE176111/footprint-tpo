@@ -14,19 +14,13 @@
 
 ## 1️⃣ Phiên & overnight — bản đồ thời gian của một ngày (~15')
 
-### 1.1 Năm phân đoạn của phiên Mỹ
+### 1.1 Nhịp trong phiên + settlement *(đã gọn — bỏ taxonomy 5 phân đoạn ES)*
 
-Hoạt động thị trường đi theo thói quen hằng ngày của trader chuyên nghiệp — volume và độ sôi động dao động theo "lịch sinh hoạt" của họ. Keppler chia phiên Mỹ của ES thành 5 phân đoạn, mỗi phân đoạn một tính cách:
+Volume/độ sôi động dao động theo "lịch sinh hoạt" của trader chuyên nghiệp. Chi tiết 5 phân đoạn ES (giờ đầu/sáng/trưa/chiều/settlement) là **lịch riêng của cổ phiếu — KHÔNG bê nguyên sang vàng** (phải quan sát nhịp riêng của vàng). Chỉ giữ 2 thứ dùng được:
+- **Settlement** = 15′ chốt ngày: day-trader buộc tất toán → biến động/volume dồn về 10′ cuối; **giá settlement = "giá đóng cửa chính thức"** của ngày → dùng làm mốc đọc phiên đêm (mục 1.2).
+- **Split Profile** = kỹ thuật tách profile ngày thành từng cột 30′ để so từng nhịp đấu giá (một cách đọc, không phải lịch cố định).
 
-1. **Giờ đầu tiên** — sôi động, dò hướng ngày.
-2. **Phiên sáng** — nếu giờ đầu đã chọn hướng thì sáng đẩy tiếp; chưa chọn thì bó hẹp trong range.
-3. **Phiên trưa** — nghỉ, volume tụt; *nhưng* thời đại thuật toán, thi thoảng move lớn khởi động đúng lúc ít ai ngờ nhất — đừng bỏ màn hình hoàn toàn.
-4. **Phiên chiều** — hay bất ngờ: có thể đảo ngược xóa sạch lãi buổi sáng, có thể tiếp diễn, có thể đi ngang chờ tin.
-5. **Settlement** — 15' chốt ngày: day trader buộc phải tất toán, trader khung dài quyết giữ hay đóng → biến động và volume dồn về 10' cuối; giá settlement là "giá đóng cửa chính thức" của ngày.
-
-Số phân đoạn thay đổi theo từng thị trường — trước khi phân đoạn cho vàng phải quan sát nhịp riêng của vàng, không bê nguyên lịch ES sang.
-
-**📊 Đọc chart thật** — [tpo/images/keppler/p084-0.png](tpo/images/keppler/p084-0.png): profile ngày của ES được tách thành các cột chữ cái A→N (kỹ thuật **Split Profile** — tách profile ngày thành từng cột 30'/từng phân đoạn để so sánh từng nhịp đấu giá), đóng khung theo 5 phân đoạn: First Hour 9:30–10:30 (A,B), Morning 10:30–12:00 (C,D,E), Lunch 12:00–14:00 (F,G,H,I), Afternoon 14:00–16:00 (J,K,L,M), Settlement 16:00–16:15 (N). Trên chart này cột N in dấu `N*` sát đỉnh ngày quanh 1363.50, trong khi POC ngày nằm 1359.50 (panel trái) — ngày đóng cửa mạnh, trên vùng giá trị.
+**📊 Đọc chart thật** — [tpo/images/keppler/p084-0.png](tpo/images/keppler/p084-0.png): profile ngày ES tách cột A→N; cột N (settlement) in dấu `N*` sát đỉnh ngày ~1363.50 trong khi POC ngày 1359.50 (panel trái) → ngày đóng cửa mạnh, trên vùng giá trị.
 
 ### 1.2 Overnight session — đọc bằng mốc settlement
 
@@ -40,14 +34,9 @@ Thị trường là dòng vốn 24h: hết phiên Mỹ không có nghĩa hết t
 
 Chú ý: "đuối sức" chưa chắc là đảo chiều — chỉ là đà hiện tại hụt hơi; thị trường có thể tích lũy lấy sức đi tiếp, hoặc yếu dần rồi bán tháo. Đừng nhảy từ "yếu" sang "short" khi chưa có cấu trúc.
 
-### 1.3 Hai mẫu volume qua đêm: Big Smile / Frown
+### 1.3 Mẫu volume qua đêm *(đã cắt Big Smile/Frown — chỉ giữ 1 caveat)*
 
-- **Big Smile (cười):** đêm trôi ngang-nhích nhẹ với volume mỏng → mở phiên mới volume nổ đột biến → move TĂNG theo sau. Vòng cung võng xuống như miệng cười.
-- **Frown (cau mày):** ngược lại — vòng cung úp, volume xuất hiện là mở màn cho move GIẢM.
-
-⚠️ **Caveat quan trọng (chính Keppler nhấn):** lúc volume đổ vào, biến động tăng và giá **có thể giật NGƯỢC hướng với xu hướng thật sắp tới** trước; phải kiên nhẫn chờ biến động lắng xuống thì hướng đi mới lộ rõ. Tức là: cú nổ volume ở mở cửa là *tín hiệu chuẩn bị*, không phải lệnh nhảy vào ngay.
-
-**📊 Đọc chart thật** — [tpo/images/keppler/p127-0.png](tpo/images/keppler/p127-0.png): chuỗi profile 30' của ES võng thành vòng cung suốt đêm; vòng tròn "Increased Volume" quanh 23:30–00:30 ở vùng ~1135–1140, sau đó giá bốc lên vùng ~1145 (ô giá hiện tại bên phải ~1144.5). Ảnh ngược lại — [tpo/images/keppler/p128-0.png](tpo/images/keppler/p128-0.png): vòng cung úp, KVT khoanh volume tăng lúc 06:30–07:30 — vòng tròn phủ dải **~1115–1135**, đỉnh cụm profile được khoanh chạm ~1133–1134 — rồi mũi tên xuống tận vùng 1100–1105.
+Hai nhãn "Big Smile / Frown" (vòng cung volume qua đêm) độ tin thấp, bỏ khỏi phần dạy. Chỉ giữ cái dùng được — chính Keppler nhấn: **cú nổ volume lúc mở cửa là *tín hiệu chuẩn bị*, KHÔNG phải lệnh nhảy vào ngay** — biến động tăng và giá có thể **giật NGƯỢC hướng thật** trước; chờ biến động lắng thì hướng mới lộ.
 
 ### 🥇 Áp cho vàng MGC
 

@@ -62,8 +62,12 @@ Các chủ đề chính (mục lục đầy đủ ở `ebook/text/00-muc-luc.md`
 
 ---
 
-## 📕 Phụ lục TPO — Market Profile *(3 buổi nén, học ngay trước/đầu giai đoạn thực hành — soạn 2026-07-05)*
-> Nguồn: sách Keppler *Profit With the Market Profile* bản dịch (`TPO - Market ProFile.pdf`) + tuyển tập TraderViet (`Market Profile _Vn.pdf`) + note thực chiến vàng 17 trang (`TPO.pdf`). Giáo trình đã soạn sẵn tại `tpo/text/`, ảnh chart tại `tpo/images/{keppler,tv,note}/` (tên file = trang PDF). Kiến thức trùng Volume Profile/order flow đã lược bỏ — chỉ còn phần MỚI.
-- [ ] **Buổi 1 — Nền TPO & bản đồ trong phiên:** auction theory tinh gọn · cơ chế chart TPO (bracket 30', TPO-POC vs VPOC) · Initial Balance + Range Extension + chiếu mục tiêu IB/ADR · Tails + Single Print + playbook chờ retest · poor high/low (= UB nhìn bằng TPO) — `tpo/text/buoi-1-nen-tpo-ban-do-phien.md`
-- [ ] **Buổi 2 — Hôm nay là ngày gì:** 6 day types + tiêu chí định lượng (A>B>C>D, quy tắc 5 TPO, bẫy DD vs Neutral) · 3 kịch bản giá mở vs VA hôm trước + 4 kiểu mở cửa Dalton · quy tắc 80% · xử lý phiên tin — `tpo/text/buoi-2-day-types-mo-cua-80.md`
-- [ ] **Buổi 3 — Đa phiên & thực chiến vàng:** overnight/gap + quy giờ VN + logic Á→Âu→CME · value migration + POC clustering + composite · note thực chiến (fix profile, break 2 lần, delta fresh/tested, 2 ca GCQ23) · kick-off thực hành (sizing 2%, scaling out, SL cấu trúc, checklist trước phiên, nhật ký backtest) — `tpo/text/buoi-3-da-phien-thuc-chien-vang.md`
+## 📕 Phụ lục TPO — Market Profile *(cô đọng thực chiến 2026-07-13 theo mindset trader kỳ cựu)*
+> Nguồn: sách Keppler *Profit With the Market Profile* bản dịch + tuyển tập TraderViet + note thực chiến vàng 17tr. Ảnh chart `tpo/images/{keppler,tv,note}/` (tên file = trang PDF).
+>
+> **⭐ DẠY THEO LÕI, KHÔNG DẠY TUẦN TỰ 3 BUỔI NỮA.** Bộ lọc thực chiến: chỉ xoay quanh **IB + giá mở vs VA + chất lượng đấu giá (acceptance/RE) + đọc số trên chart**. Đã kiểm chứng chéo (workflow 4 agent 2026-07-13) và cắt phần bội thực.
+- [ ] **🎯 Lõi thực chiến — `tpo/text/00-tpo-loi-thuc-chien.md`** (dạy từ đây): chu kỳ TPO đặt đúng (Daily→30′, IB=2 bracket đầu=60′; M30→M1 chỉ là micro-profile, soi 1′ thì dùng footprint/delta) · **3 câu hỏi mỗi phiên** (mở vs VA · IB có đấu giá/RE không · niềm tin mở: Drive/Rotation/Rejection-Reverse) · 6 setup giữ lại (80% rule · tái nhập VA thất bại · single print retest · bear trap · kỷ luật trend day · tails/poor high-low) · checklist 2′ + phiên tin.
+- [ ] 📎 **Buổi 1** *(tham chiếu)* — chart TPO, TPO-POC vs VPOC, IB/RE/failed auction, tails, single print. `tpo/text/buoi-1-nen-tpo-ban-do-phien.md`
+- [ ] 📎 **Buổi 2** *(tham chiếu)* — 3 kịch bản mở vs VA (chart ES thật), 80% rule, day types actionable. *(§2.2 "4 kiểu mở cửa" đã gọn còn 3 nhánh niềm tin; giữ nugget cực trị bracket A + Rejection-Reverse.)* `tpo/text/buoi-2-day-types-mo-cua-80.md`
+- [ ] 📎 **Buổi 3** *(tham chiếu)* — value migration + POC clustering, **note thực chiến vàng (2 ca GCQ23) ⭐**, kick-off thực hành (sizing 2%, SL cấu trúc, checklist). `tpo/text/buoi-3-da-phien-thuc-chien-vang.md`
+> **✂️ Đã cắt khỏi phần dạy** (còn trong file tham chiếu, không giảng): 4 *tên* kiểu mở cửa Latin · Normal/Normal Variation Day · 5 phân đoạn phiên ES · Big Smile/Frown · chiếu mục tiêu IB/ADR (dùng scaling-out VAH/POC/VAL thay thế).

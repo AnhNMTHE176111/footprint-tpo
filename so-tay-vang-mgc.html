@@ -8,7 +8,7 @@
   --gold:#D9AE4E; --gold-strong:#EFCE7E; --gold-deep:#D9AE4E; --gold-dim:rgba(217,174,78,.14);
   --long:#45BE8B; --long-dim:rgba(69,190,139,.13);
   --short:#E2685F; --short-dim:rgba(226,104,95,.13);
-  --warn:#DE9E3C; --warn-dim:rgba(222,158,60,.12);
+  --warn:#E8912E; --warn-dim:rgba(232,145,46,.13);
   --info:#5EA3DB; --info-dim:rgba(94,163,219,.12);
   --mono:"Cascadia Mono","Cascadia Code",Consolas,"Courier New",monospace;
   --sans:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
@@ -35,7 +35,7 @@
   --gold:#D9AE4E; --gold-strong:#EFCE7E; --gold-deep:#D9AE4E; --gold-dim:rgba(217,174,78,.14);
   --long:#45BE8B; --long-dim:rgba(69,190,139,.13);
   --short:#E2685F; --short-dim:rgba(226,104,95,.13);
-  --warn:#DE9E3C; --warn-dim:rgba(222,158,60,.12);
+  --warn:#E8912E; --warn-dim:rgba(232,145,46,.13);
   --info:#5EA3DB; --info-dim:rgba(94,163,219,.12);
   color-scheme:dark;
 }
@@ -84,7 +84,8 @@ strong{color:var(--ink-strong)}
   border-bottom:1px solid var(--line-soft);
   margin:0 -16px; padding:8px 16px;
 }
-.topbar-in{max-width:1060px; margin:0 auto; display:flex; align-items:center; gap:14px}
+.topbar-in{max-width:1060px; margin:0 auto; display:flex; align-items:center; gap:14px; position:relative}
+.topbar-in::after{content:""; position:absolute; right:0; top:0; bottom:0; width:26px; pointer-events:none; background:linear-gradient(90deg,transparent,var(--bg))}
 .brand{font-weight:700; font-size:13.5px; color:var(--gold-strong); white-space:nowrap; letter-spacing:.02em}
 .brand .mono{color:var(--muted); font-weight:400}
 nav.chips{display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none}
@@ -376,6 +377,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
   label.chk input{width:20px; height:20px}
   nav.chips a{padding:7px 13px}
   details summary{padding:11px 12px}
+  .gt{padding:4px 7px; font-size:11px; vertical-align:baseline}
 }
 
 /* ====== PRINT ====== */
@@ -422,7 +424,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
 <header class="hero">
   <div class="eyebrow">Sổ tay thao tác · TPO × Footprint × Wyckoff/VSA</div>
   <h1>Đêm nay vàng là <span class="gold">ngày gì</span> — và bạn đứng ở đâu?</h1>
-  <p class="hero-sub">Workflow một trang cho trader đi làm ban ngày, trade MGC sau 18:00 giờ VN. Đọc từ trên xuống một lần; khi trade chỉ liếc <b>Nhịp tối → Phễu → Checklist</b>.</p>
+  <p class="hero-sub">Workflow một trang cho trader đi làm ban ngày, trade MGC sau 18:00 giờ VN. Đọc từ trên xuống một lần; khi trade chỉ liếc <b>Nhịp tối → Phễu → Checklist</b>; đang cầm lệnh (lỗ / cần thoát) → nhảy thẳng <b>§7 Quản lý lệnh</b>.</p>
   <div class="hero-facts">
     <div class="fact">MGC · tick <b>0.1 = $1</b></div>
     <div class="fact">Rủi ro <b>2%</b>/lệnh</div>
@@ -453,7 +455,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
     <div class="step"><div class="s-kf">FOOTPRINT M1</div><div class="s-t">Bấm cò</div><div class="s-q">Ai đang hành động tại vùng?</div></div>
     <div class="step entry"><div class="s-kf">CHECKLIST</div><div class="s-t">Entry → Quản lý</div><div class="s-q">Đủ ô mới vào. TP/SL theo tường.</div></div>
   </div>
-  <p class="small" style="margin-top:8px">Chip <span class="gt">GT-nn</span> = giả thuyết <b>chưa backtest</b> (kinh nghiệm cá nhân/suy luận, không phải chuẩn Dalton/Keppler) — bấm để xem danh sách §9. <b>OTF</b> = Other Timeframe, dòng tiền khung lớn — kẻ tạo trend. Ký hiệu lạ (RE, SP, DD, ADR…)? → <a href="#tra-nhanh">§10 Tra nhanh</a>.</p>
+  <p class="small" style="margin-top:8px">Chip <span class="gt">GT-nn</span> = giả thuyết <b>chưa backtest</b> (kinh nghiệm cá nhân/suy luận, không phải chuẩn Dalton/Keppler) — bấm để xem danh sách §9. <b>OTF</b> = Other Timeframe, dòng tiền khung lớn — kẻ tạo trend. Ký hiệu lạ (VA, POC, IB, bracket, RE, SP, DD, ADR…)? → <a href="#tra-nhanh">§10 Tra nhanh</a>.</p>
 </header>
 <!-- ============ §1 NHỊP BUỔI TỐI ============ -->
 <section id="nhip-toi">
@@ -495,7 +497,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <div class="tl-body">
         <div class="tl-t">COMEX floor mở — phiên Mỹ bắt đầu <span class="badge b-gold">bracket A</span></div>
         <ul>
-          <li>IB = 2 bracket đầu của <b>cây Daily</b> (chốt 2026-07-13 theo bạn trader: “dùng IB Daily” — giờ phiên vàng/forex chỉ tương đối, đừng chỉnh li ti mốc <a class="gt" href="#gt-06">GT-06</a>).</li>
+          <li>IB = 2 bracket đầu của <b>cây Daily</b> (chốt 2026-07-13 theo bạn trader: “dùng IB Daily”). <b>Neo Session của cây Daily/TPO vào phiên Mỹ — bracket A khởi ~19:20 VN (COMEX floor/RTH), KHÔNG dùng thanh Globex 05:00</b> ⇒ A = 19:20–19:50, B = 19:50–20:20, <b>IB Daily = 19:20–20:20</b>. “Giờ tương đối” chỉ là ±10–20′ quanh mốc pit, KHÔNG phải chọn Globex vs pit <a class="gt" href="#gt-06">GT-06</a>.</li>
           <li>Giá mở nằm đâu so với <b>VA/range hôm qua</b>? → chọn 1 trong 3 kịch bản mở cửa (§3).</li>
           <li>Đếm TPO trên/dưới giá mở trong bracket A: <b>lệch hẳn về phía nào = phe đó đang thắng phiên mở</b>. Đối chiếu Delta 30′: TPO và Delta cùng phe → tin kịch bản; lệch phe → chưa rõ, chờ bracket B.</li>
         </ul>
@@ -609,9 +611,9 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
     <div class="d-body">
       <ul class="tight">
         <li><b>Chart 1 — TPO khung ngày:</b> TPO chart, composite/gộp nhiều phiên; bật cả TPO-POC lẫn VPOC (ATAS cho hiện song song). Dùng cho tầng T1.</li>
-        <li><b>Chart 2 — TPO M30 phiên hiện tại:</b> bracket 30′, IB = 2 bracket đầu của cây <b>Daily</b> (“dùng IB Daily” <a class="gt" href="#gt-06">GT-06</a>); kẻ sẵn VAH/POC/VAL hôm qua. Dùng cho tầng T2.</li>
+        <li><b>Chart 2 — TPO M30 phiên hiện tại:</b> bracket 30′; <b>đặt Session của cây Daily/TPO khởi ~19:20 VN</b> (KHÔNG Globex 05:00) → IB Daily = 2 bracket đầu = 19:20–20:20 <a class="gt" href="#gt-06">GT-06</a>; kẻ sẵn VAH/POC/VAL hôm qua. Dùng cho tầng T2.</li>
         <li><b>Chart 3 — Footprint M30, ô = Volume</b> (không cần Bid×Ask): nhìn Volume Cluster / HVN / tường để đặt TP-SL. Dùng cho tầng T3.</li>
-        <li><b>Chart 4 — Footprint M1, ô = Bid×Ask</b> + bật Imbalance 300% chéo + đường <b>Cumulative Delta 1′</b> ở panel dưới. Dùng cho tầng T4 (bấm cò).</li>
+        <li><b>Chart 4 — Footprint M1, ô = Bid×Ask</b> + bật Imbalance 300% chéo + đường <b>Cumulative Delta 1′</b> ở panel dưới. Dùng cho tầng T4 (bấm cò). <b>Đọc footprint/delta/DOM trên GC</b> (hợp đồng cái, thanh khoản thật) để lọc X1/X2/large-limit — book MGC quá mỏng để tin absorption/large-limit đơn độc; <b>vào lệnh &amp; tính size trên MGC</b>.</li>
         <li class="small">Data ATAS free trễ 15′ — đủ cho backtest/demo và playbook cấu trúc; không scalp theo giây.</li>
       </ul>
     </div>
@@ -763,8 +765,8 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <thead><tr><th scope="col">Nhánh</th><th scope="col">Nhận diện</th><th scope="col">Hành động</th></tr></thead>
       <tr>
         <td><b>DRIVE</b> <span class="badge b-gold">niềm tin cao nhất</span></td>
-        <td>Mở ngoài value, đi MỘT hướng ngay, không quay lại giá mở; volume/Delta lớn đi kèm — chính là <b>IB break ngay từ bracket A</b>. Biến thể: "ngoái lại" test VA/cực trị cũ một nhịp rồi mới bung theo hướng mở → vẫn là Drive, điểm test = điểm vào đẹp nhất ngày.</td>
-        <td>Bám theo, không chờ "hồi về giá mở", tuyệt đối không fade. <b>Cực trị 30′ đầu = mốc invalidation cả ngày</b> — giá xuyên lại qua đó là kịch bản chết, thoát/cân nhắc đảo <a class="gt" href="#gt-09">GT-09</a>.</td>
+        <td>Mở ngoài value, đi MỘT hướng ngay, không quay lại giá mở; volume/Delta lớn đi kèm — tiền đề phiên RE sẽ nới 1 chiều (IB = A+B <b>chưa đóng</b> nên CHƯA gọi "IB break" — xử theo luật DRIVE). Biến thể: "ngoái lại" test VA/cực trị cũ một nhịp rồi mới bung → điểm test đó = điểm vào đẹp nhất ngày.</td>
+        <td>Bám theo = vào ở <b>CÚ TEST/pullback nông đầu tiên</b> về cực trị bracket A / mức vừa phá — <b>KHÔNG đuổi giá đang bay</b>, không chờ "hồi về giá mở", tuyệt đối không fade. Không có nhịp test → BỎ kèo, chấp nhận MISS (giá của luật chờ test). <b>Cực trị 30′ đầu = mốc invalidation cả ngày</b> — giá xuyên lại qua đó là kịch bản chết, thoát/cân nhắc đảo <a class="gt" href="#gt-09">GT-09</a>.</td>
       </tr>
       <tr>
         <td><b>ROTATION</b></td>
@@ -783,12 +785,12 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
   <div class="card">
     <h3>Playbook · IB BREAK — trục chính của phiên <span class="badge b-gold">IB Daily</span> <a class="gt" href="#gt-06">GT-06</a></h3>
     <ul class="tight">
-      <li><b>Dựng khung:</b> IB = 2 bracket đầu của cây <b>Daily</b> ("dùng IB Daily"); kẻ IB High/Low. Cả phiên canh đúng một chuyện: <b>cú phá IB có được đấu giá chấp nhận không?</b></li>
+      <li><b>Dựng khung:</b> IB = 2 bracket đầu của cây <b>Daily</b> ("dùng IB Daily"), <b>Session neo 19:20 VN ⇒ IB Daily = 19:20–20:20</b> (KHÔNG Globex 05:00 <a class="gt" href="#gt-06">GT-06</a>); kẻ IB High/Low. Cả phiên canh đúng một chuyện: <b>cú phá IB có được đấu giá chấp nhận không?</b></li>
       <li><b>Chất lượng IB làm nền:</b> IB xoay 2 chiều dày dặn = biên sạch, break đáng tin; IB chỉ là một cú đẩy mỏng 1 chiều = biên yếu, dễ phá giả. IB break trong <b>giờ Mỹ</b> đáng tin hơn break lúc Á/Âu mỏng.</li>
       <li><b>Break UY TÍN (đấu giá thật):</b> phá biên + GIỮ được — TPO in dày tiếp phía ngoài (acceptance) <b>+</b> delta/imbalance cùng hướng còn fresh trên footprint → OTF nhập cuộc → đi THEO hướng phá. Chỉ có 1 trong 2 nguồn → giảm size hoặc bỏ.</li>
-      <li><b>Failed break:</b> phá nhưng không giữ nổi ~30′ rồi chui lại IB <a class="gt" href="#gt-01">GT-01</a> → kỳ vọng test <b>MẶT KIA</b> của IB (đám đu break kẹt hàng = nhiên liệu chiều ngược); chỉ fade khi có xác nhận X1–X4 tại cú chui lại — không có trigger thì đứng ngoài.</li>
-      <li><b>Entry — ✅ ĐÃ CHỐT (bạn trader 2026-07-13, nguyên văn: <i>"Phá biên rồi chờ test"</i>):</b> KHÔNG đuổi cú phá — chờ <b>retest biên vừa phá</b> rồi mới vào. Phương án phụ (từ note, chưa hỏi riêng): phục kích <b>break lần 2</b> <a class="gt" href="#gt-11">GT-11</a>. <b>SL:</b> cấu trúc bên kia biên vừa phá, kiểm khung 10–20% ADR. <b>Target:</b> scaling-out theo vùng volume (VAH/POC/VAL, HVN kế tiếp — chốt TRƯỚC mép).</li>
-      <li class="small">⚠ Còn 2 câu MỞ với bạn trader (khối tương ứng tạm dùng mặc định của sổ này): <b>(b)</b> xác nhận "đấu giá thật" bằng gì — delta/volume follow-through trên footprint hay chỉ cần giá trụ ngoài biên ~30′? <b>(c)</b> phá hụt: fade ngược về mép kia hay đứng ngoài?</li>
+      <li><b>Failed break:</b> phá nhưng không giữ nổi ~30′ rồi chui lại IB <a class="gt" href="#gt-01">GT-01</a> → <b>mặc định ĐỨNG NGOÀI</b>; chỉ fade khi có xác nhận X1–X4 tại cú chui lại (đám đu break kẹt hàng = nhiên liệu chiều ngược). <b>Target fade:</b> T1 = POC/giữa IB (chỗ hay dừng/xoay), chỉ kéo tiếp về MẶT KIA của IB khi value/delta đi theo. <b>Invalidation:</b> giá ĐÓNG M30 vượt lại cực trị cú phá hụt = phá thật/break lần 2 → out ngay. Kiểm R:R tới mép đối diện trước khi vào, &lt; ~1:2 thì đứng ngoài <a class="gt" href="#gt-22">GT-22</a>.</li>
+      <li><b>Entry — ✅ ĐÃ CHỐT (bạn trader 2026-07-13: <i>"Phá biên rồi chờ test"</i>). Quy trình 4 nhịp:</b> (1) giá phá biên IB → (2) chờ <b>1 nến M30 ĐÓNG hẳn ngoài biên</b> = công nhận break thật (chui lại trong ~30′ → nhảy playbook Failed break) → (3) chờ giá <b>RETEST đúng biên vừa phá</b> — KHÔNG đuổi cú phá → (4) tại retest cần thêm <b>xác nhận footprint X1–X4 cùng hướng + delta fresh</b> mới bấm cò. Phương án phụ: cú phá lần 1 bị từ chối → phục kích <b>break lần 2 tại chính biên IB đó</b> <a class="gt" href="#gt-11">GT-11</a>. <b>SL:</b> cấu trúc bên kia biên vừa phá, kiểm khung 10–20% ADR. <b>Target:</b> scaling-out theo vùng volume (VAH/POC/VAL, HVN kế tiếp — chốt TRƯỚC mép).</li>
+      <li class="small">⚠ <b>Đang hỏi mentor (dùng mặc định tạm):</b> <b>(b)</b> acceptance để CÔNG NHẬN break đo bằng gì — 1 nến M30 đóng ngoài biên là đủ, hay cần in trọn 1 bracket TPO + VA nhích ra? <a class="gt" href="#gt-21">GT-21</a> (tạm: 1 nến M30 đóng ngoài = công nhận; delta chỉ là trigger tại retest, KHÔNG phải cổng công nhận — vì ATAS free trễ 15′ xác nhận muộn, retest bay mất). <b>(c)</b> phá hụt: <b>mặc định ĐỨNG NGOÀI</b>, chỉ fade khi có X1–X4 tại cú chui lại (khớp bullet Failed break trên) <a class="gt" href="#gt-22">GT-22</a>.</li>
     </ul>
   </div>
 
@@ -796,7 +798,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
     <div class="card">
       <h3>Playbook · Quy tắc 80% <span class="badge b-info">fade xuyên VA</span></h3>
       <ul class="tight">
-        <li><b>Điều kiện:</b> mở NGOÀI VA hôm qua → giá quay VÀO VA → giữ được <b>2 bracket 30′ liên tiếp kể từ lúc tái nhập</b> (bracket đặt tên A, B, C… từ đầu phiên; tái nhập ở bracket thứ 5 = E thì đếm E+F). Bracket tái nhập chỉ được tính nếu nó <b>ĐÓNG bên trong VA</b> — tái nhập quá muộn giữa bracket mà đóng ngoài VA → đếm từ bracket kế tiếp.</li>
+        <li><b>Điều kiện:</b> giá ĐANG/đi ra <b>NGOÀI VA hôm qua</b> (mở ngoài HOẶC rời VA trong phiên) → giá quay VÀO VA → giữ được <b>2 bracket 30′ liên tiếp kể từ lúc tái nhập</b> (bracket đặt tên A, B, C… từ đầu phiên; tái nhập ở bracket thứ 5 = E thì đếm E+F). Bracket tái nhập chỉ được tính nếu nó <b>ĐÓNG bên trong VA</b> — tái nhập quá muộn giữa bracket mà đóng ngoài VA → đếm từ bracket kế tiếp.</li>
         <li><b>Vào:</b> theo hướng xuyên VA ngay khi bracket thứ 2 chốt. <b>Target:</b> mép VA đối diện — chốt TRƯỚC mép một chút (mép = HVN). <b>Stop mặc định:</b> ngoài mép VA vừa tái nhập + đệm vài tick, kiểm khung 10–20% ADR; cực trị đầu phiên chỉ dùng khi vẫn lọt khung ADR — ngoài khung thì bỏ kèo, không nắn SL.</li>
         <li><b>R:R của kèo này:</b> target cấu trúc cố định (mép đối diện thường cách 60–80 tick) → chấp nhận <b>≥1:2</b>, là <b>ngoại lệ CÓ TÊN</b> so với chuẩn 1:4 — ghi "80% rule" vào nhật ký. Đi 1 hợp đồng mà POC dày chắn giữa đường: hoặc nhắm TP trước POC (an toàn), hoặc giữ tới mép đối diện — <b>chọn TRƯỚC khi vào</b>; qua POC thì dời SL về hòa vốn.</li>
         <li><b>Cơ chế</b> (đừng học vẹt số 80% <a class="gt" href="#gt-13">GT-13</a>): phe thắng lúc mở mất tự tin, giá về "họp chợ" trong VA — chợ họp là quét hết sạp từ mép này sang mép kia.</li>
@@ -1061,13 +1063,13 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
   <div class="setups">
     <div class="setup">
       <div class="su-head"><span class="su-no">X1</span><h4>Large Limit Orders</h4><span class="badge b-info">thụ động · vào sớm</span></div>
-      <div class="su-mech">Tường limit lớn vừa lộ mặt: số to bất thường ở <b>MỘT cột</b>. Buy limit hiện trên Bid, Sell limit hiện trên Ask.</div>
+      <div class="su-mech">KHÔNG nhìn thấy lệnh limit chờ — <b>suy ra</b> tường qua khối lượng khớp lớn dồn <b>MỘT cột</b> mà giá không xuyên (Bid to bị nuốt = tường mua; Ask to bị nuốt = tường bán), đọc trên nến M1 <b>ĐÃ ĐÓNG</b>.</div>
       <ul>
         <li>Số to ở <b>Bid</b> + giá không thủng → tường MUA → <span class="badge b-long">Long</span> tại Hỗ trợ</li>
         <li>Số to ở <b>Ask</b> + giá không xuyên → tường BÁN → <span class="badge b-short">Short</span> tại Kháng cự</li>
-        <li>"To bất thường" theo từng phiên — dò ngưỡng riêng cho MGC</li>
+        <li>"To bất thường" theo từng phiên — dò ngưỡng riêng cho MGC (đọc trên GC cho chắc)</li>
       </ul>
-      <div class="su-trig"><b>Vào "sớm"</b> = ngay khi nến M1 chứa tường vừa <b>ĐÓNG</b> mà giá không xuyên (tường có thể xây dần vài phút — số to hiện dần). Sớm hơn X2 ở chỗ không cần chờ tường thắng trọn một trận, nhưng <b>không bao giờ sớm hơn nến đóng</b> — luật g6 luôn thắng khi mâu thuẫn.</div>
+      <div class="su-trig"><b>Vào "sớm"</b> = ngay khi nến M1 chứa tường vừa <b>ĐÓNG</b> mà giá không xuyên (tường có thể xây dần vài phút — số to hiện dần), <b>không bao giờ sớm hơn nến đóng</b> — luật g6 (§6) luôn thắng khi mâu thuẫn. <b>Trên ATAS free (trễ 15′) không vào sớm đúng giây được → X1 ≈ X2, ưu tiên X2.</b></div>
     </div>
 
     <div class="setup">
@@ -1143,19 +1145,21 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
 
   <div class="card">
     <h3>Hai chế độ entry — chọn trước, đừng lai tạp giữa chừng</h3>
+    <p class="small" style="margin:2px 0 10px"><b>ATAS free trễ 15′ = MẮT bạn trễ, KHÔNG phải LỆNH bạn.</b> Nến M1 bạn nhìn là quá khứ 15′ — thấy X1–X4 rồi mới bấm = phản ứng với bóng ma (lúc overlap giá đã đi 30–50 tick). Lệnh chờ/limit đặt TRƯỚC tại vùng/biên kẻ sẵn vẫn khớp real-time. ⇒ Trên free data: <b>luyện đọc X1–X4 trên PAPER, vào thật bằng chế độ ②.</b></p>
     <div class="grid2">
       <div class="layer-out">
-        <div class="lo-t">① Chế độ xác nhận — mặc định cho người mới</div>
+        <div class="lo-t">① Chế độ xác nhận — cho PAPER/luyện đọc X1–X4 (hoặc khi có data real-time)</div>
         <ul>
           <li>Chờ giá VÀO vùng → X1–X4 đúng phía → nến M1 đóng → bấm (checklist đủ 9 ô).</li>
           <li>Đổi lại: giá vào xấu hơn vài tick so với mép vùng — chấp nhận, đó là phí bảo hiểm.</li>
         </ul>
       </div>
       <div class="layer-out">
-        <div class="lo-t">② Chế độ lệnh chờ — kiểu note GCQ23, khi đã quen tay</div>
+        <div class="lo-t">② Chế độ lệnh chờ — MẶC ĐỊNH ở ATAS free · kiểu note GCQ23</div>
         <ul>
-          <li>Đặt limit sẵn tại vùng hấp thụ V6 còn fresh, CHỈ khi Pha 1 (g1–g4) đã pass từ trước + SL cấu trúc sát sau lưng vùng.</li>
+          <li>Đặt limit sẵn tại vùng hấp thụ V6 còn fresh / biên IB kẻ trước, CHỈ khi Pha 1 (g1–g4) đã pass từ trước + SL cấu trúc sát sau lưng vùng.</li>
           <li>Rủi ro thật: không có ai xác nhận tại thời điểm khớp — bù bằng vùng chất lượng cao + SL sát. Ghi "lệnh chờ" vào nhật ký để so hai chế độ khi backtest.</li>
+          <li class="small"><b>Cổng checklist cho ②:</b> MIỄN g5 (xác nhận ngay lúc khớp) + g6 (nến M1 đóng) — bù bằng V6 chất lượng cao + SL cấu trúc sát + rút limit trước cửa sổ tin. Verdict "9/9" là chuẩn của chế độ ①; với ② coi ĐỦ khi <b>7/9</b> (2 ô còn lại đã thay bằng chất lượng vùng).</li>
         </ul>
       </div>
     </div>
@@ -1165,7 +1169,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
     <div class="chk-group">
       <div class="cg-t">Pha 1 · TRƯỚC — tick ngay khi kẻ xong vùng (18:00 → T3)</div>
       <label class="chk"><input type="checkbox" data-ck="g1"><span><span class="what"><b>Thuận kế hoạch đêm nay</b> (ô phía trên) và <b>không ngược trend day</b> — nếu hôm nay lộ dạng Trend Day, lệnh cùng chiều RE</span><span class="why">Lệnh ngược value migration cần bằng chứng gấp đôi; kẹt ngược trend day là kẻ thua nặng nhất</span></span></label>
-      <label class="chk"><input type="checkbox" data-ck="g2"><span><span class="what"><b>Ngoài cửa sổ tin</b>: không tin hạng nhất trong ±15′ (19:30 · FOMC 01:00), tin hạng hai ±5′ (21:00)</span><span class="why">Order flow trước tin là thanh khoản rút, không phải tín hiệu</span></span></label>
+      <label class="chk"><input type="checkbox" data-ck="g2"><span><span class="what"><b>Ngoài cửa sổ tin</b>: không tin hạng nhất trong ±15′ (19:30 · FOMC 01:00 — <b>mùa đông +1h: 20:30 · 02:00</b>), tin hạng hai ±5′ (21:00)</span><span class="why">Order flow trước tin là thanh khoản rút, không phải tín hiệu</span></span></label>
       <label class="chk"><input type="checkbox" data-ck="g3"><span><span class="what"><b>Vùng kẻ TRƯỚC khi giá đến, có tiền thật</b> — cluster/HVN/stacked trùng level TPO</span><span class="why">Level vẽ sau khi giá chạy = vẽ theo ý muốn</span></span></label>
       <label class="chk"><input type="checkbox" data-ck="g4"><span><span class="what"><b>Fresh + lần test đầu + không nam châm ngược</b> — vùng chưa bị chạm lại; không UB/poor H-L/SP chưa fix ngay sau SL hoặc ngược hướng TP</span><span class="why">Mỗi lần test tiêu hao tường; giá thích quay lại "trả nợ" — đừng đứng giữa nó và món nợ</span></span></label>
     </div>
@@ -1174,7 +1178,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <label class="chk"><input type="checkbox" data-ck="g5"><span><span class="what"><b>≥1 xác nhận đúng phía NGAY TRONG vùng</b> — X1 số to 1 cột · X2 hai cột to + giá đứng · X3 phe chủ động + delta cùng dấu · X4 giá × CVD ngược chiều</span><span class="why">Xác nhận giữa trời không có giá trị — chi tiết bấm chip "Bấm cò"</span></span></label>
       <label class="chk"><input type="checkbox" data-ck="g6"><span><span class="what"><b>"GIÁ CÓ ĐI KHÔNG?"</b> trả lời thuận — nến M1 đã ĐÓNG xác nhận, không bấm theo delta đang nhảy</span><span class="why">Delta của nến chưa đóng còn "sống", có thể lật ngược</span></span></label>
       <label class="chk"><input type="checkbox" data-ck="g7"><span><span class="what"><b>SL ở phía BÊN KIA tường so với entry</b> — Long: dưới mép DƯỚI tường; Short: trên mép TRÊN tường. Khoảng giữa entry và tường = vùng CẤM đặt SL (giá được phép test tường mà kèo chưa sai)</span><span class="why">SL cấu trúc là chuẩn gốc; khung 10–20% ADR chỉ là sanity check — HẸP hơn 10% vẫn hợp lệ (chấp nhận dễ bị quét noise), RỘNG hơn 20% → bỏ kèo/đổi setup. KHÔNG bóp stop cho "vừa tiền"</span></span></label>
-      <label class="chk"><input type="checkbox" data-ck="g8"><span><span class="what"><b>R:R ≥ 1:2 (sàn cứng — dưới 1:2 cấm mọi loại kèo)</b>, TP đặt TRƯỚC vùng volume nặng kế tiếp. Chuẩn kèo vùng V1–V6 = 1:4; kèo 1:2–1:4 chỉ vào khi là <b>ngoại lệ có tên</b>: ① 80% rule (§3) ② fade sau tin (§8) — ghi tên vào nhật ký</span><span class="why">Vùng gần quá → bỏ hoặc nhắm vùng kế tiếp nữa; R:R tính TRƯỚC khi giá đến, không tính sau</span></span></label>
+      <label class="chk"><input type="checkbox" data-ck="g8"><span><span class="what"><b>R:R ≥ 1:4</b> cho kèo vùng thường (V1–V6); TP đặt TRƯỚC vùng volume nặng kế tiếp. Chỉ hạ <b>1:2–1:4 KHI đã ghi tên ngoại lệ</b>: ① 80% rule (§3) ② fade sau tin (§8). <b>Dưới 1:4 mà KHÔNG có tên ngoại lệ = KHÔNG tick.</b> Sàn tuyệt đối 1:2 — dưới 1:2 cấm mọi kèo</span><span class="why">Vùng gần quá → bỏ hoặc nhắm vùng kế tiếp nữa; R:R tính TRƯỚC khi giá đến, không tính sau</span></span></label>
       <label class="chk"><input type="checkbox" data-ck="g9"><span><span class="what"><b>Size theo 2%</b> — đúng con số máy tính bên dưới, làm tròn xuống</span><span class="why">Ăn thua đều giữ công thức, không tăng size gỡ</span></span></label>
     </div>
 
@@ -1184,7 +1188,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <span class="gv-count" id="verdict-time"></span>
       <button class="btn" id="reset-chk" type="button">Xóa hết ✕</button>
     </div>
-    <p class="small" style="margin-top:8px">Tick tự xóa sau <b>60 phút</b> — mỗi kèo tick lại từ đầu. <b>Luật dừng đêm:</b> thua 2 lệnh liên tiếp HOẶC đã vào 3 kèo → đóng máy, mai còn phiên khác. Mệt = không trade (đã tick từ 18:00 ở §1).</p>
+    <p class="small" style="margin-top:8px">Tick <b>tự xóa sau 60′ không thao tác</b> (kể cả khi tab vẫn mở — verdict tự về 0/9 lúc hết hạn); mỗi kèo tick lại từ đầu. <b>Luật dừng đêm:</b> thua 2 lệnh liên tiếp HOẶC đã vào 3 kèo → đóng máy, mai còn phiên khác. Mệt = không trade (đã tick từ 18:00 ở §1).</p>
   </div>
 
   <div class="card">
@@ -1201,7 +1205,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <div class="co"><div class="co-l">Rủi ro cho phép</div><div class="co-v" id="out-risk">$40</div><div class="co-s">vốn × %rủi ro</div></div>
       <div class="co"><div class="co-l">Số hợp đồng</div><div class="co-v" id="out-size">1</div><div class="co-s">làm tròn XUỐNG; &lt;1 = bỏ kèo</div></div>
       <div class="co"><div class="co-l">Lỗ nếu dính SL</div><div class="co-v" id="out-loss">$35</div><div class="co-s">SL tick × $1 × số HĐ</div></div>
-      <div class="co"><div class="co-l">R : R</div><div class="co-v" id="out-rr">1 : 4.0</div><div class="co-s">xanh ≥1:4 chuẩn · vàng 1:2–1:4 chỉ kèo ngoại lệ có tên · đỏ &lt;1:2 cấm</div></div>
+      <div class="co"><div class="co-l">R : R</div><div class="co-v" id="out-rr">1 : 4.0</div><div class="co-s">xanh ≥1:4 chuẩn · cam 1:2–1:4 CHỈ kèo ngoại lệ có tên · đỏ &lt;1:2 cấm</div></div>
     </div>
     <p class="small">Không đủ 1 hợp đồng → <b>bỏ kèo, chờ setup có SL cấu trúc gần hơn</b> — tuyệt đối không kéo SL lại gần cho vừa tiền (SL phải nằm ở điểm cấu trúc nói lệnh đã SAI). Muốn rủi ro nhỏ hơn: giảm size hoặc đổi kèo.</p>
   </div>
@@ -1228,11 +1232,12 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <h3>🛑 Dừng lỗ — 3 cách, một câu hỏi</h3>
       <p class="small" style="margin-top:0">Câu hỏi duy nhất của Keppler: <b>"Mức giá nào trên cấu trúc cho biết lệnh đã SAI?"</b> — SL ở đó, không phải ở con số tiền.</p>
       <ul class="tight">
-        <li><b>① SL cố định</b> (vd 10–20 tick) — không phải nghĩ, nhưng không thích ứng thị trường.</li>
+        <li><b>① SL cố định</b> (vd 10–20 tick) — <b>chỉ khi KHÔNG xác định được cấu trúc</b>; không phải nghĩ, nhưng không thích ứng thị trường. Đừng dùng để thay SL cấu trúc "quá rộng".</li>
         <li><b>② Ngoài đỉnh/đáy vùng S/R</b> đang giao dịch.</li>
         <li><b>③ Sau vùng volume THẤP nằm sau tường volume nặng</b> — giá xuyên cả tường vào vùng trống = momentum thật, hỏng kèo, thoát.</li>
-        <li>Khung sanity ≈ <b>10–20% ADR</b> (đo bằng ATR 14 ngày): SL cấu trúc <b>hẹp hơn 10%</b> vẫn hợp lệ — chấp nhận dễ bị quét noise, không hạ chuẩn cấu trúc; <b>rộng hơn 20%</b> → bỏ kèo hoặc quay về cách ①. Không bóp stop cho vừa tiền.</li>
+        <li>Khung sanity ≈ <b>10–20% ADR</b> (đo bằng ATR 14 ngày): SL cấu trúc <b>hẹp hơn 10%</b> vẫn hợp lệ — chấp nhận dễ bị quét noise, không hạ chuẩn cấu trúc; <b>rộng hơn 20%</b> → <b>GIẢM SIZE</b> để giữ 2% (SL vẫn sau tường) hoặc <b>BỎ/đổi setup</b> — KHÔNG thay bằng SL cố định cắt ngang tường. Không bóp stop cho vừa tiền.</li>
         <li><b>Chiều đặt:</b> phía giá phải XUYÊN nếu sai kèo — Short thì TRÊN tường, Long thì DƯỚI tường. Không đặt SL có UB đứng ngay sau lưng.</li>
+        <li><b>2 lớp thoát (ngày Drive):</b> SL LỆNH = dưới biên IB vừa phá (giá xuyên lại = cắt kèo); INVALIDATION KỊCH BẢN = dưới cực trị bracket A (xuyên = thoát sạch + cân nhắc đảo). Đừng lẫn hai mốc — cái rộng hơn không phải "SL để bị quét".</li>
         <li>Bị quét stop rồi giá chạy đúng hướng ≠ "cần stop xa hơn" — thường là vào sai thời điểm/giá vào xấu.</li>
       </ul>
     </div>
@@ -1324,6 +1329,8 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <tr id="gt-18"><td class="mono">GT-18</td><td>Bỏ kèo retest khi vùng SP rộng &gt; 1/3 ATR ngày <span class="small">(B1, tự đặt)</span></td><td>Đo phân phối độ rộng SP/ATR</td></tr>
       <tr id="gt-19"><td class="mono">GT-19</td><td>RE &gt; 2× IB → nghiêng Trend Day; RE ~≤2× IB → ngày cân bằng thường, kỳ vọng mỏng <span class="small">(B2)</span></td><td>Đo tỉ số RE/IB từng ngày, xem phân phối tách ở đâu</td></tr>
       <tr id="gt-20"><td class="mono">GT-20</td><td>Ngưỡng Trade Filter cho MGC: khởi điểm dò ~20–30 lô/lệnh trong phiên Mỹ <span class="small">(tự đặt để bắt đầu dò, chưa kiểm)</span></td><td>Chỉnh tới khi ra ~5–10 tín hiệu/ngày, ghi lại ngưỡng ổn định</td></tr>
+      <tr id="gt-21"><td class="mono">GT-21</td><td>(Câu b — đang hỏi mentor) Acceptance để CÔNG NHẬN cú phá IB: 1 nến M30 đóng ngoài biên đã đủ, hay cần in TRỌN 1 bracket TPO ngoài IB + VA nhích ra? <span class="small">(tự đặt từ feedback đa agent 2026-07-13)</span></td><td>So tỷ lệ đi tiếp: "1 nến M30 đóng ngoài" vs "in trọn 1 bracket + VA dịch"</td></tr>
+      <tr id="gt-22"><td class="mono">GT-22</td><td>(Câu c — đang hỏi mentor) Phá hụt IB: fade về mép kia (CHỈ khi có X1–X4 tại cú chui lại) có edge hơn ĐỨNG NGOÀI không? <span class="small">(tự đặt từ feedback đa agent 2026-07-13)</span></td><td>Đếm cú failed break: fade-có-trigger thắng bao nhiêu % vs bỏ qua</td></tr>
     </table></div>
     <p class="small" style="margin-top:10px"><b>Nhật ký mỗi phiên (5′):</b> kịch bản dự đoán trước phiên → loại ngày thực tế → setup đã vào → kết quả (R) → <b>1 mã GT đã kiểm + ĐÚNG/SAI</b>. 3/5 lần thắng chưa phải 60% — mẫu nhỏ, lặp đủ nhiều. Test trên sim/demo trước, không test bằng tiền thật.</p>
   </div>
@@ -1371,11 +1378,30 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
     </div>
     <div class="card">
       <h3>MGC specs</h3>
-      <p style="font-size:13px">Tick <span class="num">0.1 = $1</span> · chạy ~23h/ngày · nghỉ bảo trì <span class="num">04:00–05:00</span> VN · settlement <span class="num">00:29–00:30</span> VN (hè) · thanh khoản mỏng hơn GC — tin lớn dễ trượt giá qua SL.</p>
+      <p style="font-size:13px">Tick <span class="num">0.1 = $1</span> · chạy ~23h/ngày · nghỉ bảo trì <span class="num">04:00–05:00</span> VN · settlement <span class="num">00:29–00:30</span> VN (hè) · thanh khoản mỏng hơn GC — tin lớn dễ trượt giá qua SL, và book quá mỏng để tin absorption/large-limit đơn độc → <b>đọc footprint trên GC, vào lệnh trên MGC</b>.</p>
     </div>
     <div class="card">
       <h3>Viết tắt trong sổ tay</h3>
-      <p style="font-size:13px"><b>OTF</b> = Other Timeframe, dòng tiền khung lớn — kẻ tạo trend · <b>IB</b> = Initial Balance, range 2 bracket đầu A+B (60′) · <b>RE</b> = Range Extension, giá vượt ra ngoài IB · <b>SP</b> = Single Print, đoạn profile chỉ 1 TPO · <b>DD</b> = Double Distribution · <b>VA/VAH/VAL</b> = Value Area và 2 mép · <b>POC/VPOC</b> = Point of Control theo TPO/theo volume · <b>CVD</b> = Cumulative Delta · <b>UB</b> = Unfinished Business · <b>LVN/HVN</b> = Low/High Volume Node · <b>ADR ≈ ATR(14, Daily)</b> = biên độ trung bình ngày, sổ này dùng như một — đo trên ATAS rồi điền vào Kế hoạch mỗi tối (ví dụ quy đổi: ATR $40 = 400 tick → SL hợp lệ 40–80 tick) · <b>VWAP</b> = giá bình quân theo volume · <b>GCQ23</b> = hợp đồng vàng GC tháng 8/2023 trong note thực chiến.</p>
+      <div class="tblwrap"><table>
+        <tbody>
+          <tr><td class="mono"><b>bracket</b></td><td>1 khung 30′ đặt tên A, B, C… từ đầu phiên</td></tr>
+          <tr><td class="mono"><b>TPO</b></td><td>Time-Price Opportunity — 1 chữ đánh dấu 1 bracket chạm 1 mức giá</td></tr>
+          <tr><td class="mono"><b>VA / VAH / VAL</b></td><td>Value Area (~70% khối lượng) và 2 mép trên/dưới</td></tr>
+          <tr><td class="mono"><b>POC / VPOC</b></td><td>Point of Control theo TPO / theo volume — mức đông nhất</td></tr>
+          <tr><td class="mono"><b>IB</b></td><td>Initial Balance — range 2 bracket đầu A+B (ở đây neo 19:20–20:20)</td></tr>
+          <tr><td class="mono"><b>RE</b></td><td>Range Extension — giá vượt ra ngoài IB</td></tr>
+          <tr><td class="mono"><b>SP</b></td><td>Single Print — đoạn profile chỉ 1 TPO ("fix" = giá quay lại lấp)</td></tr>
+          <tr><td class="mono"><b>DD</b></td><td>Double Distribution — 2 vòm giá trị ngăn bằng SP</td></tr>
+          <tr><td class="mono"><b>OTF</b></td><td>Other Timeframe — dòng tiền khung lớn, kẻ tạo trend</td></tr>
+          <tr><td class="mono"><b>UB</b></td><td>Unfinished Business — đỉnh/đáy đấu giá chưa xong (nam châm)</td></tr>
+          <tr><td class="mono"><b>LVN / HVN</b></td><td>Low / High Volume Node — vùng volume thấp / cao</td></tr>
+          <tr><td class="mono"><b>VP</b></td><td>Volume Profile — khối lượng gom theo GIÁ (thanh nằm ngang)</td></tr>
+          <tr><td class="mono"><b>CVD</b></td><td>Cumulative Delta — delta cộng dồn cả phiên (chậm)</td></tr>
+          <tr><td class="mono"><b>VWAP</b></td><td>giá bình quân theo volume</td></tr>
+          <tr><td class="mono"><b>ADR ≈ ATR(14, D)</b></td><td>biên độ trung bình ngày — đo trên ATAS, điền vào Kế hoạch (vd ATR $40 = 400 tick → SL hợp lệ 40–80 tick)</td></tr>
+          <tr><td class="mono"><b>GCQ23</b></td><td>hợp đồng vàng GC tháng 8/2023 trong note thực chiến</td></tr>
+        </tbody>
+      </table></div>
     </div>
   </div>
 </section>
@@ -1415,9 +1441,11 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       vBox=document.getElementById('verdict');
   function renderVerdict(){
     var n=boxes.filter(function(b){return b.checked}).length;
-    vCount.textContent=n+'/'+boxes.length;
+    var p1=boxes.filter(function(b){return b.checked && /^g[1-4]$/.test(b.dataset.ck)}).length;
+    var p2=boxes.filter(function(b){return b.checked && /^g[5-9]$/.test(b.dataset.ck)}).length;
+    vCount.textContent='P1 '+p1+'/4 · P2 '+p2+'/5 · '+n+'/'+boxes.length;
     var st=loadStore(CHK_KEY, CHK_TTL);
-    vTime.textContent=(st && n>0)?('tick lần cuối '+fmtTime(st.t)):'';
+    vTime.textContent=(st && n>0)?('hết hạn ~'+fmtTime(st.t+CHK_TTL)):'';
     if(n===boxes.length){ vBox.classList.add('go'); vText.textContent='✔ ĐỦ ĐIỀU KIỆN — vào lệnh theo size máy tính, TP/SL đã kẻ'; }
     else{ vBox.classList.remove('go'); vText.textContent='Chưa đủ điều kiện — tiếp tục quan sát'; }
   }
@@ -1425,11 +1453,20 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
     var o={}; boxes.forEach(function(b){ if(b.checked) o[b.dataset.ck]=1; });
     saveStore(CHK_KEY,o);
   }
+  // Hết hạn 60′ áp NGAY cả khi tab mở liên tục (không chỉ lúc reload): bỏ tick + verdict về 0
+  function purgeIfExpired(){
+    if(!loadStore(CHK_KEY, CHK_TTL) && boxes.some(function(b){return b.checked})){
+      boxes.forEach(function(b){b.checked=false}); renderVerdict();
+    }
+  }
   boxes.forEach(function(b){ b.addEventListener('change',function(){ persistChk(); renderVerdict(); }); });
   document.getElementById('reset-chk').addEventListener('click',function(){
     boxes.forEach(function(b){b.checked=false}); persistChk(); renderVerdict();
   });
   renderVerdict();
+  setInterval(purgeIfExpired, 30*1000);
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) purgeIfExpired(); });
+  window.addEventListener('focus', purgeIfExpired);
 
   // ==== kế hoạch đêm nay: tự hết hạn sau 12h ====
   var PLAN_KEY='sotay-mgc-plan', PLAN_TTL=12*60*60*1000;

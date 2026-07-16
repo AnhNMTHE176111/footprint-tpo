@@ -399,6 +399,14 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
   .tl-row.hot,.tl-row.now{background:none; box-shadow:none}
   .tl-row.now .tl-t::after{content:none}
 }
+
+/* ====== GLS — chú thích thuật ngữ (hover / tap) ====== */
+.gls{border-bottom:1px dotted var(--faint); cursor:help}
+#gls-tip{display:none; position:fixed; z-index:999; background:var(--surface2); color:var(--ink);
+  border:1px solid var(--line); border-radius:8px; padding:7px 10px 8px;
+  font-size:12.5px; line-height:1.5; max-width:300px;
+  box-shadow:0 8px 22px rgba(0,0,0,.35); pointer-events:none}
+@media print{ .gls{border-bottom:none} #gls-tip{display:none!important} }
 </style>
 
 <div class="topbar">
@@ -1399,6 +1407,11 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
           <tr><td class="mono"><b>CVD</b></td><td>Cumulative Delta — delta cộng dồn cả phiên (chậm)</td></tr>
           <tr><td class="mono"><b>VWAP</b></td><td>giá bình quân theo volume</td></tr>
           <tr><td class="mono"><b>ADR ≈ ATR(14, D)</b></td><td>biên độ trung bình ngày — đo trên ATAS, điền vào Kế hoạch (vd ATR $40 = 400 tick → SL hợp lệ 40–80 tick)</td></tr>
+          <tr><td class="mono"><b>SC / BC</b></td><td>Selling / Buying Climax — cao trào bán / mua (Wyckoff)</td></tr>
+          <tr><td class="mono"><b>AR / ST</b></td><td>Automatic Rally — cú bật sau cao trào / Secondary Test — kiểm định lại vùng cao trào</td></tr>
+          <tr><td class="mono"><b>SOS / SOW</b></td><td>Sign of Strength / Weakness — cú đẩy xác nhận phe mua / phe bán nắm quyền</td></tr>
+          <tr><td class="mono"><b>LPS / LPSY</b></td><td>Last Point of Support / Supply — nhịp hồi cuối trước khi trend nổ ra</td></tr>
+          <tr><td class="mono"><b>UTAD</b></td><td>Upthrust After Distribution — cú vọt giả cuối phân phối, bẫy phe mua</td></tr>
           <tr><td class="mono"><b>GCQ23</b></td><td>hợp đồng vàng GC tháng 8/2023 trong note thực chiến</td></tr>
         </tbody>
       </table></div>
@@ -1589,6 +1602,115 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
   }
   window.addEventListener('scroll',onScroll,{passive:true});
   onScroll();
+})();
+</script>
+<script>
+/* ==== chú thích thuật ngữ khó: gạch chấm + tooltip (hover desktop / tap mobile) ==== */
+(function(){
+  var TIPS={
+    'otf':'Other Timeframe — dòng tiền khung lớn, kẻ tạo trend.',
+    're':'Range Extension — giá nới ra ngoài biên IB.',
+    'sp':'Single Print — vệt profile chỉ 1 TPO; "fix" = giá quay lại lấp vệt.',
+    'dd':'Double Distribution — ngày 2 vòm giá trị, ngăn nhau bằng vệt SP.',
+    'ub':'Unfinished Business — đấu giá dở dang ở đỉnh/đáy, hay hút giá quay lại trả nợ.',
+    'cvd':'Cumulative Delta — delta cộng dồn cả phiên.',
+    'hvn':'High Volume Node — nút khối lượng cao: giá dễ dừng lại, xoay quanh.',
+    'lvn':'Low Volume Node — nút khối lượng thấp: giá lướt qua nhanh.',
+    'sc':'Selling Climax — cao trào bán: volume nổ cuối nhịp giảm, phe bán cạn dần (Wyckoff).',
+    'bc':'Buying Climax — cao trào mua: volume nổ cuối nhịp tăng, phe mua cạn dần (Wyckoff).',
+    'ar':'Automatic Rally — cú bật tự động sau cao trào, vẽ biên trên của range (Wyckoff).',
+    'st':'Secondary Test — quay lại kiểm định vùng cao trào với volume nhỏ hơn hẳn (Wyckoff).',
+    'sos':'Sign of Strength — cú tăng mạnh xác nhận phe mua nắm quyền (Wyckoff).',
+    'sow':'Sign of Weakness — cú giảm mạnh xác nhận phe bán nắm quyền (Wyckoff).',
+    'lps':'Last Point of Support — nhịp hồi cuối về vùng đỡ trước khi giá tăng thật (Wyckoff).',
+    'lpsy':'Last Point of Supply — nhịp hồi cuối lên vùng cung trước khi giá rơi thật (Wyckoff).',
+    'utad':'Upthrust After Distribution — cú vọt giả cuối phân phối, bẫy phe mua (Wyckoff).',
+    'spring':'Cú rũ: chọc thủng đáy range rồi bật ngược lên — bẫy phe bán (Wyckoff).',
+    'upthrust':'Cú vọt giả: chọc lên đỉnh range rồi rơi lại — bẫy phe mua (Wyckoff).',
+    'shakeout':'Cú giũ: quét mạnh xuống loại người cầm hàng, rồi đảo lên (Wyckoff).',
+    'stopping volume':'Khối lượng chặn: volume nổ mà giá không rơi tiếp — có tay to đứng đỡ.',
+    'poor':'Đỉnh/đáy dở dang: phẳng ≥2 TPO, không có đuôi — đấu giá chưa xong, dễ bị quay lại test.',
+    'fade':'Đánh ngược: vào lệnh ngược cú kéo, cược giá quay về vùng giá trị.',
+    'acceptance':'Chấp nhận giá: giá Ở LẠI vùng mới và xây thêm TPO/volume ở đó.',
+    'rejection':'Từ chối giá: giá chọc vào vùng rồi bị đánh bật ra nhanh.',
+    'invalidation':'Mốc hủy kịch bản: giá chạm đây = kèo sai, thoát hoặc không vào nữa.',
+    'composite':'Hồ sơ gộp nhiều ngày thành một profile lớn — nhìn S/R khung rộng.',
+    'migration':'Vùng giá trị/POC dịch dần theo một hướng qua các phiên — dấu chân của trend.',
+    'settlement':'Giá chốt phiên chính thức của COMEX — mốc neo tham chiếu của ngày.',
+    'fresh':'Vùng chưa bị test lại từ khi hình thành — đáng tin nhất ở lần chạm đầu.',
+    'tested':'Vùng đã bị test — mỗi lần chạm thêm lại yếu đi.',
+    'drive':'Kiểu mở cửa lao thẳng một hướng, không quay lại giá mở — niềm tin mạnh nhất.',
+    'rotation':'Kiểu mở cửa xoay hai chiều quanh giá mở — chưa phe nào thắng, thiên về đánh hai biên.',
+    'rejection-reverse':'Kiểu mở cửa chọc một hướng rồi bị đánh bật ngược — đi theo hướng bật lại.',
+    'phase':'Pha Wyckoff: A dừng trend cũ · B tích lũy/phân phối · C cú rũ · D xác nhận · E trend mới.',
+    'effort vs result':'Nỗ lực vs Kết quả: volume/delta lớn mà giá KHÔNG đi = có tường chặn — trọng tài của mọi tín hiệu.',
+    'scaling-out':'Chốt lời từng phần thay vì đóng cả lệnh một lúc.',
+    'trail':'Dời SL bám theo giá để giữ lệnh thắng chạy tiếp.',
+    'flat':'Đứng ngoài thị trường — không giữ lệnh nào.',
+    'iceberg':'Lệnh tảng băng: limit khối lớn tự nạp lại, chỉ lộ phần nhỏ trên DOM.',
+    'large-limit':'Tường lệnh chờ khối lớn — một cột số to bất thường trên DOM/footprint.'
+  };
+  function tipFor(m){
+    var k=m.toLowerCase().replace(/\s+/g,' ');
+    if(k.indexOf('poor')===0)k='poor';
+    if(k==='large limit')k='large-limit';
+    if(k==='scaling out')k='scaling-out';
+    if(k==='trailing')k='trail';
+    return TIPS[k]||null;
+  }
+  var RE=/(?<![A-Za-zÀ-ỹ])(?:Rejection-Reverse|REJECTION-REVERSE|Effort vs Result|[Ss]topping [Vv]olume|poor high\/low|poor H\/L|poor high|poor low|[Ll]arge [Ll]imit|large-limit|[Ss]caling[- ]out|acceptance|Acceptance|invalidation|Invalidation|settlement|Settlement|rejection|composite|Composite|migration|Migration|Upthrust|Shakeout|trailing|iceberg|Iceberg|Rotation|ROTATION|tested|Spring|fresh|Fresh|trail|Drive|DRIVE|Phase|poor|fade|Fade|flat|Flat|UTAD|LPSY|LPS|SOS|SOW|CVD|HVN|LVN|OTF|UB|RE|SP|DD|SC|BC|AR|ST)(?![A-Za-zÀ-ỹ])/g;
+  var SKIP='script,style,h1,h2,h3,h4,nav,#gls-tip,.gls';
+  function inSkip(el){
+    if(!el||!el.closest)return true;
+    if(el.closest(SKIP))return true;
+    return !!el.closest('#tra-nhanh .tblwrap'); // bảng viết tắt đã là chú thích sẵn
+  }
+  var tw=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null,false);
+  var nodes=[],n;
+  while((n=tw.nextNode())){
+    if(n.nodeValue&&/[A-Za-z]/.test(n.nodeValue)&&!inSkip(n.parentElement))nodes.push(n);
+  }
+  nodes.forEach(function(node){
+    var txt=node.nodeValue,m,last=0,frag=null;
+    RE.lastIndex=0;
+    while((m=RE.exec(txt))){
+      var tip=tipFor(m[0]);
+      if(!tip)continue;
+      if(!frag)frag=document.createDocumentFragment();
+      if(m.index>last)frag.appendChild(document.createTextNode(txt.slice(last,m.index)));
+      var sp=document.createElement('span');
+      sp.className='gls'; sp.textContent=m[0]; sp.setAttribute('data-tip',tip);
+      frag.appendChild(sp);
+      last=m.index+m[0].length;
+    }
+    if(frag){
+      if(last<txt.length)frag.appendChild(document.createTextNode(txt.slice(last)));
+      node.parentNode.replaceChild(frag,node);
+    }
+  });
+  var tip=document.createElement('div'); tip.id='gls-tip'; document.body.appendChild(tip);
+  var cur=null,pinned=false;
+  function show(el){
+    cur=el; tip.textContent=el.getAttribute('data-tip'); tip.style.display='block';
+    var r=el.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight;
+    var x=Math.min(Math.max(8,r.left+r.width/2-w/2),window.innerWidth-w-8);
+    var y=r.top-h-8;
+    if(y<8)y=r.bottom+8;
+    tip.style.left=x+'px'; tip.style.top=y+'px';
+  }
+  function hide(){tip.style.display='none';cur=null;pinned=false}
+  document.addEventListener('mouseover',function(e){
+    var t=e.target.closest?e.target.closest('.gls'):null;
+    if(t&&!pinned)show(t);
+    else if(!t&&!pinned&&cur)hide();
+  });
+  document.addEventListener('click',function(e){
+    var t=e.target.closest?e.target.closest('.gls'):null;
+    if(t){ if(pinned&&cur===t)hide(); else {show(t);pinned=true;} }
+    else if(pinned||cur)hide();
+  });
+  window.addEventListener('scroll',function(){if(cur)hide()},{passive:true});
+  window.addEventListener('resize',function(){if(cur)hide()});
 })();
 </script>
 </main>

@@ -1388,7 +1388,7 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
       <h3>MGC specs</h3>
       <p style="font-size:13px">Tick <span class="num">0.1 = $1</span> · chạy ~23h/ngày · nghỉ bảo trì <span class="num">04:00–05:00</span> VN · settlement <span class="num">00:29–00:30</span> VN (hè) · thanh khoản mỏng hơn GC — tin lớn dễ trượt giá qua SL, và book quá mỏng để tin absorption/large-limit đơn độc → <b>đọc footprint trên GC, vào lệnh trên MGC</b>.</p>
     </div>
-    <div class="card">
+    <div class="card" style="grid-column:1/-1">
       <h3>Viết tắt trong sổ tay</h3>
       <div class="tblwrap"><table>
         <tbody>
@@ -1596,9 +1596,19 @@ details .d-body{padding:2px 14px 12px; font-size:13.5px}
   function onScroll(){
     var y=window.scrollY+90, cur=null;
     secs.forEach(function(s){ if(s.offsetTop<=y) cur=s; });
+    var act=null;
     links.forEach(function(a){
-      a.classList.toggle('on', !!cur && a.getAttribute('href')==='#'+cur.id);
+      var on=!!cur && a.getAttribute('href')==='#'+cur.id;
+      a.classList.toggle('on', on);
+      if(on) act=a;
     });
+    if(act && act.parentNode){
+      var nv=act.parentNode, pad=34;
+      if(act.offsetLeft+act.offsetWidth > nv.scrollLeft+nv.clientWidth-pad)
+        nv.scrollLeft=act.offsetLeft+act.offsetWidth-nv.clientWidth+pad;
+      else if(act.offsetLeft < nv.scrollLeft+8)
+        nv.scrollLeft=Math.max(0,act.offsetLeft-8);
+    }
   }
   window.addEventListener('scroll',onScroll,{passive:true});
   onScroll();

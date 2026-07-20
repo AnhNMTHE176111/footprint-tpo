@@ -1,0 +1,40 @@
+<!--
+  csproj tuỳ chọn — CHỈ dùng nếu bạn muốn build DLL bằng Visual Studio / Rider.
+  Cách dễ hơn (không cần file này): xem README mục "Cách 1 — thả .cs".
+
+  BẮT BUỘC chỉnh cho khớp máy bạn:
+   • <TargetFramework> phải khớp phiên bản ATAS đang cài (ATAS mới = net8.0-windows;
+     bản cũ có thể là net472). Mở 1 DLL trong thư mục cài ATAS để xem target.
+   • <HintPath> phải trỏ đúng thư mục cài ATAS trên máy bạn.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>                <!-- cần cho System.Windows.Media.Color -->
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>OrderFlowBubbles</AssemblyName>
+    <RootNamespace>OrderFlowBubbles</RootNamespace>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <!-- === CHỈNH ĐƯỜNG DẪN NÀY cho khớp thư mục cài ATAS của bạn === -->
+  <PropertyGroup>
+    <AtasDir>C:\Program Files (x86)\ATAS Platform</AtasDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="ATAS.Indicators">
+      <HintPath>$(AtasDir)\ATAS.Indicators.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Utils.Common">
+      <HintPath>$(AtasDir)\Utils.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Nếu compiler than thiếu type (ObjectType/SelectionType/PriceSelection...),
+         thêm reference tới OFT.Rendering.dll / ATAS.Indicators.Technical.dll trong cùng thư mục. -->
+  </ItemGroup>
+
+</Project>

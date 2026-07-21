@@ -38,15 +38,24 @@ Khuyến nghị **nền nến trung tính** (rỗng/viền hoặc trắng-xám),
 
 ## Cài đặt
 
-### Cách 1 — thả file .cs (dễ nhất)
-ATAS tự biên dịch các file `.cs` đặt trong thư mục nguồn indicator:
-1. Chép `OrderFlowBubbles.cs` vào `Documents\ATAS\Indicators` (một số bản là `%APPDATA%\ATAS\Indicators` — kiểm tra máy bạn).
-2. Mở/khởi động lại ATAS → thêm indicator **"OrderFlow Bubbles"** vào chart footprint.
-3. Nếu ATAS báo lỗi compile → xem [Checklist rủi ro](#checklist-rủi-ro).
+### Cách chính — build ra file DLL (ATAS của bạn nạp DLL)
+Cần **Windows** + **.NET SDK** + Visual Studio 2022+/Rider (hoặc chỉ cần `dotnet` CLI). ATAS **không có gói NuGet** → `.csproj` tham chiếu trực tiếp DLL trong thư mục cài ATAS.
 
-### Cách 2 — build DLL (Visual Studio 2022+ / Rider trên Windows)
-1. Sửa `OrderFlowBubbles.csproj`: `<TargetFramework>` và `<AtasDir>` cho khớp bản ATAS.
-2. `dotnet build -c Release` → copy DLL vào thư mục Indicators của ATAS.
+1. **Xác định TargetFramework**: mở thư mục cài ATAS, xem DLL thuộc `net8.0` hay `net10.0`.
+   - ATAS thường (2024/2025) → `net8.0-windows`.
+   - ATAS X (bản mới) → `net10.0-windows`, và `AtasDir = C:\Program Files\ATAS X`.
+2. **Sửa `OrderFlowBubbles.csproj`**: đặt `<AtasDir>` = đúng thư mục cài ATAS (nơi có `ATAS.Indicators.dll`) và `<TargetFramework>` cho khớp bước 1.
+3. **Build**: mở thư mục project, chạy `dotnet build -c Release` (hoặc bấm Build trong IDE).
+   - DLL ra ở `bin\Release\<framework>\OrderFlowBubbles.dll`.
+   - `.csproj` có target **tự copy** DLL vào `Documents\ATAS\Indicators` sau build (tắt được nếu không muốn).
+4. **Nạp vào ATAS**: nếu chưa auto-copy → chép `OrderFlowBubbles.dll` vào `Documents\ATAS\Indicators`, **hoặc** trong ATAS mở cửa sổ Indicators → **"Add custom indicator"** chọn file DLL.
+5. **Khởi động lại ATAS** (ATAS nạp DLL lúc mở, **không hot-reload**) → thêm **"OrderFlow Bubbles"** vào chart footprint.
+6. Build lỗi/nạp lỗi → xem [Checklist rủi ro](#checklist-rủi-ro).
+
+> **Reference cần trong .csproj** (đã cấu hình sẵn, lấy từ .csproj gốc của ATAS): `ATAS.Indicators`, `ATAS.DataFeedsCore`, `OFT.Rendering` (chứa `RenderContext`/`DrawString` — phần vẽ số delta), `OFT.Attributes`, `OFT.Localization`, `Utils.Common`. Tất cả để `<Private>false</Private>` (không kèm bản sao DLL của ATAS → tránh xung đột). Build **AnyCPU** (ATAS 64-bit), **không** ký assembly.
+
+### Cách phụ — thả file .cs (nếu bản ATAS của bạn có tự biên dịch)
+Một số bản ATAS tự compile file `.cs` trong `Documents\ATAS\Indicators`. Nếu bản bạn hỗ trợ: chép thẳng `OrderFlowBubbles.cs` vào đó rồi khởi động lại ATAS. Nếu không thấy indicator hiện ra → bản của bạn chỉ nạp DLL, dùng cách chính ở trên.
 
 ## Checklist rủi ro (sửa nhanh nếu ATAS báo lỗi)
 Xếp theo khả năng phải động tới:

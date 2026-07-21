@@ -1,40 +1,87 @@
 <!--
-  csproj tuỳ chọn — CHỈ dùng nếu bạn muốn build DLL bằng Visual Studio / Rider.
-  Cách dễ hơn (không cần file này): xem README mục "Cách 1 — thả .cs".
+  ====================================================================
+  OrderFlowBubbles.csproj  —  build indicator thành FILE DLL cho ATAS
+  ====================================================================
+  Bộ reference lấy từ file .csproj GỐC của ATAS (AtasPlatform/Indicators).
+  ATAS KHÔNG có gói NuGet -> bắt buộc tham chiếu DLL trong thư mục cài ATAS.
 
-  BẮT BUỘC chỉnh cho khớp máy bạn:
-   • <TargetFramework> phải khớp phiên bản ATAS đang cài (ATAS mới = net8.0-windows;
-     bản cũ có thể là net472). Mở 1 DLL trong thư mục cài ATAS để xem target.
-   • <HintPath> phải trỏ đúng thư mục cài ATAS trên máy bạn.
+  BẮT BUỘC chỉnh 2 thứ cho khớp máy bạn:
+   1) <AtasDir>  = thư mục cài ATAS (nơi có ATAS.Indicators.dll).
+   2) <TargetFramework> = KHỚP tên thư mục netX.0 của DLL trong thư mục đó:
+        • ATAS thường (2024/2025)  -> net8.0-windows
+        • ATAS X (bản mới, .NET 10) -> net10.0-windows  (và AtasDir = C:\Program Files\ATAS X)
+
+  Build:  dotnet build -c Release   (hoặc bấm Build trong Visual Studio 2022+/Rider)
+  DLL ra ở:  bin\Release\<framework>\OrderFlowBubbles.dll
+  Target "DeployToAtas" bên dưới TỰ COPY dll vào Documents\ATAS\Indicators sau khi build.
+  Sau đó KHỞI ĐỘNG LẠI ATAS (ATAS không hot-reload dll) rồi thêm "OrderFlow Bubbles".
 -->
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>                <!-- cần cho System.Windows.Media.Color -->
+    <UseWPF>true</UseWPF>                 <!-- cần cho System.Windows.Media.Color (color picker) -->
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
+    <Platforms>AnyCPU</Platforms>        <!-- ATAS là app 64-bit; AnyCPU chạy tốt. KHÔNG x86 -->
     <AssemblyName>OrderFlowBubbles</AssemblyName>
     <RootNamespace>OrderFlowBubbles</RootNamespace>
     <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
-  <!-- === CHỈNH ĐƯỜNG DẪN NÀY cho khớp thư mục cài ATAS của bạn === -->
+  <!-- === CHỈNH đường dẫn này cho khớp thư mục cài ATAS của bạn === -->
   <PropertyGroup>
     <AtasDir>C:\Program Files (x86)\ATAS Platform</AtasDir>
   </PropertyGroup>
 
+  <!--
+    Private=false (CopyLocal off): CHỈ xuất DLL của mình, KHÔNG kèm bản sao DLL của ATAS
+    -> tránh xung đột assembly khi ATAS nạp plugin.
+  -->
   <ItemGroup>
     <Reference Include="ATAS.Indicators">
       <HintPath>$(AtasDir)\ATAS.Indicators.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="ATAS.DataFeedsCore">
+      <HintPath>$(AtasDir)\ATAS.DataFeedsCore.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="OFT.Rendering">   <!-- RenderContext, RenderFont, DrawString/MeasureString/FillRectangle -->
+      <HintPath>$(AtasDir)\OFT.Rendering.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="OFT.Attributes">
+      <HintPath>$(AtasDir)\OFT.Attributes.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="OFT.Localization">
+      <HintPath>$(AtasDir)\OFT.Localization.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Utils.Common">
       <HintPath>$(AtasDir)\Utils.Common.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <!-- Nếu compiler than thiếu type (ObjectType/SelectionType/PriceSelection...),
-         thêm reference tới OFT.Rendering.dll / ATAS.Indicators.Technical.dll trong cùng thư mục. -->
+    <!-- Nếu compiler than thiếu type (editor/localization/windows), bật thêm 2 dòng dưới: -->
+    <!--
+    <Reference Include="OFT.Editors">
+      <HintPath>$(AtasDir)\OFT.Editors.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Utils.Windows">
+      <HintPath>$(AtasDir)\Utils.Windows.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    -->
   </ItemGroup>
+
+  <!-- Tự copy DLL vào thư mục Indicators của ATAS sau mỗi lần build (tiện, có thể xoá) -->
+  <Target Name="DeployToAtas" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFolder="$(USERPROFILE)\Documents\ATAS\Indicators"
+          SkipUnchangedFiles="false" />
+  </Target>
 
 </Project>

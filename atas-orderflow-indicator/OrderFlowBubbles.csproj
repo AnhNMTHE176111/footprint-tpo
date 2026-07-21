@@ -19,7 +19,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>  <!-- ĐÃ XÁC NHẬN: DLL ATAS của bạn build trên .NET 10 (ATAS 8.0.14.392) -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting> <!-- cho phép build target Windows kể cả trên Linux/Mac -->
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <UseWPF>true</UseWPF>                 <!-- cần cho System.Windows.Media.Color (color picker) -->
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>

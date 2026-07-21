@@ -4,3 +4,6 @@ note.txt
 
 # Ảnh crop tạm Claude tạo để phóng to đọc số trên chart (file rác)
 **/_crop/
+
+# DLL doc quyen cua ATAS - KHONG commit len repo public
+atas-orderflow-indicator/tools/*.dll

@@ -5,7 +5,10 @@
 //  bạn người dùng; đây là BẢN RIÊNG, ưu tiên tín hiệu LIMIT/HẤP THỤ (passive).
 //
 //  HỆ MÃ HOÁ 3 KÊNH (giữ chart dễ đọc — KHÔNG dùng màu để mã hoá loại tín hiệu):
-//    • MÀU  = phe aggressor:   cyan = mua chủ động (Ask>Bid) · cam/đỏ = bán (Bid>Ask)
+//    • MÀU  = phe chủ động ở tín hiệu đó:  CYAN = phe MUA (ở đỉnh) · ĐỎ = phe BÁN (ở đáy).
+//             Absorption/BigTrade/Surge: theo aggressor (Ask>Bid=cyan). Các tín hiệu ĐẢO ở
+//             cực trị (Exhaustion/Divergence/Sweep): màu = phe vừa đẩy tạo cực trị → HÀNH ĐỘNG
+//             NGƯỢC MÀU (cyan ở đỉnh = short, đỏ ở đáy = long). Nhất quán: đỉnh→cyan, đáy→đỏ.
 //    • HÌNH = loại tín hiệu:    Ellipse / Triangle / Rectangle / Diamond (ATAS chỉ có 5 hình)
 //    • SIZE = độ mạnh:          to = z-score / volume ratio lớn
 //  Bubble neo theo PRICE-LEVEL trong footprint (nhiều bubble trên 1 nến).
@@ -419,7 +422,7 @@ namespace OrderFlowBubbles
                 && cur.Delta < cur.MaxDelta * ExhDeltaFadeRatio)
             {
                 var p = cur.MaxPositiveDeltaPriceInfo?.Price ?? cur.High;
-                AddBubble(bar, p, ObjectType.Triangle, SellColor,
+                AddBubble(bar, p, ObjectType.Triangle, BuyColor,
                     MidSize(), SolidTransparency, SelectionType.Full, "Buy exhaustion");
             }
             // sell exhaustion tại đáy cục bộ: delta hồi lên khỏi đáy intrabar
@@ -427,7 +430,7 @@ namespace OrderFlowBubbles
                 && cur.Delta > cur.MinDelta * ExhDeltaFadeRatio)
             {
                 var p = cur.MaxNegativeDeltaPriceInfo?.Price ?? cur.Low;
-                AddBubble(bar, p, ObjectType.Triangle, BuyColor,
+                AddBubble(bar, p, ObjectType.Triangle, SellColor,
                     MidSize(), SolidTransparency, SelectionType.Full, "Sell exhaustion");
             }
         }
@@ -456,7 +459,7 @@ namespace OrderFlowBubbles
                 {
                     var pc = GetCandle(prevPivot);
                     if (c.High > pc.High && _cvd[bar - n] <= _cvd[prevPivot])   // giá HH, delta LH
-                        AddBubble(bar - n, c.High, ObjectType.Triangle, SellColor,
+                        AddBubble(bar - n, c.High, ObjectType.Triangle, BuyColor,
                             MidSize(), SolidTransparency, SelectionType.Full, "Bearish delta divergence");
                 }
             }
@@ -467,7 +470,7 @@ namespace OrderFlowBubbles
                 {
                     var pc = GetCandle(prevPivot);
                     if (c.Low < pc.Low && _cvd[bar - n] >= _cvd[prevPivot])     // giá LL, delta HL
-                        AddBubble(bar - n, c.Low, ObjectType.Triangle, BuyColor,
+                        AddBubble(bar - n, c.Low, ObjectType.Triangle, SellColor,
                             MidSize(), SolidTransparency, SelectionType.Full, "Bullish delta divergence");
                 }
             }
@@ -479,10 +482,10 @@ namespace OrderFlowBubbles
             var hi = MaxHighPrior(bar, SweepLookback);
             var lo = MinLowPrior(bar, SweepLookback);
             if (cur.High > hi && cur.Close < hi && cur.Delta < 0)
-                AddBubble(bar, cur.High, ObjectType.Triangle, SellColor,
+                AddBubble(bar, cur.High, ObjectType.Triangle, BuyColor,
                     MidSize(), SolidTransparency, SelectionType.Full, "Liquidity sweep (highs)");
             if (cur.Low < lo && cur.Close > lo && cur.Delta > 0)
-                AddBubble(bar, cur.Low, ObjectType.Triangle, BuyColor,
+                AddBubble(bar, cur.Low, ObjectType.Triangle, SellColor,
                     MidSize(), SolidTransparency, SelectionType.Full, "Liquidity sweep (lows)");
         }
 

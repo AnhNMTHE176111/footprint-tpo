@@ -20,8 +20,11 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;                     // DisplayName
 using System.ComponentModel.DataAnnotations;     // Display, Range
-using System.Windows.Media;                      // Color, Colors  (ATAS color-picker type)
+using System.Windows.Media;                      // Colors  (ATAS color-picker type)
 using ATAS.Indicators;
+using OFT.Rendering.Context;                     // RenderContext (tham số OnRender)
+using OFT.Rendering.Tools;                       // RenderFont + extension DrawString/MeasureString
+using Color = System.Windows.Media.Color;        // KHOÁ 'Color' trần = Media.Color -> chống CS0104 khi trộn với System.Drawing.Color lúc vẽ
 
 namespace OrderFlowBubbles
 {
@@ -68,6 +71,34 @@ namespace OrderFlowBubbles
         [Display(Name = "Độ trong bubble đặc (0-100)", GroupName = "Appearance", Order = 6)]
         [Range(0, 100)]
         public int SolidTransparency { get; set; } = 10;
+
+        // ---------- Delta Numbers (số delta dưới đáy nến — DEFAULT ON) ----------
+        [Display(Name = "Hiện số Delta dưới nến", GroupName = "Delta Numbers", Order = 1)]
+        public bool ShowDeltaNumbers { get; set; } = true;
+
+        [Display(Name = "Cỡ chữ", GroupName = "Delta Numbers", Order = 2)]
+        [Range(6, 40)]
+        public int DeltaFontSize { get; set; } = 11;
+
+        [Display(Name = "Font", GroupName = "Delta Numbers", Order = 3)]
+        public string DeltaFontFamily { get; set; } = "Arial";
+
+        [Display(Name = "Cách đáy nến (px)", GroupName = "Delta Numbers", Order = 4)]
+        [Range(0, 60)]
+        public int DeltaYOffsetPx { get; set; } = 4;
+
+        [Display(Name = "Chỉ vẽ khi bề rộng nến ≥ (px)", GroupName = "Delta Numbers", Order = 5)]
+        [Range(1, 100)]
+        public int DeltaMinBarWidthPx { get; set; } = 6;
+
+        [Display(Name = "Nền mờ sau chữ (dễ đọc)", GroupName = "Delta Numbers", Order = 6)]
+        public bool DeltaBackground { get; set; } = false;
+
+        [Display(Name = "Màu Delta dương (+)", GroupName = "Delta Numbers", Order = 7)]
+        public Color DeltaPosColor { get; set; } = Color.FromRgb(0x3F, 0xB9, 0x50);   // xanh dịu
+
+        [Display(Name = "Màu Delta âm (−)", GroupName = "Delta Numbers", Order = 8)]
+        public Color DeltaNegColor { get; set; } = Color.FromRgb(0xF8, 0x51, 0x49);   // đỏ dịu
 
         // ---------- Baseline ----------
         [Display(Name = "Số nến baseline (rolling)", GroupName = "Baseline", Order = 1)]
@@ -193,6 +224,10 @@ namespace OrderFlowBubbles
         {
             _render.IsHidden = true;
             DataSeries[0] = _render;   // thay series mặc định bằng series bubble (giống ClusterSearch)
+
+            // === bật custom drawing để vẽ số Delta dưới nến (OnRender) ===
+            EnableCustomDrawing = true;                     // BẮT BUỘC — thiếu dòng này OnRender KHÔNG chạy
+            SubscribeToDrawingEvents(DrawingLayouts.Final); // vẽ lại mỗi lần chart render -> mượt khi kéo/zoom
         }
 
         protected override void OnRecalculate()
@@ -309,6 +344,65 @@ namespace OrderFlowBubbles
             if (DivergenceEnabled) TryDivergence(bar);
             if (SweepEnabled) TrySweep(bar, candle);
             if (StopHuntEnabled) TryStopHunt(bar, candle);
+        }
+
+        // ================================================================
+        //  CUSTOM RENDER — số Delta dưới đáy mỗi nến (dưới râu nến nếu có râu)
+        //  Dùng đường vẽ pixel (OnRender) — khác đường bubble (PriceSelectionValue).
+        //  DrawString đòi System.Drawing.Color -> phải fully-qualify, KHÔNG 'using System.Drawing;'.
+        // ================================================================
+        protected override void OnRender(RenderContext context, DrawingLayouts layout)
+        {
+            if (!ShowDeltaNumbers) return;
+            if (ChartInfo == null) return;                       // ChartInfo là IChart? (nullable) -> guard bắt buộc
+
+            var container = ChartInfo.PriceChartContainer;
+            if (container == null) return;
+            if ((int)container.BarsWidth < DeltaMinBarWidthPx) return;   // nến quá hẹp -> bỏ (tránh rối + đỡ tốn)
+
+            var region = container.Region;                       // System.Drawing.Rectangle (vùng vẽ giá)
+            var font = new RenderFont(DeltaFontFamily, DeltaFontSize);
+
+            // chỉ vẽ bar đang hiển thị; clamp phòng biên
+            var first = Math.Max(FirstVisibleBarNumber, 0);
+            var last = Math.Min(LastVisibleBarNumber, CurrentBar);
+
+            for (var bar = first; bar <= last; bar++)
+            {
+                var candle = GetCandle(bar);
+
+                var centerX = container.GetXByBar(bar, false);           // false = GIỮA bar
+                var lowY = container.GetYByPrice(candle.Low, false);     // false = giữa price-level; LUÔN truyền bool
+                var y = lowY + DeltaYOffsetPx;                           // Y tăng xuống dưới => cộng = dưới đáy wick
+
+                var text = candle.Delta.ToString("+0;-0;0");             // dấu rõ (+/−/0)
+
+                var size = context.MeasureString(text, font);           // var: type có thể Size hoặc SizeF -> KHÔNG khai báo cứng
+                var w = (int)size.Width;
+                var h = (int)size.Height;
+                var x = centerX - w / 2;                                 // căn giữa ngang (DrawString neo góc trên-trái)
+
+                // clip: bỏ nếu rơi ngoài vùng vẽ
+                if (y > region.Bottom) continue;
+                if (x + w < region.Left || x > region.Right) continue;
+
+                if (DeltaBackground)
+                    context.FillRectangle(System.Drawing.Color.FromArgb(120, 0, 0, 0),
+                        new System.Drawing.Rectangle(x - 1, y, w + 2, h));
+
+                context.DrawString(text, font, DeltaColor(candle.Delta), x, y);
+            }
+        }
+
+        // Media.Color -> System.Drawing.Color (an toàn 100%, không phụ thuộc extension .Convert())
+        private static System.Drawing.Color ToDrawing(Color c)          // Color = Media.Color (alias)
+            => System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
+
+        private System.Drawing.Color DeltaColor(decimal d)
+        {
+            if (d > 0) return ToDrawing(DeltaPosColor);
+            if (d < 0) return ToDrawing(DeltaNegColor);
+            return System.Drawing.Color.Gray;
         }
 
         // ================================================================

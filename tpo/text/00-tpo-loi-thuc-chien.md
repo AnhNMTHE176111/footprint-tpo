@@ -57,6 +57,8 @@ Thay cho taxonomy Latin, đọc 3 nhánh niềm tin:
 
 ## 2️⃣ Bộ setup thực chiến giữ lại (đã lọc)
 
+> 📊 Setup 1 & 2 có diagram minh họa riêng (đã vẽ vì người học thích nhìn chart) → [`batch-A-80-rule-va-tai-nhap.md`](batch-A-80-rule-va-tai-nhap.md).
+
 1. **80% rule** — mở **ngoài** VA → quay **vào** VA → giữ **2 bracket 30′ liên tiếp kể từ lúc tái nhập** → ~80% xuyên **hết VA sang mép đối diện**. Entry khi điều kiện chốt; **target = mép VA đối diện** (chốt trước 1 chút vì trùng HVN); stop ngoài mép vừa tái nhập / cực trị bracket A.
 2. **Mở ngoài value + tái nhập THẤT BẠI** → mép VA cũ thành **tường** (mở dưới VAL, ngoi lên fail nhiều lần → VAL thành trần → Short tựa lưng VAL; gương ngược cho mở trên VAH).
 3. **Single print / minus development** (vệt in đơn giữa profile = LVN đo bằng thời gian): **đừng đuổi** cú chạy, **chờ retest** vùng in đơn; SL bên kia vùng. Giá vượt lên để lại vệt dưới → hỗ trợ; lao xuống để lại vệt trên → kháng cự.

@@ -51,6 +51,8 @@ Hai nhãn "Big Smile / Frown" (vòng cung volume qua đêm) độ tin thấp, b�
 
 ## 2️⃣ Value migration đa phiên — đọc QUAN HỆ giữa các phiên (~20')
 
+> 📊 Mục này có bản dạy riêng kèm 8 diagram tập nhìn (VA nâng/hạ/chồng/thu hẹp + bài tập không nhãn + POC clustering + composite knob + TPO-POC vs VPOC) → [`value-migration-poc-clustering.md`](value-migration-poc-clustering.md). ⭐ Người học xác nhận đây là phần quan trọng nhất của TPO (tạo BIAS mua/bán — entry là việc của footprint M1).
+
 Một profile đơn lẻ trả lời "hôm nay đấu giá thế nào". Nhiều profile đặt cạnh nhau trả lời câu quan trọng hơn: **giá trị đang di cư về đâu?** Đây là "kịch bản nền" trước khi vào bất kỳ lệnh nào.
 
 ### 2.1 Bốn quan hệ giữa VA phiên sau và phiên trước

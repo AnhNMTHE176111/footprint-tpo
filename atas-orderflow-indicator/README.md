@@ -71,11 +71,18 @@ In **delta ròng của mỗi nến ngay dưới đáy** (dưới râu nếu có)
 | **Exhaustion** | Volume ≤ 0.6× nến trước | Đợt đẩy cuối cạn lực |
 | | Delta co ≤ 0.4× đỉnh intrabar | Động lượng tụt |
 | **Stacked Imb.** | Tỷ lệ chéo 300% (=3:1) · min vol 15 · 3 mức | MGC → hạ min vol về **10** |
-| **Big Trade** | Vol ≥ 20 **hoặc** z ≥ 2.5 | Lệnh lớn đơn lẻ |
+| **Big Trade** | Vol/**mức** ≥ 20 **hoặc** z ≥ 2.5 | Lệnh lớn tại **1 mức giá** (không phải cả nến). Xem lưu ý bên dưới |
 
 ## Thông số MGC (Micro Gold) — để đặt ngưỡng
 - Tick size **0.10**, tick value **$1**, point value **$10**. (Code đọc `InstrumentInfo.TickSize` lúc chạy.)
 - Volume MGC nhỏ → **ít bubble thì GIẢM** các ngưỡng (z-score, min volume); **nhiễu thì TĂNG**.
+
+### ⚠️ Lưu ý Big Trade trên MGC M1 (rút từ buổi 2026-07-22)
+- Big Trade đo `lvl.Volume` = **volume tại MỘT MỨC GIÁ** (một hàng footprint), **không phải volume cả nến**. Điều kiện bắn: `vol/mức ≥ MinVolume` **HOẶC** `z-score ≥ Z`.
+- Trên **MGC M1**, volume mỗi mức rất nhỏ: điển hình **5–15**, đỉnh **~30–32**. → Đặt **"Volume tối thiểu/mức = 70" là VÔ HIỆU** (không mức nào chạm) → mọi vòng tròn khi đó **chỉ đến từ nhánh z-score**, chỉnh số tuyệt đối không có tác dụng.
+- Nếu vẫn dùng Big Trade ở M1: đặt **Volume/mức ≈ 25** (bắt đúng mức nổi trội) và **z ≈ 3.0** (hoặc z = 99 để tắt hẳn nhánh z, chỉ dùng ngưỡng tuyệt đối). Vòng tròn sẽ thưa và có nghĩa.
+- **Khuyến nghị:** micro gold M1 volume/mức quá nhỏ nên "lệnh lớn" ít ý nghĩa → **TẮT Big Trade ở M1**, để **BẬT ở M30** (mỗi mức gom volume lớn hơn). Ngưỡng M1 **không** áp sang M30 — phải canh lại theo footprint M30.
+- Vòng tròn **đặc** (solid) = Big Trade / Delta Surge; vòng tròn **halo** (mờ viền) = Absorption. Cụm vòng to ở các nến delta mạnh thường là **Absorption** (giữ lại), không phải Big Trade.
 
 ## Tinh chỉnh & kiểm nghiệm
 1. Bật **chỉ Absorption + Exhaustion** trước, chỉnh ngưỡng tới khi bubble khớp các điểm giá đảo thật trên MGC M1.

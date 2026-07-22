@@ -84,6 +84,34 @@ In **delta ròng của mỗi nến ngay dưới đáy** (dưới râu nếu có)
 - **Khuyến nghị:** micro gold M1 volume/mức quá nhỏ nên "lệnh lớn" ít ý nghĩa → **TẮT Big Trade ở M1**, để **BẬT ở M30** (mỗi mức gom volume lớn hơn). Ngưỡng M1 **không** áp sang M30 — phải canh lại theo footprint M30.
 - Vòng tròn **đặc** (solid) = Big Trade / Delta Surge; vòng tròn **halo** (mờ viền) = Absorption. Cụm vòng to ở các nến delta mạnh thường là **Absorption** (giữ lại), không phải Big Trade.
 
+## Migrate sang Quantower (real-time data giá rẻ)
+
+Mục tiêu: có **footprint/order flow real-time** trên CME gold với chi phí thấp nhất. Cách rẻ nhất **không** phải mua Quantower trực tiếp mà là dùng **Quantower FREE qua broker AMP Futures**.
+
+| Đường | Chi phí platform | Order flow / footprint | Ghi chú |
+|---|---|---|---|
+| **Quantower FREE qua AMP** ✅ rẻ nhất | **$0** | ✅ Có (footprint, cluster, delta) | Kết nối qua tài khoản AMP; bản free đủ order flow |
+| Quantower mua trực tiếp | ~$70/tháng hoặc ~$1,590 vĩnh viễn | ✅ Có | Bản free tải từ web **thiếu** order flow → không dùng |
+
+**Chi phí thực của đường rẻ (Quantower FREE + AMP):**
+- **Platform: $0** — Quantower miễn phí khi vào qua AMP.
+- **Tài khoản AMP:** nạp tối thiểu **~$100** (đây là **vốn trade của bạn**, hoàn lại được, không phải phí).
+- **Data phí COMEX qua AMP** (áp dụng từ 2026-06-01, không chia theo ngày):
+  - **L1 (top of book): ~$5/tháng** ← đủ để đọc footprint MGC/GC.
+  - L2 (depth/DOM): ~$17/tháng (chỉ cần nếu muốn xem order book sâu).
+- → **Tổng vận hành ≈ $5/tháng** + $100 vốn nằm trong tài khoản. Rẻ hơn nhiều so với ATAS Pro (~€90/tháng).
+
+**⚠️ Chi phí ẩn khi chuyển — indicator này KHÔNG chạy trên Quantower:**
+- `OrderFlowBubbles.dll` viết cho **ATAS API** (C#/.NET riêng của ATAS). Quantower dùng **API khác** → DLL không nạp được.
+- Muốn có bubble trên Quantower phải **port lại** indicator sang Quantower SDK (một dự án riêng). Trong lúc chưa port: dùng **footprint + delta native của Quantower** (đã khá đủ để trade).
+- Workspace/template ATAS cũng không mang sang được → dựng lại layout chart bên Quantower.
+
+**Lộ trình gợi ý (migrate dần, chạy song song):**
+1. Mở tài khoản AMP, nạp ~$100, bật data COMEX **L1 $5/tháng**.
+2. Cài Quantower, kết nối AMP → mở **footprint MGC/GC real-time** (hết cảnh delay 15').
+3. Trade bằng footprint + delta native Quantower trước; vẫn giữ ATAS để đối chiếu tới khi quen.
+4. Khi ổn định → cân nhắc **port OrderFlowBubbles sang Quantower SDK** (làm sau, không chặn việc chuyển).
+
 ## Tinh chỉnh & kiểm nghiệm
 1. Bật **chỉ Absorption + Exhaustion** trước, chỉnh ngưỡng tới khi bubble khớp các điểm giá đảo thật trên MGC M1.
 2. So bubble với **Big Trades / Cluster Search native** của ATAS để canh ngưỡng volume.

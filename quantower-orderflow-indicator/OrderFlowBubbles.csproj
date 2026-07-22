@@ -1,0 +1,57 @@
+<!--
+  ====================================================================
+  OrderFlowBubbles.csproj  —  build indicator thành DLL cho QUANTOWER
+  ====================================================================
+  Quantower KHÔNG có gói NuGet -> tham chiếu trực tiếp DLL trong thư mục cài Quantower.
+
+  BẮT BUỘC chỉnh cho khớp máy bạn:
+   1) <QuantowerDir> = thư mục cài Quantower (nơi có TradingPlatform\v<ver>\bin\...).
+   2) <PlatformVer>  = phiên bản trong đường dẫn bin (vd v1.146.16).
+   3) <TargetFramework> = KHỚP .NET của DLL Quantower (bản 1.146.x = net10.0).
+
+  Build:  dotnet build -c Release   ->  bin\Release\OrderFlowBubbles.dll
+  Nạp:    copy DLL vào <Quantower>\Settings\Scripts\Indicators\OrderFlowBubbles\ , restart Quantower.
+          (Trên Linux dùng ~/quantower-libs/qw-rebuild.sh — đã cấu hình sẵn.)
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>   <!-- build target Windows kể cả trên Linux/Mac -->
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Platforms>AnyCPU</Platforms>
+    <AssemblyName>OrderFlowBubbles</AssemblyName>
+    <RootNamespace>OrderFlowBubbles</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <NoWarn>CA1416</NoWarn>   <!-- System.Drawing.Common chỉ hỗ trợ Windows — bỏ cảnh báo platform -->
+  </PropertyGroup>
+
+  <!-- === CHỈNH cho khớp máy bạn === -->
+  <PropertyGroup>
+    <QuantowerDir>C:\Quantower</QuantowerDir>
+    <PlatformVer>v1.146.16</PlatformVer>
+    <QwBin>$(QuantowerDir)\TradingPlatform\$(PlatformVer)\bin</QwBin>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="TradingPlatform.BusinessLayer">
+      <HintPath>$(QwBin)\TradingPlatform.BusinessLayer.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.Drawing.Common">
+      <HintPath>$(QwBin)\System\System.Drawing.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Tự copy DLL vào kho indicator của Quantower sau khi build (tiện; có thể xoá) -->
+  <Target Name="DeployToQuantower" AfterTargets="Build">
+    <MakeDir Directories="$(QuantowerDir)\Settings\Scripts\Indicators\OrderFlowBubbles" />
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFolder="$(QuantowerDir)\Settings\Scripts\Indicators\OrderFlowBubbles"
+          SkipUnchangedFiles="false" />
+  </Target>
+
+</Project>

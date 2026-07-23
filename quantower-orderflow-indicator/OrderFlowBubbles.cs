@@ -128,7 +128,7 @@ namespace OrderFlowBubbles
         public double DeltaPctFloor { get; set; } = 0.30;
 
         [InputParameter("Nến delta · |Δ| z-score ≥", 22, 0.0, 10.0, 0.1, 1)]
-        public double DeltaBarSigZ { get; set; } = 2.0;
+        public double DeltaBarSigZ { get; set; } = 3.0;
 
         [InputParameter("Nến delta · cổng volume (× median nến)", 23, 0.0, 5.0, 0.05, 2)]
         public double DeltaBarVolGate { get; set; } = 0.8;
@@ -157,7 +157,7 @@ namespace OrderFlowBubbles
         public bool AbsorptionEnabled { get; set; } = true;
 
         [InputParameter("Absorption · Volume/mức z-score ≥", 41, 0.0, 12.0, 0.1, 1)]
-        public double AbsZ { get; set; } = 2.5;
+        public double AbsZ { get; set; } = 4.0;
 
         [InputParameter("Absorption · Tỷ lệ 1 phe áp đảo ≥", 42, 0.5, 1.0, 0.05, 2)]
         public double AbsDom { get; set; } = 0.60;
@@ -165,12 +165,18 @@ namespace OrderFlowBubbles
         [InputParameter("Absorption · Cách cực trị tối đa (ticks)", 43, 0, 20, 1, 0)]
         public int AbsMaxDisplaceTicks { get; set; } = 2;
 
+        [InputParameter("Absorption · số bubble mạnh nhất / nến", 44, 1, 10, 1, 0)]
+        public int AbsorptionTopN { get; set; } = 1;
+
         // ---------- 2) Big Trade ----------
         [InputParameter("Big Trade · Bật", 50)]
         public bool BigTradeEnabled { get; set; } = true;
 
         [InputParameter("Big Trade · z-score ≥ (lệnh đơn / volume mức)", 51, 0.0, 12.0, 0.1, 1)]
-        public double BigZ { get; set; } = 2.5;
+        public double BigZ { get; set; } = 4.5;
+
+        [InputParameter("Big Trade · số bubble mạnh nhất / nến", 52, 1, 10, 1, 0)]
+        public int BigTradeTopN { get; set; } = 1;
 
         // ---------- 3) Big Delta profile (gạch ngang) ----------
         [InputParameter("Big Delta line · Bật", 60)]
@@ -180,10 +186,10 @@ namespace OrderFlowBubbles
         public double DLineFloor { get; set; } = 0.35;
 
         [InputParameter("Big Delta line · |Δ mức| z-score ≥", 62, 0.0, 12.0, 0.1, 1)]
-        public double DLineZ { get; set; } = 2.0;
+        public double DLineZ { get; set; } = 4.0;
 
         [InputParameter("Big Delta line · số mức mạnh nhất / nến", 63, 1, 10, 1, 0)]
-        public int DLineTopN { get; set; } = 2;
+        public int DLineTopN { get; set; } = 1;
 
         // ---------- 4) Exhaustion ----------
         [InputParameter("Exhaustion · Bật", 70)]
@@ -380,6 +386,8 @@ namespace OrderFlowBubbles
 
             bool motReady = ready && _rLvlMot.BarCount > 0 && _rLvlMot.Median > 0;
             var dLineCands = new List<(double price, double z, int sign)>();
+            var bigTradeCands = new List<(Bubble b, double z)>();
+            var absCands = new List<(Bubble b, double z)>();
             int imbBuyRun = 0, imbSellRun = 0;
             double imbMinVol = Math.Max(MinLevelVolFloor, _rLvlVol.Median);
 
@@ -391,7 +399,7 @@ namespace OrderFlowBubbles
                 double buy = it.BuyVolume, sell = it.SellVolume, vol = it.Volume;
                 double dNet = buy - sell, sum = buy + sell;
 
-                // 1) ABSORPTION — tròn ĐẶC cố định = nến, tại cực trị + bị chặn
+                // 1) ABSORPTION — tròn ĐẶC cố định = nến, tại cực trị + bị chặn. Giữ TOP-N sau vòng lặp.
                 if (AbsorptionEnabled && ready && vol >= MinLevelVolFloor && sum > 0)
                 {
                     double volZ = _rLvlVol.ModZ(vol);
@@ -401,13 +409,13 @@ namespace OrderFlowBubbles
                         // buyDom sát ĐỈNH: mua chủ động nhưng bị nuốt (đóng cửa dưới đỉnh) → cyan, canh short
                         if (buyDom >= AbsDom && (bar.High - price) / tick <= AbsMaxDisplaceTicks
                             && (bar.High - bar.Close) >= tick)
-                            list.Add(Solid(price, Shape.Ellipse, BuyColor, true,
-                                $"Absorption đỉnh  vZ={volZ:0.0} buy={buyDom:P0}"));
+                            absCands.Add((Solid(price, Shape.Ellipse, BuyColor, true,
+                                $"Absorption đỉnh  vZ={volZ:0.0} buy={buyDom:P0}"), volZ));
                         // sellDom sát ĐÁY: bán chủ động bị nuốt (đóng cửa trên đáy) → đỏ, canh long
                         else if (sellDom >= AbsDom && (price - bar.Low) / tick <= AbsMaxDisplaceTicks
                             && (bar.Close - bar.Low) >= tick)
-                            list.Add(Solid(price, Shape.Ellipse, SellColor, true,
-                                $"Absorption đáy  vZ={volZ:0.0} sell={sellDom:P0}"));
+                            absCands.Add((Solid(price, Shape.Ellipse, SellColor, true,
+                                $"Absorption đáy  vZ={volZ:0.0} sell={sellDom:P0}"), volZ));
                     }
                 }
 
@@ -427,13 +435,13 @@ namespace OrderFlowBubbles
                     {
                         double z = rr.ModZ(metric);
                         if (z >= BigZ || metric >= 3 * rr.Median)
-                            list.Add(new Bubble
+                            bigTradeCands.Add((new Bubble
                             {
                                 Price = price, Shape = Shape.Ellipse, Color = AggColor(buy, sell),
                                 Size = SizeFromMagnitude(z, BigZ), Transparency = HaloTransparency,
                                 Halo = true, UseBarWidth = false,
                                 Tooltip = $"Big trade ({src}) {metric:0}  z={z:0.0}"
-                            });
+                            }, z));
                     }
                 }
 
@@ -479,6 +487,16 @@ namespace OrderFlowBubbles
                         list.Add(new Bubble { Price = bar.Low, Shape = Shape.Rectangle, Color = BuyColor, Size = MinBubbleSize, Transparency = SolidTransparency, Tooltip = "Unfinished (đáy)" });
                 }
             }
+
+            // Absorption: giữ TOP-N theo volume z (mỗi nến chỉ 1 bubble mạnh nhất → chart sạch)
+            if (absCands.Count > 0)
+                foreach (var c in absCands.OrderByDescending(x => x.z).Take(Math.Max(1, AbsorptionTopN)))
+                    list.Add(c.b);
+
+            // Big Trade: giữ TOP-N theo z (mỗi nến chỉ 1 bubble mạnh nhất → chart sạch)
+            if (bigTradeCands.Count > 0)
+                foreach (var c in bigTradeCands.OrderByDescending(x => x.z).Take(Math.Max(1, BigTradeTopN)))
+                    list.Add(c.b);
 
             // Big Delta line: giữ TOP-N theo z
             if (dLineCands.Count > 0)

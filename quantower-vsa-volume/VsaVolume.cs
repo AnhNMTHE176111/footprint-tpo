@@ -57,11 +57,11 @@ namespace VsaVolume
             SeparateWindow = true;
 
             // Thứ tự series khớp Color 0..5 của TradingView.
-            AddLineSeries("Color 0 · Ultra High (climax)", Color.FromArgb(0x9C, 0x27, 0xB0), 4, LineStyle.Histogramm); // tím
+            AddLineSeries("Color 0 · Ultra High (climax)", Color.FromArgb(0xD5, 0x00, 0xF9), 4, LineStyle.Histogramm); // magenta/fuchsia (khớp TV)
             AddLineSeries("Color 1 · Very High",           Color.FromArgb(0xF4, 0x43, 0x36), 4, LineStyle.Histogramm); // đỏ
             AddLineSeries("Color 2 · High",                Color.FromArgb(0xFF, 0x98, 0x00), 4, LineStyle.Histogramm); // cam
             AddLineSeries("Color 3 · Normal",              Color.FromArgb(0x4C, 0xAF, 0x50), 4, LineStyle.Histogramm); // xanh lá
-            AddLineSeries("Color 4 · Low",                 Color.FromArgb(0x5B, 0x8D, 0xEF), 4, LineStyle.Histogramm); // xanh dương
+            AddLineSeries("Color 4 · Low",                 Color.FromArgb(0x42, 0xA5, 0xF5), 4, LineStyle.Histogramm); // xanh dương (sky, khớp TV)
             AddLineSeries("Color 5 · Very Low",            Color.FromArgb(0xB0, 0xBE, 0xC5), 4, LineStyle.Histogramm); // xám
         }
 

@@ -13,8 +13,86 @@ namespace TpoSuite
 {
     using System;
     using System.Collections.Generic;
+    using System.Drawing;
     using System.Linq;
     using TradingPlatform.BusinessLayer;
+    using TradingPlatform.BusinessLayer.Chart;
+    using TradingPlatform.BusinessLayer.Native;
+
+    // ---- Kéo-thả bảng bằng chuột (dùng chung cho 2 indicator) ----------------
+    //  Bắt sự kiện chuột của chart (CurrentChart.MouseDown/Move/Up). Khi bấm trái
+    //  vào trong vùng bảng → kéo theo chuột. Lưu vị trí bằng offset px; nếu chưa
+    //  kéo bao giờ thì dùng vị trí góc mặc định. Chỉ UI thread đụng tới lớp này.
+    internal sealed class PanelDrag
+    {
+        private readonly object _lk = new object();
+        private IChart _chart;
+        private bool _dragging;
+        private float _grabDX, _grabDY;
+        private float _bx, _by, _bw, _bh;   // vùng bảng lần vẽ gần nhất (hit-test)
+        private float? _x, _y;              // vị trí người dùng đã kéo (null = mặc định)
+
+        public void Attach(IChart chart)
+        {
+            if (chart == null || ReferenceEquals(_chart, chart)) return;
+            Detach();
+            _chart = chart;
+            _chart.MouseDown += OnDown;
+            _chart.MouseMove += OnMove;
+            _chart.MouseUp += OnUp;
+        }
+
+        public void Detach()
+        {
+            if (_chart == null) return;
+            try { _chart.MouseDown -= OnDown; _chart.MouseMove -= OnMove; _chart.MouseUp -= OnUp; } catch { }
+            _chart = null; _dragging = false;
+        }
+
+        // Vị trí gốc bảng để vẽ: nếu đã kéo dùng vị trí đó, chưa thì dùng defX/defY;
+        // luôn kẹp trong vùng chart để bảng không biến mất khỏi màn hình.
+        public (float x, float y) Origin(float defX, float defY, float bw, float bh, Rectangle clip)
+        {
+            lock (_lk)
+            {
+                float x = _x ?? defX, y = _y ?? defY;
+                x = Math.Max(clip.Left, Math.Min(x, clip.Right - bw));
+                y = Math.Max(clip.Top, Math.Min(y, clip.Bottom - bh));
+                return (x, y);
+            }
+        }
+
+        // Gọi CUỐI OnPaintChart sau khi biết vị trí + kích thước bảng thực vẽ.
+        public void SetBounds(float x, float y, float bw, float bh)
+        { lock (_lk) { _bx = x; _by = y; _bw = bw; _bh = bh; } }
+
+        private void OnDown(object s, ChartMouseNativeEventArgs e)
+        {
+            if (e.Button != NativeMouseButtons.Left) return;
+            lock (_lk)
+            {
+                if (!(e.X >= _bx && e.X <= _bx + _bw && e.Y >= _by && e.Y <= _by + _bh)) return;
+                _dragging = true; _grabDX = e.X - _bx; _grabDY = e.Y - _by;
+            }
+            e.Handled = true; e.NeedMouseCapture = true;
+        }
+
+        private void OnMove(object s, ChartMouseNativeEventArgs e)
+        {
+            lock (_lk)
+            {
+                if (!_dragging) return;
+                _x = e.X - _grabDX; _y = e.Y - _grabDY;
+            }
+            e.Handled = true; e.NeedRedraw = true;
+        }
+
+        private void OnUp(object s, ChartMouseNativeEventArgs e)
+        {
+            lock (_lk) { if (!_dragging) return; _dragging = false; }
+            e.Handled = true; e.NeedRedraw = true;
+        }
+    }
 
     // ---- Kết quả profile 1 phiên (ngày, hoặc khối Á/Âu/Mỹ, hoặc 1 profile 30') ----
     internal sealed class SessionProfile

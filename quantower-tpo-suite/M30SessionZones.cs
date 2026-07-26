@@ -65,6 +65,7 @@ namespace M30SessionZones
         private readonly object _calc = new();
         private ZoneRenderState _render;
         private int _digits = 1;
+        private readonly PanelDrag _drag = new();   // kéo-thả bảng bằng chuột
 
         public M30SessionZones() : base()
         {
@@ -75,7 +76,7 @@ namespace M30SessionZones
 
         public bool IsRequirePriceLevelsCalculation => true;
         public void VolumeAnalysisData_Loaded() { lock (_calc) { _vaLoaded = true; } Process(); }
-        protected override void OnClear() { lock (_calc) { _vaLoaded = false; lock (_sync) _render = null; } }
+        protected override void OnClear() { _drag.Detach(); lock (_calc) { _vaLoaded = false; lock (_sync) _render = null; } }
         protected override void OnUpdate(UpdateArgs args)
         {
             if (!_vaLoaded) return;
@@ -328,6 +329,7 @@ namespace M30SessionZones
         {
             base.OnPaintChart(args);
             if (CurrentChart == null || !_vaLoaded) return;
+            _drag.Attach(CurrentChart);
             var win = CurrentChart.Windows[args.WindowIndex];
             if (!win.IsMainWindow) return;
 
@@ -366,12 +368,14 @@ namespace M30SessionZones
                 float pad = 6, lineH = f.Height + 2, w = 0;
                 foreach (var (t, _) in rs.Panel) w = Math.Max(w, gr.MeasureString(t, f).Width);
                 float bw = w + 2 * pad, bh = rs.Panel.Count * lineH + 2 * pad;
-                float x = (PanelCorner == 1 || PanelCorner == 3) ? clip.Right - bw - 8 : clip.Left + 8;
-                float y = (PanelCorner >= 2) ? clip.Bottom - bh - 8 : clip.Top + 8;
+                float defX = (PanelCorner == 1 || PanelCorner == 3) ? clip.Right - bw - 8 : clip.Left + 8;
+                float defY = (PanelCorner >= 2) ? clip.Bottom - bh - 8 : clip.Top + 8;
+                var (x, y) = _drag.Origin(defX, defY, bw, bh, clip);
                 using (var bg = new SolidBrush(Color.FromArgb(215, 18, 18, 22))) gr.FillRectangle(bg, x, y, bw, bh);
                 using (var bd = new Pen(Color.FromArgb(90, 255, 255, 255))) gr.DrawRectangle(bd, x, y, bw, bh);
                 float ty = y + pad;
                 foreach (var (t, col) in rs.Panel) { using var br = new SolidBrush(col); gr.DrawString(t, f, br, x + pad, ty); ty += lineH; }
+                _drag.SetBounds(x, y, bw, bh);
             }
         }
     }

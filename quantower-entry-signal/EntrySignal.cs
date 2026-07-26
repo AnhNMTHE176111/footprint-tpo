@@ -636,11 +636,18 @@ namespace EntrySignal
                         Color dir = s.Side > 0 ? LongColor : ShortColor;
                         bool active = s.Outcome == "running";
 
+                        // ĐIỂM VÀO chính xác: chấm tròn ngay tại nến entry (mọi tín hiệu) — viền trắng để luôn thấy
+                        if (yE >= clip.Top && yE <= clip.Bottom)
+                        {
+                            using (var bd = new SolidBrush(active ? dir : Color.FromArgb(200, dir))) gr.FillEllipse(bd, x - 4.5f, yE - 4.5f, 9, 9);
+                            using (var pw = new Pen(Color.White, 1.4f)) gr.DrawEllipse(pw, x - 4.5f, yE - 4.5f, 9, 9);
+                        }
+
                         if (!active)
                         {
                             if (!ShowClosed) continue;
-                            // đã đóng → chỉ mũi tên mờ + dấu kết quả (giữ lịch sử, không rối)
-                            if (ShowArrows) DrawArrow(gr, x, yE, s.Side, Color.FromArgb(150, dir), Math.Max(4, ArrowSize - 3));
+                            // đã đóng → mũi tên mờ + dấu kết quả + chip giá nhỏ (giữ lịch sử, không rối)
+                            if (ShowArrows) DrawArrow(gr, x, yE, s.Side, Color.FromArgb(170, dir), Math.Max(4, ArrowSize - 2));
                             string mk = s.Outcome == "TP" ? "✓" : "✗";
                             Color mc = s.Outcome == "TP" ? TpLineColor : SlLineColor;
                             using var bf = new SolidBrush(Color.FromArgb(190, mc));

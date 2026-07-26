@@ -140,6 +140,28 @@ namespace EntrySignal
         public int LineWidth { get; set; } = 2;
         [InputParameter("Tô vùng R:R (lời/lỗ)", 96)]
         public bool ShowRiskBox { get; set; } = true;
+        // ---- bật/tắt từng thành phần vẽ (tín hiệu ĐANG CHẠY) ----
+        [InputParameter("Vẽ mũi tên", 100)]
+        public bool ShowArrows { get; set; } = true;
+        [InputParameter("Vẽ đường E/SL/TP", 101)]
+        public bool ShowLines { get; set; } = true;
+        [InputParameter("Vẽ chip giá (mép phải)", 102)]
+        public bool ShowChips { get; set; } = true;
+        [InputParameter("Vẽ nhãn setup", 103)]
+        public bool ShowLabels { get; set; } = true;
+        [InputParameter("Hiện tín hiệu ĐÃ ĐÓNG (mờ)", 104)]
+        public bool ShowClosed { get; set; } = true;
+        [InputParameter("SL/TP nét đứt (tắt = nét liền)", 105)]
+        public bool DashedSlTp { get; set; } = true;
+        // ---- tinh chỉnh độ đậm / kích thước ----
+        [InputParameter("Độ mờ vùng R:R (0-120)", 106, 0, 120, 2, 0)]
+        public int RiskBoxOpacity { get; set; } = 34;
+        [InputParameter("Cỡ mũi tên", 107, 4, 20, 1, 0)]
+        public int ArrowSize { get; set; } = 8;
+        [InputParameter("Độ dày đường vùng hợp lưu", 108, 1, 6, 1, 0)]
+        public int ZoneLineWidth { get; set; } = 2;
+        [InputParameter("Độ mờ nền bảng (100-255)", 109, 100, 255, 5, 0)]
+        public int PanelOpacity { get; set; } = 215;
 
         private bool _vaLoaded;
         private readonly object _sync = new();
@@ -591,7 +613,7 @@ namespace EntrySignal
                 if (ShowZones && rs.Clusters != null && rs.Clusters.Count > 0)
                 {
                     using var fZ = new Font("Segoe UI", 8, FontStyle.Bold);
-                    using var penZ = new Pen(ConflColor, 2f) { DashStyle = DashStyle.Dash, DashPattern = new[] { 6f, 4f } };
+                    using var penZ = new Pen(ConflColor, Math.Max(1, ZoneLineWidth)) { DashStyle = DashStyle.Dash, DashPattern = new[] { 6f, 4f } };
                     foreach (var (price, strength, side) in rs.Clusters)
                     {
                         float y = (float)conv.GetChartY(price);
@@ -616,37 +638,45 @@ namespace EntrySignal
 
                         if (!active)
                         {
+                            if (!ShowClosed) continue;
                             // đã đóng → chỉ mũi tên mờ + dấu kết quả (giữ lịch sử, không rối)
-                            DrawArrow(gr, x, yE, s.Side, Color.FromArgb(150, dir), 5);
+                            if (ShowArrows) DrawArrow(gr, x, yE, s.Side, Color.FromArgb(150, dir), Math.Max(4, ArrowSize - 3));
                             string mk = s.Outcome == "TP" ? "✓" : "✗";
                             Color mc = s.Outcome == "TP" ? TpLineColor : SlLineColor;
-                            using var bf = new SolidBrush(Color.FromArgb(180, mc));
+                            using var bf = new SolidBrush(Color.FromArgb(190, mc));
                             gr.DrawString(mk, fLbl, bf, x - 5, s.Side > 0 ? yE + 22 : yE - 34);
                             continue;
                         }
 
                         float xr = clip.Right;
+                        var dash = DashedSlTp ? DashStyle.Dash : DashStyle.Solid;
                         // vùng R:R: xanh = Entry→TP (lời), đỏ = Entry→SL (lỗ)
-                        if (ShowRiskBox)
+                        if (ShowRiskBox && RiskBoxOpacity > 0)
                         {
                             float xb = Math.Max(x, clip.Left);
-                            using (var bt = new SolidBrush(Color.FromArgb(34, TpLineColor)))
+                            using (var bt = new SolidBrush(Color.FromArgb(RiskBoxOpacity, TpLineColor)))
                                 gr.FillRectangle(bt, xb, Math.Min(yE, yTP), xr - xb, Math.Abs(yTP - yE));
-                            using (var bs = new SolidBrush(Color.FromArgb(34, SlLineColor)))
+                            using (var bs = new SolidBrush(Color.FromArgb(RiskBoxOpacity, SlLineColor)))
                                 gr.FillRectangle(bs, xb, Math.Min(yE, ySL), xr - xb, Math.Abs(ySL - yE));
                         }
-                        // đường dày, đục
-                        using (var pe = new Pen(dir, LineWidth + 0.5f)) gr.DrawLine(pe, x, yE, xr, yE);
-                        using (var ps = new Pen(SlLineColor, LineWidth) { DashStyle = DashStyle.Dash }) gr.DrawLine(ps, x, ySL, xr, ySL);
-                        using (var pt = new Pen(TpLineColor, LineWidth) { DashStyle = DashStyle.Dash }) gr.DrawLine(pt, x, yTP, xr, yTP);
-                        // chip giá ở mép phải
-                        Chip(gr, fChip, xr, yE, "E " + Fmt(s.Entry), dir, true);
-                        Chip(gr, fChip, xr, ySL, "SL " + Fmt(s.Sl) + " (" + (s.RiskT * _tick).ToString("0.0") + "đ)", SlLineColor, true);
-                        Chip(gr, fChip, xr, yTP, "TP " + Fmt(s.Tp1) + "  " + s.Rr2.ToString("0.0") + "R", TpLineColor, true);
-                        // mũi tên viền trắng + nhãn có nền
-                        DrawArrow(gr, x, yE, s.Side, dir, 8);
-                        string lbl = (s.Side > 0 ? "LONG " : "SHORT ") + s.Grade + " ×" + s.Confl + " · " + s.Scen;
-                        LabelBox(gr, fLbl, x + 10, s.Side > 0 ? yE + 16 : yE - 34, lbl, dir);
+                        if (ShowLines)
+                        {
+                            using (var pe = new Pen(dir, LineWidth + 0.5f)) gr.DrawLine(pe, x, yE, xr, yE);
+                            using (var ps = new Pen(SlLineColor, LineWidth) { DashStyle = dash }) gr.DrawLine(ps, x, ySL, xr, ySL);
+                            using (var pt = new Pen(TpLineColor, LineWidth) { DashStyle = dash }) gr.DrawLine(pt, x, yTP, xr, yTP);
+                        }
+                        if (ShowChips)
+                        {
+                            Chip(gr, fChip, xr, yE, "E " + Fmt(s.Entry), dir, true);
+                            Chip(gr, fChip, xr, ySL, "SL " + Fmt(s.Sl) + " (" + (s.RiskT * _tick).ToString("0.0") + "đ)", SlLineColor, true);
+                            Chip(gr, fChip, xr, yTP, "TP " + Fmt(s.Tp1) + "  " + s.Rr2.ToString("0.0") + "R", TpLineColor, true);
+                        }
+                        if (ShowArrows) DrawArrow(gr, x, yE, s.Side, dir, Math.Max(4, ArrowSize));
+                        if (ShowLabels)
+                        {
+                            string lbl = (s.Side > 0 ? "LONG " : "SHORT ") + s.Grade + " ×" + s.Confl + " · " + s.Scen;
+                            LabelBox(gr, fLbl, x + 10, s.Side > 0 ? yE + 16 : yE - 34, lbl, dir);
+                        }
                     }
                 }
                 if (ShowPanel && rs.Panel != null && rs.Panel.Count > 0)
@@ -658,7 +688,7 @@ namespace EntrySignal
                     float defX = (PanelCorner == 1 || PanelCorner == 3) ? clip.Right - bw - 8 : clip.Left + 8;
                     float defY = (PanelCorner >= 2) ? clip.Bottom - bh - 8 : clip.Top + 8;
                     var (x, y) = _drag.Origin(defX, defY, bw, bh, clip);
-                    using (var bg = new SolidBrush(Color.FromArgb(215, 18, 18, 22))) gr.FillRectangle(bg, x, y, bw, bh);
+                    using (var bg = new SolidBrush(Color.FromArgb(Math.Clamp(PanelOpacity, 100, 255), 18, 18, 22))) gr.FillRectangle(bg, x, y, bw, bh);
                     using (var bd = new Pen(Color.FromArgb(90, 255, 255, 255))) gr.DrawRectangle(bd, x, y, bw, bh);
                     float ty = y + pad;
                     foreach (var (t, col) in rs.Panel) { using var br = new SolidBrush(col); gr.DrawString(t, f, br, x + pad, ty); ty += lineH; }

@@ -6,7 +6,10 @@
       "Bash(where pdftotext *)",
       "Bash(where qpdf *)",
       "Bash(pip install *)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(python3 -)",
+      "Bash(cd ~/quantower-libs && cat qw-rebuild.sh)",
+      "Read(//home/asl86/quantower-libs/**)"
     ]
   }
 }

@@ -112,7 +112,11 @@ namespace AskBidDeltaBars
             close = delta;
             high = maxDelta;
             low = minDelta;
-            if (high < low) { double t = high; high = low; low = t; }     // guard
+            // Nến RỖNG / đang hình thành: MaxDelta=double.MinValue, MinDelta=double.MaxValue (giá trị mồi).
+            // Nếu để lọt, high/low = ±1.8e308 sẽ THỔI trục Y lên khổng lồ → mọi nến delta thật bẹp dí,
+            // cửa sổ phụ nhìn như TRỐNG. maxDelta<minDelta chỉ xảy ra đúng ở trạng thái mồi này
+            // (nến thật luôn Max≥Min) → gộp nến về close = nến phẳng, không phá trục.
+            if (high < low || !double.IsFinite(high) || !double.IsFinite(low)) { high = close; low = close; }
             open = Math.Min(Math.Max(0.0, low), high);                    // kẹp 0 vào [low,high]
             high = Math.Max(high, Math.Max(open, close));                 // nến hợp lệ
             low = Math.Min(low, Math.Min(open, close));

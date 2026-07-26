@@ -344,7 +344,7 @@ namespace OrderFlowBubbles
         private void ComputeBar(int idx, HistoryItemBar bar, double tick, bool ready, bool isClosed)
         {
             var va = bar.VolumeAnalysisData;
-            if (va == null || va.PriceLevels == null || va.PriceLevels.Count == 0)
+            if (va == null || va.Total == null || va.PriceLevels == null || va.PriceLevels.Count == 0)
             {
                 lock (_sync) { _bubbles.Remove(idx); _barTint.Remove(idx); }
                 return;
@@ -597,7 +597,7 @@ namespace OrderFlowBubbles
         private bool ParticOk(int idx, double medVol)
         {
             var b = Bar(idx);
-            double v = b?.VolumeAnalysisData?.Total.Volume ?? 0;
+            double v = b?.VolumeAnalysisData?.Total?.Volume ?? 0;
             return medVol <= 0 || v >= DivVolPartic * medVol;
         }
 
@@ -644,6 +644,7 @@ namespace OrderFlowBubbles
             if (CurrentChart == null || !_vaLoaded) return;
 
             var win = CurrentChart.Windows[args.WindowIndex];
+            if (!win.IsMainWindow) return;              // overlay ở chart CHÍNH; không vẽ lộn sang cửa sổ phụ (VSA/Ask-Bid/DMA)
             var conv = win.CoordinatesConverter;
             var gr = args.Graphics;
             var clip = win.ClientRectangle;
@@ -712,7 +713,7 @@ namespace OrderFlowBubbles
                     }
 
                     // --- số delta ---
-                    if (ShowDeltaNumbers && barsW >= DeltaMinBarWidthPx && bar.VolumeAnalysisData != null)
+                    if (ShowDeltaNumbers && barsW >= DeltaMinBarWidthPx && bar.VolumeAnalysisData?.Total != null)
                     {
                         double d = bar.VolumeAnalysisData.Total.Delta;
                         string text = d.ToString("+0;-0;0");
@@ -790,8 +791,8 @@ namespace OrderFlowBubbles
             => (absIdx >= 0 && absIdx < HistoricalData.Count)
                 ? HistoricalData[absIdx, SeekOriginHistory.Begin] as HistoryItemBar : null;
 
-        private static double BarDelta(HistoryItemBar bar) => bar.VolumeAnalysisData?.Total.Delta ?? 0.0;
-        private static double PrevVol(HistoryItemBar bar) => bar.VolumeAnalysisData?.Total.Volume ?? 0.0;
+        private static double BarDelta(HistoryItemBar bar) => bar.VolumeAnalysisData?.Total?.Delta ?? 0.0;
+        private static double PrevVol(HistoryItemBar bar) => bar.VolumeAnalysisData?.Total?.Volume ?? 0.0;
 
         private Color AggColor(double buy, double sell) => buy >= sell ? BuyColor : SellColor;
         private int MidSize() => (MinBubbleSize + MaxBubbleSize) / 2;

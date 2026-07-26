@@ -1,0 +1,217 @@
+// ============================================================================
+//  ProfileEngine  —  lõi dùng chung cho DailyTpoBias + M30SessionZones (Quantower)
+// ============================================================================
+//  Thuần logic (không phụ thuộc Indicator/GDI). Dựng profile phiên từ footprint
+//  (VolumeAnalysisData.PriceLevels) hoặc TPO (High/Low nến), tính POC/VA (rule 2
+//  hàng 70%), IB, và các vùng (naked POC, cụm POC, biên VA, HVN).
+//
+//  ĐƯỢC CONCAT vào đầu mỗi file indicator khi build (xem build-tpo.sh). Vì vậy
+//  MỌI `using` đặt BÊN TRONG namespace (không có using top-level) để nối file hợp lệ.
+//  Đã validate offline: POC khớp đáp án nền tảng 90% trong 5 tick (prototype_test.py).
+// ============================================================================
+namespace TpoSuite
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using TradingPlatform.BusinessLayer;
+
+    // ---- Kết quả profile 1 phiên (ngày, hoặc khối Á/Âu/Mỹ, hoặc 1 profile 30') ----
+    internal sealed class SessionProfile
+    {
+        public string Label = "";
+        public DateTime Start, End;
+        public int FromIdx = -1, ToIdx = -1;
+        public int Bars;
+        public double Tick = 0.1;
+        public double Open, Close;
+        public double High = double.MinValue, Low = double.MaxValue;
+        public double Poc = double.NaN, Vah = double.NaN, Val = double.NaN, Mid = double.NaN;
+        public double IbHigh = double.NaN, IbLow = double.NaN;
+        public double Volume, Delta;
+
+        public bool Valid => High > Low && !double.IsNaN(Poc);
+        public double RangeTicks => (High > Low) ? (High - Low) / Tick : 0;
+        public double VaWidthTicks => (!double.IsNaN(Vah) && !double.IsNaN(Val)) ? (Vah - Val) / Tick : 0;
+        public double IbRangeTicks => (!double.IsNaN(IbHigh) && !double.IsNaN(IbLow)) ? (IbHigh - IbLow) / Tick : 0;
+        public double ClosePos => (High > Low) ? (Close - Low) / (High - Low) : 0.5;
+        public int Direction => Close > Open ? 1 : Close < Open ? -1 : 0;
+        // balance: ROT (>=0.55) / TREND (<=0.35) / INT theo VAwidth/Range
+        public string Balance
+        {
+            get { double r = RangeTicks > 0 ? VaWidthTicks / RangeTicks : 1;
+                  return r >= 0.55 ? "ROT" : r <= 0.35 ? "TREND" : "INT"; }
+        }
+        public string CloseState => ClosePos >= 0.70 ? "MẠNH" : ClosePos <= 0.30 ? "YẾU" : "TB";
+    }
+
+    internal static class ProfileEngine
+    {
+        public static double Snap(double price, double step) => Math.Round(price / step) * step;
+
+        // Volume rows (giá->volume) từ PriceLevels trên [from..to], snap về rowStep.
+        public static SortedDictionary<double, double> VolumeRows(HistoricalData hd, int from, int to, double rowStep)
+        {
+            var rows = new SortedDictionary<double, double>();
+            for (int i = from; i <= to; i++)
+            {
+                if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b) continue;
+                var pl = b.VolumeAnalysisData?.PriceLevels;
+                if (pl == null) continue;
+                foreach (var kv in pl)
+                {
+                    double p = Snap(kv.Key, rowStep);
+                    double v = kv.Value.Volume;
+                    rows[p] = rows.TryGetValue(p, out var c) ? c + v : v;
+                }
+            }
+            return rows;
+        }
+
+        // TPO rows (giá->số nến phủ) từ High/Low trên [from..to].
+        public static SortedDictionary<double, double> TpoRows(HistoricalData hd, int from, int to, double rowStep)
+        {
+            var rows = new SortedDictionary<double, double>();
+            for (int i = from; i <= to; i++)
+            {
+                if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b) continue;
+                long a = (long)Math.Round(b.Low / rowStep), z = (long)Math.Round(b.High / rowStep);
+                for (long r = a; r <= z; r++)
+                {
+                    double p = r * rowStep;
+                    rows[p] = rows.TryGetValue(p, out var c) ? c + 1 : 1;
+                }
+            }
+            return rows;
+        }
+
+        // POC + Value Area (rule 2 hàng, 70%).
+        public static (double poc, double vah, double val) ValueArea(SortedDictionary<double, double> rows, double frac = 0.70)
+        {
+            if (rows == null || rows.Count == 0) return (double.NaN, double.NaN, double.NaN);
+            var prices = rows.Keys.ToArray();
+            var w = rows.Values.ToArray();
+            double tot = 0; for (int i = 0; i < w.Length; i++) tot += w[i];
+            if (tot <= 0) return (double.NaN, double.NaN, double.NaN);
+            int poc = 0; for (int i = 1; i < w.Length; i++) if (w[i] > w[poc]) poc = i;
+            double acc = w[poc], target = tot * frac; int lo = poc, hi = poc;
+            while (acc < target && (lo > 0 || hi < w.Length - 1))
+            {
+                double up = (hi < w.Length - 1 ? w[hi + 1] : 0) + (hi < w.Length - 2 ? w[hi + 2] : 0);
+                double dn = (lo > 0 ? w[lo - 1] : 0) + (lo > 1 ? w[lo - 2] : 0);
+                if (hi >= w.Length - 1) { acc += dn; lo = Math.Max(0, lo - 2); }
+                else if (lo <= 0) { acc += up; hi = Math.Min(w.Length - 1, hi + 2); }
+                else if (up >= dn) { acc += up; hi = Math.Min(w.Length - 1, hi + 2); }
+                else { acc += dn; lo = Math.Max(0, lo - 2); }
+            }
+            return (prices[poc], prices[hi], prices[lo]);
+        }
+
+        // Dựng 1 SessionProfile từ nến [from..to]. useVolume=true → volume rows (fallback TPO nếu rỗng).
+        public static SessionProfile BuildProfile(HistoricalData hd, int from, int to, double tick,
+                                                  double rowStep, bool useVolume, int ibBars, string label)
+        {
+            var sp = new SessionProfile { Label = label, FromIdx = from, ToIdx = to, Tick = tick };
+            if (from < 0 || to < from) return sp;
+            for (int i = from; i <= to; i++)
+            {
+                if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b) continue;
+                if (i == from) { sp.Open = b.Open; sp.Start = b.TimeLeft; }
+                sp.High = Math.Max(sp.High, b.High);
+                sp.Low = Math.Min(sp.Low, b.Low);
+                sp.Close = b.Close; sp.End = b.TimeLeft; sp.Bars++;
+                var t = b.VolumeAnalysisData?.Total;
+                if (t != null) { sp.Volume += t.Volume; sp.Delta += t.Delta; }
+            }
+            var rows = useVolume ? VolumeRows(hd, from, to, rowStep) : null;
+            if (rows == null || rows.Count == 0) rows = TpoRows(hd, from, to, rowStep);
+            var (poc, vah, val) = ValueArea(rows);
+            sp.Poc = poc; sp.Vah = vah; sp.Val = val;
+            if (sp.High > sp.Low) sp.Mid = (sp.High + sp.Low) / 2;
+            if (ibBars > 0)
+            {
+                double ih = double.MinValue, il = double.MaxValue; int cnt = 0;
+                for (int k = 0; k < ibBars && from + k <= to; k++)
+                    if (hd[from + k, SeekOriginHistory.Begin] is HistoryItemBar bb)
+                    { ih = Math.Max(ih, bb.High); il = Math.Min(il, bb.Low); cnt++; }
+                if (cnt > 0) { sp.IbHigh = ih; sp.IbLow = il; }
+            }
+            return sp;
+        }
+
+        // Nhóm toàn bộ nến thành các phiên theo GAP thời gian (không cần timezone).
+        // gapMinutes: gap giữa 2 nến liên tiếp lớn hơn ngưỡng → phiên mới (nghỉ bảo trì/cuối tuần).
+        public static List<(int from, int to)> GroupByGap(HistoricalData hd, double gapMinutes)
+        {
+            var res = new List<(int, int)>();
+            int n = hd.Count; if (n == 0) return res;
+            int start = 0; DateTime prev = DateTime.MinValue; bool have = false;
+            for (int i = 0; i < n; i++)
+            {
+                if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b) continue;
+                if (have && (b.TimeLeft - prev).TotalMinutes > gapMinutes)
+                { res.Add((start, i - 1)); start = i; }
+                prev = b.TimeLeft; have = true;
+            }
+            res.Add((start, n - 1));
+            return res;
+        }
+
+        // ---- thống kê ----
+        public static double Median(List<double> xs)
+        {
+            if (xs == null || xs.Count == 0) return 0;
+            var s = xs.ToList(); s.Sort(); int m = s.Count / 2;
+            return (s.Count % 2 == 1) ? s[m] : 0.5 * (s[m - 1] + s[m]);
+        }
+        public static double Percentile(List<double> xs, double p)
+        {
+            if (xs == null || xs.Count == 0) return 0;
+            var s = xs.ToList(); s.Sort();
+            double idx = Math.Clamp(p, 0, 1) * (s.Count - 1);
+            int lo = (int)Math.Floor(idx), hi = (int)Math.Ceiling(idx);
+            if (lo == hi) return s[lo];
+            return s[lo] + (idx - lo) * (s[hi] - s[lo]);
+        }
+        public static double Clamp(double x, double a, double b) => Math.Max(a, Math.Min(b, x));
+
+        // Phân loại quan hệ vùng giá trị d(hôm nay/dev) vs p(hôm qua). Trả (nhãn, điểm[-1..1]).
+        public static (string label, double s) ValueRelation(double dVah, double dVal, double dClose,
+                                                             double pVah, double pVal, double pPoc, double gapDollars)
+        {
+            if (dVal > pVah + gapDollars) return ("vùng giá trị cao hơn", +1.0);
+            if (dVah < pVal - gapDollars) return ("vùng giá trị thấp hơn", -1.0);
+            if (dVah > pVah && dVal > pVal) return ("chồng lên cao hơn", +0.5);
+            if (dVah < pVah && dVal < pVal) return ("chồng lên thấp hơn", -0.5);
+            if (dVah <= pVah && dVal >= pVal) return ("nằm trong giá trị cũ", 0.0);
+            return ("bao trùm giá trị cũ", 0.15 * (dClose > pPoc ? 1 : -1));
+        }
+
+        // Naked/virgin POC: POC của phiên đã đóng, chưa nến nào SAU khi phiên đó kết thúc phủ lại.
+        public static bool IsNaked(HistoricalData hd, SessionProfile sp, int lastIdx)
+        {
+            for (int i = sp.ToIdx + 1; i <= lastIdx; i++)
+                if (hd[i, SeekOriginHistory.Begin] is HistoryItemBar b && b.Low <= sp.Poc && sp.Poc <= b.High)
+                    return false;
+            return true;
+        }
+
+        // Gom các POC gần nhau (<= tolTicks) thành cụm; trả (lo,hi,count) cho cụm có >=minCount.
+        public static List<(double lo, double hi, int n)> ClusterPocs(List<double> pocs, double tolTicks, double tick, int minCount)
+        {
+            var res = new List<(double, double, int)>();
+            if (pocs == null || pocs.Count == 0) return res;
+            var s = pocs.Where(x => !double.IsNaN(x)).ToList(); s.Sort();
+            if (s.Count == 0) return res;
+            var cur = new List<double> { s[0] };
+            void flush() { if (cur.Count >= minCount) res.Add((cur[0], cur[cur.Count - 1], cur.Count)); }
+            for (int i = 1; i < s.Count; i++)
+            {
+                if ((s[i] - cur[cur.Count - 1]) / tick <= tolTicks) cur.Add(s[i]);
+                else { flush(); cur = new List<double> { s[i] }; }
+            }
+            flush();
+            return res;
+        }
+    }
+}

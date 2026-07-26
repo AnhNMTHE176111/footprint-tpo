@@ -113,8 +113,12 @@ namespace EntrySignal
         public bool ShowZones { get; set; } = true;
         [InputParameter("Hiện bảng", 82)]
         public bool ShowPanel { get; set; } = true;
-        [InputParameter("Số nến hiển thị tín hiệu gần nhất", 83, 50, 5000, 50, 0)]
+        [InputParameter("Hiện TOÀN BỘ tín hiệu lịch sử", 83)]
+        public bool ShowAllHistory { get; set; } = true;
+        [InputParameter("(nếu tắt) số nến hiển thị gần nhất", 87, 50, 20000, 50, 0)]
         public int DisplayBars { get; set; } = 600;
+        [InputParameter("Số dòng tối đa trong bảng", 88, 2, 20, 1, 0)]
+        public int PanelRows { get; set; } = 4;
         [InputParameter("Góc bảng (0=TL 1=TR 2=BL 3=BR)", 84, 0, 3, 1, 0)]
         public int PanelCorner { get; set; } = 0;
         [InputParameter("Cỡ chữ", 85, 7, 20, 1, 0)]
@@ -227,9 +231,10 @@ namespace EntrySignal
                     var sigs = Scan(hd, B, pool);
                     foreach (var s in sigs) s.Outcome = Simulate(B, s);
 
-                    // lọc hiển thị NGAY trong Process (paint không đụng HistoricalData)
+                    // lọc hiển thị NGAY trong Process (paint không đụng HistoricalData).
+                    // ShowAllHistory → vẽ MỌI tín hiệu (paint tự cull theo trục X nên không nặng).
                     int minIdx = B.Count - 1 - DisplayBars;
-                    var show = sigs.Where(s => s.Idx >= minIdx || s.Outcome == "running").ToList();
+                    var show = ShowAllHistory ? sigs : sigs.Where(s => s.Idx >= minIdx || s.Outcome == "running").ToList();
 
                     double now = B[B.Count - 1].C;
                     var clusters = CurrentClusters(pool, B[B.Count - 1].Time, now);
@@ -551,8 +556,11 @@ namespace EntrySignal
         private List<(string, Color)> BuildPanel(List<Sig> sigs, double now)
         {
             var p = new List<(string, Color)>();
-            p.Add(("ENTRY SIGNAL (M1)", Color.White));
-            var recent = sigs.Where(s => !OnlyAGrade || s.Grade == 'A').OrderByDescending(s => s.Idx).Take(4).ToList();
+            var pool = sigs.Where(s => !OnlyAGrade || s.Grade == 'A').ToList();
+            int running = pool.Count(s => s.Outcome == "running");
+            int tp = pool.Count(s => s.Outcome == "TP"), sl = pool.Count(s => s.Outcome == "SL");
+            p.Add(($"ENTRY SIGNAL (M1)   {pool.Count} tín hiệu · ✓{tp} ✗{sl} •{running}", Color.White));
+            var recent = pool.OrderByDescending(s => s.Idx).Take(Math.Max(2, PanelRows)).ToList();
             if (recent.Count == 0) { p.Add(("(chưa có setup hợp lưu ≥2)", Color.Gray)); return p; }
             foreach (var s in recent)
             {

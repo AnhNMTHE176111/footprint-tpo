@@ -41,8 +41,8 @@ namespace EntrySignal
         public int SessionGapMin { get; set; } = 40;
         [InputParameter("Gap tách ngày (phút)", 22, 20, 240, 1, 0)]
         public int DayGapMin { get; set; } = 45;    // khe bảo trì M1 ~61' > 45 → tách ngày đúng
-        [InputParameter("Số phiên gần nhất xét vùng", 23, 3, 40, 1, 0)]
-        public int LookbackSessions { get; set; } = 12;
+        [InputParameter("Số phiên xét vùng (0 = TẤT CẢ lịch sử)", 23, 0, 400, 1, 0)]
+        public int LookbackSessions { get; set; } = 0;   // 0 = dựng vùng cho MỌI phiên đã load → tín hiệu lịch sử đầy đủ (khớp backtest). >0 chỉ để chặn tải nặng.
         [InputParameter("Số ngày vùng còn hiệu lực", 24, 1, 10, 1, 0)]
         public int ZoneExpireDays { get; set; } = 3;
 
@@ -77,18 +77,18 @@ namespace EntrySignal
         public int RetestBars { get; set; } = 12;
         [InputParameter("Retest sát mức (tick)", 51, 1, 20, 1, 0)]
         public int RetestTol { get; set; } = 4;
-        [InputParameter("SL sàn (giá)", 52, 0.5, 6, 0.1, 1)]
-        public double SlFloor { get; set; } = 2.0;
+        [InputParameter("SL sàn (giá) — tránh stop 2đ dính nhiễu", 52, 0.5, 8, 0.1, 1)]
+        public double SlFloor { get; set; } = 4.0;   // backtest: floor 2đ hay bị noise-stop rồi giá chạy TP; 4đ ⇒ WR 36%→58% (giữ mục tiêu ~6đ)
         [InputParameter("SL trần (giá) — quá thì bỏ", 53, 1, 12, 0.1, 1)]
         public double SlCap { get; set; } = 6.0;
         [InputParameter("SL đệm ngoài nến/vùng (tick)", 54, 0, 20, 1, 0)]
         public int SlBuf { get; set; } = 2;
         [InputParameter("RR mục tiêu (TP1)", 55, 1, 6, 0.5, 1)]
-        public double RR { get; set; } = 3.0;
+        public double RR { get; set; } = 1.5;   // với SL 4đ ⇒ TP1 ≈ 6đ = điểm ngọt (58% WR). RR to hơn = TP quá xa, hụt.
         [InputParameter("Nới TP tới vùng mạnh kế", 56)]
         public bool ExtendToNextZone { get; set; } = true;
-        [InputParameter("RR tối thiểu để nới", 57, 1, 8, 0.5, 1)]
-        public double NextZoneMinR { get; set; } = 3.0;
+        [InputParameter("RR tối thiểu để nới (TP2 runner)", 57, 1, 8, 0.5, 1)]
+        public double NextZoneMinR { get; set; } = 2.0;
         [InputParameter("Cooldown mỗi cụm (số nến)", 58, 0, 60, 1, 0)]
         public int Cooldown { get; set; } = 15;
 
@@ -99,6 +99,8 @@ namespace EntrySignal
         public bool EnableS2 { get; set; } = true;
         [InputParameter("Hấp thụ: dominance mức ≥", 62, 0.3, 1.0, 0.05, 2)]
         public double AbsDom { get; set; } = 0.60;
+        [InputParameter("KB2: nến climax tím thay được tường hấp thụ", 63)]
+        public bool S2ClimaxOverride { get; set; } = true;   // nến climax (VSA≥tím) tại cụm ≥2 = bằng chứng hấp thụ đủ, không cần per-level wall
 
         // ---------- lọc / warm-up ----------
         [InputParameter("Sàn volume (chống nến mỏng)", 70, 0, 500, 1, 0)]
@@ -170,6 +172,8 @@ namespace EntrySignal
         private int _digits = 1;
         private double _tick = 0.1;
         private int _lastN = -1;
+        private int _vaCov, _vaTot;          // số nến có footprint (Δ) / tổng nến → báo vùng quét thực tế
+        private DateTime _vaFirst = DateTime.MinValue;
         private readonly PanelDrag _drag = new();
 
         public EntrySignal() : base()
@@ -227,8 +231,11 @@ namespace EntrySignal
         {
             public int Idx; public DateTime Time; public int Side;
             public string Scen; public char Grade; public double Entry, Sl, Tp1, Tp2, RiskT, Rr2;
-            public int Confl; public double Vsa; public bool Climax; public List<string> Why = new();
+            public int Confl;        // số vùng THỰC SỰ kích hoạt cùng setup (gộp trigger)
+            public int Cluster;      // số vùng NẰM TRONG cụm quanh giá vào (confluence "mắt nhìn") — dùng để lọc
+            public double Vsa; public bool Climax; public List<string> Why = new();
             public string Outcome = "running";
+            public DateTime OutTime; // nến chạm SL/TP (để vẽ khối tới đúng chỗ kết thúc)
         }
 
         private void Process()
@@ -251,7 +258,7 @@ namespace EntrySignal
 
                     var pool = BuildPool(hd, B);
                     var sigs = Scan(hd, B, pool);
-                    foreach (var s in sigs) s.Outcome = Simulate(B, s);
+                    foreach (var s in sigs) Simulate(B, s);
 
                     // lọc hiển thị NGAY trong Process (paint không đụng HistoricalData).
                     // ShowAllHistory → vẽ MỌI tín hiệu (paint tự cull theo trục X nên không nặng).
@@ -272,13 +279,16 @@ namespace EntrySignal
         private List<Bar> BuildBars(HistoricalData hd, int n)
         {
             var B = new List<Bar>(n);
+            int cov = 0; DateTime first = DateTime.MinValue;
             for (int i = 0; i < n; i++)
             {
                 if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b) continue;
                 var t = b.VolumeAnalysisData?.Total;
+                if (t != null) { cov++; if (first == DateTime.MinValue) first = b.TimeLeft; }
                 B.Add(new Bar { Idx = B.Count, HdIdx = i, Time = b.TimeLeft, O = b.Open, H = b.High, L = b.Low, C = b.Close,
                     Vol = t?.Volume ?? b.Volume, Delta = t?.Delta ?? 0 });
             }
+            _vaCov = cov; _vaTot = B.Count; _vaFirst = first;   // nến cũ hơn _vaFirst chưa có footprint → không thể bắn (Δ=0)
             double csPV = 0, csV = 0, cum = 0, rollSum = 0;
             var q = new Queue<double>();
             for (int i = 0; i < B.Count; i++)
@@ -307,7 +317,10 @@ namespace EntrySignal
 
             // ---- blocks phiên (đổi nhãn Á/Âu/Mỹ hoặc gap>SessionGap) ----
             var sBlocks = SplitBlocks(hd, SessionGapMin);
-            int startBlk = Math.Max(0, sBlocks.Count - 1 - LookbackSessions);
+            // LookbackSessions=0 → dựng vùng cho MỌI phiên (mỗi vùng vẫn tự hết hạn sau ZoneExpireDays,
+            // nên scan chỉ bắn nơi vùng còn sống). Đây là fix bug "số entry chững ~4": trước đây chỉ
+            // 12 phiên cuối có session-zone → lịch sử bị đói vùng → thiếu hợp lưu. Nay khớp backtest.
+            int startBlk = LookbackSessions > 0 ? Math.Max(0, sBlocks.Count - 1 - LookbackSessions) : 0;
             for (int i = startBlk; i < sBlocks.Count - 1; i++)   // bỏ block đang chạy
             {
                 string lab = LabelOf(GetTime(hd, sBlocks[i].from));
@@ -410,27 +423,29 @@ namespace EntrySignal
                     {
                         if (b.C < zp - buf * _tick) z.State = "idle";
                         else if (b.L <= zp + RetestTol * _tick && LongSignal(b, out var w))
-                            em = Emit(raw, B, pool, i, +1, "KB1 phá&hồi", Math.Min(b.L, zp), w, 'A');
+                            em = Emit(raw, B, pool, i, +1, "KB1 phá&hồi", Math.Min(b.L, zp), w, 'A', zp);
                         if (em) { z.Cool = i; z.State = "idle"; }
                     }
                     else if (z.State == "broke_dn" && i - z.BrkBar > 0 && i - z.BrkBar <= RetestBars)
                     {
                         if (b.C > zp + buf * _tick) z.State = "idle";
                         else if (b.H >= zp - RetestTol * _tick && ShortSignal(b, out var w))
-                            em = Emit(raw, B, pool, i, -1, "KB1 phá&hồi", Math.Max(b.H, zp), w, 'A');
+                            em = Emit(raw, B, pool, i, -1, "KB1 phá&hồi", Math.Max(b.H, zp), w, 'A', zp);
                         if (em) { z.Cool = i; z.State = "idle"; }
                     }
                     if (!em && EnableS2 && (z.State == "idle" || z.State == "broke_up" || z.State == "broke_dn"))
                     {
                         if (up && tagged && b.C < zhi && ShortSignal(b, out var w) && b.Delta < 0)
                         {
-                            if (!RequireWallForS2 || Absorption(HdBar(hd, b.HdIdx), b.H, -1))
-                                if (Emit(raw, B, pool, i, -1, "KB2 chạm&đảo", Math.Max(b.H, zp), Append(w, "hấp thụ"), 'B')) { z.Cool = i; z.State = "idle"; }
+                            bool wall = !RequireWallForS2 || Absorption(HdBar(hd, b.HdIdx), b.H, -1) || (S2ClimaxOverride && b.Vratio >= VsaClimax);
+                            if (wall)
+                                if (Emit(raw, B, pool, i, -1, "KB2 chạm&đảo", Math.Max(b.H, zp), Append(w, b.Vratio >= VsaClimax ? "climax" : "hấp thụ"), 'B', zp)) { z.Cool = i; z.State = "idle"; }
                         }
                         else if (dn && tagged && b.C > zlo && LongSignal(b, out var w2) && b.Delta > 0)
                         {
-                            if (!RequireWallForS2 || Absorption(HdBar(hd, b.HdIdx), b.L, +1))
-                                if (Emit(raw, B, pool, i, +1, "KB2 chạm&đảo", Math.Min(b.L, zp), Append(w2, "hấp thụ"), 'B')) { z.Cool = i; z.State = "idle"; }
+                            bool wall = !RequireWallForS2 || Absorption(HdBar(hd, b.HdIdx), b.L, +1) || (S2ClimaxOverride && b.Vratio >= VsaClimax);
+                            if (wall)
+                                if (Emit(raw, B, pool, i, +1, "KB2 chạm&đảo", Math.Min(b.L, zp), Append(w2, b.Vratio >= VsaClimax ? "climax" : "hấp thụ"), 'B', zp)) { z.Cool = i; z.State = "idle"; }
                         }
                     }
                     z.PrevRel = rel;
@@ -490,7 +505,23 @@ namespace EntrySignal
             return false;
         }
 
-        private bool Emit(List<Sig> raw, List<Bar> B, List<PZone> pool, int i, int side, string scen, double anchor, List<string> why, char grade)
+        // Số vùng KHÁC NHAU (theo giá) đang còn hiệu lực nằm trong ConfluenceTol quanh giá vùng kích hoạt.
+        // = "hợp lưu mắt nhìn" (cụm ≥2 vùng chồng nhau), gồm cả vùng không tự bắn. Backtest: gate cụm≥2
+        // cho edge cao hơn gate theo-trigger (WR 43%→49%, exp +0.30→+0.48).
+        private int ClusterCount(List<PZone> pool, DateTime t, double price)
+        {
+            var seen = new HashSet<long>();
+            foreach (var z in pool)
+            {
+                if (t < z.ReadyTime || t > z.ExpireTime) continue;
+                double zp = z.Price; if (double.IsNaN(zp) || zp <= 0) continue;
+                if (Math.Abs(zp - price) / _tick > ConfluenceTol) continue;
+                seen.Add((long)Math.Round(zp / _tick));
+            }
+            return seen.Count;
+        }
+
+        private bool Emit(List<Sig> raw, List<Bar> B, List<PZone> pool, int i, int side, string scen, double anchor, List<string> why, char grade, double zonePrice)
         {
             var b = B[i]; double entry = b.C; double sl, risk;
             double slCap = Math.Max(SlCap, SlFloor);       // clamp: tránh SlFloor>SlCap tắt hết tín hiệu
@@ -511,7 +542,8 @@ namespace EntrySignal
                 }
             }
             raw.Add(new Sig { Idx = i, Time = b.Time, Side = side, Scen = scen, Grade = grade, Entry = entry, Sl = sl,
-                Tp1 = tp1, Tp2 = tp2, RiskT = risk, Rr2 = rr2, Vsa = b.Vratio, Climax = b.Vratio >= VsaClimax, Why = why });
+                Tp1 = tp1, Tp2 = tp2, RiskT = risk, Rr2 = rr2, Vsa = b.Vratio, Climax = b.Vratio >= VsaClimax, Why = why,
+                Cluster = ClusterCount(pool, b.Time, zonePrice) });
             return true;
         }
 
@@ -537,22 +569,23 @@ namespace EntrySignal
             {
                 var m = outp.FirstOrDefault(k => k.Side == s.Side && Math.Abs(s.Idx - k.Idx) <= 6 && Math.Abs(s.Entry - k.Entry) / _tick <= DedupTol);
                 if (m == null) { s.Confl = 1; outp.Add(s); }
-                else m.Confl++;
+                else { m.Confl++; m.Cluster = Math.Max(m.Cluster, s.Cluster); }
             }
-            return outp.Where(s => s.Confl >= MinConfluence).ToList();
+            // GATE theo cụm-gần (confluence "mắt nhìn"): giữ setup có ≥MinConfluence vùng chồng quanh giá vào.
+            return outp.Where(s => s.Cluster >= MinConfluence).ToList();
         }
 
-        private string Simulate(List<Bar> B, Sig s)   // bi quan: SL trước TP (chỉ để hiển thị outcome)
+        private void Simulate(List<Bar> B, Sig s)   // bi quan: SL trước TP (chỉ để hiển thị outcome); ghi OutTime
         {
             for (int j = s.Idx + 1; j < B.Count; j++)
             {
                 var b = B[j];
                 bool hitSL = s.Side > 0 ? b.L <= s.Sl : b.H >= s.Sl;
                 bool hitTP = s.Side > 0 ? b.H >= s.Tp1 : b.L <= s.Tp1;
-                if (hitSL) return "SL";
-                if (hitTP) return "TP";
+                if (hitSL) { s.Outcome = "SL"; s.OutTime = b.Time; return; }
+                if (hitTP) { s.Outcome = "TP"; s.OutTime = b.Time; return; }
             }
-            return "running";
+            s.Outcome = "running"; s.OutTime = B[B.Count - 1].Time;
         }
 
         private List<(double price, double strength, int side)> CurrentClusters(List<PZone> pool, DateTime now, double nowPrice)
@@ -581,7 +614,12 @@ namespace EntrySignal
             var pool = sigs.Where(s => !OnlyAGrade || s.Grade == 'A').ToList();
             int running = pool.Count(s => s.Outcome == "running");
             int tp = pool.Count(s => s.Outcome == "TP"), sl = pool.Count(s => s.Outcome == "SL");
-            p.Add(($"ENTRY SIGNAL (M1)   {pool.Count} tín hiệu · ✓{tp} ✗{sl} •{running}", Color.White));
+            int closed = tp + sl;
+            string wr = closed > 0 ? $" · WR {100.0 * tp / closed:0}%" : "";
+            p.Add(($"ENTRY SIGNAL (M1)   {pool.Count} tín hiệu · ✓{tp} ✗{sl} •{running}{wr}", Color.White));
+            // cảnh báo vùng quét thực tế: nến cũ hơn _vaFirst chưa có footprint → không bắn được
+            if (_vaTot > 0 && _vaCov < (int)(_vaTot * 0.98) && _vaFirst != DateTime.MinValue)
+                p.Add(($"⚠ footprint chỉ có {_vaCov}/{_vaTot} nến (từ {_vaFirst:dd/MM HH:mm}) — tăng số bar tính Volume Analysis để thấy lịch sử xa hơn", Color.FromArgb(255, 190, 120)));
             var recent = pool.OrderByDescending(s => s.Idx).Take(Math.Max(2, PanelRows)).ToList();
             if (recent.Count == 0) { p.Add(("(chưa có setup hợp lưu ≥2)", Color.Gray)); return p; }
             foreach (var s in recent)
@@ -590,7 +628,7 @@ namespace EntrySignal
                 string dir = s.Side > 0 ? "LONG" : "SHORT";
                 string oc = s.Outcome == "TP" ? "✓" : s.Outcome == "SL" ? "✗" : "•";
                 p.Add(($"{oc} {dir} {s.Grade} {s.Scen} | E {Fmt(s.Entry)} SL {Fmt(s.Sl)} ({s.RiskT * _tick:0.0}đ) TP {Fmt(s.Tp1)}→{Fmt(s.Tp2)} ({s.Rr2:0.0}R)", col));
-                p.Add(($"    hợp lưu ×{s.Confl} · {string.Join(" · ", s.Why)}", Color.Silver));
+                p.Add(($"    hợp lưu ×{s.Cluster} · {string.Join(" · ", s.Why)}", Color.Silver));
             }
             return p;
         }
@@ -626,63 +664,67 @@ namespace EntrySignal
                 {
                     using var fLbl = new Font("Consolas", Math.Max(8, FontSize), FontStyle.Bold);
                     using var fChip = new Font("Consolas", Math.Max(8, FontSize), FontStyle.Bold);
+                    var dash = DashedSlTp ? DashStyle.Dash : DashStyle.Solid;
                     foreach (var s in rs.Sigs)
                     {
                         if (OnlyAGrade && s.Grade != 'A') continue;
-                        float x = (float)conv.GetChartX(s.Time);
-                        if (x < clip.Left - 40 || x > clip.Right) continue;
-                        float yE = (float)conv.GetChartY(s.Entry), ySL = (float)conv.GetChartY(s.Sl), yTP = (float)conv.GetChartY(s.Tp1);
-                        if (Math.Max(yE, Math.Max(ySL, yTP)) < clip.Top || Math.Min(yE, Math.Min(ySL, yTP)) > clip.Bottom) continue;
-                        Color dir = s.Side > 0 ? LongColor : ShortColor;
                         bool active = s.Outcome == "running";
+                        if (!active && !ShowClosed) continue;
 
-                        // ĐIỂM VÀO chính xác: chấm tròn ngay tại nến entry (mọi tín hiệu) — viền trắng để luôn thấy
-                        if (yE >= clip.Top && yE <= clip.Bottom)
-                        {
-                            using (var bd = new SolidBrush(active ? dir : Color.FromArgb(200, dir))) gr.FillEllipse(bd, x - 4.5f, yE - 4.5f, 9, 9);
-                            using (var pw = new Pen(Color.White, 1.4f)) gr.DrawEllipse(pw, x - 4.5f, yE - 4.5f, 9, 9);
-                        }
+                        // KHỐI kéo từ nến vào → nến kết thúc (đã đóng) hoặc mép phải (đang chạy)
+                        float xE = (float)conv.GetChartX(s.Time);
+                        float xEnd = active ? clip.Right : (float)conv.GetChartX(s.OutTime);
+                        if (xEnd > clip.Right) xEnd = clip.Right;
+                        if (xEnd < xE + 10) xEnd = xE + 10;                 // khối tối thiểu để nhìn thấy
+                        if (xEnd < clip.Left || xE > clip.Right) continue;   // cull ngoài màn hình
+                        float yE = (float)conv.GetChartY(s.Entry), ySL = (float)conv.GetChartY(s.Sl), yTP = (float)conv.GetChartY(s.Tp1);
+                        float yTop = Math.Min(ySL, yTP), yBot = Math.Max(ySL, yTP);
+                        if (yBot < clip.Top || yTop > clip.Bottom) continue;
+                        Color dir = s.Side > 0 ? LongColor : ShortColor;
+                        float xb = Math.Max(xE, clip.Left); float bw = Math.Max(1, xEnd - xb);
+                        int fillA = active ? Math.Max(18, RiskBoxOpacity) : Math.Max(10, RiskBoxOpacity / 2);
+                        int lineA = active ? 255 : 150;
 
-                        if (!active)
+                        // ---- KHỐI position-tool: xanh = LỜI (E→TP), đỏ = LỖ (E→SL) ----
+                        if (ShowRiskBox)
                         {
-                            if (!ShowClosed) continue;
-                            // đã đóng → mũi tên mờ + dấu kết quả + chip giá nhỏ (giữ lịch sử, không rối)
-                            if (ShowArrows) DrawArrow(gr, x, yE, s.Side, Color.FromArgb(170, dir), Math.Max(4, ArrowSize - 2));
-                            string mk = s.Outcome == "TP" ? "✓" : "✗";
-                            Color mc = s.Outcome == "TP" ? TpLineColor : SlLineColor;
-                            using var bf = new SolidBrush(Color.FromArgb(190, mc));
-                            gr.DrawString(mk, fLbl, bf, x - 5, s.Side > 0 ? yE + 22 : yE - 34);
-                            continue;
-                        }
-
-                        float xr = clip.Right;
-                        var dash = DashedSlTp ? DashStyle.Dash : DashStyle.Solid;
-                        // vùng R:R: xanh = Entry→TP (lời), đỏ = Entry→SL (lỗ)
-                        if (ShowRiskBox && RiskBoxOpacity > 0)
-                        {
-                            float xb = Math.Max(x, clip.Left);
-                            using (var bt = new SolidBrush(Color.FromArgb(RiskBoxOpacity, TpLineColor)))
-                                gr.FillRectangle(bt, xb, Math.Min(yE, yTP), xr - xb, Math.Abs(yTP - yE));
-                            using (var bs = new SolidBrush(Color.FromArgb(RiskBoxOpacity, SlLineColor)))
-                                gr.FillRectangle(bs, xb, Math.Min(yE, ySL), xr - xb, Math.Abs(ySL - yE));
+                            using (var bt = new SolidBrush(Color.FromArgb(fillA, TpLineColor)))
+                                gr.FillRectangle(bt, xb, Math.Min(yE, yTP), bw, Math.Abs(yTP - yE));
+                            using (var bs = new SolidBrush(Color.FromArgb(fillA, SlLineColor)))
+                                gr.FillRectangle(bs, xb, Math.Min(yE, ySL), bw, Math.Abs(ySL - yE));
                         }
                         if (ShowLines)
                         {
-                            using (var pe = new Pen(dir, LineWidth + 0.5f)) gr.DrawLine(pe, x, yE, xr, yE);
-                            using (var ps = new Pen(SlLineColor, LineWidth) { DashStyle = dash }) gr.DrawLine(ps, x, ySL, xr, ySL);
-                            using (var pt = new Pen(TpLineColor, LineWidth) { DashStyle = dash }) gr.DrawLine(pt, x, yTP, xr, yTP);
+                            using (var pt = new Pen(Color.FromArgb(lineA, TpLineColor), LineWidth) { DashStyle = dash }) gr.DrawLine(pt, xb, yTP, xEnd, yTP);
+                            using (var ps = new Pen(Color.FromArgb(lineA, SlLineColor), LineWidth) { DashStyle = dash }) gr.DrawLine(ps, xb, ySL, xEnd, ySL);
+                            using (var pe = new Pen(Color.FromArgb(lineA, dir), LineWidth + 0.5f)) gr.DrawLine(pe, xb, yE, xEnd, yE);
+                            using (var pv = new Pen(Color.FromArgb(active ? 220 : 110, dir), 1.5f)) gr.DrawLine(pv, xE, yTop, xE, yBot);   // cạnh trái = mốc nến vào
                         }
-                        if (ShowChips)
+
+                        // điểm vào: chấm tròn viền trắng (luôn định vị được entry)
+                        if (yE >= clip.Top - 6 && yE <= clip.Bottom + 6)
                         {
-                            Chip(gr, fChip, xr, yE, "E " + Fmt(s.Entry), dir, true);
-                            Chip(gr, fChip, xr, ySL, "SL " + Fmt(s.Sl) + " (" + (s.RiskT * _tick).ToString("0.0") + "đ)", SlLineColor, true);
-                            Chip(gr, fChip, xr, yTP, "TP " + Fmt(s.Tp1) + "  " + s.Rr2.ToString("0.0") + "R", TpLineColor, true);
+                            using (var bd = new SolidBrush(active ? dir : Color.FromArgb(210, dir))) gr.FillEllipse(bd, xE - 4.5f, yE - 4.5f, 9, 9);
+                            using (var pw = new Pen(Color.FromArgb(active ? 255 : 190, Color.White), 1.4f)) gr.DrawEllipse(pw, xE - 4.5f, yE - 4.5f, 9, 9);
                         }
-                        if (ShowArrows) DrawArrow(gr, x, yE, s.Side, dir, Math.Max(4, ArrowSize));
+                        if (ShowArrows) DrawArrow(gr, xE, yE, s.Side, active ? dir : Color.FromArgb(180, dir), Math.Max(4, active ? ArrowSize : ArrowSize - 2));
+
                         if (ShowLabels)
                         {
-                            string lbl = (s.Side > 0 ? "LONG " : "SHORT ") + s.Grade + " ×" + s.Confl + " · " + s.Scen;
-                            LabelBox(gr, fLbl, x + 10, s.Side > 0 ? yE + 16 : yE - 34, lbl, dir);
+                            string lbl = (s.Side > 0 ? "LONG " : "SHORT ") + s.Grade + " ×" + s.Cluster + (active ? " · " + s.Scen : "");
+                            LabelBox(gr, fLbl, xE + 10, s.Side > 0 ? yBot + 4 : yTop - 20, lbl, active ? dir : Color.FromArgb(210, dir));
+                        }
+                        if (active && ShowChips)
+                        {
+                            Chip(gr, fChip, clip.Right, yE, "E " + Fmt(s.Entry), dir, true);
+                            Chip(gr, fChip, clip.Right, ySL, "SL " + Fmt(s.Sl) + " (" + (s.RiskT * _tick).ToString("0.0") + "đ)", SlLineColor, true);
+                            Chip(gr, fChip, clip.Right, yTP, "TP " + Fmt(s.Tp1) + "  " + s.Rr2.ToString("0.0") + "R", TpLineColor, true);
+                        }
+                        else if (!active)
+                        {
+                            string mk = s.Outcome == "TP" ? "✓" : "✗";
+                            using var bf = new SolidBrush(s.Outcome == "TP" ? TpLineColor : SlLineColor);
+                            gr.DrawString(mk, fLbl, bf, xEnd - 3, (s.Outcome == "TP" ? yTP : ySL) - 8);
                         }
                     }
                 }

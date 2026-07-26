@@ -128,6 +128,14 @@ namespace EntrySignal
         public Color ShortColor { get; set; } = Color.FromArgb(0xEF, 0x53, 0x50);
         [InputParameter("Màu vùng hợp lưu", 92)]
         public Color ConflColor { get; set; } = Color.FromArgb(0xFF, 0xB3, 0x00);
+        [InputParameter("Màu SL (đỏ)", 93)]
+        public Color SlLineColor { get; set; } = Color.FromArgb(0xE5, 0x39, 0x35);
+        [InputParameter("Màu TP (xanh)", 94)]
+        public Color TpLineColor { get; set; } = Color.FromArgb(0x00, 0xC8, 0x53);
+        [InputParameter("Độ dày đường", 95, 1, 5, 1, 0)]
+        public int LineWidth { get; set; } = 2;
+        [InputParameter("Tô vùng R:R (lời/lỗ)", 96)]
+        public bool ShowRiskBox { get; set; } = true;
 
         private bool _vaLoaded;
         private readonly object _sync = new();
@@ -571,44 +579,66 @@ namespace EntrySignal
             var prevClip = gr.ClipBounds; gr.SetClip(clip);
             try
             {
+                gr.SmoothingMode = SmoothingMode.AntiAlias;
                 if (ShowZones && rs.Clusters != null && rs.Clusters.Count > 0)
                 {
-                    using var fZ = new Font("Arial", 8, FontStyle.Bold);
-                    using var brZ = new SolidBrush(ConflColor);
-                    using var penZ = new Pen(Color.FromArgb(160, ConflColor), 1.4f) { DashStyle = DashStyle.Dot };
+                    using var fZ = new Font("Segoe UI", 8, FontStyle.Bold);
+                    using var penZ = new Pen(ConflColor, 2f) { DashStyle = DashStyle.Dash, DashPattern = new[] { 6f, 4f } };
                     foreach (var (price, strength, side) in rs.Clusters)
                     {
                         float y = (float)conv.GetChartY(price);
                         if (y < clip.Top || y > clip.Bottom) continue;
                         gr.DrawLine(penZ, clip.Left, y, clip.Right, y);
-                        gr.DrawString($"HỢP LƯU {price.ToString("0.0##")}", fZ, brZ, clip.Right - 150, y - 12);
+                        Chip(gr, fZ, clip.Left + 2, y, "⬥ HỢP LƯU " + price.ToString("0.0##"), ConflColor, false);
                     }
                 }
                 if (ShowSignals && rs.Sigs != null)
                 {
-                    using var fLbl = new Font("Consolas", Math.Max(7, FontSize - 1), FontStyle.Regular);
+                    using var fLbl = new Font("Consolas", Math.Max(8, FontSize), FontStyle.Bold);
+                    using var fChip = new Font("Consolas", Math.Max(8, FontSize), FontStyle.Bold);
                     foreach (var s in rs.Sigs)
                     {
                         if (OnlyAGrade && s.Grade != 'A') continue;
                         float x = (float)conv.GetChartX(s.Time);
-                        if (x < clip.Left - 5 || x > clip.Right) continue;
+                        if (x < clip.Left - 40 || x > clip.Right) continue;
                         float yE = (float)conv.GetChartY(s.Entry), ySL = (float)conv.GetChartY(s.Sl), yTP = (float)conv.GetChartY(s.Tp1);
-                        // bỏ nếu cả 3 mức đều ngoài khung dọc
                         if (Math.Max(yE, Math.Max(ySL, yTP)) < clip.Top || Math.Min(yE, Math.Min(ySL, yTP)) > clip.Bottom) continue;
-                        Color col = s.Side > 0 ? LongColor : ShortColor;
-                        using (var br = new SolidBrush(col))
+                        Color dir = s.Side > 0 ? LongColor : ShortColor;
+                        bool active = s.Outcome == "running";
+
+                        if (!active)
                         {
-                            var tri = s.Side > 0
-                                ? new[] { new PointF(x, yE + 14), new PointF(x - 6, yE + 24), new PointF(x + 6, yE + 24) }
-                                : new[] { new PointF(x, yE - 14), new PointF(x - 6, yE - 24), new PointF(x + 6, yE - 24) };
-                            gr.FillPolygon(br, tri);
+                            // đã đóng → chỉ mũi tên mờ + dấu kết quả (giữ lịch sử, không rối)
+                            DrawArrow(gr, x, yE, s.Side, Color.FromArgb(150, dir), 5);
+                            string mk = s.Outcome == "TP" ? "✓" : "✗";
+                            Color mc = s.Outcome == "TP" ? TpLineColor : SlLineColor;
+                            using var bf = new SolidBrush(Color.FromArgb(180, mc));
+                            gr.DrawString(mk, fLbl, bf, x - 5, s.Side > 0 ? yE + 22 : yE - 34);
+                            continue;
                         }
-                        using (var pe = new Pen(Color.FromArgb(200, col), 1f)) gr.DrawLine(pe, x, yE, clip.Right, yE);
-                        using (var ps = new Pen(Color.FromArgb(150, ShortColor), 1f) { DashStyle = DashStyle.Dash }) gr.DrawLine(ps, x, ySL, clip.Right, ySL);
-                        using (var pt = new Pen(Color.FromArgb(150, LongColor), 1f) { DashStyle = DashStyle.Dash }) gr.DrawLine(pt, x, yTP, clip.Right, yTP);
-                        string oc = s.Outcome == "TP" ? "✓" : s.Outcome == "SL" ? "✗" : "";
-                        using var brT = new SolidBrush(col);
-                        gr.DrawString($"{(s.Side > 0 ? "L" : "S")}{s.Grade}×{s.Confl} {s.Rr2:0.0}R {oc}", fLbl, brT, x + 8, yE - 6);
+
+                        float xr = clip.Right;
+                        // vùng R:R: xanh = Entry→TP (lời), đỏ = Entry→SL (lỗ)
+                        if (ShowRiskBox)
+                        {
+                            float xb = Math.Max(x, clip.Left);
+                            using (var bt = new SolidBrush(Color.FromArgb(34, TpLineColor)))
+                                gr.FillRectangle(bt, xb, Math.Min(yE, yTP), xr - xb, Math.Abs(yTP - yE));
+                            using (var bs = new SolidBrush(Color.FromArgb(34, SlLineColor)))
+                                gr.FillRectangle(bs, xb, Math.Min(yE, ySL), xr - xb, Math.Abs(ySL - yE));
+                        }
+                        // đường dày, đục
+                        using (var pe = new Pen(dir, LineWidth + 0.5f)) gr.DrawLine(pe, x, yE, xr, yE);
+                        using (var ps = new Pen(SlLineColor, LineWidth) { DashStyle = DashStyle.Dash }) gr.DrawLine(ps, x, ySL, xr, ySL);
+                        using (var pt = new Pen(TpLineColor, LineWidth) { DashStyle = DashStyle.Dash }) gr.DrawLine(pt, x, yTP, xr, yTP);
+                        // chip giá ở mép phải
+                        Chip(gr, fChip, xr, yE, "E " + Fmt(s.Entry), dir, true);
+                        Chip(gr, fChip, xr, ySL, "SL " + Fmt(s.Sl) + " (" + (s.RiskT * _tick).ToString("0.0") + "đ)", SlLineColor, true);
+                        Chip(gr, fChip, xr, yTP, "TP " + Fmt(s.Tp1) + "  " + s.Rr2.ToString("0.0") + "R", TpLineColor, true);
+                        // mũi tên viền trắng + nhãn có nền
+                        DrawArrow(gr, x, yE, s.Side, dir, 8);
+                        string lbl = (s.Side > 0 ? "LONG " : "SHORT ") + s.Grade + " ×" + s.Confl + " · " + s.Scen;
+                        LabelBox(gr, fLbl, x + 10, s.Side > 0 ? yE + 16 : yE - 34, lbl, dir);
                     }
                 }
                 if (ShowPanel && rs.Panel != null && rs.Panel.Count > 0)
@@ -629,6 +659,49 @@ namespace EntrySignal
             }
             catch { /* nuốt lỗi vẽ, giữ chuỗi paint sống */ }
             finally { gr.SetClip(prevClip); }
+        }
+
+        // ---- helper vẽ ----
+        private static GraphicsPath Round(float x, float y, float w, float h, float r)
+        {
+            var p = new GraphicsPath(); float d = r * 2;
+            p.AddArc(x, y, d, d, 180, 90); p.AddArc(x + w - d, y, d, d, 270, 90);
+            p.AddArc(x + w - d, y + h - d, d, d, 0, 90); p.AddArc(x, y + h - d, d, d, 90, 90);
+            p.CloseFigure(); return p;
+        }
+        private static Color TextOn(Color bg)
+            => (0.299 * bg.R + 0.587 * bg.G + 0.114 * bg.B) > 150 ? Color.FromArgb(20, 20, 24) : Color.White;
+
+        // chip bo góc; anchorRight=true → mép phải của chip nằm tại x (mọc sang trái), ngược lại mọc sang phải
+        private void Chip(Graphics gr, Font f, float x, float yMid, string text, Color bg, bool anchorRight)
+        {
+            var sz = gr.MeasureString(text, f);
+            float pad = 5, h = sz.Height + 3, w = sz.Width + 2 * pad;
+            float bx = anchorRight ? x - w : x;
+            float by = yMid - h / 2;
+            using var path = Round(bx, by, w, h, 4);
+            using (var b = new SolidBrush(bg)) gr.FillPath(b, path);
+            using var tb = new SolidBrush(TextOn(bg));
+            gr.DrawString(text, f, tb, bx + pad, by + 1);
+        }
+
+        private void LabelBox(Graphics gr, Font f, float x, float y, string text, Color accent)
+        {
+            var sz = gr.MeasureString(text, f);
+            float pad = 4, w = sz.Width + 2 * pad, h = sz.Height + 2;
+            using (var bg = new SolidBrush(Color.FromArgb(210, 18, 18, 22))) { using var p = Round(x, y, w, h, 3); gr.FillPath(bg, p); }
+            using (var bd = new Pen(Color.FromArgb(180, accent), 1f)) { using var p = Round(x, y, w, h, 3); gr.DrawPath(bd, p); }
+            using var tb = new SolidBrush(accent);
+            gr.DrawString(text, f, tb, x + pad, y + 1);
+        }
+
+        private void DrawArrow(Graphics gr, float x, float yE, int side, Color col, float sz)
+        {
+            var tri = side > 0
+                ? new[] { new PointF(x, yE + sz + 6), new PointF(x - sz, yE + sz * 2 + 6), new PointF(x + sz, yE + sz * 2 + 6) }
+                : new[] { new PointF(x, yE - sz - 6), new PointF(x - sz, yE - sz * 2 - 6), new PointF(x + sz, yE - sz * 2 - 6) };
+            using (var b = new SolidBrush(col)) gr.FillPolygon(b, tri);
+            using (var pn = new Pen(Color.FromArgb(230, 255, 255, 255), 1.3f)) gr.DrawPolygon(pn, tri);
         }
 
         private sealed class RenderState

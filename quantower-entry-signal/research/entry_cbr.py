@@ -19,12 +19,16 @@ import entry_month as em
 TICK = em.TICK
 
 RANGE_LEN = 8          # so nen tao "range" truoc break
+RANGE_MIN_T = 30       # span range >= 3.0 gia — LOAI micro-range nhieu (bai hoc user 07/24 19:27:
+                       #   vung co 2.4gia trong downtrend, "pha" 1 nen = noise. sweep: span>=3 net +40 vs +35)
 RANGE_MAX_T = 75       # span range <= 7.5 gia (vung co hep)
 BREAK_VSA = 2.0        # nen pha phai climax
 BREAK_BODY = 0.50
 WAIT_BARS = 12         # cho hoi + tiep dien trong 12 nen sau break
-PULL_MIN = 0.10        # nhip hoi >=10% cua LEG (peak-edge)
-PULL_MAX = 0.90        # <=90% — ca hoi NON (long) lan hoi SAU gan retest (short) deu vao
+PULL_MIN = 0.40        # nhip hoi >=40% cua LEG. user review 07/24 09:54: hoi 31% cua leg 15gia = duoi
+                       #   climax da kiet. sweep PULL_MIN 10->40% (giu max 90%): net +28->+35R, WR 30->31%,
+                       #   VAN bat 4/6 GT. LUU Y: cap max xuong 50-60% ("an toan") lai GIAM net (mat runner).
+PULL_MAX = 0.90        # <=90% — GIU cao: hoi SAU (60-90%) chua nhieu runner lon, cap thap la cat lai
 HOLD_TOL_T = 2         # day nhip hoi cho phep thung canh vung <=0.2 gia (rau)
 RESUME_BODY = 0.35     # nen tiep dien: than >=35% (BO gate delta/VSA — bai hoc #2)
 # BIAS_GATE dung EMA30/120 = bias TRE -> 1 thang cho thay LOC NHAM lenh tot (bias ON +5R vs OFF +28R
@@ -53,7 +57,7 @@ def run_cbr(B):
         win = B[i - RANGE_LEN:i]                     # RANGE_LEN nen truoc (khong gom nen pha)
         rhi = max(x['hi'] for x in win); rlo = min(x['lo'] for x in win)
         span = (rhi - rlo) / TICK
-        if span > RANGE_MAX_T:                       # khong phai vung co -> bo
+        if span > RANGE_MAX_T or span < RANGE_MIN_T:  # khong phai vung co, hoac micro-range noise -> bo
             continue
         up = (b['c'] > rhi + BUF * TICK and b['vratio'] >= BREAK_VSA and b['brat'] >= BREAK_BODY
               and b['c'] > b['o'] and (b['bias'] >= 0 or not BIAS_GATE))
@@ -189,17 +193,29 @@ if __name__ == '__main__':
     import csv as _csv
     DIRR = "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/"
     HEAD = ['ngay_gio', 'huong', 'break_luc', 'vung_pha', 'span_range_gia', 'retrace%',
-            'entry', 'SL', 'risk_gia', 'bias_EMA', 'co_vung', 'KQ_3R', 'tran_R_24h']
+            'entry', 'SL', 'risk_gia', 'bias_EMA', 'co_vung', 'tp_vuong_vung', 'KQ_3R', 'tran_R_24h']
     rows = []
     for s in sorted(sig, key=lambda x: x['i']):
         r = s['risk_t'] * TICK
         tp = s['entry'] + 3 * r if s['side'] == 'LONG' else s['entry'] - 3 * r
         kq = hit(B, s['i'], s['side'], s['sl'], tp)
         cel = ceiling(B, s['i'], s['side'], s['entry'], s['sl'])
+        # info-only (KHONG auto-loai): vung MANH nao chan duong toi 3R & cach entry bao nhieu R
+        block = None
+        for z in pool:
+            if not (z['ready'] <= s['dt'] <= z['expire']) or z['strength'] < 58:
+                continue
+            p = z['price']
+            inpath = (tp < p < s['entry']) if s['side'] == 'SHORT' else (s['entry'] < p < tp)
+            if inpath:
+                rr = abs(p - s['entry']) / r
+                if block is None or rr < block:
+                    block = rr
         rows.append([s['dt'].strftime('%Y-%m-%d %H:%M'), s['side'], s['brk_dt'].strftime('%H:%M'),
                      f"{s['edge']:.1f}", f"{s['span_t']/10:.1f}", f"{s.get('retr',0)*100:.0f}",
                      f"{s['entry']:.1f}", f"{s['sl']:.1f}", f"{s['risk_t']/10:.1f}", f"{s['bias']:+d}",
                      'co' if s['cluster'] >= 2 else '-',
+                     f"{block:.1f}R" if block is not None else '-',
                      'WIN' if kq == 'TP' else ('LOSS' if kq == 'SL' else 'open'), f"{cel:.1f}"])
     with open(DIRR + "trades_runner_cbr.csv", 'w', newline='', encoding='utf-8-sig') as f:
         w = _csv.writer(f); w.writerow(HEAD); w.writerows(rows)

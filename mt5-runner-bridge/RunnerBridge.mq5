@@ -53,7 +53,7 @@ input group "=== BO LOC AN TOAN ==="
 input double          InpMaxSpread       = 0.50;               // Spread toi da (USD/oz), 0 = bo qua
 input double          InpMaxSpreadPctOfR = 15.0;               // Bo lenh neu spread > % cua khoang cach SL (chong SL chat)
 input int             InpMaxAgeSec       = 120;                // Tuoi tin hieu toi da (giay)
-input int             InpDeviationPts    = 30;                 // Truot gia cho phep (points)
+input int             InpDeviationPts    = 300;                // Truot gia cho phep (POINTS, khong phai USD)
 input int             InpMaxPositions    = 1;                  // So vi the toi da cua EA
 input double          InpMaxDailyLossPct = 6.0;                // Dung giao dich khi lo ngay vuot % (0 = tat)
 input bool            InpAllowBuy        = true;               // Cho phep BUY
@@ -193,6 +193,11 @@ void HandleCmd(const string line, const string id)
                                     spr, 100.0*spr/slDist, slDist, InpMaxSpreadPctOfR));
       return;
      }
+
+   // --- symbol co cho mo lenh khong (phien dong / chi cho dong lenh) ---
+   long tmode = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_MODE);
+   if(tmode != SYMBOL_TRADE_MODE_FULL)
+     { Reject(id, line, StringFormat("symbol khong cho mo lenh luc nay (trade mode %d)", (int)tmode)); return; }
 
    // --- so vi the ---
    if(CountMyPositions() >= InpMaxPositions)
@@ -527,6 +532,12 @@ void PrintSpec()
    PrintFormat("RunnerBridge equity %.2f %s | LOT MIN: SL 3.0 -> mat %.2f (%.1f%%), SL 7.0 -> mat %.2f (%.1f%%)",
                equity, AccountInfoString(ACCOUNT_CURRENCY), r3, equity > 0 ? 100.0*r3/equity : 0.0,
                r7, equity > 0 ? 100.0*r7/equity : 0.0);
+   double spr = CurSpread();
+   PrintFormat("RunnerBridge exec mode %d | spread hien tai %.3f -> voi tran %.0f%% thi SL toi thieu duoc nhan = %.2f USD"
+               " | deviation %d points = %.3f USD",
+               (int)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_EXEMODE), spr, InpMaxSpreadPctOfR,
+               InpMaxSpreadPctOfR > 0.0 ? spr/(InpMaxSpreadPctOfR/100.0) : 0.0,
+               InpDeviationPts, InpDeviationPts*SymbolInfoDouble(_Symbol, SYMBOL_POINT));
    if(equity > 0 && r7 > equity*InpMaxRiskPct/100.0)
      {
       g_specWarn = true;

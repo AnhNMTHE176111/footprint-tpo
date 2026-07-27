@@ -22,7 +22,7 @@ namespace EntrySignal
     using TradingPlatform.BusinessLayer;
     using TpoSuite;   // ProfileEngine (concat)
 
-    public class EntrySignal : Indicator, IVolumeAnalysisIndicator
+    public class EntrySignalRunner : Indicator, IVolumeAnalysisIndicator
     {
         // ---------- giờ phiên (khớp M30SessionZones) ----------
         [InputParameter("Lệch giờ (bar.TimeLeft UTC → local)", 10, -12, 14, 1, 0)]
@@ -86,11 +86,11 @@ namespace EntrySignal
         [InputParameter("SL đệm ngoài nến/vùng (tick)", 54, 0, 20, 1, 0)]
         public int SlBuf { get; set; } = 2;
         [InputParameter("RR mục tiêu (TP1)", 55, 1, 6, 0.5, 1)]
-        public double RR { get; set; } = 1.5;   // với SL 4đ ⇒ TP1 ≈ 6đ = điểm ngọt (58% WR). RR to hơn = TP quá xa, hụt.
+        public double RR { get; set; } = 2.0;   // RUNNER: 2R = điểm ngọt đã validate (+0.33..+0.50R, 44-50% WR cả 2 cửa sổ). Đẩy 3R được nhưng backtest còn ± (mẫu nhỏ) → tinh chỉnh trên data bạn đưa.
         [InputParameter("Nới TP tới vùng mạnh kế", 56)]
         public bool ExtendToNextZone { get; set; } = true;
         [InputParameter("RR tối thiểu để nới (TP2 runner)", 57, 1, 8, 0.5, 1)]
-        public double NextZoneMinR { get; set; } = 2.0;
+        public double NextZoneMinR { get; set; } = 3.0;
         [InputParameter("Cooldown mỗi cụm (số nến)", 58, 0, 60, 1, 0)]
         public int Cooldown { get; set; } = 15;
 
@@ -98,7 +98,7 @@ namespace EntrySignal
         [InputParameter("KB2 (chạm&đảo): bắt buộc tường hấp thụ live", 60)]
         public bool RequireWallForS2 { get; set; } = true;
         [InputParameter("Bật Kịch bản 2 (chạm&đảo)", 61)]
-        public bool EnableS2 { get; set; } = true;
+        public bool EnableS2 { get; set; } = false;   // RUNNER: tắt KB2 (đảo chiều cap sớm ở 1.5R); chỉ giữ momentum phá&hồi để chạy xa
         [InputParameter("Hấp thụ: dominance mức ≥", 62, 0.3, 1.0, 0.05, 2)]
         public double AbsDom { get; set; } = 0.60;
         [InputParameter("KB2: nến climax tím thay được tường hấp thụ", 63)]
@@ -184,10 +184,10 @@ namespace EntrySignal
         private DateTime _vaFirst = DateTime.MinValue;
         private readonly PanelDrag _drag = new();
 
-        public EntrySignal() : base()
+        public EntrySignalRunner() : base()
         {
-            Name = "Entry Signal (M1)";
-            Description = "Gợi ý entry footprint M1: hợp lưu ≥2 vùng + 2 kịch bản (phá&hồi / chạm&đảo). Bắn nến đóng. Cần Volume Analysis. Add vào chart M1.";
+            Name = "Entry Signal — Runner (M1, 2R+)";
+            Description = "BẢN B (thử nghiệm, nhắm mục tiêu lớn 2R–3R): CHỈ momentum phá&hồi giữ vùng (KB2 tắt). Backtest: 2R +0.33..+0.50R; 3R còn ở ranh giới (±, mẫu nhỏ) — cần data nhiều tháng để chốt. Chạy song song bản 1.5R.";
             SeparateWindow = false;
         }
 

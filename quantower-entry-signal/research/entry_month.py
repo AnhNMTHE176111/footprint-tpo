@@ -15,6 +15,8 @@ import csv, statistics as st
 from datetime import datetime, timedelta
 DIR="/home/asl86/Documents/footprint-tpo/data-export/"; TICK=0.1
 ARM_DIST_T=20; BUF_T=2; RETEST_BARS=12; RETEST_TOL_T=4
+RETEST_HOLD_T=0   # KB1: retest phai GIU vung (low>=zp-HOLD cho LONG / hi<=zp+HOLD cho SHORT). 0=strict.
+                  # Backtest: hoi giu goc pha (retrace<=100%) -> 1.5R +0.44->+1.00R, 3R -0.08->+0.20R.
 VSA_GATE=1.2; VSA_CLIMAX=2.2; VSA_BREAK=1.2
 BODY_STRONG=0.55; DDOM_STRONG=0.25; DELTA_ABS_MIN=15
 WICK_FRAC=0.50; CLOSEPOS_HI=0.55; CLOSEPOS_LO=0.45
@@ -159,12 +161,12 @@ def run(B,pool):
             em=False
             if z['state']=='broke_up' and 0<i-z['brk_bar']<=RETEST_BARS:
                 if b['c']<zp-BUF_T*TICK:z['state']='idle'
-                elif b['lo']<=zp+RETEST_TOL_T*TICK:
+                elif b['lo']<=zp+RETEST_TOL_T*TICK and b['lo']>=zp-RETEST_HOLD_T*TICK:  # GIU vung
                     ok,w=long_sig(b)
                     if ok and _emit(raw,B,i,z,'LONG','1 pha&hoi len',min(b['lo'],zp),w,pool):em=True;z['cool']=i;z['state']='idle'
             elif z['state']=='broke_dn' and 0<i-z['brk_bar']<=RETEST_BARS:
                 if b['c']>zp+BUF_T*TICK:z['state']='idle'
-                elif b['hi']>=zp-RETEST_TOL_T*TICK:
+                elif b['hi']>=zp-RETEST_TOL_T*TICK and b['hi']<=zp+RETEST_HOLD_T*TICK:  # GIU vung
                     ok,w=short_sig(b)
                     if ok and _emit(raw,B,i,z,'SHORT','1 pha&hoi xuong',max(b['hi'],zp),w,pool):em=True;z['cool']=i;z['state']='idle'
             if not em and z['state'] in('idle','broke_up','broke_dn'):

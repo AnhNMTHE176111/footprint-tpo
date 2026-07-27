@@ -106,6 +106,8 @@ namespace DailyTpoBias
 
         protected override void OnUpdate(UpdateArgs args)
         {
+            ConfigTele();
+            _tele.PollTest(Symbol?.Name);        // nút gửi thử: xử lý ngay, không đợi VA
             if (!_vaLoaded) return;
             var p = HistoricalData.VolumeAnalysisCalculationProgress;
             if (p == null || p.State != VolumeAnalysisCalculationState.Finished) return;

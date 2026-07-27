@@ -382,18 +382,36 @@ namespace TpoSuite
             try
             {
                 PublishSection(symbol, kind, lines);
-
-                bool sender = !string.IsNullOrWhiteSpace(BotToken) && !string.IsNullOrWhiteSpace(ChatId);
-                if (!sender) return;
-
-                // nút "gửi thử" (bắt sườn lên): gộp & bắn ngay, bỏ qua mốc + khoá
-                bool test = TestNow && !_lastTest; _lastTest = TestNow;
-                if (test) { SendAsync(Compose(symbol, "🔔 TEST"), null); return; }
+                if (string.IsNullOrWhiteSpace(BotToken) || string.IsNullOrWhiteSpace(ChatId)) return;
 
                 long now = DateTime.UtcNow.Ticks;
                 if (now - _lastCheckTicks < 15 * TimeSpan.TicksPerSecond) return;   // ~15s/lần
                 _lastCheckTicks = now;
                 CheckTriggers(hd, symbol);
+            }
+            catch (Exception ex) { Log("LỖI Run: " + ex.Message); }
+        }
+
+        // Xử lý RIÊNG nút "gửi thử" — gọi từ OnUpdate (mỗi tick / lúc đổi cấu hình), KHÔNG lệ
+        // thuộc VA/Process đã sẵn sàng → bấm là gửi ngay + ghi log để soi lỗi.
+        public void PollTest(string symbol)
+        {
+            bool edge = TestNow && !_lastTest;
+            _lastTest = TestNow;
+            if (!edge) return;
+            Log($"nút TEST bật — enabled={Enabled}, có token={!string.IsNullOrWhiteSpace(BotToken)}, có chat_id={!string.IsNullOrWhiteSpace(ChatId)}");
+            if (!Enabled) { Log("BỎ QUA: chưa bật 'Gửi Telegram'"); return; }
+            if (string.IsNullOrWhiteSpace(BotToken) || string.IsNullOrWhiteSpace(ChatId)) { Log("BỎ QUA: thiếu token hoặc chat_id"); return; }
+            Log("TEST → đang gửi HTTP...");
+            SendAsync(Compose(symbol, "🔔 TEST — bot TPO chạy OK"), null);
+        }
+
+        private void Log(string msg)
+        {
+            try
+            {
+                string line = DateTime.UtcNow.AddHours(TzOffset).ToString("yyyy-MM-dd HH:mm:ss") + "  " + msg + "\n";
+                File.AppendAllText(Path.Combine(Dir(), "tele_log.txt"), line);
             }
             catch { }
         }
@@ -457,6 +475,7 @@ namespace TpoSuite
             if (File.Exists(lockPath)) return;
             try { using (new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { } }
             catch { return; }   // ai đó đã chiếm mốc này
+            Log($"{slot} → đang gửi (ngày {dayKey})");
             SendAsync(Compose(symbol, header), lockPath);   // gửi lỗi → xoá khoá để lần sau thử lại
         }
 
@@ -500,10 +519,17 @@ namespace TpoSuite
                 try
                 {
                     var resp = await Http.PostAsync(url, form).ConfigureAwait(false);
+                    string body = "";
+                    try { body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false); } catch { }
+                    Log($"HTTP {(int)resp.StatusCode} {(resp.IsSuccessStatusCode ? "OK" : "FAIL")}: {(body.Length > 200 ? body.Substring(0, 200) : body)}");
                     if (!resp.IsSuccessStatusCode && lockPathOnFail != null)
                         try { File.Delete(lockPathOnFail); } catch { }
                 }
-                catch { if (lockPathOnFail != null) try { File.Delete(lockPathOnFail); } catch { } }
+                catch (Exception ex)
+                {
+                    Log("HTTP LỖI: " + ex.Message);
+                    if (lockPathOnFail != null) try { File.Delete(lockPathOnFail); } catch { }
+                }
             });
         }
     }

@@ -14,7 +14,11 @@ namespace TpoSuite
     using System;
     using System.Collections.Generic;
     using System.Drawing;
+    using System.IO;
     using System.Linq;
+    using System.Net.Http;
+    using System.Text;
+    using System.Threading.Tasks;
     using TradingPlatform.BusinessLayer;
     using TradingPlatform.BusinessLayer.Chart;
     using TradingPlatform.BusinessLayer.Native;
@@ -344,6 +348,163 @@ namespace TpoSuite
             }
             flush();
             return res;
+        }
+    }
+
+    // ---- Gửi "tổng hợp" lên Telegram (dùng chung cho DailyTpoBias + M30SessionZones) --------
+    //  Mỗi indicator GHI phần của mình ra file chung (sec_<symbol>_<kind>.txt). Indicator nào
+    //  có bot token + chat id sẽ GỘP các phần (bias + zone) thành 1 tin và bắn tại 2 mốc/ngày:
+    //    • MORNING : ngày phát triển vừa đủ nến qua IB (đủ bias) — cửa sổ vài nến sau IB.
+    //    • PREUS   : trước giờ phiên Mỹ mở PreUsMin phút.
+    //  Chống gửi trùng bằng FILE KHOÁ tạo NGUYÊN TỬ (FileMode.CreateNew) theo ngày+mốc → dù
+    //  cả 2 indicator (hoặc 2 chart) cùng cầm token cũng chỉ 1 tin/mốc/ngày. Chỉ chạy khi dữ
+    //  liệu LIVE (nến cuối gần giờ thực → chart lịch sử không bắn nhầm). HTTP chạy nền (Task).
+    internal sealed class TeleReport
+    {
+        public bool Enabled, TestNow;
+        public string BotToken = "", ChatId = "", ShareDir = "";
+        public int TzOffset = 7;
+        public int UsStartMin = 1160;      // 19:20 VN (COMEX vàng mở pit)
+        public int PreUsMin = 30;
+        public int MorningGraceBars = 6;   // sau IB còn được bắn "báo sáng" trong bao nhiêu nến
+        public int IbBars = 2;
+        public int GapMinutes = 75;
+        public int FreshMinutes = 15;      // section/nến cũ hơn ngần này coi như KHÔNG live
+
+        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        private long _lastPubTicks, _lastCheckTicks;
+        private bool _lastTest;
+
+        // Gọi 1 lần cuối mỗi Process(): ghi section của indicator này + kiểm mốc để gửi.
+        public void Run(HistoricalData hd, string symbol, string kind, IReadOnlyList<string> lines)
+        {
+            if (!Enabled || hd == null) return;
+            try
+            {
+                PublishSection(symbol, kind, lines);
+
+                bool sender = !string.IsNullOrWhiteSpace(BotToken) && !string.IsNullOrWhiteSpace(ChatId);
+                if (!sender) return;
+
+                // nút "gửi thử" (bắt sườn lên): gộp & bắn ngay, bỏ qua mốc + khoá
+                bool test = TestNow && !_lastTest; _lastTest = TestNow;
+                if (test) { SendAsync(Compose(symbol, "🔔 TEST"), null); return; }
+
+                long now = DateTime.UtcNow.Ticks;
+                if (now - _lastCheckTicks < 15 * TimeSpan.TicksPerSecond) return;   // ~15s/lần
+                _lastCheckTicks = now;
+                CheckTriggers(hd, symbol);
+            }
+            catch { }
+        }
+
+        private string Dir()
+        {
+            string d = string.IsNullOrWhiteSpace(ShareDir)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TpoSuite")
+                : ShareDir;
+            Directory.CreateDirectory(d);
+            return d;
+        }
+
+        private static string Safe(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "sym";
+            var sb = new StringBuilder();
+            foreach (char c in s) sb.Append(char.IsLetterOrDigit(c) ? c : '_');
+            return sb.ToString();
+        }
+
+        private void PublishSection(string symbol, string kind, IReadOnlyList<string> lines)
+        {
+            if (lines == null || lines.Count == 0) return;
+            long now = DateTime.UtcNow.Ticks;
+            if (now - _lastPubTicks < 30 * TimeSpan.TicksPerSecond) return;   // giảm ghi đĩa
+            _lastPubTicks = now;
+            var sb = new StringBuilder();
+            foreach (var l in lines) sb.Append(l).Append('\n');
+            try { File.WriteAllText(Path.Combine(Dir(), $"sec_{Safe(symbol)}_{kind}.txt"), sb.ToString()); } catch { }
+        }
+
+        private void CheckTriggers(HistoricalData hd, string symbol)
+        {
+            int n = hd.Count; if (n == 0) return;
+            // Dữ liệu có LIVE không? Nến cuối phải gần giờ thực (nến M30 đang tạo cũ tối đa ~30').
+            if (hd[n - 1, SeekOriginHistory.Begin] is not HistoryItemBar lastBar) return;
+            if ((DateTime.UtcNow - lastBar.TimeLeft).TotalMinutes > 60) return;
+
+            var groups = ProfileEngine.GroupByGap(hd, GapMinutes);
+            if (groups.Count == 0) return;
+            var dg = groups[groups.Count - 1];                 // ngày đang phát triển
+            int devBars = dg.to - dg.from + 1;
+            if (hd[dg.from, SeekOriginHistory.Begin] is not HistoryItemBar firstBar) return;
+            string dayKey = firstBar.TimeLeft.AddHours(TzOffset).ToString("yyyyMMdd");
+            int nowMin = (int)DateTime.UtcNow.AddHours(TzOffset).TimeOfDay.TotalMinutes;
+
+            // MORNING — IB xong, còn trong cửa sổ vài nến sau IB (mở chart giữa ngày sẽ KHÔNG bắn)
+            if (devBars >= IbBars && devBars <= IbBars + MorningGraceBars)
+                TrySend(symbol, dayKey, "MORNING", "☀️ TỔNG HỢP ĐẦU NGÀY");
+
+            // PREUS — trong 20' kể từ mốc (giờ phiên Mỹ − PreUsMin)
+            int trig = UsStartMin - PreUsMin;
+            if (nowMin >= trig && nowMin <= trig + 20)
+                TrySend(symbol, dayKey, "PREUS", "🇺🇸 CHUẨN BỊ PHIÊN MỸ (30')");
+        }
+
+        private void TrySend(string symbol, string dayKey, string slot, string header)
+        {
+            string lockPath = Path.Combine(Dir(), $"sent_{Safe(symbol)}_{dayKey}_{slot}.lock");
+            if (File.Exists(lockPath)) return;
+            try { using (new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { } }
+            catch { return; }   // ai đó đã chiếm mốc này
+            SendAsync(Compose(symbol, header), lockPath);   // gửi lỗi → xoá khoá để lần sau thử lại
+        }
+
+        private string Compose(string symbol, string header)
+        {
+            var sb = new StringBuilder();
+            sb.Append(header).Append(" · ").Append(symbol ?? "").Append(" · ")
+              .Append(DateTime.UtcNow.AddHours(TzOffset).ToString("dd/MM HH:mm")).Append('\n');
+            sb.Append("————————————\n");
+            string dir = Dir();
+            bool any = false;
+            foreach (var kind in new[] { "bias", "zone" })   // bias trước, zone sau
+            {
+                string path = Path.Combine(dir, $"sec_{Safe(symbol)}_{kind}.txt");
+                if (!File.Exists(path)) continue;
+                try
+                {
+                    if ((DateTime.UtcNow - new FileInfo(path).LastWriteTimeUtc).TotalMinutes > FreshMinutes) continue;
+                    string body = File.ReadAllText(path).TrimEnd();
+                    if (body.Length == 0) continue;
+                    if (any) sb.Append('\n');
+                    sb.Append(body).Append('\n');
+                    any = true;
+                }
+                catch { }
+            }
+            if (!any) sb.Append("(chưa có dữ liệu bias/vùng — mở indicator lên chart)");
+            return sb.ToString().TrimEnd();
+        }
+
+        private void SendAsync(string text, string lockPathOnFail)
+        {
+            if (string.IsNullOrWhiteSpace(BotToken) || string.IsNullOrWhiteSpace(ChatId) || string.IsNullOrEmpty(text)) return;
+            string url = $"https://api.telegram.org/bot{BotToken}/sendMessage";
+            var form = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["chat_id"] = ChatId, ["text"] = text, ["disable_web_page_preview"] = "true"
+            });
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var resp = await Http.PostAsync(url, form).ConfigureAwait(false);
+                    if (!resp.IsSuccessStatusCode && lockPathOnFail != null)
+                        try { File.Delete(lockPathOnFail); } catch { }
+                }
+                catch { if (lockPathOnFail != null) try { File.Delete(lockPathOnFail); } catch { } }
+            });
         }
     }
 }

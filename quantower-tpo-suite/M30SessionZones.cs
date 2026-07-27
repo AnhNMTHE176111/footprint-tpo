@@ -60,12 +60,31 @@ namespace M30SessionZones
         [InputParameter("Màu naked POC", 42)]
         public Color NakedColor { get; set; } = Color.Gold;
 
+        // ---------- Telegram (tổng hợp đầu ngày + trước phiên Mỹ) ----------
+        [InputParameter("Gửi Telegram", 50)]
+        public bool TeleEnabled { get; set; } = false;
+        [InputParameter("TG · Bot token", 51)]
+        public string TeleBotToken { get; set; } = "";
+        [InputParameter("TG · Chat ID", 52)]
+        public string TeleChatId { get; set; } = "";
+        [InputParameter("TG · Phiên Mỹ mở (phút/ngày; 19:20=1160)", 54, 0, 1439, 5, 0)]
+        public int TeleUsStartMin { get; set; } = 1160;
+        [InputParameter("TG · Báo trước phiên Mỹ (phút)", 55, 5, 120, 5, 0)]
+        public int TelePreUsMin { get; set; } = 30;
+        [InputParameter("TG · Cửa sổ báo sáng sau IB (nến)", 56, 1, 20, 1, 0)]
+        public int TeleMorningGrace { get; set; } = 6;
+        [InputParameter("TG · Thư mục chung (trống=mặc định)", 57)]
+        public string TeleShareDir { get; set; } = "";
+        [InputParameter("TG · Gửi thử ngay (bật rồi tắt)", 58)]
+        public bool TeleTestNow { get; set; } = false;
+
         private bool _vaLoaded;
         private readonly object _sync = new();
         private readonly object _calc = new();
         private ZoneRenderState _render;
         private int _digits = 1;
         private readonly PanelDrag _drag = new();   // kéo-thả bảng bằng chuột
+        private readonly TeleReport _tele = new();  // gửi tổng hợp lên Telegram
 
         public M30SessionZones() : base()
         {
@@ -167,7 +186,40 @@ namespace M30SessionZones
                 }
 
                 lock (_sync) _render = new ZoneRenderState { Zones = zones, Panel = panel, NowPrice = nowPrice };
+
+                // ---- tổng hợp GỌN cho Telegram ----
+                var tele = new List<string>();
+                tele.Add($"🇺🇸 Phiên Mỹ: {decision} — {(lean > 0 ? "MUA" : lean < 0 ? "BÁN" : "TRUNG TÍNH")} ({conf}/100)");
+                if (reasons.Count > 0) tele.Add($"Lý do: {reasons[0]}");
+                tele.Add($"Giá hiện tại: {Fmt(nowPrice)}");
+                if (zones.Count > 0)
+                {
+                    tele.Add("Vùng quan trọng:");
+                    foreach (var z in zones.Take(4))
+                    {
+                        string sd = z.Side > 0 ? "S" : z.Side < 0 ? "R" : "·";
+                        string pr = Math.Abs(z.Hi - z.Lo) < tick ? Fmt(z.Center) : $"{Fmt(z.Lo)}–{Fmt(z.Hi)}";
+                        tele.Add($"• {sd} {pr} · {z.Label} [{z.Strength:0}]");
+                    }
+                }
+                ConfigTele();
+                _tele.Run(hd, Symbol?.Name, "zone", tele);
             }
+        }
+
+        private void ConfigTele()
+        {
+            _tele.Enabled = TeleEnabled;
+            _tele.TestNow = TeleTestNow;
+            _tele.BotToken = TeleBotToken?.Trim() ?? "";
+            _tele.ChatId = TeleChatId?.Trim() ?? "";
+            _tele.ShareDir = TeleShareDir ?? "";
+            _tele.TzOffset = TzOffset;          // dùng lệch giờ sẵn có của M30
+            _tele.UsStartMin = TeleUsStartMin;
+            _tele.PreUsMin = TelePreUsMin;
+            _tele.MorningGraceBars = TeleMorningGrace;
+            _tele.IbBars = 2;                   // M30 không có input IB → coi IB = 2 nến (1h)
+            _tele.GapMinutes = GapMinutes;
         }
 
         private void AddSentence(List<(string, Color)> panel, SessionProfile s, SessionProfile prior, double tick, bool devTag = false)

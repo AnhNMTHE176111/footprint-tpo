@@ -65,12 +65,33 @@ namespace DailyTpoBias
         [InputParameter("Màu mức hôm qua", 34)]
         public Color PriorColor { get; set; } = Color.FromArgb(0x90, 0x90, 0x90);
 
+        // ---------- Telegram (tổng hợp đầu ngày + trước phiên Mỹ) ----------
+        [InputParameter("Gửi Telegram", 50)]
+        public bool TeleEnabled { get; set; } = false;
+        [InputParameter("TG · Bot token", 51)]
+        public string TeleBotToken { get; set; } = "";
+        [InputParameter("TG · Chat ID", 52)]
+        public string TeleChatId { get; set; } = "";
+        [InputParameter("TG · Lệch giờ local (bar UTC→local)", 53, -12, 14, 1, 0)]
+        public int TeleTzOffset { get; set; } = 7;
+        [InputParameter("TG · Phiên Mỹ mở (phút/ngày; 19:20=1160)", 54, 0, 1439, 5, 0)]
+        public int TeleUsStartMin { get; set; } = 1160;
+        [InputParameter("TG · Báo trước phiên Mỹ (phút)", 55, 5, 120, 5, 0)]
+        public int TelePreUsMin { get; set; } = 30;
+        [InputParameter("TG · Cửa sổ báo sáng sau IB (nến)", 56, 1, 20, 1, 0)]
+        public int TeleMorningGrace { get; set; } = 6;
+        [InputParameter("TG · Thư mục chung (trống=mặc định)", 57)]
+        public string TeleShareDir { get; set; } = "";
+        [InputParameter("TG · Gửi thử ngay (bật rồi tắt)", 58)]
+        public bool TeleTestNow { get; set; } = false;
+
         private bool _vaLoaded;
         private readonly object _sync = new();
         private readonly object _calc = new();
         private RenderState _render;
         private int _digits = 1;
         private readonly PanelDrag _drag = new();   // kéo-thả bảng bằng chuột
+        private readonly TeleReport _tele = new();  // gửi tổng hợp lên Telegram
 
         public DailyTpoBias() : base()
         {
@@ -131,7 +152,25 @@ namespace DailyTpoBias
                 var rs = ComputeBias(dev, prior, tick, RangeTypical, IBTypical);
                 rs.Dev = dev; rs.Prior = prior;
                 lock (_sync) _render = rs;
+
+                ConfigTele();
+                _tele.Run(hd, Symbol?.Name, "bias", rs.Tele);
             }
+        }
+
+        private void ConfigTele()
+        {
+            _tele.Enabled = TeleEnabled;
+            _tele.TestNow = TeleTestNow;
+            _tele.BotToken = TeleBotToken?.Trim() ?? "";
+            _tele.ChatId = TeleChatId?.Trim() ?? "";
+            _tele.ShareDir = TeleShareDir ?? "";
+            _tele.TzOffset = TeleTzOffset;
+            _tele.UsStartMin = TeleUsStartMin;
+            _tele.PreUsMin = TelePreUsMin;
+            _tele.MorningGraceBars = TeleMorningGrace;
+            _tele.IbBars = IbBars;
+            _tele.GapMinutes = GapMinutes;
         }
 
         private RenderState ComputeBias(SessionProfile dev, SessionProfile prior, double tick,
@@ -234,7 +273,15 @@ namespace DailyTpoBias
                 panel.Add(($"IB nay: {Fmt(dev.IbLow)}–{Fmt(dev.IbHigh)} ({wide} vs {IBTypical:0}t)", Color.Gainsboro));
             }
 
-            return new RenderState { Panel = panel };
+            // ---- tổng hợp GỌN cho Telegram ----
+            var tele = new List<string>();
+            tele.Add($"📊 Bias NGÀY: {label} ({(S >= 0 ? "+" : "")}{S:0}) · tin {confidence}/100");
+            tele.Add($"Kiểu ngày: {dayType} · Pha: {phase}");
+            if (reasons.Count > 0) tele.Add($"Lý do: {reasons[0]}");
+            if (priorOk) tele.Add($"Hôm qua: VAH {Fmt(prior.Vah)} · POC {Fmt(prior.Poc)} · VAL {Fmt(prior.Val)}");
+            if (!double.IsNaN(dev.IbHigh)) tele.Add($"IB nay: {Fmt(dev.IbLow)}–{Fmt(dev.IbHigh)}");
+
+            return new RenderState { Panel = panel, Tele = tele };
         }
 
         private string DayTypeGuess(SessionProfile dev, int bracket, double IBTypical, double tick)
@@ -315,5 +362,6 @@ namespace DailyTpoBias
     {
         public SessionProfile Dev, Prior;
         public List<(string text, Color col)> Panel;
+        public List<string> Tele;
     }
 }

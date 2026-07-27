@@ -211,8 +211,32 @@ namespace RunnerSignal
         [InputParameter("Đường dẫn CSV (trống = thư mục Documents)", 121)]
         public string ExportPath { get; set; } = "";
 
+        // ---------- CẦU NỐI MT5 (gửi tín hiệu sang MetaTrader 5 / Exness) ----------
+        // Ghi 1 dòng JSON/lệnh vào <MT5 Common>\Files\runner_cmd.jsonl → EA RunnerBridge.mq5 đọc & vào lệnh.
+        // CHỈ gửi KHOẢNG CÁCH SL + RR, KHÔNG gửi giá tuyệt đối: Quantower chạy GC/MGC futures,
+        // MT5 chạy XAUUSD spot — lệch basis vài chục USD (và trôi + đảo hợp đồng), nhưng cả hai
+        // đều báo giá USD/oz nên KHOẢNG CÁCH chuyển 1:1. EA vào market rồi tự đặt SL/TP theo fill.
+        [InputParameter("Cầu nối MT5: BẬT gửi tín hiệu", 130)]
+        public bool Mt5Bridge { get; set; } = false;
+        [InputParameter("MT5: dry-run (EA chỉ ghi log, KHÔNG vào lệnh)", 131)]
+        public bool Mt5DryRun { get; set; } = true;
+        [InputParameter("MT5: thư mục Files (trống = Common\\Files của MT5)", 132)]
+        public string Mt5Dir { get; set; } = "";
+        [InputParameter("MT5: tuổi tín hiệu tối đa (giây) — chống bắn lệnh cũ", 133, 20, 600, 5, 0)]
+        public int Mt5MaxAgeSec { get; set; } = 90;
+        [InputParameter("MT5: gửi nhánh CBR (3R)", 134)]
+        public bool Mt5SendCbr { get; set; } = true;
+        [InputParameter("MT5: gửi nhánh QUAY ĐẦU (1.5R)", 135)]
+        public bool Mt5SendRev { get; set; } = true;
+        [InputParameter("MT5: chỉ gửi grade A (hợp lưu)", 136)]
+        public bool Mt5OnlyGradeA { get; set; } = false;
+
         private bool _vaLoaded;
         private string _exportedTo;
+        private bool _armed;                                   // false = lần quét đầu (nạp lịch sử) → KHÔNG gửi
+        private int _bridgeSent;
+        private string _bridgeStatus;
+        private readonly HashSet<string> _sentIds = new();
         private readonly object _sync = new();
         private readonly object _calc = new();
         private RenderState _render;
@@ -232,7 +256,16 @@ namespace RunnerSignal
 
         public bool IsRequirePriceLevelsCalculation => true;
         public void VolumeAnalysisData_Loaded() { lock (_calc) { _vaLoaded = true; _lastN = -1; } Process(); }
-        protected override void OnClear() { _drag.Detach(); lock (_calc) { _vaLoaded = false; _lastN = -1; lock (_sync) _render = null; } }
+        protected override void OnClear()
+        {
+            _drag.Detach();
+            lock (_calc)
+            {
+                _vaLoaded = false; _lastN = -1;
+                _armed = false; _sentIds.Clear(); _bridgeSent = 0; _bridgeStatus = null;   // re-attach = nạp lại lịch sử, không bắn lệnh cũ
+                lock (_sync) _render = null;
+            }
+        }
         protected override void OnUpdate(UpdateArgs args)
         {
             if (!_vaLoaded) return;
@@ -310,6 +343,7 @@ namespace RunnerSignal
                     foreach (var s in sigs) { Simulate(B, s); Enrich(pool, s); }
 
                     if (ExportCsv) ExportSignals(sigs);
+                    if (Mt5Bridge) EmitLive(sigs, B);
 
                     int minIdx = B.Count - 1 - DisplayBars;
                     var show = ShowAllHistory ? sigs : sigs.Where(s => s.Idx >= minIdx || s.Outcome == "running").ToList();
@@ -660,6 +694,103 @@ namespace RunnerSignal
             if (!double.IsNaN(s.BlockR)) s.Why.Add($"TP vướng vùng ↧{s.BlockR:0.0}R");
         }
 
+        // ================= CẦU NỐI MT5 =================
+        // Process() quét LẠI TOÀN BỘ lịch sử mỗi nến mới → nếu gửi lệnh hồn nhiên ở đây sẽ bắn
+        // hàng chục lệnh cũ vào tài khoản thật mỗi lần reload. 4 chốt chống trùng:
+        //   1) chỉ xét tín hiệu ở nến VỪA ĐÓNG (Idx == B.Count-2; Scan đã bỏ nến đang hình thành)
+        //   2) _armed: lần quét đầu sau attach/reload chỉ NẠP id, không gửi
+        //   3) tuổi tín hiệu ≤ Mt5MaxAgeSec so với đồng hồ (bar.TimeLeft = mốc MỞ nến, UTC)
+        //   4) id tất định (symbol|phút|hướng|nhánh) → EA lưu id đã xử lý ra file, restart không bắn lại
+        private static bool IsRev(Sig s) => s.Scen != null && s.Scen.StartsWith("quay");
+
+        private string SigId(Sig s) =>
+            $"{Symbol?.Name ?? "X"}|{s.Time:yyyyMMddHHmm}|{(s.Side > 0 ? "B" : "S")}|{(IsRev(s) ? "R" : "C")}";
+
+        private void EmitLive(List<Sig> sigs, List<Bar> B)
+        {
+            try
+            {
+                if (B.Count < 3) return;
+                int lastClosed = B.Count - 2;
+                double barMin = (B[B.Count - 1].Time - B[B.Count - 2].Time).TotalMinutes;
+                if (barMin <= 0 || barMin > 60) barMin = 1;
+
+                if (!_armed)
+                {
+                    foreach (var s0 in sigs) _sentIds.Add(SigId(s0));
+                    _armed = true;
+                    double skew = (DateTime.UtcNow - B[B.Count - 1].Time.AddMinutes(barMin)).TotalSeconds;
+                    _bridgeStatus = $"nạp {_sentIds.Count} tín hiệu cũ (KHÔNG gửi) · lệch feed↔đồng hồ {skew:0}s";
+                    return;
+                }
+
+                foreach (var s in sigs.Where(x => x.Idx == lastClosed))
+                {
+                    bool rev = IsRev(s);
+                    string id = SigId(s);
+                    if (_sentIds.Contains(id)) continue;
+                    if (rev ? !Mt5SendRev : !Mt5SendCbr) { _sentIds.Add(id); continue; }
+                    if (Mt5OnlyGradeA && s.Grade != 'A') { _sentIds.Add(id); continue; }
+
+                    var closeUtc = s.Time.AddMinutes(barMin);
+                    double age = (DateTime.UtcNow - closeUtc).TotalSeconds;
+                    if (age > Mt5MaxAgeSec || age < -Mt5MaxAgeSec)
+                    {
+                        _sentIds.Add(id);
+                        _bridgeStatus = $"BỎ {s.Time:dd/MM HH:mm} — lệch đồng hồ {age:0}s (>{Mt5MaxAgeSec}s)";
+                        continue;
+                    }
+                    WriteCmd(s, id, rev, closeUtc);
+                    _sentIds.Add(id);
+                }
+            }
+            catch (Exception ex) { _bridgeStatus = "LỖI cầu nối: " + ex.Message; }
+        }
+
+        private string Mt5FilesDir()
+        {
+            string dir = Mt5Dir?.Trim();
+            if (!string.IsNullOrEmpty(dir)) return dir;
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                "MetaQuotes", "Terminal", "Common", "Files");
+        }
+
+        private void WriteCmd(Sig s, string id, bool rev, DateTime closeUtc)
+        {
+            var ci = CultureInfo.InvariantCulture;
+            string dir = Mt5FilesDir();
+            Directory.CreateDirectory(dir);
+            string path = Path.Combine(dir, "runner_cmd.jsonl");
+
+            double slDist = s.RiskT * _tick;
+            double rr = s.TargetRr > 0 ? s.TargetRr : RR;
+            var sb = new StringBuilder();
+            sb.Append('{')
+              .Append("\"id\":\"").Append(id).Append("\",")
+              .Append("\"ts_utc\":\"").Append(closeUtc.ToString("yyyy-MM-dd HH:mm:ss", ci)).Append("\",")
+              .Append("\"src\":\"").Append(Symbol?.Name ?? "?").Append("\",")
+              .Append("\"branch\":\"").Append(rev ? "REV" : "CBR").Append("\",")
+              .Append("\"side\":\"").Append(s.Side > 0 ? "BUY" : "SELL").Append("\",")
+              .Append("\"sl_dist\":").Append(slDist.ToString("0.###", ci)).Append(',')
+              .Append("\"rr\":").Append(rr.ToString("0.##", ci)).Append(',')
+              .Append("\"grade\":\"").Append(s.Grade).Append("\",")
+              .Append("\"vsa\":").Append(s.Vsa.ToString("0.00", ci)).Append(',')
+              .Append("\"cluster\":").Append(s.Cluster.ToString(ci)).Append(',')
+              .Append("\"src_entry\":").Append(s.Entry.ToString("0.0##", ci)).Append(',')
+              .Append("\"src_sl\":").Append(s.Sl.ToString("0.0##", ci)).Append(',')
+              .Append("\"src_tp\":").Append(s.Tp1.ToString("0.0##", ci)).Append(',')
+              .Append("\"dry\":").Append(Mt5DryRun ? "true" : "false")
+              .Append("}\n");
+
+            using (var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+            using (var w = new StreamWriter(fs, new UTF8Encoding(false)))
+                w.Write(sb.ToString());
+
+            _bridgeSent++;
+            _bridgeStatus = $"gửi {_bridgeSent} · {s.Time:dd/MM HH:mm} {(s.Side > 0 ? "BUY" : "SELL")} "
+                          + $"{(rev ? "QUAY ĐẦU" : "CBR")} SL {slDist:0.0}đ {rr:0.#}R{(Mt5DryRun ? " [DRY]" : "")}";
+        }
+
         // ================= XUẤT CSV (đối chiếu C#↔Python + tách WR nhánh CBR vs quay đầu) =================
         // Ghi TOÀN BỘ tín hiệu mỗi khi có nến mới (ghi đè cùng file). Cột nhanh=CBR/QUAY_DAU để soi 2 nhánh.
         private void ExportSignals(List<Sig> sigs)
@@ -732,6 +863,9 @@ namespace RunnerSignal
                 p.Add(($"⚠ footprint chỉ có {_vaCov}/{_vaTot} nến (từ {_vaFirst:dd/MM HH:mm}) — tăng số bar Volume Analysis", Color.FromArgb(255, 190, 120)));
             if (ExportCsv && !string.IsNullOrEmpty(_exportedTo))
                 p.Add(($"💾 CSV: {_exportedTo}", Color.FromArgb(150, 220, 150)));
+            if (Mt5Bridge)
+                p.Add((($"🔗 MT5{(Mt5DryRun ? " (DRY)" : " LIVE")}: " + (_bridgeStatus ?? "chờ nến mới…")),
+                       Mt5DryRun ? Color.FromArgb(150, 200, 240) : Color.FromArgb(255, 170, 90)));
             var recent = sigs.OrderByDescending(s => s.Idx).Take(Math.Max(2, PanelRows)).ToList();
             if (recent.Count == 0) { p.Add(("(chưa có setup CBR)", Color.Gray)); return p; }
             foreach (var s in recent)

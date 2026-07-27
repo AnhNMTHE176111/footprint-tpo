@@ -22,7 +22,10 @@ namespace RunnerSignal
     using System.Collections.Generic;
     using System.Drawing;
     using System.Drawing.Drawing2D;
+    using System.Globalization;
+    using System.IO;
     using System.Linq;
+    using System.Text;
     using TradingPlatform.BusinessLayer;
     using TpoSuite;   // ProfileEngine + PanelDrag (concat)
 
@@ -171,7 +174,14 @@ namespace RunnerSignal
         [InputParameter("Độ mờ nền bảng (100-255)", 109, 100, 255, 5, 0)]
         public int PanelOpacity { get; set; } = 215;
 
+        // ---------- xuất CSV (để đối chiếu C# ↔ Python + tách WR 2 nhánh) ----------
+        [InputParameter("Xuất CSV toàn bộ tín hiệu", 120)]
+        public bool ExportCsv { get; set; } = false;
+        [InputParameter("Đường dẫn CSV (trống = thư mục Documents)", 121)]
+        public string ExportPath { get; set; } = "";
+
         private bool _vaLoaded;
+        private string _exportedTo;
         private readonly object _sync = new();
         private readonly object _calc = new();
         private RenderState _render;
@@ -266,6 +276,8 @@ namespace RunnerSignal
                     var pool = BuildPool(hd, B);
                     var sigs = Scan(hd, B, pool);
                     foreach (var s in sigs) { Simulate(B, s); Enrich(pool, s); }
+
+                    if (ExportCsv) ExportSignals(sigs);
 
                     int minIdx = B.Count - 1 - DisplayBars;
                     var show = ShowAllHistory ? sigs : sigs.Where(s => s.Idx >= minIdx || s.Outcome == "running").ToList();
@@ -605,6 +617,50 @@ namespace RunnerSignal
             if (!double.IsNaN(s.BlockR)) s.Why.Add($"TP vướng vùng ↧{s.BlockR:0.0}R");
         }
 
+        // ================= XUẤT CSV (đối chiếu C#↔Python + tách WR nhánh CBR vs quay đầu) =================
+        // Ghi TOÀN BỘ tín hiệu mỗi khi có nến mới (ghi đè cùng file). Cột nhanh=CBR/QUAY_DAU để soi 2 nhánh.
+        private void ExportSignals(List<Sig> sigs)
+        {
+            try
+            {
+                string path = ExportPath?.Trim();
+                if (string.IsNullOrEmpty(path))
+                    path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "RunnerSignal_signals.csv");
+                else if (Directory.Exists(path))
+                    path = Path.Combine(path, "RunnerSignal_signals.csv");
+
+                var ci = CultureInfo.InvariantCulture;
+                var sb = new StringBuilder();
+                sb.Append("ngay_gio,nhanh,huong,entry,SL,risk_gia,TP,RR,VSA,climax,co_vung,grade,tp_vuong_vung,KQ,ket_thuc_luc,chi_tiet\n");
+                foreach (var s in sigs.OrderBy(x => x.Idx))
+                {
+                    string nhanh = s.Scen != null && s.Scen.StartsWith("quay") ? "QUAY_DAU" : "CBR";
+                    string huong = s.Side > 0 ? "LONG" : "SHORT";
+                    string block = double.IsNaN(s.BlockR) ? "-" : s.BlockR.ToString("0.0", ci) + "R";
+                    string kq = s.Outcome == "TP" ? "WIN" : s.Outcome == "SL" ? "LOSS" : "open";
+                    string ct = "\"" + string.Join(" · ", s.Why ?? new List<string>()).Replace("\"", "'") + "\"";
+                    sb.Append(s.Time.ToString("yyyy-MM-dd HH:mm")).Append(',')
+                      .Append(nhanh).Append(',').Append(huong).Append(',')
+                      .Append(s.Entry.ToString("0.0##", ci)).Append(',')
+                      .Append(s.Sl.ToString("0.0##", ci)).Append(',')
+                      .Append((s.RiskT * _tick).ToString("0.0", ci)).Append(',')
+                      .Append(s.Tp1.ToString("0.0##", ci)).Append(',')
+                      .Append(RR.ToString("0.#", ci)).Append(',')
+                      .Append(s.Vsa.ToString("0.00", ci)).Append(',')
+                      .Append(s.Climax ? "tim" : "-").Append(',')
+                      .Append(s.Cluster.ToString(ci)).Append(',')
+                      .Append(s.Grade).Append(',')
+                      .Append(block).Append(',')
+                      .Append(kq).Append(',')
+                      .Append(s.OutTime.ToString("yyyy-MM-dd HH:mm")).Append(',')
+                      .Append(ct).Append('\n');
+                }
+                File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));
+                _exportedTo = $"{sigs.Count} lệnh → {path}";
+            }
+            catch (Exception ex) { _exportedTo = "LỖI ghi CSV: " + ex.Message; }
+        }
+
         private List<(double price, double strength, int side)> CurrentClusters(List<PZone> pool, DateTime now, double nowPrice)
         {
             var active = pool.Where(z => now >= z.ReadyTime && now <= z.ExpireTime && !double.IsNaN(z.Price) && z.Price > 0)
@@ -630,6 +686,8 @@ namespace RunnerSignal
             p.Add(($"RUNNER CBR (M1)   {sigs.Count} tín hiệu · ✓{tp} ✗{sl} •{running}{wr}  [TP {RR:0.#}R]", Color.White));
             if (_vaTot > 0 && _vaCov < (int)(_vaTot * 0.98) && _vaFirst != DateTime.MinValue)
                 p.Add(($"⚠ footprint chỉ có {_vaCov}/{_vaTot} nến (từ {_vaFirst:dd/MM HH:mm}) — tăng số bar Volume Analysis", Color.FromArgb(255, 190, 120)));
+            if (ExportCsv && !string.IsNullOrEmpty(_exportedTo))
+                p.Add(($"💾 CSV: {_exportedTo}", Color.FromArgb(150, 220, 150)));
             var recent = sigs.OrderByDescending(s => s.Idx).Take(Math.Max(2, PanelRows)).ToList();
             if (recent.Count == 0) { p.Add(("(chưa có setup CBR)", Color.Gray)); return p; }
             foreach (var s in recent)

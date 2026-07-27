@@ -64,7 +64,7 @@ namespace RunnerSignal
         [InputParameter("Range: span TỐI THIỂU (giá) — loại micro-range nhiễu", 51, 0.5, 10, 0.1, 1)]
         public double RangeMinPts { get; set; } = 3.0;   // sweep: span≥3đ net +40 vs +35 (loại vụ 07/24 19:27)
         [InputParameter("Range: span TỐI ĐA (giá) — vùng co hẹp", 52, 1, 20, 0.1, 1)]
-        public double RangeMaxPts { get; set; } = 7.5;
+        public double RangeMaxPts { get; set; } = 7.5;   // thử nới 10 → exp 0.29→0.21 (KHÔNG free) → giữ 7.5. Nới tại đây nếu muốn thêm lệnh (chấp nhận loãng edge)
 
         // ---------- CBR: BREAK ----------
         [InputParameter("Break: VSA tối thiểu (× TB) — climax", 53, 1.0, 5, 0.05, 2)]
@@ -97,6 +97,20 @@ namespace RunnerSignal
         public int Cooldown { get; set; } = 15;
         [InputParameter("Gộp tín hiệu trùng (số nến)", 65, 1, 20, 1, 0)]
         public int DedupBars { get; set; } = 6;
+
+        // ---------- QUAY ĐẦU (reversal tại vùng — dùng HẤP THỤ footprint LIVE) ----------
+        [InputParameter("Bật nhánh QUAY ĐẦU (chạm vùng + hấp thụ)", 66)]
+        public bool EnableReversal { get; set; } = true;
+        [InputParameter("Quay đầu: khoảng arm tới vùng (tick)", 67, 5, 60, 1, 0)]
+        public int ArmDistTicks { get; set; } = 20;
+        [InputParameter("Hấp thụ: dominance mức ≥ (|Δ|/vol per-level)", 68, 0.3, 1.0, 0.05, 2)]
+        public double AbsDom { get; set; } = 0.60;
+        [InputParameter("Quay đầu: rút râu ≥ (rau/range)", 69, 0.3, 1.0, 0.05, 2)]
+        public double WickFrac { get; set; } = 0.50;
+        [InputParameter("Quay đầu: hoặc thân mạnh ≥ (body/range)", 72, 0.3, 1.0, 0.05, 2)]
+        public double BodyStrong { get; set; } = 0.55;
+        [InputParameter("Quay đầu: climax tím thay được tường hấp thụ", 73)]
+        public bool RevClimaxOverride { get; set; } = true;
 
         // ---------- lọc / warm-up ----------
         [InputParameter("Sàn volume (chống nến mỏng)", 70, 0, 500, 1, 0)]
@@ -206,13 +220,18 @@ namespace RunnerSignal
             public int SinceGap;
             public double Rng => H - L;
             public double Body => Math.Abs(C - O);
+            public double UW => H - Math.Max(O, C);
+            public double LW => Math.Min(O, C) - L;
             public double Brat => Rng > 0 ? Body / Rng : 0;
+            public double Cpos => Rng > 0 ? (C - L) / Rng : 0.5;
+            public double Ddom => Vol > 0 ? Delta / Vol : 0;
         }
 
         private sealed class PZone
         {
             public double Price; public string Kind; public double Strength;
             public DateTime ReadyTime, ExpireTime;
+            public string PrevRel;   // above/below/in — hướng tiếp cận vùng (nhánh quay đầu)
         }
 
         private sealed class Sig
@@ -245,7 +264,7 @@ namespace RunnerSignal
                     if (B.Count < VsaPeriod + 5) { _lastN = n; return; }
 
                     var pool = BuildPool(hd, B);
-                    var sigs = Scan(B, pool);
+                    var sigs = Scan(hd, B, pool);
                     foreach (var s in sigs) { Simulate(B, s); Enrich(pool, s); }
 
                     int minIdx = B.Count - 1 - DisplayBars;
@@ -358,7 +377,7 @@ namespace RunnerSignal
         }
 
         // ================= CBR: phá vùng co → hồi giữ leg → tiếp diễn (KHỚP entry_cbr.run_cbr) =================
-        private List<Sig> Scan(List<Bar> B, List<PZone> pool)
+        private List<Sig> Scan(HistoricalData hd, List<Bar> B, List<PZone> pool)
         {
             var raw = new List<Sig>();
             int nClosed = B.Count - 1;                          // BỎ nến đang hình thành → không repaint
@@ -406,7 +425,8 @@ namespace RunnerSignal
                             else { sl = pullExt + SlBuf * _tick; risk = (sl - entry) / _tick; }
                             if (risk < slFloorT) { sl = up ? entry - slFloorT * _tick : entry + slFloorT * _tick; risk = slFloorT; }
                             if (risk > slCapT) break;
-                            EmitRunner(raw, j, side, entry, sl, risk, edge, span, b.Vratio, retr, leg / _tick, b.Time, pool);
+                            AddSig(raw, j, side, entry, sl, risk, b.Vratio, "CBR phá→hồi→tiếp diễn",
+                                new List<string> { $"phá {edge.ToString("0.0##")}", $"hồi {retr * 100:0}%", $"leg {leg:0.0}giá", $"VSA {b.Vratio:0.0}x{(b.Vratio >= VsaClimax ? " tím" : "")}" });
                             break;
                         }
                     }
@@ -414,18 +434,98 @@ namespace RunnerSignal
                     if (up ? bj.H > peak : bj.L < peak) { peak = up ? bj.H : bj.L; since = j; }
                 }
             }
+            if (EnableReversal) raw.AddRange(ScanReversal(hd, B, pool));
             return Cooldown_(Dedup(raw));
         }
 
-        private void EmitRunner(List<Sig> raw, int j, int side, double entry, double sl, double risk,
-                                double edge, double spanT, double brkVsa, double retr, double legT, DateTime brkTime, List<PZone> pool)
+        private void AddSig(List<Sig> raw, int idx, int side, double entry, double sl, double risk, double vsa, string scen, List<string> why)
         {
-            var s = new Sig { Idx = j, Side = side, Scen = "CBR phá→hồi→tiếp diễn",
-                Entry = entry, Sl = sl, RiskT = risk, Rr2 = RR, Vsa = brkVsa, Climax = brkVsa >= VsaClimax };
-            raw.Add(s);
-            // (Time/Tp/Cluster/Block điền sau khi biết bar j trong Dedup/Simulate; giữ tối giản ở đây)
-            s.Why = new List<string> { $"phá {edge.ToString("0.0##")}", $"hồi {retr * 100:0}%", $"leg {legT * _tick:0.0}đ", $"VSA {brkVsa:0.0}x{(brkVsa >= VsaClimax ? " tím" : "")}" };
+            raw.Add(new Sig { Idx = idx, Side = side, Scen = scen, Entry = entry, Sl = sl, RiskT = risk,
+                Rr2 = RR, Vsa = vsa, Climax = vsa >= VsaClimax, Why = why });
         }
+
+        // ===== NHÁNH QUAY ĐẦU: chạm vùng + HẤP THỤ per-level (footprint LIVE) → đảo chiều, TP 3R =====
+        // KHÔNG backtest offline được (CSV không có footprint per-level) → validate LIVE. Cổng chặt:
+        // giá tiếp cận vùng (arm), tag vùng, đóng bật lại đúng phía, + tường hấp thụ (Absorption) HOẶC
+        // nến climax tím. SL ngoài cực trị ±buf (sàn/trần như CBR).
+        private List<Sig> ScanReversal(HistoricalData hd, List<Bar> B, List<PZone> pool)
+        {
+            var raw = new List<Sig>();
+            int nClosed = B.Count - 1; int buf = SlBuf;
+            double slFloorT = SlFloorPts / _tick, slCapT = SlCapPts / _tick;
+            foreach (var z in pool) z.PrevRel = null;
+            for (int i = VsaPeriod + 2; i < nClosed; i++)
+            {
+                var b = B[i]; double px = b.C;
+                bool gated = Gate(b);
+                foreach (var z in pool)
+                {
+                    if (b.Time < z.ReadyTime || b.Time > z.ExpireTime) continue;
+                    double zp = z.Price; if (double.IsNaN(zp) || zp <= 0) continue;
+                    string rel = b.C > zp + buf * _tick ? "above" : b.C < zp - buf * _tick ? "below" : "in";
+                    if (!gated) { z.PrevRel = px > zp ? "above" : "below"; continue; }
+                    double dist = Math.Abs(px - zp) / _tick;
+                    if (dist > ArmDistTicks) { z.PrevRel = rel; continue; }
+                    double zlo = zp - buf * _tick, zhi = zp + buf * _tick;
+                    bool tagged = b.L <= zhi && b.H >= zlo;
+                    bool up = z.PrevRel == "below", dn = z.PrevRel == "above";
+                    if (tagged)
+                    {
+                        // tới vùng từ DƯỚI, bị đẩy xuống lại (kháng cự) → SHORT
+                        if (up && b.C < zhi && b.Delta < 0 && RejDown(b))
+                        {
+                            bool wall = Absorption(HdBar(hd, b.HdIdx), b.H, -1) || (RevClimaxOverride && b.Vratio >= VsaClimax);
+                            if (wall) EmitRev(raw, i, -1, b.C, Math.Max(b.H, zp), zp, b.Vratio, slFloorT, slCapT);
+                        }
+                        // tới vùng từ TRÊN, bị đỡ lên lại (hỗ trợ) → LONG
+                        else if (dn && b.C > zlo && b.Delta > 0 && RejUp(b))
+                        {
+                            bool wall = Absorption(HdBar(hd, b.HdIdx), b.L, +1) || (RevClimaxOverride && b.Vratio >= VsaClimax);
+                            if (wall) EmitRev(raw, i, +1, b.C, Math.Min(b.L, zp), zp, b.Vratio, slFloorT, slCapT);
+                        }
+                    }
+                    z.PrevRel = rel;
+                }
+            }
+            return raw;
+        }
+
+        private bool RejUp(Bar b) => (b.LW >= WickFrac * b.Rng && b.Cpos >= 0.55) || (b.Brat >= BodyStrong && b.Ddom >= 0.25 && b.Cpos >= 0.6);
+        private bool RejDown(Bar b) => (b.UW >= WickFrac * b.Rng && b.Cpos <= 0.45) || (b.Brat >= BodyStrong && b.Ddom <= -0.25 && b.Cpos <= 0.4);
+
+        private void EmitRev(List<Sig> raw, int i, int side, double entry, double anchor, double zp, double vsa, double slFloorT, double slCapT)
+        {
+            double sl, risk;
+            if (side > 0) { sl = anchor - SlBuf * _tick; risk = (entry - sl) / _tick; }
+            else { sl = anchor + SlBuf * _tick; risk = (sl - entry) / _tick; }
+            if (risk < slFloorT) { sl = side > 0 ? entry - slFloorT * _tick : entry + slFloorT * _tick; risk = slFloorT; }
+            if (risk <= 0 || risk > slCapT) return;
+            AddSig(raw, i, side, entry, sl, risk, vsa, "quay đầu (hấp thụ)",
+                new List<string> { $"chạm {zp:0.0##}", vsa >= VsaClimax ? "climax tím" : "hấp thụ", $"VSA {vsa:0.0}x" });
+        }
+
+        // Tường hấp thụ per-level (footprint LIVE): tại cực trị có mức volume vượt trội + dominance
+        // NGƯỢC chiều tiếp cận. side=+1 hấp thụ tại ĐÁY (mua đỡ), -1 tại ĐỈNH (bán đè). (port EntrySignal)
+        private bool Absorption(HistoryItemBar bar, double extreme, int side)
+        {
+            var pl = bar?.VolumeAnalysisData?.PriceLevels;
+            if (pl == null || pl.Count == 0) return false;
+            double sum = 0; int c = 0;
+            foreach (var kv in pl) { sum += kv.Value.Volume; c++; }
+            if (c == 0) return false; double meanVol = sum / c;
+            foreach (var kv in pl)
+            {
+                if (Math.Abs(kv.Key - extreme) > 3 * _tick) continue;
+                double vol = kv.Value.Volume; if (vol < meanVol * 1.5) continue;
+                double dNet = kv.Value.Delta; double dom = vol > 0 ? Math.Abs(dNet) / vol : 0;
+                bool dirOk = side > 0 ? dNet < 0 : dNet > 0;
+                if (dom >= AbsDom && dirOk) return true;
+            }
+            return false;
+        }
+
+        private HistoryItemBar HdBar(HistoricalData hd, int absIdx)
+            => (absIdx >= 0 && absIdx < hd.Count) ? hd[absIdx, SeekOriginHistory.Begin] as HistoryItemBar : null;
 
         // gộp trùng cùng phía trong DedupBars nến (KHỚP entry_cbr.dedup)
         private List<Sig> Dedup(List<Sig> raw)

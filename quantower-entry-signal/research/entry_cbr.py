@@ -21,7 +21,7 @@ TICK = em.TICK
 RANGE_LEN = 8          # so nen tao "range" truoc break
 RANGE_MIN_T = 30       # span range >= 3.0 gia — LOAI micro-range nhieu (bai hoc user 07/24 19:27:
                        #   vung co 2.4gia trong downtrend, "pha" 1 nen = noise. sweep: span>=3 net +40 vs +35)
-RANGE_MAX_T = 75       # span range <= 7.5 gia (vung co hep)
+RANGE_MAX_T = 75       # span range <= 7.5 gia (vung co hep). THU noi 10gia -> exp 0.29->0.21 (KHONG free) -> giu 7.5
 BREAK_VSA = 2.0        # nen pha phai climax
 BREAK_BODY = 0.50
 WAIT_BARS = 12         # cho hoi + tiep dien trong 12 nen sau break

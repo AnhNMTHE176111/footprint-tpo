@@ -48,7 +48,7 @@ def outcome(B, i, side, sl, tp):
     return 'open', len(B) - 1 - i
 
 
-HORIZON = 480   # ~8h M1: gioi han cua so do MFE trong phien (khong tinh trend nhieu ngay)
+HORIZON = 1440   # 24h: du cho runner qua dem (cu 19:20/07/23 chay 17.6h -> 9R). Cap 8h cu che mat runner (loi da sua).
 
 
 def ceiling_mfe(B, i, side, entry, sl, rdollar):

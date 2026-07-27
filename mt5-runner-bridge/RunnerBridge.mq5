@@ -175,13 +175,9 @@ void HandleCmd(const string line, const string id)
       return;
      }
 
-   // --- moi truong giao dich ---
-   bool envOk = (TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) != 0)
-             && (MQLInfoInteger(MQL_TRADE_ALLOWED) != 0)
-             && (AccountInfoInteger(ACCOUNT_TRADE_EXPERT) != 0)
-             && (AccountInfoInteger(ACCOUNT_TRADE_ALLOWED) != 0);
-   if(!envOk)
-     { Reject(id, line, "terminal/tai khoan chua cho phep auto-trade"); return; }
+   // --- moi truong giao dich (chi ro CO NAO sai de khoi phai doan) ---
+   if(EnvBlock() != "")
+     { Reject(id, line, "chua cho phep auto-trade: " + EnvBlock()); return; }
 
    // --- spread ---
    double spr = CurSpread();
@@ -472,6 +468,22 @@ double CurSpread()
    return(SymbolInfoDouble(_Symbol, SYMBOL_ASK) - SymbolInfoDouble(_Symbol, SYMBOL_BID));
   }
 
+//+------------------------------------------------------------------+
+//| "" = du quyen giao dich. Nguoc lai tra ve DUNG cai dang chan.     |
+//+------------------------------------------------------------------+
+string EnvBlock()
+  {
+   if(TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) == 0)
+      return("nut 'Algo Trading' tren toolbar MT5 dang TAT");
+   if(MQLInfoInteger(MQL_TRADE_ALLOWED) == 0)
+      return("o 'Allow Algo Trading' trong tab Common cua EA chua tick");
+   if(AccountInfoInteger(ACCOUNT_TRADE_EXPERT) == 0)
+      return("broker khong cho EA giao dich tren tai khoan nay");
+   if(AccountInfoInteger(ACCOUNT_TRADE_ALLOWED) == 0)
+      return("tai khoan khong duoc phep giao dich (mat khau investor?)");
+   return("");
+  }
+
 int CountMyPositions()
   {
    int n = 0;
@@ -555,6 +567,9 @@ void PrintSpec()
       Print("RunnerBridge CANH BAO: lot NHO NHAT da vuot tran rui ro -> EA se BO cac lenh SL rong. ",
             "Can nap them tien, doi loai tai khoan (cent), hoac nang InpMaxRiskPct co y thuc.");
      }
+   string env = EnvBlock();
+   if(env != "")
+      Print("RunnerBridge CANH BAO: chua the vao lenh — ", env);
    if(StringFind(_Symbol, "XAU") < 0)
       Print("RunnerBridge CANH BAO: symbol chart khong chua 'XAU' — EA giao dich DUNG symbol cua chart nay.");
   }

@@ -103,6 +103,10 @@ namespace EntrySignal
         public bool S2ClimaxOverride { get; set; } = true;   // nến climax (VSA≥tím) tại cụm ≥2 = bằng chứng hấp thụ đủ, không cần per-level wall
         [InputParameter("KB3: climax PHÁ qua cụm (phụ, mặc định TẮT)", 64)]
         public bool EnableS3ClimaxBreak { get; set; } = false;   // nến tím xuyên cụm ≥2 (vd 20:31/4051.8). Edge yếu (~hòa vốn) → grade C, tự bật nếu muốn.
+        [InputParameter("KB4: đảo chiều arm→confirm (phụ, mặc định TẮT)", 65)]
+        public bool EnableS4ArmConfirm { get; set; } = false;   // rút râu = ARM (không cần vol); nến tăng/giảm mạnh vol≥High trong N cây = CONFIRM. Gate cụm≥2 tự lọc. Edge +0.15R@1.5R.
+        [InputParameter("KB4: cửa sổ chờ xác nhận (số nến)", 66, 2, 20, 1, 0)]
+        public int ArmConfirmWindow { get; set; } = 6;   // rút râu và nến xác nhận cách nhau ≤ N cây
 
         // ---------- lọc / warm-up ----------
         [InputParameter("Sàn volume (chống nến mỏng)", 70, 0, 500, 1, 0)]
@@ -227,6 +231,7 @@ namespace EntrySignal
             public double Price; public string Kind; public double Strength;
             public DateTime ReadyTime, ExpireTime; public bool IsVwap;
             public string State; public int BrkBar; public int Cool; public string PrevRel;
+            public int ArmLBar = -999, ArmSBar = -999; public double ArmLLow, ArmSHigh;   // KB4 arm→confirm
         }
 
         private sealed class Sig
@@ -384,7 +389,7 @@ namespace EntrySignal
             var raw = new List<Sig>();
             int nClosed = B.Count - 1;                 // BỎ nến đang hình thành → không repaint
             int buf = SlBuf;
-            foreach (var z in pool) { z.State = "idle"; z.BrkBar = -999; z.Cool = -999; z.PrevRel = null; }
+            foreach (var z in pool) { z.State = "idle"; z.BrkBar = -999; z.Cool = -999; z.PrevRel = null; z.ArmLBar = -999; z.ArmSBar = -999; }
             var vwapZone = pool.FirstOrDefault(z => z.IsVwap);
 
             for (int i = VsaPeriod + 2; i < nClosed; i++)
@@ -447,7 +452,32 @@ namespace EntrySignal
                         {
                             bool wall = !RequireWallForS2 || Absorption(HdBar(hd, b.HdIdx), b.L, +1) || (S2ClimaxOverride && b.Vratio >= VsaClimax);
                             if (wall)
-                                if (Emit(raw, B, pool, i, +1, "KB2 chạm&đảo", Math.Min(b.L, zp), Append(w2, b.Vratio >= VsaClimax ? "climax" : "hấp thụ"), 'B', zp)) { z.Cool = i; z.State = "idle"; }
+                                if (Emit(raw, B, pool, i, +1, "KB2 chạm&đảo", Math.Min(b.L, zp), Append(w2, b.Vratio >= VsaClimax ? "climax" : "hấp thụ"), 'B', zp)) { z.Cool = i; z.State = "idle"; em = true; }
+                        }
+                    }
+
+                    // KB4 (phụ, tắt mặc định): ĐẢO CHIỀU arm→confirm (đặc tả user). Rút râu = ARM (KHÔNG cần
+                    // vol); nến tăng/giảm mạnh vol≥High trong ArmConfirmWindow cây = CONFIRM → vào. Gate cụm≥2
+                    // (Dedup) tự lọc → chỉ giữ ca ở hợp lưu. Backtest +0.15R@1.5R (yếu hơn lõi, hơn nhiễu đơn-vùng).
+                    if (EnableS4ArmConfirm)
+                    {
+                        if (b.C < zp - buf * _tick) z.ArmLBar = -999;   // phá xuống → hủy arm mua
+                        if (b.C > zp + buf * _tick) z.ArmSBar = -999;   // phá lên → hủy arm bán
+                        if (!em && i - z.Cool >= Cooldown)              // CONFIRM (dùng arm từ cây trước; ưu tiên sau KB1/KB2)
+                        {
+                            if (z.ArmLBar >= 0 && i - z.ArmLBar > 0 && i - z.ArmLBar <= ArmConfirmWindow
+                                && b.Brat >= BodyStrong && b.Delta > 0 && b.C > zp && b.Cpos >= 0.6 && b.Vratio >= VsaGate)
+                            { if (Emit(raw, B, pool, i, +1, "KB4 đảo chiều", Math.Min(z.ArmLLow, zp), new List<string> { "rút râu→xác nhận", $"Δ{b.Delta:+0;-0}", $"VSA {b.Vratio:0.0}x" }, 'B', zp)) { z.Cool = i; z.ArmLBar = -999; em = true; } }
+                            else if (z.ArmSBar >= 0 && i - z.ArmSBar > 0 && i - z.ArmSBar <= ArmConfirmWindow
+                                && b.Brat >= BodyStrong && b.Delta < 0 && b.C < zp && b.Cpos <= 0.4 && b.Vratio >= VsaGate)
+                            { if (Emit(raw, B, pool, i, -1, "KB4 đảo chiều", Math.Max(z.ArmSHigh, zp), new List<string> { "rút râu→xác nhận", $"Δ{b.Delta:+0;-0}", $"VSA {b.Vratio:0.0}x" }, 'B', zp)) { z.Cool = i; z.ArmSBar = -999; em = true; } }
+                        }
+                        if (b.Rng > 0)                                 // ARM (đặt cuối → hiệu lực cho cây sau); rút râu KHÔNG cần vol
+                        {
+                            if (b.L <= zp + RetestTol * _tick && b.L >= zp - 12 * _tick && b.C > zp && b.LW >= WickFrac * b.Rng && b.Cpos >= 0.5)
+                            { z.ArmLBar = i; z.ArmLLow = b.L; }
+                            if (b.H >= zp - RetestTol * _tick && b.H <= zp + 12 * _tick && b.C < zp && b.UW >= WickFrac * b.Rng && b.Cpos <= 0.5)
+                            { z.ArmSBar = i; z.ArmSHigh = b.H; }
                         }
                     }
                     z.PrevRel = rel;

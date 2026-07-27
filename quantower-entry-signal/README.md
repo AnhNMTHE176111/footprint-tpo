@@ -42,3 +42,20 @@ TP nới vùng kế, render mũi tên/nhãn/bảng. Build: `./build-entry.sh` �
    LONG tại VWAP+VAH Á+VAL Âu, climax tím — indicator phải gắn cờ đúng).
 4. Chỉnh input theo feed: `TzOffset`, mốc giờ phiên, `VolFloor`, ngưỡng hấp thụ.
 ```
+
+## RunnerSignal — Báo Telegram (mở lệnh + đóng bởi SL/TP)
+`RunnerSignal.cs` tự bắn Telegram **2 sự kiện mỗi lệnh**:
+- **🔔 Mở lệnh** khi có tín hiệu MỚI ở nến vừa đóng — nội dung gọn: hướng (MUA/BÁN), nhánh (CBR hay
+  Quay đầu VWAP), hạng A/B, giá **Entry / SL (kèm số giá) / TP (kèm RR)**, **lý do** (phá→hồi→tiếp diễn
+  hoặc quay đầu tại VWAP) + các bullet chi tiết (hồi %, leg, VSA, hợp lưu…).
+- **✅/🛑 Đóng lệnh** khi lệnh đó chạm TP/SL — kết quả (+RR / −1R), giá vào→ra, giờ mở→đóng + thời lượng.
+
+**Cơ chế chống trùng (dùng lại khung cầu nối MT5):**
+- Lần quét đầu sau khi add/reload chỉ **nạp** id lệnh cũ, **không bắn** (khỏi spam lịch sử).
+- Tín hiệu mở phải ở **nến vừa đóng** + còn tươi (≤ `Tuổi tín hiệu tối đa`, mặc định 90s) → chống bắn lệnh cũ khi reload.
+- **Chỉ báo ĐÓNG cho lệnh mà bot ĐÃ báo MỞ** (không báo đóng cho lệnh lịch sử/đang chạy lúc mới add).
+
+**Cài đặt:** bật **"Báo Telegram: BẬT"**, điền **Bot token + Chat ID** (điền tay — repo public, KHÔNG hardcode).
+Tùy chọn: tắt/bật báo mở, báo đóng, chỉ grade A, lọc nhánh CBR/Quay đầu. Nút **"TG · Gửi thử ngay"** để test
+(bật→tắt; chạy độc lập với Volume Analysis). Log chẩn đoán: `%LOCALAPPDATA%\RunnerSignal\tele_log.txt`.
+Chỉ chạy khi Quantower đang mở + dữ liệu live. Lưu ý DST: `TzOffset` dùng chung cho giờ hiển thị.

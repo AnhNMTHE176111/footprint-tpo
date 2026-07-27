@@ -231,12 +231,46 @@ namespace RunnerSignal
         [InputParameter("MT5: chỉ gửi grade A (hợp lưu)", 136)]
         public bool Mt5OnlyGradeA { get; set; } = false;
 
+        // ---------- BÁO TELEGRAM (mở lệnh + đóng bởi SL/TP) ----------
+        // Bắn 1 tin GỌN khi có tín hiệu MỚI ở nến vừa đóng, và 1 tin khi lệnh đó chạm SL/TP.
+        // Chỉ báo ĐÓNG cho lệnh mà bot ĐÃ báo MỞ (không báo đóng lệnh lịch sử). Dùng chung
+        // module TeleReport (đã concat từ ProfileEngine) — chỉ mượn hàm gửi + log, không đụng
+        // cơ chế tổng-hợp-2-mốc của bộ TPO. Cần bật + điền token/chat_id (điền tay, repo public).
+        [InputParameter("Báo Telegram: BẬT (mở/đóng lệnh)", 140)]
+        public bool TeleAlerts { get; set; } = false;
+        [InputParameter("Telegram: Bot token", 141)]
+        public string TeleBotToken { get; set; } = "";
+        [InputParameter("Telegram: Chat ID", 142)]
+        public string TeleChatId { get; set; } = "";
+        [InputParameter("Báo khi MỞ lệnh", 143)]
+        public bool TeleAlertOpen { get; set; } = true;
+        [InputParameter("Báo khi ĐÓNG (chạm TP/SL)", 144)]
+        public bool TeleAlertClose { get; set; } = true;
+        [InputParameter("Chỉ báo grade A (hợp lưu)", 145)]
+        public bool TeleOnlyGradeA { get; set; } = false;
+        [InputParameter("Báo nhánh CBR (3R)", 146)]
+        public bool TeleSendCbr { get; set; } = true;
+        [InputParameter("Báo nhánh QUAY ĐẦU (1.5R)", 147)]
+        public bool TeleSendRev { get; set; } = true;
+        [InputParameter("Tuổi tín hiệu tối đa (giây) — chống bắn khi reload", 148, 20, 600, 5, 0)]
+        public int TeleMaxAgeSec { get; set; } = 90;
+        [InputParameter("TG · Gửi thử ngay", 149)]
+        public bool TeleTestNow { get; set; } = false;
+
         private bool _vaLoaded;
         private string _exportedTo;
         private bool _armed;                                   // false = lần quét đầu (nạp lịch sử) → KHÔNG gửi
         private int _bridgeSent;
         private string _bridgeStatus;
         private readonly HashSet<string> _sentIds = new();
+        // ----- Telegram -----
+        private readonly TeleReport _tele = new();
+        private bool _teleArmed;                               // như _armed nhưng riêng cho Telegram
+        private readonly HashSet<string> _teleSeen = new();    // id đã xử lý (chống lặp)
+        private readonly HashSet<string> _teleOpenSent = new();// id ĐÃ báo MỞ (điều kiện để báo ĐÓNG)
+        private readonly HashSet<string> _teleClosed = new();  // id ĐÃ báo ĐÓNG
+        private int _teleSent;
+        private string _teleStatus;
         private readonly object _sync = new();
         private readonly object _calc = new();
         private RenderState _render;
@@ -263,11 +297,13 @@ namespace RunnerSignal
             {
                 _vaLoaded = false; _lastN = -1;
                 _armed = false; _sentIds.Clear(); _bridgeSent = 0; _bridgeStatus = null;   // re-attach = nạp lại lịch sử, không bắn lệnh cũ
+                _teleArmed = false; _teleSeen.Clear(); _teleOpenSent.Clear(); _teleClosed.Clear(); _teleSent = 0; _teleStatus = null;
                 lock (_sync) _render = null;
             }
         }
         protected override void OnUpdate(UpdateArgs args)
         {
+            PollTeleTest();                       // nút "gửi thử" chạy ĐỘC LẬP với VA (bấm là gửi ngay)
             if (!_vaLoaded) return;
             var p = HistoricalData?.VolumeAnalysisCalculationProgress;
             if (p == null || p.State != VolumeAnalysisCalculationState.Finished) return;
@@ -344,6 +380,7 @@ namespace RunnerSignal
 
                     if (ExportCsv) ExportSignals(sigs);
                     if (Mt5Bridge) EmitLive(sigs, B);
+                    if (TeleAlerts) EmitTele(sigs, B);
 
                     int minIdx = B.Count - 1 - DisplayBars;
                     var show = ShowAllHistory ? sigs : sigs.Where(s => s.Idx >= minIdx || s.Outcome == "running").ToList();
@@ -791,6 +828,140 @@ namespace RunnerSignal
                           + $"{(rev ? "QUAY ĐẦU" : "CBR")} SL {slDist:0.0}đ {rr:0.#}R{(Mt5DryRun ? " [DRY]" : "")}";
         }
 
+        // ================= BÁO TELEGRAM (mở lệnh + đóng bởi SL/TP) =================
+        // Cùng khung chống-trùng như cầu nối MT5, nhưng theo dõi CẢ vòng đời lệnh:
+        //   • MỞ  : tín hiệu mới ở nến VỪA ĐÓNG + còn tươi (≤ TeleMaxAgeSec) → bắn 1 tin gọn.
+        //   • ĐÓNG: khi Simulate() lật Outcome của lệnh ĐÃ báo mở sang TP/SL → bắn tin kết quả.
+        // Lần quét đầu sau attach/reload: NẠP toàn bộ id (không bắn) để không spam lịch sử.
+        private void ConfigTele()
+        {
+            _tele.Enabled = TeleAlerts;
+            _tele.BotToken = (TeleBotToken ?? "").Trim();
+            _tele.ChatId = (TeleChatId ?? "").Trim();
+            _tele.TzOffset = TzOffset;
+            _tele.TestNow = TeleTestNow;
+            // log/telegram riêng của RunnerSignal (tách khỏi %LOCALAPPDATA%\TpoSuite của bộ TPO)
+            _tele.ShareDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RunnerSignal");
+        }
+
+        private void PollTeleTest()
+        {
+            ConfigTele();
+            _tele.PollTestRaw($"🔔 TEST — Runner Signal ({Symbol?.Name ?? "?"}) bot chạy OK");
+        }
+
+        private bool BranchOn(bool rev) => rev ? TeleSendRev : TeleSendCbr;
+
+        private void EmitTele(List<Sig> sigs, List<Bar> B)
+        {
+            try
+            {
+                ConfigTele();
+                if (B.Count < 3) return;
+                int lastClosed = B.Count - 2;
+                double barMin = (B[B.Count - 1].Time - B[B.Count - 2].Time).TotalMinutes;
+                if (barMin <= 0 || barMin > 60) barMin = 1;
+
+                if (!_teleArmed)
+                {
+                    foreach (var s0 in sigs)
+                    {
+                        string id0 = SigId(s0);
+                        _teleSeen.Add(id0);
+                        if (s0.Outcome != "running") _teleClosed.Add(id0);   // lệnh cũ đã đóng → không báo
+                    }
+                    _teleArmed = true;
+                    _teleStatus = $"nạp {_teleSeen.Count} lệnh cũ (không báo) · sẵn sàng";
+                    return;
+                }
+
+                foreach (var s in sigs)
+                {
+                    string id = SigId(s);
+                    bool rev = IsRev(s);
+                    bool ok = BranchOn(rev) && (!TeleOnlyGradeA || s.Grade == 'A');
+
+                    // ---- MỞ lệnh ----
+                    if (!_teleSeen.Contains(id))
+                    {
+                        if (TeleAlertOpen && ok && s.Idx == lastClosed)
+                        {
+                            var closeUtc = s.Time.AddMinutes(barMin);
+                            double age = (DateTime.UtcNow - closeUtc).TotalSeconds;
+                            if (age <= TeleMaxAgeSec && age >= -TeleMaxAgeSec)
+                            {
+                                _tele.SendRaw(ComposeOpen(s, rev));
+                                _teleOpenSent.Add(id);
+                                _teleSent++;
+                                _teleStatus = $"MỞ {(s.Side > 0 ? "MUA" : "BÁN")} {(rev ? "quay đầu" : "CBR")} {s.Time.AddHours(TzOffset):HH:mm} · đã gửi {_teleSent}";
+                            }
+                        }
+                        _teleSeen.Add(id);   // đánh dấu đã xử lý dù có bắn hay không → không lặp
+                    }
+
+                    // ---- ĐÓNG lệnh (chỉ báo lệnh ta ĐÃ báo mở) ----
+                    if (TeleAlertClose && !_teleClosed.Contains(id) && _teleOpenSent.Contains(id)
+                        && (s.Outcome == "TP" || s.Outcome == "SL"))
+                    {
+                        _tele.SendRaw(ComposeClose(s, rev));
+                        _teleClosed.Add(id);
+                        _teleSent++;
+                        _teleStatus = $"ĐÓNG {(s.Outcome == "TP" ? "✓TP" : "✗SL")} {(s.Side > 0 ? "MUA" : "BÁN")} {s.OutTime.AddHours(TzOffset):HH:mm} · đã gửi {_teleSent}";
+                    }
+                }
+            }
+            catch (Exception ex) { _teleStatus = "LỖI Telegram: " + ex.Message; }
+        }
+
+        private string ComposeOpen(Sig s, bool rev)
+        {
+            double rr = s.TargetRr > 0 ? s.TargetRr : RR;
+            double slPts = s.RiskT * _tick;
+            double tpPts = slPts * rr;
+            string dirVN = s.Side > 0 ? "🟢 MUA (LONG)" : "🔴 BÁN (SHORT)";
+            string branch = rev ? "Quay đầu VWAP" : "CBR";
+            string reason = rev ? "quay đầu (đảo chiều) tại VWAP"
+                                 : "phá vùng co → hồi giữ gốc → vào nến tiếp diễn";
+            var sb = new StringBuilder();
+            sb.Append("🔔 LỆNH MỚI\n");
+            sb.Append(dirVN).Append(" · Runner ").Append(branch).Append(" · hạng ").Append(s.Grade).Append('\n');
+            sb.Append("Vào (Entry): ").Append(Fmt(s.Entry)).Append('\n');
+            sb.Append("SL: ").Append(Fmt(s.Sl)).Append("  (").Append(slPts.ToString("0.0")).Append(" giá)\n");
+            sb.Append("TP: ").Append(Fmt(s.Tp1)).Append("  (").Append(tpPts.ToString("0.0")).Append(" giá · ").Append(rr.ToString("0.#")).Append("R)\n");
+            sb.Append("Lý do: ").Append(reason).Append('\n');
+            if (s.Why != null && s.Why.Count > 0) sb.Append("• ").Append(string.Join(" · ", s.Why)).Append('\n');
+            sb.Append("⏱ ").Append(s.Time.AddHours(TzOffset).ToString("HH:mm dd/MM"))
+              .Append(" · ").Append(Symbol?.Name ?? "?");
+            return sb.ToString();
+        }
+
+        private string ComposeClose(Sig s, bool rev)
+        {
+            bool win = s.Outcome == "TP";
+            double rr = s.TargetRr > 0 ? s.TargetRr : RR;
+            double exit = win ? s.Tp1 : s.Sl;
+            string dirVN = s.Side > 0 ? "MUA (LONG)" : "BÁN (SHORT)";
+            string branch = rev ? "Quay đầu VWAP" : "CBR";
+            string head = win ? "✅ CHỐT LỜI (TP)" : "🛑 DỪNG LỖ (SL)";
+            string rRes = win ? "+" + rr.ToString("0.#") + "R" : "-1.0R";
+            var sb = new StringBuilder();
+            sb.Append(head).Append(" · ").Append(dirVN).Append(" · Runner ").Append(branch).Append('\n');
+            sb.Append("Kết quả: ").Append(rRes).Append('\n');
+            sb.Append("Vào ").Append(Fmt(s.Entry)).Append(" → ra ").Append(Fmt(exit)).Append('\n');
+            sb.Append("Mở ").Append(s.Time.AddHours(TzOffset).ToString("HH:mm"))
+              .Append(" → đóng ").Append(s.OutTime.AddHours(TzOffset).ToString("HH:mm dd/MM"))
+              .Append("  ·  ").Append(Dur(s.OutTime - s.Time));
+            return sb.ToString();
+        }
+
+        private static string Dur(TimeSpan t)
+        {
+            if (t.TotalMinutes < 1) return "<1p";
+            int h = (int)t.TotalHours, m = t.Minutes;
+            return h > 0 ? $"{h}h{m:00}p" : $"{m}p";
+        }
+
         // ================= XUẤT CSV (đối chiếu C#↔Python + tách WR nhánh CBR vs quay đầu) =================
         // Ghi TOÀN BỘ tín hiệu mỗi khi có nến mới (ghi đè cùng file). Cột nhanh=CBR/QUAY_DAU để soi 2 nhánh.
         private void ExportSignals(List<Sig> sigs)
@@ -866,6 +1037,8 @@ namespace RunnerSignal
             if (Mt5Bridge)
                 p.Add((($"🔗 MT5{(Mt5DryRun ? " (DRY)" : " LIVE")}: " + (_bridgeStatus ?? "chờ nến mới…")),
                        Mt5DryRun ? Color.FromArgb(150, 200, 240) : Color.FromArgb(255, 170, 90)));
+            if (TeleAlerts)
+                p.Add((("📨 Tele: " + (_teleStatus ?? "chờ tín hiệu…")), Color.FromArgb(150, 210, 255)));
             var recent = sigs.OrderByDescending(s => s.Idx).Take(Math.Max(2, PanelRows)).ToList();
             if (recent.Count == 0) { p.Add(("(chưa có setup CBR)", Color.Gray)); return p; }
             foreach (var s in recent)

@@ -406,6 +406,27 @@ namespace TpoSuite
             SendAsync(Compose(symbol, "🔔 TEST — bot TPO chạy OK"), null);
         }
 
+        // ===== Dùng cho indicator KHÁC (vd RunnerSignal): gửi 1 tin THÔ, KHÔNG đụng section/lock TPO =====
+        // Chỉ tái dùng HttpClient + đường log chung. Không có Compose/CheckTriggers ở đây.
+        public void SendRaw(string text)
+        {
+            if (!Enabled) return;
+            SendAsync(text, null);
+        }
+
+        // Nút "gửi thử" bản THÔ: gửi đúng testText của indicator gọi (không dùng Compose TPO).
+        public void PollTestRaw(string testText)
+        {
+            bool edge = TestNow && !_lastTest;
+            _lastTest = TestNow;
+            if (!edge) return;
+            Log($"nút TEST bật — enabled={Enabled}, có token={!string.IsNullOrWhiteSpace(BotToken)}, có chat_id={!string.IsNullOrWhiteSpace(ChatId)}");
+            if (!Enabled) { Log("BỎ QUA: chưa bật báo Telegram"); return; }
+            if (string.IsNullOrWhiteSpace(BotToken) || string.IsNullOrWhiteSpace(ChatId)) { Log("BỎ QUA: thiếu token hoặc chat_id"); return; }
+            Log("TEST → đang gửi HTTP...");
+            SendAsync(testText, null);
+        }
+
         private void Log(string msg)
         {
             try

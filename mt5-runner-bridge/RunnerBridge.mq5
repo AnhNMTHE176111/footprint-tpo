@@ -29,7 +29,8 @@ enum ENUM_RISK_MODE
   {
    RISK_MIN_LOT  = 0,  // Lot nho nhat cua broker (chay thu)
    RISK_PERCENT  = 1,  // % equity moi lenh
-   RISK_FIXED    = 2   // Lot co dinh
+   RISK_FIXED    = 2,  // Lot co dinh
+   RISK_MONEY    = 3   // So TIEN co dinh moi lenh (don vi tien tai khoan)
   };
 
 input group "=== CONG TAC CHINH ==="
@@ -47,6 +48,7 @@ input group "=== KHOI LUONG / RUI RO ==="
 input ENUM_RISK_MODE  InpRiskMode        = RISK_MIN_LOT;       // Cach tinh lot
 input double          InpRiskPercent     = 1.0;                // % equity moi lenh (che do RISK_PERCENT)
 input double          InpFixedLot        = 0.01;               // Lot co dinh (che do RISK_FIXED)
+input double          InpRiskMoney       = 50.0;               // So TIEN rui ro moi lenh (che do RISK_MONEY, don vi tk)
 input double          InpMaxRiskPct      = 3.0;                // TRAN CUNG: bo lenh neu rui ro > % equity nay
 
 input group "=== BO LOC AN TOAN ==="
@@ -297,6 +299,7 @@ bool CalcLot(const double slDist, double &lot, double &riskMoney, string &err)
 
    if(InpRiskMode == RISK_FIXED)         lot = InpFixedLot;
    else if(InpRiskMode == RISK_MIN_LOT)  lot = minLot;
+   else if(InpRiskMode == RISK_MONEY)    lot = InpRiskMoney/riskPerLot;
    else                                  lot = (equity*InpRiskPercent/100.0)/riskPerLot;
 
    lot = MathFloor(lot/step + 1e-8)*step;              // lam tron XUONG theo step -> khong bao gio vuot rui ro dat ra
@@ -529,9 +532,17 @@ void PrintSpec()
 
    PrintFormat("RunnerBridge %s | contract %.2f | tick %.5f | tickValue %.5f | lot min %.2f | digits %d | stops %d",
                _Symbol, contract, tickSize, tickVal, minLot, _Digits, (int)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL));
-   PrintFormat("RunnerBridge equity %.2f %s | LOT MIN: SL 3.0 -> mat %.2f (%.1f%%), SL 7.0 -> mat %.2f (%.1f%%)",
-               equity, AccountInfoString(ACCOUNT_CURRENCY), r3, equity > 0 ? 100.0*r3/equity : 0.0,
-               r7, equity > 0 ? 100.0*r7/equity : 0.0);
+   PrintFormat("RunnerBridge equity %.2f %s | don bay 1:%d | LOT MIN: SL 3.0 -> mat %.2f (%.1f%%), SL 7.0 -> mat %.2f (%.1f%%)",
+               equity, AccountInfoString(ACCOUNT_CURRENCY), (int)AccountInfoInteger(ACCOUNT_LEVERAGE),
+               r3, equity > 0 ? 100.0*r3/equity : 0.0, r7, equity > 0 ? 100.0*r7/equity : 0.0);
+   // KIEM TRA TRUOC: voi che do sizing dang chon, lenh SL 3.0 va SL 7.0 se ra lot / rui ro bao nhieu
+   double l3 = 0, m3 = 0, l7 = 0, m7 = 0; string e3 = "", e7 = "";
+   bool ok3 = CalcLot(3.0, l3, m3, e3), ok7 = CalcLot(7.0, l7, m7, e7);
+   PrintFormat("RunnerBridge SIZING (che do %d): SL 3.0 -> lot %.2f rui ro %.2f (%.1f%%) %s | SL 7.0 -> lot %.2f rui ro %.2f (%.1f%%) %s",
+               (int)InpRiskMode,
+               l3, m3, equity > 0 ? 100.0*m3/equity : 0.0, ok3 ? "OK" : ("=> BO LENH: " + e3),
+               l7, m7, equity > 0 ? 100.0*m7/equity : 0.0, ok7 ? "OK" : ("=> BO LENH: " + e7));
+
    double spr = CurSpread();
    PrintFormat("RunnerBridge exec mode %d | spread hien tai %.3f -> voi tran %.0f%% thi SL toi thieu duoc nhan = %.2f USD"
                " | deviation %d points = %.3f USD",

@@ -31,6 +31,15 @@ namespace TpoSuite
         private float _grabDX, _grabDY;
         private float _bx, _by, _bw, _bh;   // vùng bảng lần vẽ gần nhất (hit-test)
         private float? _x, _y;              // vị trí người dùng đã kéo (null = mặc định)
+        private bool _collapsed;            // đang thu gọn (chỉ hiện tiêu đề)
+
+        public const float ToggleSize = 15f;   // cạnh nút thu gọn/mở rộng (px)
+        public bool Collapsed { get { lock (_lk) return _collapsed; } }
+
+        // Vùng nút thu gọn ở góc trên-phải của bảng — DÙNG CHUNG cho cả vẽ ↔ bắt chuột
+        // (một nguồn sự thật để glyph và hit-test luôn khớp nhau).
+        public static RectangleF ToggleBox(float x, float y, float bw)
+            => new RectangleF(x + bw - ToggleSize - 3f, y + 3f, ToggleSize, ToggleSize);
 
         public void Attach(IChart chart)
         {
@@ -69,12 +78,57 @@ namespace TpoSuite
         private void OnDown(object s, ChartMouseNativeEventArgs e)
         {
             if (e.Button != NativeMouseButtons.Left) return;
+            bool toggled = false;
             lock (_lk)
             {
                 if (!(e.X >= _bx && e.X <= _bx + _bw && e.Y >= _by && e.Y <= _by + _bh)) return;
-                _dragging = true; _grabDX = e.X - _bx; _grabDY = e.Y - _by;
+                // Bấm vào nút góc trên-phải → thu gọn/mở rộng (KHÔNG bắt đầu kéo).
+                var tr = ToggleBox(_bx, _by, _bw);
+                if (e.X >= tr.X && e.X <= tr.Right && e.Y >= tr.Y && e.Y <= tr.Bottom)
+                {
+                    _collapsed = !_collapsed; toggled = true;
+                }
+                else { _dragging = true; _grabDX = e.X - _bx; _grabDY = e.Y - _by; }
             }
-            e.Handled = true; e.NeedMouseCapture = true;
+            e.Handled = true;
+            if (toggled) e.NeedRedraw = true; else e.NeedMouseCapture = true;
+        }
+
+        // Vẽ nút thu gọn/mở rộng: ▸ khi đang thu gọn (bấm để mở), ▾ khi đang mở (bấm để thu).
+        public static void DrawToggle(Graphics gr, float x, float y, float bw, bool collapsed)
+        {
+            var r = ToggleBox(x, y, bw);
+            using (var b = new SolidBrush(Color.FromArgb(55, 255, 255, 255))) gr.FillRectangle(b, r.X, r.Y, r.Width, r.Height);
+            using (var bd = new Pen(Color.FromArgb(120, 255, 255, 255), 1f)) gr.DrawRectangle(bd, r.X, r.Y, r.Width, r.Height);
+            float cx = r.X + r.Width / 2f, cy = r.Y + r.Height / 2f;
+            using var pen = new Pen(Color.FromArgb(220, 255, 255, 255), 1.6f);
+            if (collapsed)
+                gr.DrawLines(pen, new[] { new PointF(cx - 2.5f, cy - 4f), new PointF(cx + 3f, cy), new PointF(cx - 2.5f, cy + 4f) }); // ▸
+            else
+                gr.DrawLines(pen, new[] { new PointF(cx - 4f, cy - 2.5f), new PointF(cx, cy + 3f), new PointF(cx + 4f, cy - 2.5f) }); // ▾
+        }
+
+        // Vẽ TRỌN bảng (nền + viền + chữ + nút thu gọn) rồi lưu hit-test. Khi thu gọn
+        // chỉ vẽ dòng đầu (tiêu đề). Dùng chung cho cả 3 indicator để logic thu gọn ở 1 chỗ.
+        public void Draw(Graphics gr, Font f, IReadOnlyList<(string text, Color col)> lines,
+                         int bgAlpha, int corner, Rectangle clip)
+        {
+            if (lines == null || lines.Count == 0) return;
+            bool col = Collapsed;
+            int nShow = col ? 1 : lines.Count;
+            float pad = 6f, lineH = f.Height + 2f, w = 0f;
+            for (int k = 0; k < nShow; k++) w = Math.Max(w, gr.MeasureString(lines[k].text, f).Width);
+            float bw = w + 2f * pad + ToggleSize + 6f;   // chừa chỗ nút thu gọn góc phải
+            float bh = nShow * lineH + 2f * pad;
+            float defX = (corner == 1 || corner == 3) ? clip.Right - bw - 8f : clip.Left + 8f;
+            float defY = (corner >= 2) ? clip.Bottom - bh - 8f : clip.Top + 8f;
+            var (x, y) = Origin(defX, defY, bw, bh, clip);
+            using (var bg = new SolidBrush(Color.FromArgb(bgAlpha, 18, 18, 22))) gr.FillRectangle(bg, x, y, bw, bh);
+            using (var bd = new Pen(Color.FromArgb(90, 255, 255, 255))) gr.DrawRectangle(bd, x, y, bw, bh);
+            float ty = y + pad;
+            for (int k = 0; k < nShow; k++) { using var br = new SolidBrush(lines[k].col); gr.DrawString(lines[k].text, f, br, x + pad, ty); ty += lineH; }
+            DrawToggle(gr, x, y, bw, col);
+            SetBounds(x, y, bw, bh);
         }
 
         private void OnMove(object s, ChartMouseNativeEventArgs e)

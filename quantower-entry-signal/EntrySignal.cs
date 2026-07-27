@@ -101,6 +101,8 @@ namespace EntrySignal
         public double AbsDom { get; set; } = 0.60;
         [InputParameter("KB2: nến climax tím thay được tường hấp thụ", 63)]
         public bool S2ClimaxOverride { get; set; } = true;   // nến climax (VSA≥tím) tại cụm ≥2 = bằng chứng hấp thụ đủ, không cần per-level wall
+        [InputParameter("KB3: climax PHÁ qua cụm (phụ, mặc định TẮT)", 64)]
+        public bool EnableS3ClimaxBreak { get; set; } = false;   // nến tím xuyên cụm ≥2 (vd 20:31/4051.8). Edge yếu (~hòa vốn) → grade C, tự bật nếu muốn.
 
         // ---------- lọc / warm-up ----------
         [InputParameter("Sàn volume (chống nến mỏng)", 70, 0, 500, 1, 0)]
@@ -450,6 +452,20 @@ namespace EntrySignal
                     }
                     z.PrevRel = rel;
                 }
+
+                // KB3 (phụ, tắt mặc định): climax PHÁ qua CỤM ≥2 — bắt nến tím momentum xuyên cụm
+                // (vd 20:31 4051.8, đã hụt KB1/KB2). Edge yếu (+0.07..0.11R@2R ~ hòa vốn) → grade C.
+                if (EnableS3ClimaxBreak && b.Vratio >= VsaClimax && i > 0)
+                {
+                    double pc = B[i - 1].C;
+                    foreach (var c in ClustersNear(pool, b.Time, b.L, b.H))
+                    {
+                        if (pc < c - 2 * _tick && b.C > c && b.Cpos >= 0.6 && b.Delta >= 0 && b.Brat >= 0.4)
+                        { Emit(raw, B, pool, i, +1, "KB3 climax phá cụm", Math.Min(b.L, c), new List<string> { "phá cụm", $"Δ{b.Delta:+0;-0}", $"VSA {b.Vratio:0.0}x tím" }, 'C', c); break; }
+                        if (pc > c + 2 * _tick && b.C < c && b.Cpos <= 0.4 && b.Delta <= 0 && b.Brat >= 0.4)
+                        { Emit(raw, B, pool, i, -1, "KB3 climax phá cụm", Math.Max(b.H, c), new List<string> { "phá cụm", $"Δ{b.Delta:+0;-0}", $"VSA {b.Vratio:0.0}x tím" }, 'C', c); break; }
+                    }
+                }
             }
             return Dedup(raw);
         }
@@ -519,6 +535,29 @@ namespace EntrySignal
                 seen.Add((long)Math.Round(zp / _tick));
             }
             return seen.Count;
+        }
+
+        // Tâm các CỤM ≥MinConfluence vùng (gộp ≤ConfluenceTol) đang sống gần [lo..hi]. Dùng cho KB3.
+        private List<double> ClustersNear(List<PZone> pool, DateTime t, double lo, double hi)
+        {
+            var seen = new HashSet<long>(); var ps = new List<double>();
+            foreach (var z in pool)
+            {
+                if (t < z.ReadyTime || t > z.ExpireTime) continue;
+                double zp = z.Price; if (double.IsNaN(zp) || zp <= 0) continue;
+                if (zp < lo - 3 || zp > hi + 3) continue;
+                if (seen.Add((long)Math.Round(zp / _tick))) ps.Add(Math.Round(zp / _tick) * _tick);
+            }
+            ps.Sort();
+            var res = new List<double>(); int k = 0;
+            while (k < ps.Count)
+            {
+                int j = k; var grp = new List<double> { ps[k] };
+                while (j + 1 < ps.Count && (ps[j + 1] - grp[0]) / _tick <= ConfluenceTol) { grp.Add(ps[j + 1]); j++; }
+                if (grp.Count >= MinConfluence) res.Add(grp.Average());
+                k = j + 1;
+            }
+            return res;
         }
 
         private bool Emit(List<Sig> raw, List<Bar> B, List<PZone> pool, int i, int side, string scen, double anchor, List<string> why, char grade, double zonePrice)

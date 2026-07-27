@@ -203,7 +203,7 @@ def _emit(raw,B,i,z,side,scen,anchor,why,pool):
         else:cand=nz+2*TICK
         rr_cand=abs(cand-entry)/r_dollar
         if rr_cand>=NEXTZONE_MINR:tpx=cand;rx=rr_cand
-    raw.append(dict(i=i,dt=b['dt'],side=side,scen=scen,zone=f"{z['kind']} {z['price']:.1f}",zstr=z['strength'],
+    raw.append(dict(i=i,dt=b['dt'],brk_bar=z['brk_bar'],zp_break=z['price'],side=side,scen=scen,zone=f"{z['kind']} {z['price']:.1f}",zstr=z['strength'],
         entry=entry,sl=sl,tp3=tp3,tpx=tpx,rx=rx,risk_t=risk,bias=b['bias'],climax=b['vratio']>=VSA_CLIMAX,
         vwap='tren' if entry>=b['vwap'] else 'duoi',vsa=b['vratio'],why=";".join(why)))
     return True

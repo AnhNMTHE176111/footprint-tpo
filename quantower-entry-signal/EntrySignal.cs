@@ -529,6 +529,7 @@ namespace EntrySignal
             var seen = new HashSet<long>();
             foreach (var z in pool)
             {
+                if (z.IsVwap) continue;   // khớp backtest (pool cụm KHÔNG gồm VWAP) — giữ đúng edge đã validate
                 if (t < z.ReadyTime || t > z.ExpireTime) continue;
                 double zp = z.Price; if (double.IsNaN(zp) || zp <= 0) continue;
                 if (Math.Abs(zp - price) / _tick > ConfluenceTol) continue;
@@ -543,6 +544,7 @@ namespace EntrySignal
             var seen = new HashSet<long>(); var ps = new List<double>();
             foreach (var z in pool)
             {
+                if (z.IsVwap) continue;   // khớp backtest cụm
                 if (t < z.ReadyTime || t > z.ExpireTime) continue;
                 double zp = z.Price; if (double.IsNaN(zp) || zp <= 0) continue;
                 if (zp < lo - 3 || zp > hi + 3) continue;

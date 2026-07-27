@@ -11,10 +11,21 @@
 //  lại hẳn trong range). RESUME = nến đóng vượt cực trị nhịp hồi → vào tại close.
 //  SL = cực trị nhịp hồi ± buf (sàn 3đ, trần 7đ). Chỉ bắn NẾN ĐÃ ĐÓNG (không repaint).
 //
-//  Logic KHỚP research/entry_cbr.py (backtest 28 ngày: net +37R@3R, WR 32%, 127 lệnh,
-//  bắt 4/6 GT). Bias EMA TẮT (lọc nhầm → dùng TPO bias khi vào lệnh thật). Vùng hợp
-//  lưu (co_vung) và TP-vướng-vùng CHỈ là thông tin hiển thị — KHÔNG lọc bỏ tín hiệu
-//  (test cho thấy hard-loại đều GIẢM net). Build: build-runner.sh (concat ProfileEngine).
+//  Logic KHỚP research/entry_cbr.py + optimize_loop.py (backtest thanh khoản 5-7/2026,
+//  dxFeed GCQ26). Vùng hợp lưu (co_vung) và TP-vướng-vùng CHỈ là info hiển thị.
+//  Build: build-runner.sh (concat ProfileEngine).
+//
+//  === NÂNG CẤP 2026-07-28 (đối chiếu live CSV 221 lệnh + 9 tháng data + 4 setup đảo chiều) ===
+//  Phát hiện: nhánh cũ QUAY ĐẦU LỖ (-6R, WR23%, gate climax/VSA/co_vung VÔ NGHĨA); CBR
+//  thắng theo XU HƯỚNG, thua NGƯỢC (thg6 crash -550 → LONG -19R). Bốn cải tiến ĐO ĐƯỢC:
+//   1) LỌC THUẬN XU HƯỚNG (proxy TPO bias, close vs close ~8h): thg6 -16R→+5R, net +18→+35R,
+//      MỌI THÁNG DƯƠNG. EMA30/120 quá nhanh → dùng lookback chậm.
+//   2) RETRACE 60-90% (nâng sàn hồi): WR 30→33% (hồi sâu = runner thật).
+//   3) VÀO ĐÚNG PHÍA VWAP + LỌC THANH KHOẢN (vma ≥ 0.75× TB dài): WR 33→37%, giữ net.
+//   4) QUAY ĐẦU XÂY LẠI quanh VWAP (4 setup user đều neo VWAP): bỏ gate vô nghĩa, chỉ giữ
+//      VWAP + rút râu + đóng mạnh + VSA≥1.8 + THUẬN trend; TP 1.5R (đảo chiều trần ~1.3R,
+//      KHÔNG phải 3R). Kết quả: WR 23→56%, -6R→+10R. Absorption footprint = bonus grade LIVE.
+//  Portfolio (CBR@3R + Quay đầu@1.5R): WR ~39%, +48R/3 tháng, cả 3 tháng dương.
 // ============================================================================
 namespace RunnerSignal
 {
@@ -79,7 +90,7 @@ namespace RunnerSignal
         [InputParameter("Chờ hồi+tiếp diễn trong (số nến)", 55, 3, 40, 1, 0)]
         public int WaitBars { get; set; } = 12;
         [InputParameter("Retrace TỐI THIỂU (% của leg)", 56, 0.05, 0.9, 0.05, 2)]
-        public double PullMin { get; set; } = 0.40;   // sweep: nâng sàn 10→40% net +28→+35. Hồi nông = đuổi đà kiệt (07/24 09:54).
+        public double PullMin { get; set; } = 0.60;   // nâng 40→60% (2026-07-28): WR 30→33%, giữ net. Hồi SÂU 60-90% = runner thật; hồi nông = đuổi đà kiệt.
         [InputParameter("Retrace TỐI ĐA (% của leg)", 57, 0.3, 1.0, 0.05, 2)]
         public double PullMax { get; set; } = 0.90;   // GIỮ cao: hồi sâu 60-90% chứa nhiều runner lớn. Cap thấp = cắt lãi.
         [InputParameter("Hồi cho phép thủng cạnh vùng (tick)", 58, 0, 10, 1, 0)]
@@ -101,18 +112,38 @@ namespace RunnerSignal
         [InputParameter("Gộp tín hiệu trùng (số nến)", 65, 1, 20, 1, 0)]
         public int DedupBars { get; set; } = 6;
 
-        // ---------- QUAY ĐẦU (reversal tại vùng — dùng HẤP THỤ footprint LIVE) ----------
-        [InputParameter("Bật nhánh QUAY ĐẦU (chạm vùng + hấp thụ)", 66)]
+        // ---------- LỌC THUẬN XU HƯỚNG (proxy TPO bias) + THANH KHOẢN (2026-07-28) ----------
+        [InputParameter("Lọc THUẬN xu hướng (proxy TPO bias)", 44)]
+        public bool TrendFilter { get; set; } = true;    // thg6 crash: -16R→+5R, MỌI THÁNG DƯƠNG
+        [InputParameter("Xu hướng: số nến lookback (~8h)", 45, 60, 2000, 20, 0)]
+        public int TrendBars { get; set; } = 480;        // 480≈8h. EMA30/120 quá nhanh → loại nhầm.
+        [InputParameter("Xu hướng: ngưỡng đổi hướng (giá)", 46, 0.0, 10, 0.1, 1)]
+        public double TrendTolPts { get; set; } = 1.0;
+        [InputParameter("CBR: vào ĐÚNG phía VWAP", 47)]
+        public bool VwapAlign { get; set; } = true;      // LONG khi entry≥VWAP; SHORT khi ≤VWAP
+        [InputParameter("Lọc thanh khoản (vma ≥ k×TB dài)", 48)]
+        public bool LiquidityFilter { get; set; } = true; // COMEX/US session > Á mỏng (portable, không hardcode giờ)
+        [InputParameter("Thanh khoản: k (× TB dài)", 49, 0.0, 3.0, 0.05, 2)]
+        public double LiquidityRatio { get; set; } = 0.75;
+        [InputParameter("Thanh khoản: cửa sổ TB (số nến)", 43, 100, 5000, 50, 0)]
+        public int LiquidityWindow { get; set; } = 1000;
+
+        // ---------- QUAY ĐẦU v2 — đảo chiều tại VWAP (2026-07-28, khớp reversal_vwap.py) ----------
+        [InputParameter("Bật nhánh QUAY ĐẦU (đảo chiều tại VWAP)", 66)]
         public bool EnableReversal { get; set; } = true;
-        [InputParameter("Quay đầu: khoảng arm tới vùng (tick)", 67, 5, 60, 1, 0)]
-        public int ArmDistTicks { get; set; } = 20;
-        [InputParameter("Hấp thụ: dominance mức ≥ (|Δ|/vol per-level)", 68, 0.3, 1.0, 0.05, 2)]
-        public double AbsDom { get; set; } = 0.60;
+        [InputParameter("Quay đầu: RR mục tiêu (TP) — đảo chiều trần ~1.3R", 67, 1.0, 4.0, 0.25, 2)]
+        public double RevRR { get; set; } = 1.5;
+        [InputParameter("Quay đầu: VSA xác nhận tối thiểu", 68, 1.0, 4.0, 0.1, 1)]
+        public double RevVsaConf { get; set; } = 1.8;
+        [InputParameter("Quay đầu: dung sai chạm VWAP (tick)", 74, 2, 40, 1, 0)]
+        public int VwapTolTicks { get; set; } = 12;
+        [InputParameter("Quay đầu: số nến tiếp cận VWAP", 75, 2, 20, 1, 0)]
+        public int RevApproachBars { get; set; } = 6;
         [InputParameter("Quay đầu: rút râu ≥ (rau/range)", 69, 0.3, 1.0, 0.05, 2)]
         public double WickFrac { get; set; } = 0.50;
-        [InputParameter("Quay đầu: hoặc thân mạnh ≥ (body/range)", 72, 0.3, 1.0, 0.05, 2)]
-        public double BodyStrong { get; set; } = 0.55;
-        [InputParameter("Quay đầu: climax tím thay được tường hấp thụ", 73)]
+        [InputParameter("Hấp thụ per-level (footprint LIVE) = nâng grade A", 76, 0.3, 1.0, 0.05, 2)]
+        public double AbsDom { get; set; } = 0.60;
+        [InputParameter("Quay đầu: climax tím = nâng grade (bonus)", 73)]
         public bool RevClimaxOverride { get; set; } = true;
 
         // ---------- lọc / warm-up ----------
@@ -227,6 +258,8 @@ namespace RunnerSignal
             public DateTime Time;
             public double O, H, L, C, Vol, Delta, Cum, Vwap, Vma, Vratio;
             public int Bias;      // EMA30 vs EMA120 (hiển thị; KHÔNG gate — bias thật = TPO)
+            public int Trend;     // close vs close TrendBars trước (proxy TPO bias — GATE)
+            public double LiqRatio;  // vma / TB-vol dài (thanh khoản phiên; GATE)
             public int SinceGap;
             public double Rng => H - L;
             public double Body => Math.Abs(C - O);
@@ -241,13 +274,12 @@ namespace RunnerSignal
         {
             public double Price; public string Kind; public double Strength;
             public DateTime ReadyTime, ExpireTime;
-            public string PrevRel;   // above/below/in — hướng tiếp cận vùng (nhánh quay đầu)
         }
 
         private sealed class Sig
         {
             public int Idx; public DateTime Time; public int Side;
-            public string Scen; public char Grade; public double Entry, Sl, Tp1, Tp2, RiskT, Rr2;
+            public string Scen; public char Grade; public double Entry, Sl, Tp1, Tp2, RiskT, Rr2, TargetRr;
             public int Cluster;          // số vùng chồng quanh giá vào (info, KHÔNG gate)
             public double BlockR;        // TP-vướng-vùng mạnh: cách entry bao nhiêu R (NaN = không vướng)
             public double Vsa; public bool Climax; public List<string> Why = new();
@@ -306,9 +338,11 @@ namespace RunnerSignal
                     Vol = t?.Volume ?? b.Volume, Delta = t?.Delta ?? 0 });
             }
             _vaCov = cov; _vaTot = B.Count; _vaFirst = first;
-            double csPV = 0, csV = 0, cum = 0, rollSum = 0;
+            double csPV = 0, csV = 0, cum = 0, rollSum = 0, liqSum = 0;
             double ef = double.NaN, es = double.NaN, kf = 2.0 / (30 + 1), ks = 2.0 / (120 + 1);
+            int liqW = Math.Max(100, LiquidityWindow);
             var q = new Queue<double>();
+            var lq = new Queue<double>();       // cửa sổ dài để tính TB-vol thanh khoản (O(1))
             for (int i = 0; i < B.Count; i++)
             {
                 var b = B[i];
@@ -321,15 +355,27 @@ namespace RunnerSignal
                 if (q.Count > VsaPeriod) rollSum -= q.Dequeue();
                 b.Vma = q.Count > 0 ? rollSum / q.Count : b.Vol;
                 b.Vratio = b.Vma > 1e-9 ? b.Vol / b.Vma : 0;
+                // TB-vol dài (KHÔNG gồm nến này) → tỉ lệ thanh khoản portable
+                double liqMean = lq.Count > 0 ? liqSum / lq.Count : b.Vol;
+                b.LiqRatio = liqMean > 1e-9 ? b.Vma / liqMean : 1.0;
+                lq.Enqueue(b.Vol); liqSum += b.Vol;
+                if (lq.Count > liqW) liqSum -= lq.Dequeue();
                 ef = double.IsNaN(ef) ? b.C : ef + kf * (b.C - ef);
                 es = double.IsNaN(es) ? b.C : es + ks * (b.C - es);
                 b.Bias = ef > es + 3 * _tick ? 1 : ef < es - 3 * _tick ? -1 : 0;
+                // xu hướng chậm (proxy TPO bias): close vs close TrendBars trước
+                if (i >= TrendBars) { double d = b.C - B[i - TrendBars].C; b.Trend = d > TrendTolPts ? 1 : d < -TrendTolPts ? -1 : 0; }
+                else b.Trend = 0;
                 b.SinceGap = gap ? 0 : (i > 0 ? B[i - 1].SinceGap + 1 : 999);
             }
             return B;
         }
 
         private bool Gate(Bar b) => b.Vol >= VolFloor && b.SinceGap >= WarmupBars && b.Vma >= VolFloor * 0.6;
+        // GATE chung (2026-07-28): thuận xu hướng (proxy TPO bias) + đúng phía VWAP + thanh khoản đủ
+        private bool TrendOk(Bar b, int side) => !TrendFilter || b.Trend == side;
+        private bool VwapOk(Bar b, int side) => !VwapAlign || (side > 0 ? b.C >= b.Vwap : b.C <= b.Vwap);
+        private bool LiqOk(Bar b) => !LiquidityFilter || b.LiqRatio >= LiquidityRatio;
 
         // ================= dựng pool vùng (chỉ để hiển thị hợp lưu + info TP-vướng) =================
         private List<PZone> BuildPool(HistoricalData hd, List<Bar> B)
@@ -437,8 +483,10 @@ namespace RunnerSignal
                             else { sl = pullExt + SlBuf * _tick; risk = (sl - entry) / _tick; }
                             if (risk < slFloorT) { sl = up ? entry - slFloorT * _tick : entry + slFloorT * _tick; risk = slFloorT; }
                             if (risk > slCapT) break;
-                            AddSig(raw, j, side, entry, sl, risk, b.Vratio, "CBR phá→hồi→tiếp diễn",
-                                new List<string> { $"phá {edge.ToString("0.0##")}", $"hồi {retr * 100:0}%", $"leg {leg:0.0}giá", $"VSA {b.Vratio:0.0}x{(b.Vratio >= VsaClimax ? " tím" : "")}" });
+                            // GATE (thuận trend + đúng phía VWAP + thanh khoản) — 1 setup/range, filter-then-break khớp Python
+                            if (TrendOk(bj, side) && VwapOk(bj, side) && LiqOk(bj))
+                                AddSig(raw, j, side, entry, sl, risk, RR, b.Vratio, "CBR phá→hồi→tiếp diễn",
+                                    new List<string> { $"phá {edge.ToString("0.0##")}", $"hồi {retr * 100:0}%", $"leg {leg:0.0}giá", $"VSA {b.Vratio:0.0}x{(b.Vratio >= VsaClimax ? " tím" : "")}" });
                             break;
                         }
                     }
@@ -450,70 +498,63 @@ namespace RunnerSignal
             return Cooldown_(Dedup(raw));
         }
 
-        private void AddSig(List<Sig> raw, int idx, int side, double entry, double sl, double risk, double vsa, string scen, List<string> why)
+        private void AddSig(List<Sig> raw, int idx, int side, double entry, double sl, double risk, double targetRr, double vsa, string scen, List<string> why)
         {
             raw.Add(new Sig { Idx = idx, Side = side, Scen = scen, Entry = entry, Sl = sl, RiskT = risk,
-                Rr2 = RR, Vsa = vsa, Climax = vsa >= VsaClimax, Why = why });
+                Rr2 = RR, TargetRr = targetRr, Vsa = vsa, Climax = vsa >= VsaClimax, Why = why });
         }
 
-        // ===== NHÁNH QUAY ĐẦU: chạm vùng + HẤP THỤ per-level (footprint LIVE) → đảo chiều, TP 3R =====
-        // KHÔNG backtest offline được (CSV không có footprint per-level) → validate LIVE. Cổng chặt:
-        // giá tiếp cận vùng (arm), tag vùng, đóng bật lại đúng phía, + tường hấp thụ (Absorption) HOẶC
-        // nến climax tím. SL ngoài cực trị ±buf (sàn/trần như CBR).
+        // ===== NHÁNH QUAY ĐẦU v2 — ĐẢO CHIỀU TẠI VWAP (2026-07-28, khớp reversal_vwap.py) =====
+        // 4 setup thật của user ĐỀU neo VWAP (3/4) + phá-hụt + 1 nến xác nhận mạnh. Live CSV bác
+        // gate cũ (climax/VSA-độ-lớn/co_vung VÔ NGHĨA; delta gate làm TỆ hơn) → BỎ hết, chỉ giữ:
+        // VWAP + rút râu + đóng mạnh phía đảo + VSA≥RevVsaConf + đến-từ-đúng-phía + THUẬN trend.
+        // TP = RevRR (1.5R — đảo chiều trần MFE ~1.3R, KHÁC runner 3R). SL ngoài cực trị/VWAP.
+        // Absorption per-level (footprint LIVE) = BONUS nâng grade, KHÔNG bắt buộc (offline bác delta).
         private List<Sig> ScanReversal(HistoricalData hd, List<Bar> B, List<PZone> pool)
         {
             var raw = new List<Sig>();
-            int nClosed = B.Count - 1; int buf = SlBuf;
-            double slFloorT = SlFloorPts / _tick, slCapT = SlCapPts / _tick;
-            foreach (var z in pool) z.PrevRel = null;
+            int nClosed = B.Count - 1;
+            double slFloorT = SlFloorPts / _tick, slCapT = SlCapPts / _tick, tol = VwapTolTicks * _tick;
             for (int i = VsaPeriod + 2; i < nClosed; i++)
             {
-                var b = B[i]; double px = b.C;
-                bool gated = Gate(b);
-                foreach (var z in pool)
-                {
-                    if (b.Time < z.ReadyTime || b.Time > z.ExpireTime) continue;
-                    double zp = z.Price; if (double.IsNaN(zp) || zp <= 0) continue;
-                    string rel = b.C > zp + buf * _tick ? "above" : b.C < zp - buf * _tick ? "below" : "in";
-                    if (!gated) { z.PrevRel = px > zp ? "above" : "below"; continue; }
-                    double dist = Math.Abs(px - zp) / _tick;
-                    if (dist > ArmDistTicks) { z.PrevRel = rel; continue; }
-                    double zlo = zp - buf * _tick, zhi = zp + buf * _tick;
-                    bool tagged = b.L <= zhi && b.H >= zlo;
-                    bool up = z.PrevRel == "below", dn = z.PrevRel == "above";
-                    if (tagged)
-                    {
-                        // tới vùng từ DƯỚI, bị đẩy xuống lại (kháng cự) → SHORT
-                        if (up && b.C < zhi && b.Delta < 0 && RejDown(b))
-                        {
-                            bool wall = Absorption(HdBar(hd, b.HdIdx), b.H, -1) || (RevClimaxOverride && b.Vratio >= VsaClimax);
-                            if (wall) EmitRev(raw, i, -1, b.C, Math.Max(b.H, zp), zp, b.Vratio, slFloorT, slCapT);
-                        }
-                        // tới vùng từ TRÊN, bị đỡ lên lại (hỗ trợ) → LONG
-                        else if (dn && b.C > zlo && b.Delta > 0 && RejUp(b))
-                        {
-                            bool wall = Absorption(HdBar(hd, b.HdIdx), b.L, +1) || (RevClimaxOverride && b.Vratio >= VsaClimax);
-                            if (wall) EmitRev(raw, i, +1, b.C, Math.Min(b.L, zp), zp, b.Vratio, slFloorT, slCapT);
-                        }
-                    }
-                    z.PrevRel = rel;
-                }
+                var b = B[i];
+                if (!Gate(b)) continue;
+                double rng = b.Rng; if (rng <= 0) continue;
+                double vw = b.Vwap;
+                // SHORT: VWAP là KHÁNG CỰ — giá đẩy lên chạm VWAP rồi bị từ chối
+                bool touchUp = b.H >= vw - tol;
+                bool rejShort = b.UW >= WickFrac * rng && b.Cpos <= 0.45 && b.C < vw && b.Brat >= 0.30 && b.Vratio >= RevVsaConf;
+                // LONG: VWAP là HỖ TRỢ — giá đạp xuống chạm VWAP rồi bật lên
+                bool touchDn = b.L <= vw + tol;
+                bool rejLong = b.LW >= WickFrac * rng && b.Cpos >= 0.55 && b.C > vw && b.Brat >= 0.30 && b.Vratio >= RevVsaConf;
+                // bối cảnh: đến từ đúng phía (đẩy VÀO VWAP) trong RevApproachBars nến
+                bool approUp = false, approDn = false;
+                for (int k = Math.Max(0, i - RevApproachBars); k < i; k++)
+                { if (B[k].C < vw) approUp = true; if (B[k].C > vw) approDn = true; }
+
+                int side = 0; double anchor = 0;
+                if (touchUp && rejShort && approUp) { side = -1; anchor = Math.Max(b.H, vw); }
+                else if (touchDn && rejLong && approDn) { side = +1; anchor = Math.Min(b.L, vw); }
+                if (side == 0) continue;
+                if (!TrendOk(b, side)) continue;   // THUẬN trend (mua nhịp giảm trong uptrend / bán nhịp tăng trong downtrend)
+
+                bool wall = Absorption(HdBar(hd, b.HdIdx), side > 0 ? b.L : b.H, side) || (RevClimaxOverride && b.Vratio >= VsaClimax);
+                EmitRev(raw, i, side, b.C, anchor, vw, b.Vratio, slFloorT, slCapT, wall);
             }
             return raw;
         }
 
-        private bool RejUp(Bar b) => (b.LW >= WickFrac * b.Rng && b.Cpos >= 0.55) || (b.Brat >= BodyStrong && b.Ddom >= 0.25 && b.Cpos >= 0.6);
-        private bool RejDown(Bar b) => (b.UW >= WickFrac * b.Rng && b.Cpos <= 0.45) || (b.Brat >= BodyStrong && b.Ddom <= -0.25 && b.Cpos <= 0.4);
-
-        private void EmitRev(List<Sig> raw, int i, int side, double entry, double anchor, double zp, double vsa, double slFloorT, double slCapT)
+        private void EmitRev(List<Sig> raw, int i, int side, double entry, double anchor, double vw, double vsa, double slFloorT, double slCapT, bool wall)
         {
+            // SL TIGHT ở cực trị/VWAP (KHÔNG sàn 3 giá như CBR — user: "SL đặt ở VWAP thì đẹp"), cap slCapT
             double sl, risk;
             if (side > 0) { sl = anchor - SlBuf * _tick; risk = (entry - sl) / _tick; }
             else { sl = anchor + SlBuf * _tick; risk = (sl - entry) / _tick; }
-            if (risk < slFloorT) { sl = side > 0 ? entry - slFloorT * _tick : entry + slFloorT * _tick; risk = slFloorT; }
-            if (risk <= 0 || risk > slCapT) return;
-            AddSig(raw, i, side, entry, sl, risk, vsa, "quay đầu (hấp thụ)",
-                new List<string> { $"chạm {zp:0.0##}", vsa >= VsaClimax ? "climax tím" : "hấp thụ", $"VSA {vsa:0.0}x" });
+            if (risk <= 5 || risk > slCapT) return;
+            _ = slFloorT;
+            var why = new List<string> { $"đảo chiều VWAP {vw:0.0##}", side > 0 ? "rút râu dưới" : "rút râu trên", $"VSA {vsa:0.0}x{(vsa >= VsaClimax ? " tím" : "")}" };
+            if (wall) why.Add("hấp thụ ✓");
+            AddSig(raw, i, side, entry, sl, risk, RevRR, vsa, "quay đầu VWAP", why);
         }
 
         // Tường hấp thụ per-level (footprint LIVE): tại cực trị có mức volume vượt trội + dominance
@@ -577,7 +618,8 @@ namespace RunnerSignal
         private double BlockRToTp(List<PZone> pool, Sig s)
         {
             double r = s.RiskT * _tick, best = double.NaN;
-            double tp = s.Side > 0 ? s.Entry + RR * r : s.Entry - RR * r;
+            double trr = s.TargetRr > 0 ? s.TargetRr : RR;
+            double tp = s.Side > 0 ? s.Entry + trr * r : s.Entry - trr * r;
             foreach (var z in pool)
             {
                 if (s.Time < z.ReadyTime || s.Time > z.ExpireTime || z.Strength < 58) continue;
@@ -595,7 +637,8 @@ namespace RunnerSignal
             var b0 = B[s.Idx];
             s.Time = b0.Time;
             double r = s.RiskT * _tick;
-            s.Tp1 = s.Side > 0 ? s.Entry + RR * r : s.Entry - RR * r; s.Tp2 = s.Tp1;
+            double rr = s.TargetRr > 0 ? s.TargetRr : RR;   // CBR=RR(3), quay đầu VWAP=RevRR(1.5)
+            s.Tp1 = s.Side > 0 ? s.Entry + rr * r : s.Entry - rr * r; s.Tp2 = s.Tp1;
             for (int j = s.Idx + 1; j < B.Count; j++)
             {
                 var b = B[j];
@@ -645,7 +688,7 @@ namespace RunnerSignal
                       .Append(s.Sl.ToString("0.0##", ci)).Append(',')
                       .Append((s.RiskT * _tick).ToString("0.0", ci)).Append(',')
                       .Append(s.Tp1.ToString("0.0##", ci)).Append(',')
-                      .Append(RR.ToString("0.#", ci)).Append(',')
+                      .Append((s.TargetRr > 0 ? s.TargetRr : RR).ToString("0.#", ci)).Append(',')
                       .Append(s.Vsa.ToString("0.00", ci)).Append(',')
                       .Append(s.Climax ? "tim" : "-").Append(',')
                       .Append(s.Cluster.ToString(ci)).Append(',')
@@ -683,7 +726,8 @@ namespace RunnerSignal
             int tp = sigs.Count(s => s.Outcome == "TP"), sl = sigs.Count(s => s.Outcome == "SL");
             int closed = tp + sl;
             string wr = closed > 0 ? $" · WR {100.0 * tp / closed:0}%" : "";
-            p.Add(($"RUNNER CBR (M1)   {sigs.Count} tín hiệu · ✓{tp} ✗{sl} •{running}{wr}  [TP {RR:0.#}R]", Color.White));
+            int nRev = sigs.Count(s => s.Scen != null && s.Scen.StartsWith("quay"));
+            p.Add(($"RUNNER CBR+VWAP (M1)   ▶{sigs.Count - nRev} ↩{nRev} · ✓{tp} ✗{sl} •{running}{wr}  [CBR {RR:0.#}R · quay đầu {RevRR:0.#}R]", Color.White));
             if (_vaTot > 0 && _vaCov < (int)(_vaTot * 0.98) && _vaFirst != DateTime.MinValue)
                 p.Add(($"⚠ footprint chỉ có {_vaCov}/{_vaTot} nến (từ {_vaFirst:dd/MM HH:mm}) — tăng số bar Volume Analysis", Color.FromArgb(255, 190, 120)));
             if (ExportCsv && !string.IsNullOrEmpty(_exportedTo))
@@ -695,7 +739,9 @@ namespace RunnerSignal
                 Color col = s.Side > 0 ? LongColor : ShortColor;
                 string dir = s.Side > 0 ? "LONG" : "SHORT";
                 string oc = s.Outcome == "TP" ? "✓" : s.Outcome == "SL" ? "✗" : "•";
-                p.Add(($"{oc} {dir} {s.Grade} | E {Fmt(s.Entry)} SL {Fmt(s.Sl)} ({s.RiskT * _tick:0.0}đ) TP {Fmt(s.Tp1)} ({RR:0.#}R)", col));
+                string tag = s.Scen != null && s.Scen.StartsWith("quay") ? "↩" : "▶";
+                double rr = s.TargetRr > 0 ? s.TargetRr : RR;
+                p.Add(($"{oc} {tag} {dir} {s.Grade} | E {Fmt(s.Entry)} SL {Fmt(s.Sl)} ({s.RiskT * _tick:0.0}giá) TP {Fmt(s.Tp1)} ({rr:0.#}R)", col));
                 p.Add(($"    {string.Join(" · ", s.Why)}", Color.Silver));
             }
             return p;
@@ -771,14 +817,15 @@ namespace RunnerSignal
                         if (ShowArrows) DrawArrow(gr, xE, yE, s.Side, active ? dir : Color.FromArgb(180, dir), Math.Max(4, active ? ArrowSize : ArrowSize - 2));
                         if (ShowLabels)
                         {
-                            string lbl = (s.Side > 0 ? "LONG " : "SHORT ") + s.Grade + (s.Cluster >= MinConfluence ? " ×" + s.Cluster : "") + (active ? " · CBR" : "");
+                            string br = s.Scen != null && s.Scen.StartsWith("quay") ? "↩VWAP" : "▶CBR";
+                            string lbl = (s.Side > 0 ? "LONG " : "SHORT ") + s.Grade + (s.Cluster >= MinConfluence ? " ×" + s.Cluster : "") + (active ? " · " + br : "");
                             LabelBox(gr, fLbl, xE + 10, s.Side > 0 ? yBot + 4 : yTop - 20, lbl, active ? dir : Color.FromArgb(210, dir));
                         }
                         if (active && ShowChips)
                         {
                             Chip(gr, fChip, clip.Right, yE, "E " + Fmt(s.Entry), dir, true);
-                            Chip(gr, fChip, clip.Right, ySL, "SL " + Fmt(s.Sl) + " (" + (s.RiskT * _tick).ToString("0.0") + "đ)", SlLineColor, true);
-                            Chip(gr, fChip, clip.Right, yTP, "TP " + Fmt(s.Tp1) + "  " + RR.ToString("0.#") + "R", TpLineColor, true);
+                            Chip(gr, fChip, clip.Right, ySL, "SL " + Fmt(s.Sl) + " (" + (s.RiskT * _tick).ToString("0.0") + "giá)", SlLineColor, true);
+                            Chip(gr, fChip, clip.Right, yTP, "TP " + Fmt(s.Tp1) + "  " + (s.TargetRr > 0 ? s.TargetRr : RR).ToString("0.#") + "R", TpLineColor, true);
                         }
                         else if (!active)
                         {

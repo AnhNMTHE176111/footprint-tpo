@@ -7,3 +7,7 @@ note.txt
 
 # DLL doc quyen cua ATAS - KHONG commit len repo public
 atas-orderflow-indicator/tools/*.dll
+
+# Rac build cua project test (chi commit source + dist/*.dll)
+**/tests/bin/
+**/tests/obj/

@@ -1,0 +1,22 @@
+<!-- Test lõi FootprintCore — chạy trên LINUX, KHÔNG cần Quantower.
+     Chỉ compile FootprintCore.cs (file indicator có tham chiếu TradingPlatform nên loại ra).
+     Chạy:  cd tests && dotnet run                (exit code 0 = pass hết)  -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>FootprintCoreTests</AssemblyName>
+    <RootNamespace>FootprintExport</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- CS0649: vài field của FpBar chỉ được gán trong FootprintExport.cs (file kia không nằm
+         trong project test vì tham chiếu TradingPlatform). Không phải lỗi. -->
+    <NoWarn>CS0649</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../FootprintCore.cs" />
+    <Compile Include="Tests.cs" />
+  </ItemGroup>
+</Project>

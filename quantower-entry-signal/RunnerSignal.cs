@@ -128,6 +128,18 @@ namespace RunnerSignal
         [InputParameter("Thanh khoản: cửa sổ TB (số nến)", 43, 100, 5000, 50, 0)]
         public int LiquidityWindow { get; set; } = 1000;
 
+        // ---------- Lọc PHIÊN CHẾT (research 148 lệnh THẬT 2026-07-28) ----------
+        // Khung 02–08h (giờ hiển thị = UTC+TzOffset ≈ giờ CME nghỉ/settlement 17-18h ET): CBR ở khung này
+        // WR 10%, −19R, XẤU cả 3 tháng. CHỈ cắt CBR (reversal khung này 4/4 THẮNG → MIỄN): WR 36→43%, +38→+57R.
+        // Mặc định BẬT — đã validate trên CSV LIVE C# (cùng engine, không phải proxy), robust cả 3 tháng.
+        // Tắt ô này nếu muốn so A/B với bản không lọc.
+        [InputParameter("Lọc phiên chết: BỎ lệnh CBR khung giờ chết (mặc định BẬT)", 77)]
+        public bool SkipDeadSession { get; set; } = true;
+        [InputParameter("Phiên chết: giờ BẮT ĐẦU (giờ hiển thị 0-23)", 78, 0, 23, 1, 0)]
+        public int DeadStartHour { get; set; } = 2;
+        [InputParameter("Phiên chết: giờ KẾT THÚC (không gồm, 0-24)", 79, 0, 24, 1, 0)]
+        public int DeadEndHour { get; set; } = 8;
+
         // ---------- QUAY ĐẦU v2 — đảo chiều tại VWAP (2026-07-28, khớp reversal_vwap.py) ----------
         [InputParameter("Bật nhánh QUAY ĐẦU (đảo chiều tại VWAP)", 66)]
         public bool EnableReversal { get; set; } = true;
@@ -566,7 +578,20 @@ namespace RunnerSignal
                 }
             }
             if (EnableReversal) raw.AddRange(ScanReversal(hd, B, pool));
+            // Lọc phiên chết TRƯỚC dedup/cooldown. CHỈ cắt CBR — reversal MIỄN (verify 148 lệnh THẬT:
+            // reversal trong khung chết 4/4 THẮNG +6R; cắt cả 2 nhánh +51R, chỉ cắt CBR +57R). Idx = nến vào.
+            if (SkipDeadSession && DeadStartHour != DeadEndHour)
+                raw.RemoveAll(s => !IsRev(s) && InDeadWindow(B[s.Idx].Time));
             return Cooldown_(Dedup(raw));
+        }
+
+        // Giờ (hiển thị = UTC+TzOffset) rơi vào khung chết? Hỗ trợ khung qua nửa đêm (start > end).
+        private bool InDeadWindow(DateTime tUtc)
+        {
+            int h = tUtc.AddHours(TzOffset).Hour;
+            return DeadStartHour <= DeadEndHour
+                ? (h >= DeadStartHour && h < DeadEndHour)
+                : (h >= DeadStartHour || h < DeadEndHour);
         }
 
         private void AddSig(List<Sig> raw, int idx, int side, double entry, double sl, double risk, double targetRr, double vsa, string scen, List<string> why)
@@ -1030,7 +1055,8 @@ namespace RunnerSignal
             int closed = tp + sl;
             string wr = closed > 0 ? $" · WR {100.0 * tp / closed:0}%" : "";
             int nRev = sigs.Count(s => s.Scen != null && s.Scen.StartsWith("quay"));
-            p.Add(($"RUNNER CBR+VWAP (M1)   ▶{sigs.Count - nRev} ↩{nRev} · ✓{tp} ✗{sl} •{running}{wr}  [CBR {RR:0.#}R · quay đầu {RevRR:0.#}R]", Color.White));
+            string deadTag = (SkipDeadSession && DeadStartHour != DeadEndHour) ? $" · ⛔{DeadStartHour:00}-{DeadEndHour:00}h" : "";
+            p.Add(($"RUNNER CBR+VWAP (M1)   ▶{sigs.Count - nRev} ↩{nRev} · ✓{tp} ✗{sl} •{running}{wr}{deadTag}  [CBR {RR:0.#}R · quay đầu {RevRR:0.#}R]", Color.White));
             // Thống kê R lời/lỗ (TP=+RR nhánh đó, SL=−1R)
             double totalR = 0;
             foreach (var s in sigs)

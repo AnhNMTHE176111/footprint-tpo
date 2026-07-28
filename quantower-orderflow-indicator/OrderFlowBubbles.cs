@@ -23,9 +23,20 @@
 //  Truy cập: bar.VolumeAnalysisData.PriceLevels[price] và .Total.
 //  Guard: HistoricalData.VolumeAnalysisCalculationProgress.State == Finished.
 //
-//  ---- HỆ MÃ HOÁ HÌNH (mới) ---------------------------------------------------
-//    • Absorption      = TRÒN ĐẶC, cố định = bề rộng nến (không scale).  cyan(đỉnh)/đỏ(đáy)
-//    • Big Trade       = TRÒN MỜ (halo), to dần theo MaxOneTradeVolume.  cyan/đỏ = aggressor
+//  ---- ABSORPTION v3 (2026-07-28, xem research/) -------------------------------
+//  Bản cũ đòi 4 điều kiện AND cứng ("1 phe ≥60%" + sát cực trị + close lùi ≥1 tick) nên gần
+//  như không bao giờ nổ, trong khi Big Trade dùng cùng metric với cửa OR rộng → chart chỉ thấy
+//  Big Trade. Bản này CHẤM ĐIỂM 5 thành phần mà mọi tài liệu order-flow đều nhắc:
+//    EFFORT (volume ô bất thường) 2đ · NO-RESULT (range hẹp / price-impact thấp ~ Kyle lambda) 2đ
+//    · tại cực trị 1đ · sau swing 1đ · POC nổi bật 1đ · delta divergence 2đ · hai phe cùng lớn 1đ
+//    · đa nến (cùng mức nóng lại) 2đ     → vẽ khi tổng ≥ AbsScoreMin (mặc định 6/12)
+//  Đã BỎ điều kiện "close lùi khỏi cực trị": test 75k nến cho thấy nó kéo hit-rate xuống DƯỚI base.
+//  XÁC NHẬN chỉ đổi viền (giữ mức = vòng trắng, vỡ = mờ đi), KHÔNG trì hoãn tín hiệu.
+//
+//  ---- HỆ MÃ HOÁ HÌNH ---------------------------------------------------------
+//    • Absorption      = TRÒN ĐẶC (sàn px = AbsMinPx).  cyan(đỉnh)/đỏ(đáy)
+//    • Big Trade/HVN   = TRÒN MỜ (halo). Feed KHÔNG cấp MaxOneTradeVolume (đã kiểm 0% trên
+//                        6 tháng dxFeed) → tooltip ghi "HVN cell · vol/ô" cho đúng bản chất.
 //    • Big Delta line  = GẠCH NGANG (rộng = nến), xanh(buy)/đỏ(sell).
 //    • Nến delta lớn   = TÔ THÂN NẾN xanh(+delta)/đỏ(−delta).
 //    • Số delta        = chữ dưới đáy nến, xanh/đỏ theo dấu.
@@ -58,6 +69,16 @@ namespace OrderFlowBubbles
             public bool Halo;           // true = viền + fill mờ (Big Trade)
             public bool UseBarWidth;    // true = đường kính/độ dài = bề rộng nến (Absorption, HLine)
             public string Tooltip;
+            public int Confirm;         // absorption: 0 = đang chờ, +1 = mức GIỮ được, -1 = mức VỠ
+        }
+
+        // absorption đang chờ xác nhận (mức giữ hay vỡ trong N nến sau)
+        private sealed class AbsRec
+        {
+            public int Idx;
+            public double Price;
+            public bool Top;
+            public Bubble B;            // tham chiếu để cập nhật Confirm
         }
 
         // key = chỉ số nến tuyệt đối (SeekOriginHistory.Begin, 0 = cũ nhất)
@@ -67,16 +88,22 @@ namespace OrderFlowBubbles
         private readonly object _calcLock = new();   // serialize thread tính (OnUpdate vs VA_Loaded)
 
         // ===================== baseline ROBUST (median + MAD) =====================
-        private RollingRobust _rLvlVol;       // per-level Volume
+        private RollingRobust _rLvlVol;       // per-level Volume (chỉ top-K ô/nến nếu BaselineTopLevels>0)
         private RollingRobust _rLvlAbsDelta;  // per-level |Delta|
         private RollingRobust _rLvlMot;       // per-level MaxOneTradeVolume (chỉ khi feed điền)
         private RollingRobust _rBarVol;       // per-bar Total.Volume
         private RollingRobust _rBarAbsDelta;  // per-bar |Total.Delta|
+        private RollingRobust _rBarRange;     // per-bar High-Low (đo "no result")
+        private RollingRobust _rBarImpact;    // per-bar |Close-Open|/Volume  ~ Kyle lambda thô
 
         private readonly List<double> _cvd = new();  // cumulative delta theo chỉ số tuyệt đối
         private int _processedClosedCount;
         private bool _vaLoaded;
         private int _lastDivPivot = int.MinValue;     // cooldown divergence
+
+        // ô có EFFORT cao theo nến (idx -> danh sách chỉ số tick) — dùng cho điểm "đa nến"
+        private readonly Dictionary<int, List<long>> _hotLvls = new();
+        private readonly List<AbsRec> _absRecs = new();   // absorption chờ xác nhận
 
         // ================================================================
         //  INPUT PARAMETERS
@@ -120,6 +147,11 @@ namespace OrderFlowBubbles
         [InputParameter("Baseline · Sàn volume/nến (absolute, chống nhiễu)", 13, 0, 1000000, 1, 0)]
         public double MinBarVolFloor { get; set; } = 20;
 
+        // Nạp baseline per-level bằng K ô ĐẬM NHẤT mỗi nến (0 = mọi ô, như bản cũ).
+        // Lý do: gộp cả ô rìa 1-2 lot làm median tụt → z của POC bị thổi phồng, tín hiệu nổ khắp nơi.
+        [InputParameter("Baseline · Số ô đậm nhất/nến nạp vào baseline (0 = tất cả)", 14, 0, 20, 1, 0)]
+        public int BaselineTopLevels { get; set; } = 3;
+
         // ---------- Nến delta lớn (dominant-delta candle) ----------
         [InputParameter("Nến delta · Bật (tô thân nến)", 20)]
         public bool DeltaBarEnabled { get; set; } = true;
@@ -152,15 +184,19 @@ namespace OrderFlowBubbles
         [InputParameter("Số Delta · nền mờ sau chữ", 34)]
         public bool DeltaBackground { get; set; } = false;
 
-        // ---------- 1) Absorption ----------
+        // ---------- 1) Absorption v3 (chấm điểm, xem research/) ----------
+        //  score = 2·EFFORT + 2·NO-RESULT + 1·tại cực trị + 1·sau swing + 1·POC nổi bật
+        //        + 2·delta divergence + 1·hai phe cùng lớn + 2·đa nến      (tối đa 12)
+        //  Ngưỡng dưới đây là TẠM (chưa có footprint per-level thật để calibrate) —
+        //  chạy research/calibrate_perlevel.py trên file export rồi điền lại.
         [InputParameter("Absorption · Bật", 40)]
         public bool AbsorptionEnabled { get; set; } = true;
 
-        [InputParameter("Absorption · Volume/mức z-score ≥", 41, 0.0, 12.0, 0.1, 1)]
-        public double AbsZ { get; set; } = 4.0;
+        [InputParameter("Absorption · EFFORT: volume/ô z-score ≥", 41, 0.0, 12.0, 0.1, 1)]
+        public double AbsEffortZ { get; set; } = 2.5;
 
-        [InputParameter("Absorption · Tỷ lệ 1 phe áp đảo ≥", 42, 0.5, 1.0, 0.05, 2)]
-        public double AbsDom { get; set; } = 0.60;
+        [InputParameter("Absorption · Điểm tối thiểu để vẽ (max 12)", 42, 3, 12, 1, 0)]
+        public int AbsScoreMin { get; set; } = 6;
 
         [InputParameter("Absorption · Cách cực trị tối đa (ticks)", 43, 0, 20, 1, 0)]
         public int AbsMaxDisplaceTicks { get; set; } = 2;
@@ -168,81 +204,123 @@ namespace OrderFlowBubbles
         [InputParameter("Absorption · số bubble mạnh nhất / nến", 44, 1, 10, 1, 0)]
         public int AbsorptionTopN { get; set; } = 1;
 
-        // ---------- 2) Big Trade ----------
-        [InputParameter("Big Trade · Bật", 50)]
+        [InputParameter("Absorption · NO-RESULT: range nến ≤ × median", 45, 0.2, 2.0, 0.05, 2)]
+        public double AbsRangeRatio { get; set; } = 0.9;
+
+        [InputParameter("Absorption · NO-RESULT: price-impact z ≤ −", 46, 0.0, 5.0, 0.1, 1)]
+        public double AbsImpactZ { get; set; } = 1.0;
+
+        [InputParameter("Absorption · Sau swing: lookback (Valtos = 9)", 47, 0, 50, 1, 0)]
+        public int AbsSwingPeriod { get; set; } = 9;
+
+        [InputParameter("Absorption · POC nổi bật: POC ≥ × ô nhì", 48, 1.0, 5.0, 0.1, 1)]
+        public double AbsPocProminence { get; set; } = 1.5;
+
+        [InputParameter("Absorption · Delta divergence: |Δ ô|/vol ≥", 49, 0.0, 1.0, 0.05, 2)]
+        public double AbsDivergencePct { get; set; } = 0.10;
+
+        [InputParameter("Absorption · Hai phe cùng lớn: min(bid,ask) ≥ × vol", 50, 0.0, 0.5, 0.05, 2)]
+        public double AbsTwoSidedPct { get; set; } = 0.35;
+
+        [InputParameter("Absorption · Đa nến: lookback cùng mức (±2 tick)", 51, 0, 20, 1, 0)]
+        public int AbsMultiBarLookback { get; set; } = 5;
+
+        [InputParameter("Absorption · Xác nhận: số nến theo dõi mức", 52, 0, 20, 1, 0)]
+        public int AbsConfirmBars { get; set; } = 3;
+
+        [InputParameter("Absorption · Xác nhận: coi là VỠ khi vượt (ticks)", 53, 1, 20, 1, 0)]
+        public int AbsBreakTicks { get; set; } = 1;
+
+        [InputParameter("Absorption · Kích thước tối thiểu khi zoom hẹp (px)", 54, 6, 60, 1, 0)]
+        public int AbsMinPx { get; set; } = 14;
+
+        // ---------- 2) Big Trade / HVN cell ----------
+        //  Feed không cấp MaxOneTradeVolume (đã kiểm: 0% trên 6 tháng dxFeed) → tín hiệu thực chất là
+        //  "ô volume cao (HVN cell)", KHÔNG phải lệnh lớn. Tooltip in rõ nguồn đang dùng.
+        [InputParameter("Big Trade · Bật", 60)]
         public bool BigTradeEnabled { get; set; } = true;
 
-        [InputParameter("Big Trade · z-score ≥ (lệnh đơn / volume mức)", 51, 0.0, 12.0, 0.1, 1)]
-        public double BigZ { get; set; } = 4.5;
+        [InputParameter("Big Trade · z-score ≥ (lệnh đơn / volume ô)", 61, 0.0, 12.0, 0.1, 1)]
+        public double BigZ { get; set; } = 3.0;
 
-        [InputParameter("Big Trade · số bubble mạnh nhất / nến", 52, 1, 10, 1, 0)]
+        // AND (không phải OR như bản cũ): cửa OR '≥3×median' từng chiếm 51-71% số lần nổ.
+        [InputParameter("Big Trade · VÀ ≥ × median (0 = tắt điều kiện này)", 62, 0.0, 20.0, 0.5, 1)]
+        public double BigVolMult { get; set; } = 4.0;
+
+        [InputParameter("Big Trade · số bubble mạnh nhất / nến", 63, 1, 10, 1, 0)]
         public int BigTradeTopN { get; set; } = 1;
 
+        [InputParameter("Big Trade · Chỉ vẽ khi feed CÓ lệnh đơn thật", 64)]
+        public bool BigTradeRequireRealTrades { get; set; } = false;
+
+        [InputParameter("Big Trade · Bỏ nếu trùng mức với Absorption", 65)]
+        public bool BigTradeSkipOnAbsorption { get; set; } = true;
+
         // ---------- 3) Big Delta profile (gạch ngang) ----------
-        [InputParameter("Big Delta line · Bật", 60)]
+        [InputParameter("Big Delta line · Bật", 70)]
         public bool DLineEnabled { get; set; } = true;
 
-        [InputParameter("Big Delta line · deltaPct tối thiểu", 61, 0.0, 1.0, 0.01, 2)]
+        [InputParameter("Big Delta line · deltaPct tối thiểu", 71, 0.0, 1.0, 0.01, 2)]
         public double DLineFloor { get; set; } = 0.35;
 
-        [InputParameter("Big Delta line · |Δ mức| z-score ≥", 62, 0.0, 12.0, 0.1, 1)]
+        [InputParameter("Big Delta line · |Δ mức| z-score ≥", 72, 0.0, 12.0, 0.1, 1)]
         public double DLineZ { get; set; } = 4.0;
 
-        [InputParameter("Big Delta line · số mức mạnh nhất / nến", 63, 1, 10, 1, 0)]
+        [InputParameter("Big Delta line · số mức mạnh nhất / nến", 73, 1, 10, 1, 0)]
         public int DLineTopN { get; set; } = 1;
 
         // ---------- 4) Exhaustion ----------
-        [InputParameter("Exhaustion · Bật", 70)]
+        [InputParameter("Exhaustion · Bật", 80)]
         public bool ExhaustionEnabled { get; set; } = false;
 
-        [InputParameter("Exhaustion · Volume nến ≤ × nến trước", 71, 0.1, 1.5, 0.05, 2)]
+        [InputParameter("Exhaustion · Volume nến ≤ × nến trước", 81, 0.1, 1.5, 0.05, 2)]
         public double ExhVolFadeRatio { get; set; } = 0.65;
 
-        [InputParameter("Exhaustion · Delta co ≤ × đỉnh intrabar", 72, 0.0, 1.0, 0.05, 2)]
+        [InputParameter("Exhaustion · Delta co ≤ × đỉnh intrabar", 82, 0.0, 1.0, 0.05, 2)]
         public double ExhDeltaFadeRatio { get; set; } = 0.40;
 
-        [InputParameter("Exhaustion · Lookback đỉnh/đáy", 73, 1, 50, 1, 0)]
+        [InputParameter("Exhaustion · Lookback đỉnh/đáy", 83, 1, 50, 1, 0)]
         public int ExhSwingLookback { get; set; } = 3;
 
         // ---------- 5) Stacked Imbalance ----------
-        [InputParameter("Stacked Imbalance · Bật", 80)]
+        [InputParameter("Stacked Imbalance · Bật", 90)]
         public bool ImbalanceEnabled { get; set; } = false;
 
-        [InputParameter("Stacked Imbalance · Tỷ lệ chéo % (300 = 3:1)", 81, 100, 2000, 10, 0)]
+        [InputParameter("Stacked Imbalance · Tỷ lệ chéo % (300 = 3:1)", 91, 100, 2000, 10, 0)]
         public int ImbalanceRatioPct { get; set; } = 300;
 
-        [InputParameter("Stacked Imbalance · Số mức liên tiếp", 82, 2, 20, 1, 0)]
+        [InputParameter("Stacked Imbalance · Số mức liên tiếp", 92, 2, 20, 1, 0)]
         public int ImbalanceRun { get; set; } = 3;
 
         // ---------- 6) Delta Divergence ----------
-        [InputParameter("Divergence · Bật", 90)]
+        [InputParameter("Divergence · Bật", 100)]
         public bool DivergenceEnabled { get; set; } = false;
 
-        [InputParameter("Divergence · Lookback swing", 91, 2, 50, 1, 0)]
+        [InputParameter("Divergence · Lookback swing", 101, 2, 50, 1, 0)]
         public int DivSwingLookback { get; set; } = 3;
 
-        [InputParameter("Divergence · Volume pivot ≥ × median", 92, 0.5, 5.0, 0.1, 1)]
+        [InputParameter("Divergence · Volume pivot ≥ × median", 102, 0.5, 5.0, 0.1, 1)]
         public double DivVolPartic { get; set; } = 1.5;
 
-        [InputParameter("Divergence · Cooldown (nến)", 93, 0, 50, 1, 0)]
+        [InputParameter("Divergence · Cooldown (nến)", 103, 0, 50, 1, 0)]
         public int DivCooldown { get; set; } = 3;
 
         // ---------- 7) Liquidity Sweep ----------
-        [InputParameter("Sweep · Bật", 100)]
+        [InputParameter("Sweep · Bật", 110)]
         public bool SweepEnabled { get; set; } = false;
 
-        [InputParameter("Sweep · Lookback swing", 101, 2, 50, 1, 0)]
+        [InputParameter("Sweep · Lookback swing", 111, 2, 50, 1, 0)]
         public int SweepLookback { get; set; } = 8;
 
         // ---------- 8) Unfinished Business ----------
-        [InputParameter("Unfinished · Bật", 110)]
+        [InputParameter("Unfinished · Bật", 120)]
         public bool UnfinishedEnabled { get; set; } = false;
 
         // ---------- 9) Stop-hunt + Absorption ----------
-        [InputParameter("Stop-hunt · Bật", 120)]
+        [InputParameter("Stop-hunt · Bật", 130)]
         public bool StopHuntEnabled { get; set; } = false;
 
-        [InputParameter("Stop-hunt · Lookback swing", 121, 2, 50, 1, 0)]
+        [InputParameter("Stop-hunt · Lookback swing", 131, 2, 50, 1, 0)]
         public int StopHuntLookback { get; set; } = 8;
 
         // ================================================================
@@ -278,6 +356,8 @@ namespace OrderFlowBubbles
             _rLvlMot = new RollingRobust(BaselineBars);
             _rBarVol = new RollingRobust(BaselineBars);
             _rBarAbsDelta = new RollingRobust(BaselineBars);
+            _rBarRange = new RollingRobust(BaselineBars);
+            _rBarImpact = new RollingRobust(BaselineBars);
         }
 
         private void ResetState()
@@ -287,6 +367,8 @@ namespace OrderFlowBubbles
             _cvd.Clear();
             _processedClosedCount = 0;
             _lastDivPivot = int.MinValue;
+            _hotLvls.Clear();
+            _absRecs.Clear();
         }
 
         // ================================================================
@@ -323,6 +405,7 @@ namespace OrderFlowBubbles
                     bool ready = _rBarVol.BarCount >= MinBars;
                     ComputeBar(i, bar, tick, ready, isClosed: true);
                     AddToBaseline(bar);
+                    UpdateAbsorptionConfirms(i, tick);     // mức của các nến trước giữ hay vỡ?
                 }
                 if (closedCount > _processedClosedCount) _processedClosedCount = closedCount;
 
@@ -386,10 +469,36 @@ namespace OrderFlowBubbles
 
             bool motReady = ready && _rLvlMot.BarCount > 0 && _rLvlMot.Median > 0;
             var dLineCands = new List<(double price, double z, int sign)>();
-            var bigTradeCands = new List<(Bubble b, double z)>();
-            var absCands = new List<(Bubble b, double z)>();
+            var bigTradeCands = new List<(Bubble b, double z, long k)>();
+            var absCands = new List<(Bubble b, int score, double z, long k, bool top)>();
             int imbBuyRun = 0, imbSellRun = 0;
             double imbMinVol = Math.Max(MinLevelVolFloor, _rLvlVol.Median);
+
+            // ---- POC của nến + ô đậm thứ nhì (điểm "POC nổi bật" của Valtos) ----
+            double pocVol = 0, secondVol = 0; long pocTick = long.MinValue;
+            foreach (var kv in byTick)
+            {
+                double v = kv.Value.it.Volume;
+                if (v > pocVol) { secondVol = pocVol; pocVol = v; pocTick = kv.Key; }
+                else if (v > secondVol) secondVol = v;
+            }
+            bool pocProminent = pocVol > 0 && pocVol >= AbsPocProminence * Math.Max(secondVol, 1e-9);
+
+            // ---- NO-RESULT: nến "có công mà không có kết quả" ----
+            //  (a) range hẹp so với median  HOẶC  (b) price impact |Close-Open|/Volume thấp bất
+            //  thường (Kyle's lambda thô: nhiều order flow mà giá không dịch = đang bị hấp thụ)
+            double barRange = bar.High - bar.Low;
+            double rangeMed = _rBarRange.Median;
+            bool noResultRange = ready && rangeMed > 0 && barRange <= AbsRangeRatio * rangeMed;
+            double impact = barVol > 0 ? Math.Abs(bar.Close - bar.Open) / barVol : 0;
+            bool noResultImpact = ready && _rBarImpact.BarCount >= MinBars && _rBarImpact.ModZ(impact) <= -AbsImpactZ;
+            bool noResult = noResultRange || noResultImpact;
+
+            // ---- sau một cú swing (Valtos: Swing Filter, period 9) ----
+            bool afterSwingHigh = AbsSwingPeriod <= 0 || IsLocalHigh(idx, AbsSwingPeriod);
+            bool afterSwingLow = AbsSwingPeriod <= 0 || IsLocalLow(idx, AbsSwingPeriod);
+
+            var hotThisBar = new List<long>();
 
             for (long k = loIdx; k <= hiIdx; k++)
             {
@@ -399,27 +508,57 @@ namespace OrderFlowBubbles
                 double buy = it.BuyVolume, sell = it.SellVolume, vol = it.Volume;
                 double dNet = buy - sell, sum = buy + sell;
 
-                // 1) ABSORPTION — tròn ĐẶC cố định = nến, tại cực trị + bị chặn. Giữ TOP-N sau vòng lặp.
+                // 1) ABSORPTION v3 — CHẤM ĐIỂM (xem research/RESEARCH-absorption-cac-nen-tang)
+                //    EFFORT bắt buộc; các thành phần còn lại cộng điểm. KHÔNG còn đòi "1 phe ≥60%"
+                //    và KHÔNG còn đòi close phải lùi khỏi cực trị (đo được là làm giảm edge).
                 if (AbsorptionEnabled && ready && vol >= MinLevelVolFloor && sum > 0)
                 {
                     double volZ = _rLvlVol.ModZ(vol);
-                    if (volZ >= AbsZ)
+                    if (volZ >= AbsEffortZ)
                     {
-                        double buyDom = buy / sum, sellDom = sell / sum;
-                        // buyDom sát ĐỈNH: mua chủ động nhưng bị nuốt (đóng cửa dưới đỉnh) → cyan, canh short
-                        if (buyDom >= AbsDom && (bar.High - price) / tick <= AbsMaxDisplaceTicks
-                            && (bar.High - bar.Close) >= tick)
-                            absCands.Add((Solid(price, Shape.Ellipse, BuyColor, true,
-                                $"Absorption đỉnh  vZ={volZ:0.0} buy={buyDom:P0}"), volZ));
-                        // sellDom sát ĐÁY: bán chủ động bị nuốt (đóng cửa trên đáy) → đỏ, canh long
-                        else if (sellDom >= AbsDom && (price - bar.Low) / tick <= AbsMaxDisplaceTicks
-                            && (bar.Close - bar.Low) >= tick)
-                            absCands.Add((Solid(price, Shape.Ellipse, SellColor, true,
-                                $"Absorption đáy  vZ={volZ:0.0} sell={sellDom:P0}"), volZ));
+                        hotThisBar.Add(k);                       // ô "nóng" — dùng cho điểm đa nến
+                        bool nearHi = (hiIdx - k) <= AbsMaxDisplaceTicks;
+                        bool nearLo = (k - loIdx) <= AbsMaxDisplaceTicks;
+                        if (nearHi || nearLo)
+                        {
+                            // ô vừa gần đỉnh vừa gần đáy (nến 1-2 tick) → chọn phía gần hơn
+                            bool top = nearHi && (!nearLo || (hiIdx - k) <= (k - loIdx));
+                            double dPctLvl = sum > 0 ? dNet / sum : 0;
+                            // delta divergence: tại ĐỈNH người mua VẪN đang đập vào (Δ>0) mà giá không
+                            // qua được → có tường bán thụ động. Đây là luật mạnh nhất trong test.
+                            bool divergence = top ? dPctLvl >= AbsDivergencePct : dPctLvl <= -AbsDivergencePct;
+                            bool twoSided = Math.Min(buy, sell) >= AbsTwoSidedPct * vol;   // định nghĩa Trader Dale
+                            // POC nổi bật NẰM NGAY vùng hấp thụ (không đòi chính ô này là POC —
+                            // như vậy điều kiện gần như không bao giờ đạt, thành điểm chết).
+                            bool prominent = pocProminent && Math.Abs(pocTick - k) <= AbsMaxDisplaceTicks + 1;
+                            bool swing = top ? afterSwingHigh : afterSwingLow;
+                            bool multi = HasRecentHotLevel(idx, k);
+
+                            int score = 2                                   // EFFORT (bắt buộc)
+                                      + (noResult ? 2 : 0)
+                                      + 1                                   // tại cực trị (đã lọc)
+                                      + (swing ? 1 : 0)
+                                      + (prominent ? 1 : 0)
+                                      + (divergence ? 2 : 0)
+                                      + (twoSided ? 1 : 0)
+                                      + (multi ? 2 : 0);
+
+                            if (score >= AbsScoreMin)
+                            {
+                                string why = $"Absorption {(top ? "đỉnh" : "đáy")}  điểm {score}/12  vZ={volZ:0.0}"
+                                    + $"  Δô={dPctLvl:P0}"
+                                    + (noResult ? " ·no-result" : "") + (divergence ? " ·divergence" : "")
+                                    + (twoSided ? " ·2 phe" : "") + (prominent ? " ·POC nổi bật" : "")
+                                    + (swing ? " ·sau swing" : "") + (multi ? " ·đa nến" : "");
+                                var b = Solid(price, Shape.Ellipse, top ? BuyColor : SellColor, true, why);
+                                absCands.Add((b, score, volZ, k, top));
+                            }
+                        }
                     }
                 }
 
-                // 2) BIG TRADE — tròn MỜ, scale theo lệnh ĐƠN lớn nhất (fallback volume/mức)
+                // 2) BIG TRADE / HVN cell — tròn MỜ. Feed không cấp lệnh đơn → fallback volume ô,
+                //    khi đó tooltip ghi "HVN cell" cho đúng bản chất. Điều kiện z VÀ ×median (không OR).
                 if (BigTradeEnabled && ready)
                 {
                     double metric; RollingRobust rr; string src;
@@ -429,19 +568,21 @@ namespace OrderFlowBubbles
                         if (mot > 0) { metric = mot; rr = _rLvlMot; src = "lệnh đơn"; }
                         else { metric = -1; rr = null; src = null; }
                     }
-                    else { metric = vol; rr = _rLvlVol; src = "vol/mức"; }
+                    else if (BigTradeRequireRealTrades) { metric = -1; rr = null; src = null; }
+                    else { metric = vol; rr = _rLvlVol; src = "HVN cell · vol/ô"; }
 
                     if (rr != null && metric >= MinLevelVolFloor)
                     {
                         double z = rr.ModZ(metric);
-                        if (z >= BigZ || metric >= 3 * rr.Median)
+                        bool multOk = BigVolMult <= 0 || metric >= BigVolMult * rr.Median;
+                        if (z >= BigZ && multOk)
                             bigTradeCands.Add((new Bubble
                             {
                                 Price = price, Shape = Shape.Ellipse, Color = AggColor(buy, sell),
                                 Size = SizeFromMagnitude(z, BigZ), Transparency = HaloTransparency,
                                 Halo = true, UseBarWidth = false,
-                                Tooltip = $"Big trade ({src}) {metric:0}  z={z:0.0}"
-                            }, z));
+                                Tooltip = $"{src} {metric:0}  z={z:0.0}"
+                            }, z, k));
                     }
                 }
 
@@ -488,15 +629,36 @@ namespace OrderFlowBubbles
                 }
             }
 
-            // Absorption: giữ TOP-N theo volume z (mỗi nến chỉ 1 bubble mạnh nhất → chart sạch)
-            if (absCands.Count > 0)
-                foreach (var c in absCands.OrderByDescending(x => x.z).Take(Math.Max(1, AbsorptionTopN)))
-                    list.Add(c.b);
+            // ---- chọn TOP-N + thứ tự vẽ ----
+            // Absorption chọn theo ĐIỂM (rồi tới z). Big Trade add TRƯỚC absorption để absorption nằm
+            // TRÊN CÙNG (trước đây halo Big Trade vẽ đè lên tròn đặc absorption).
+            var absKeep = absCands.Count > 0
+                ? absCands.OrderByDescending(x => x.score).ThenByDescending(x => x.z)
+                          .Take(Math.Max(1, AbsorptionTopN)).ToList()
+                : new List<(Bubble b, int score, double z, long k, bool top)>();
 
-            // Big Trade: giữ TOP-N theo z (mỗi nến chỉ 1 bubble mạnh nhất → chart sạch)
             if (bigTradeCands.Count > 0)
-                foreach (var c in bigTradeCands.OrderByDescending(x => x.z).Take(Math.Max(1, BigTradeTopN)))
+            {
+                var bigKeep = bigTradeCands.OrderByDescending(x => x.z).Take(Math.Max(1, BigTradeTopN));
+                foreach (var c in bigKeep)
+                {
+                    // trùng mức với absorption → bỏ, để không che tín hiệu mạnh hơn
+                    if (BigTradeSkipOnAbsorption && absKeep.Any(a => a.k == c.k)) continue;
                     list.Add(c.b);
+                }
+            }
+
+            foreach (var c in absKeep)
+            {
+                list.Add(c.b);
+                if (isClosed && AbsConfirmBars > 0)
+                    _absRecs.Add(new AbsRec { Idx = idx, Price = c.b.Price, Top = c.top, B = c.b });
+            }
+
+            // ghi lại ô nóng của nến này (ghi ĐÈ vì nến đang hình thành được tính lại mỗi tick)
+            _hotLvls[idx] = hotThisBar;
+            if (_hotLvls.Count > 400)
+                foreach (var oldIdx in _hotLvls.Keys.Where(x => x < idx - 50).ToList()) _hotLvls.Remove(oldIdx);
 
             // Big Delta line: giữ TOP-N theo z
             if (dLineCands.Count > 0)
@@ -624,13 +786,13 @@ namespace OrderFlowBubbles
             if (cur.High > hi && cur.Close < hi && TryLevel(va, cur.High, tick, out var itH))
             {
                 double vz = _rLvlVol.ModZ(itH.Volume);
-                if (vz >= AbsZ && itH.BuyVolume > itH.SellVolume)
+                if (vz >= AbsEffortZ && itH.BuyVolume > itH.SellVolume)
                     list.Add(Solid(cur.High, Shape.Ellipse, SellColor, true, "Stop-hunt + absorption (đỉnh)"));
             }
             if (cur.Low < lo && cur.Close > lo && TryLevel(va, cur.Low, tick, out var itL))
             {
                 double vz = _rLvlVol.ModZ(itL.Volume);
-                if (vz >= AbsZ && itL.SellVolume > itL.BuyVolume)
+                if (vz >= AbsEffortZ && itL.SellVolume > itL.BuyVolume)
                     list.Add(Solid(cur.Low, Shape.Ellipse, BuyColor, true, "Stop-hunt + absorption (đáy)"));
             }
         }
@@ -700,7 +862,10 @@ namespace OrderFlowBubbles
                         foreach (var b in bubbles)
                         {
                             float y = (float)conv.GetChartY(b.Price);
-                            int drawSize = b.UseBarWidth ? Math.Clamp((int)Math.Round(barsW), MinBubbleSize, 400) : b.Size;
+                            // absorption dùng bề rộng nến, nhưng có SÀN px: khi zoom hẹp nó từng nhỏ
+                            // hơn cả halo Big Trade nên gần như vô hình.
+                            int minPx = b.Shape == Shape.Ellipse ? Math.Max(MinBubbleSize, AbsMinPx) : MinBubbleSize;
+                            int drawSize = b.UseBarWidth ? Math.Clamp((int)Math.Round(barsW), minPx, 400) : b.Size;
                             DrawShape(gr, b, cx, y, drawSize, (float)barsW);
 
                             if (hoverTip == null)
@@ -758,6 +923,9 @@ namespace OrderFlowBubbles
                 return;
             }
 
+            // mức đã VỠ → làm mờ hẳn (giữ lại để học, không gây nhiễu mắt)
+            if (b.Confirm < 0) alpha = Math.Max(30, alpha / 3);
+
             var fillColor = Color.FromArgb(b.Halo ? Math.Min(alpha, 110) : alpha, b.Color);
             float r = size / 2f;
             using var fill = new SolidBrush(fillColor);
@@ -778,6 +946,15 @@ namespace OrderFlowBubbles
                 using var pen = new Pen(Color.FromArgb(alpha, b.Color), 2f);
                 if (b.Shape == Shape.Ellipse) gr.DrawEllipse(pen, cx - r, cy - r, size, size);
                 else if (b.Shape == Shape.Rectangle) gr.DrawRectangle(pen, cx - r, cy - r, size, size);
+            }
+
+            // viền xác nhận: mức GIỮ được → vòng trắng ngoài (đáng tin hơn), VỠ → vòng xám mảnh
+            if (b.Confirm != 0 && b.Shape == Shape.Ellipse)
+            {
+                using var cp = b.Confirm > 0
+                    ? new Pen(Color.FromArgb(230, Color.White), 2f)
+                    : new Pen(Color.FromArgb(90, Color.Gray), 1f);
+                gr.DrawEllipse(cp, cx - r - 2f, cy - r - 2f, size + 4, size + 4);
             }
         }
 
@@ -827,11 +1004,63 @@ namespace OrderFlowBubbles
                 double m = it.MaxOneTradeVolume;
                 if (m > 0) mots.Add(m);
             }
+            // Chỉ nạp K ô ĐẬM NHẤT → "bất thường" nghĩa là bất thường so với các ô đậm lịch sử,
+            // không phải so với ô rìa 1-2 lot (nguyên nhân tín hiệu nổ khắp nơi ở bản cũ).
+            if (BaselineTopLevels > 0 && vols.Count > BaselineTopLevels)
+            {
+                vols.Sort(); vols.Reverse();
+                vols = vols.GetRange(0, BaselineTopLevels);
+            }
             _rLvlVol.AddBar(vols.ToArray());
             _rLvlAbsDelta.AddBar(ads.ToArray());
             if (mots.Count > 0) _rLvlMot.AddBar(mots.ToArray());
             _rBarVol.AddBar(new[] { va.Total.Volume });
             _rBarAbsDelta.AddBar(new[] { Math.Abs(va.Total.Delta) });
+            _rBarRange.AddBar(new[] { bar.High - bar.Low });
+            double vv = va.Total.Volume;
+            if (vv > 0) _rBarImpact.AddBar(new[] { Math.Abs(bar.Close - bar.Open) / vv });
+        }
+
+        // Điểm "đa nến": cùng mức (±2 tick) đã từng là ô nóng trong N nến gần đây.
+        // Hấp thụ là QUÁ TRÌNH (Trader Dale: "mất vài phút"), không phải sự kiện 1 nến.
+        private bool HasRecentHotLevel(int idx, long k)
+        {
+            if (AbsMultiBarLookback <= 0) return false;
+            for (int i = idx - 1; i >= idx - AbsMultiBarLookback && i >= 0; i--)
+            {
+                if (!_hotLvls.TryGetValue(i, out var lvls) || lvls == null) continue;
+                foreach (var t in lvls) if (Math.Abs(t - k) <= 2) return true;
+            }
+            return false;
+        }
+
+        // XÁC NHẬN: mức absorption giữ được hay bị vượt trong AbsConfirmBars nến sau.
+        // Chỉ đổi VIỀN của bubble (không trì hoãn tín hiệu — chờ 2 nến rồi mới báo thì mất edge).
+        private void UpdateAbsorptionConfirms(int closedIdx, double tick)
+        {
+            if (_absRecs.Count == 0) return;
+            var done = new List<AbsRec>();
+            foreach (var r in _absRecs)
+            {
+                if (r.Idx >= closedIdx) continue;
+                bool broke = false;
+                for (int i = r.Idx + 1; i <= Math.Min(closedIdx, r.Idx + AbsConfirmBars); i++)
+                {
+                    var b = Bar(i);
+                    if (b == null) continue;
+                    if (r.Top ? b.High > r.Price + AbsBreakTicks * tick
+                              : b.Low < r.Price - AbsBreakTicks * tick) { broke = true; break; }
+                }
+                int verdict = broke ? -1 : (closedIdx >= r.Idx + AbsConfirmBars ? 1 : 0);
+                if (verdict != 0)
+                {
+                    lock (_sync) { r.B.Confirm = verdict; }
+                    r.B.Tooltip += broke ? "  → VỠ mức" : "  → GIỮ mức";
+                    done.Add(r);
+                }
+            }
+            foreach (var r in done) _absRecs.Remove(r);
+            if (_absRecs.Count > 500) _absRecs.RemoveRange(0, _absRecs.Count - 500);
         }
 
         private void EnsureCvd(int total) { while (_cvd.Count < total) _cvd.Add(0.0); }

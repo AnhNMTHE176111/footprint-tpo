@@ -28,8 +28,8 @@ tiêu** → cùng cấu hình chạy đúng cho GC, MGC, hay feed proxy. Knob **
 ## Đọc hình thế nào — hệ mã hoá mới
 | Tín hiệu | HÌNH | Kích thước | Màu |
 |---|---|---|---|
-| **Absorption (hấp thụ)** | ⬤ **tròn ĐẶC** | **cố định = bề rộng nến** (không to/nhỏ) | cyan (đỉnh) / đỏ (đáy) = phe aggressor bị nuốt |
-| **Big Trade** | ⬤ **tròn MỜ (halo)** | **to dần theo lệnh đơn lớn nhất** | cyan/đỏ = phe aggressor |
+| **Absorption (hấp thụ)** | ⬤ **tròn ĐẶC**, vẽ **trên cùng** | = bề rộng nến, **sàn 14 px** (trước đây zoom hẹp là gần như vô hình) | cyan (đỉnh) / đỏ (đáy) · **vòng trắng = mức GIỮ được**, mờ đi = **mức VỠ** |
+| **Big Trade / HVN cell** | ⬤ **tròn MỜ (halo)** | to dần theo z | cyan/đỏ = phe aggressor · **bỏ nếu trùng mức với Absorption** |
 | **Big Delta profile** | ━ **gạch ngang** (rộng = nến) | dày nhẹ theo độ mạnh | **xanh = buy dồn / đỏ = sell dồn** |
 | **Nến delta lớn** | **tô thân nến** | cả thân | **xanh (Δ>0) / đỏ (Δ<0)** |
 | **Số Delta** | chữ dưới nến | — | xanh/đỏ theo dấu |
@@ -42,8 +42,8 @@ Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score,
 ## Giải nghĩa & thuật toán (ngưỡng portable, default vàng M1)
 | # | Tín hiệu | Cơ chế + test | Default |
 |---|---|---|---|
-| 1 | **Absorption** | Volume/mức z **cao** + 1 phe áp đảo **tại cực trị** nến + giá **bị chặn** (đóng cửa lùi khỏi cực trị ≥1 tick). | **BẬT** |
-| 2 | **Big Trade** | `MaxOneTradeVolume` (lệnh ĐƠN lớn nhất) z ≥ ngưỡng — hoặc fallback volume/mức nếu feed không điền. Size nén **sqrt**. | **BẬT** |
+| 1 | **Absorption v3** | **CHẤM ĐIỂM /12** (2026-07-28, xem [research/](research/)): EFFORT (volume ô z) 2đ · **NO-RESULT** (range hẹp / price-impact thấp ~ Kyle lambda) 2đ · tại cực trị 1đ · **sau swing** 1đ · **POC nổi bật** 1đ · **delta divergence** 2đ · **hai phe cùng lớn** 1đ · **đa nến** 2đ → vẽ khi ≥ 6. **Xác nhận** 1–3 nến sau chỉ đổi viền (giữ mức = vòng trắng, vỡ = mờ), KHÔNG trì hoãn tín hiệu. | **BẬT** |
+| 2 | **Big Trade → HVN cell** | `MaxOneTradeVolume` (lệnh ĐƠN) z ≥ ngưỡng **VÀ** ≥ ×median. Feed dxFeed **không cấp** field này (0% trên 6 tháng) → tự fallback volume/ô và tooltip ghi **"HVN cell · vol/ô"** cho đúng bản chất. | **BẬT** |
 | 3 | **Big Delta line** | 1 mức có net delta lệch mạnh: `|Δ/Vol| ≥ 0.35` **và** `|Δ|` z cao. Giữ **top-N** mức/nến. | **BẬT** |
 | 4/5 | **Nến delta lớn** | `|Δ/Vol| ≥ 0.30` **và** `|Δ|` z ≥ 2 **và** volume ≥ 0.8× median → tô thân **theo DẤU DELTA** (không theo close). | **BẬT** |
 | 6 | **Exhaustion** | Cực trị swing mới + volume teo + **delta rút khỏi đỉnh intrabar** (dùng `Total.MaxDelta/MinDelta` THẬT). | tắt |
@@ -79,10 +79,10 @@ Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score,
 ## Bảng cấu hình then chốt (Settings)
 | Nhóm | Tham số | Ý nghĩa |
 |---|---|---|
-| Baseline | Số nến (100) · Warm-up (40) · **Sàn nhiễu** vol/mức (5), vol/nến (20) | Cửa sổ median+MAD; sàn = knob tuyệt đối DUY NHẤT, tinh chỉnh theo feed |
+| Baseline | Số nến (100) · Warm-up (40) · **Sàn nhiễu** vol/mức (5), vol/nến (20) · **Số ô đậm nhất/nến (3)** | Cửa sổ median+MAD. **Top-3 ô** = so POC với POC lịch sử; để 0 sẽ nạp cả ô rìa 1-2 lot làm median tụt → tín hiệu nổ khắp nơi (lỗi bản cũ) |
 | Nến delta | deltaPct (0.30) · z (2.0) · cổng volume (0.8×) · độ đậm tô (85) | Tô thân xanh/đỏ khi delta lớn & 1 chiều |
-| Absorption | z (2.5) · áp đảo (0.60) · cách cực trị (2 tick) | Ít bubble → hạ z |
-| Big Trade | z (2.5) | Dùng lệnh đơn lớn nhất; nhiều quá → tăng z |
+| Absorption | EFFORT z (2.5) · **điểm tối thiểu (6/12)** · cách cực trị (2 tick) · range ≤0.9×med · impact z ≤−1 · swing (9) · POC nổi bật (1.5×) · divergence (0.10) · hai phe (0.35) · đa nến (5) · xác nhận (3 nến) | Ít bubble → hạ **điểm tối thiểu** trước, rồi mới hạ EFFORT z. Ngưỡng hiện là **TẠM** — chạy `research/calibrate_perlevel.py` trên file footprint per-level để chốt |
+| Big Trade | z (3.0) **VÀ** ≥4×median · bỏ nếu trùng mức Absorption | Đây là **AND**, không phải OR như bản cũ (cửa OR từng chiếm 51-71% số lần nổ) |
 | Big Delta line | deltaPct (0.35) · z (2.0) · top-N (2) | Số gạch ngang mạnh nhất mỗi nến |
 
 ## Thông số MGC/GC (Micro/Full Gold)

@@ -87,7 +87,6 @@ namespace FootprintExport
 
         // ==================== trạng thái ====================
         private volatile string _status = "chờ Volume Analysis…";
-        private volatile bool _vaLoaded;
         private int _busy;                  // 0/1 — Interlocked, chống chạy 2 lần chồng nhau
         // Cấu hình đã xuất xong. Đặt trên thread platform, có thể bị thread xuất đặt lại null khi
         // lỗi (để cho phép thử lại) → volatile. Đổi BẤT KỲ setting nào = key khác = xuất lại.
@@ -106,20 +105,23 @@ namespace FootprintExport
 
         public void VolumeAnalysisData_Loaded()
         {
-            _vaLoaded = true;
             _status = "Volume Analysis đã nạp — bật 'XUẤT NGAY' để xuất.";
             if (AutoExport) TryStart();
         }
 
         protected override void OnClear()
         {
-            _vaLoaded = false;
+            _status = "chờ Volume Analysis…";
             // KHÔNG xoá _doneCfg: tránh xuất lại y nguyên khi platform recalc.
         }
 
         protected override void OnUpdate(UpdateArgs args)
         {
-            if (!_vaLoaded || !ExportNow) return;
+            // CỐ Ý không đòi _vaLoaded: cờ đó bị OnClear xoá mỗi lần platform recalc, và nếu
+            // sự kiện VolumeAnalysisData_Loaded không bắn lại (VA đã cache) thì indicator sẽ
+            // treo ở "chờ Volume Analysis" vĩnh viễn. Điều kiện THẬT là
+            // VolumeAnalysisCalculationProgress.State == Finished — TryStart tự kiểm.
+            if (!ExportNow) return;
             TryStart();
         }
 
@@ -243,7 +245,7 @@ namespace FootprintExport
                 string dir = Path.GetDirectoryName(levelsPath);
                 if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-                long rows = 0, barsOut = 0, skippedNoVa = 0, skippedRange = 0;
+                long rows = 0, barsOut = 0, skippedNoVa = 0, skippedRange = 0, skippedUnstable = 0;
                 bool capped = false;
                 var utf8 = new UTF8Encoding(false);                  // KHÔNG BOM: pandas/numpy đọc sạch
                 var sbL = new StringBuilder(1 << 16);                // buffer file MỨC GIÁ
@@ -272,24 +274,12 @@ namespace FootprintExport
                         var pl = va?.PriceLevels;
                         if (pl == null || pl.Count == 0) { skippedNoVa++; continue; }
 
-                        raw.Clear();
-                        foreach (var kv in pl)
-                        {
-                            var it = kv.Value;
-                            if (it == null) continue;
-                            raw.Add(new FpLevel
-                            {
-                                Tick = FpCore.ToTick(kv.Key, cfg.Tick),
-                                BidVol = it.SellVolume,             // khớp ở BID = bán chủ động
-                                AskVol = it.BuyVolume,              // khớp ở ASK = mua chủ động
-                                Volume = it.Volume,
-                                Delta = it.Delta,
-                                Trades = it.Trades,
-                                BuyTrades = it.BuyTrades,
-                                SellTrades = it.SellTrades,
-                                MaxOneTrade = FpCore.FixPrimer(it.MaxOneTradeVolume, 0)
-                            });
-                        }
+                        // PriceLevels là Dictionary do platform giữ. Nếu người dùng cuộn chart /
+                        // nạp thêm lịch sử GIỮA lúc xuất, platform có thể tính lại VA → foreach
+                        // ném "Collection was modified". Thà BỎ nến đó (và báo số lượng) hơn là
+                        // huỷ cả lần xuất. Thử lại 1 lần trước khi bỏ.
+                        if (!TryReadLevels(pl, cfg.Tick, raw) && !TryReadLevels(pl, cfg.Tick, raw))
+                        { skippedUnstable++; continue; }
                         if (raw.Count == 0) { skippedNoVa++; continue; }
 
                         var levels = FpCore.Aggregate(raw, cfg.TicksPerRow);
@@ -353,21 +343,29 @@ namespace FootprintExport
                 double sec = (DateTime.UtcNow - t0).TotalSeconds;
                 double mb = SafeMb(levelsPath);
                 var msg = new StringBuilder();
-                msg.Append($"XONG: {barsOut:N0} nến · {rows:N0} dòng · {mb:0.0} MB · {sec:0.0}s");
-                if (capped) msg.Append($" · ⚠ ĐÃ CẮT ở trần {FpCore.MaxRowsHardCap:N0} dòng — thu hẹp khoảng/ tăng tick/hàng");
+                // 0 dòng KHÔNG được báo "XONG" màu xanh — dễ tưởng xuất thành công rồi đi phân tích file rỗng.
+                bool empty = rows == 0;
+                msg.Append(empty
+                    ? "LỖI: KHÔNG XUẤT ĐƯỢC DÒNG NÀO — kiểm lại lọc ngày / lệch giờ / feed có volume thật?"
+                    : $"XONG: {barsOut:N0} nến · {rows:N0} dòng · {mb:0.0} MB · {sec:0.0}s");
+                if (capped) msg.Append($" · ⚠ ĐÃ CẮT ở trần {FpCore.MaxRowsHardCap:N0} dòng — thu hẹp khoảng / tăng tick/hàng");
                 if (skippedNoVa > 0) msg.Append($" · bỏ {skippedNoVa:N0} nến không có VA");
                 if (skippedRange > 0) msg.Append($" · lọc ngày bỏ {skippedRange:N0} nến");
+                if (skippedUnstable > 0) msg.Append($" · ⚠ bỏ {skippedUnstable:N0} nến vì VA bị tính lại giữa lúc xuất (đừng cuộn chart khi đang xuất) — nên xuất lại");
                 if (badFrom) msg.Append(" · ⚠ 'Từ ngày' sai định dạng → BỎ QUA");
                 if (badTo) msg.Append(" · ⚠ 'Đến ngày' sai định dạng → BỎ QUA");
-                msg.Append(" → ").Append(levelsPath);
-                _status = msg.ToString();
-                Log(msg.ToString(), cfg, digits);
+                Log(msg + " → " + levelsPath, cfg, digits);
+                // Banner chỉ hiện TÊN file (đường dẫn đầy đủ nằm trong export_log.txt) cho gọn.
+                _status = msg + " → " + Path.GetFileName(levelsPath);
             }
             catch (Exception ex)
             {
                 _doneCfg = null;                                     // cho phép thử lại
-                _status = "LỖI xuất CSV: " + ex.Message;
-                Log("LỖI: " + ex, cfg, 0);
+                // File đã ghi dở PHẢI bị đổi tên: một CSV cắt giữa dòng trông y như file hoàn chỉnh,
+                // đem đi phân tích là hỏng cả nghiên cứu mà không ai biết.
+                string marked = MarkIncomplete(levelsPath) + " / " + MarkIncomplete(barsPath);
+                _status = "LỖI xuất CSV: " + ex.Message + " · file ghi dở đã đổi tên .INCOMPLETE";
+                Log("LỖI: " + ex + " | file dở: " + marked, cfg, 0);
             }
             finally
             {
@@ -379,13 +377,56 @@ namespace FootprintExport
         private static void Flush(StringBuilder sb, StreamWriter w)
         {
             if (w == null || sb.Length == 0) return;
-            w.Write(sb.ToString());
+            w.Write(sb);                    // overload StringBuilder: không copy ra string trung gian
             sb.Clear();
+        }
+
+        /// <summary>Đọc PriceLevels của 1 nến vào 'raw'. false = dictionary bị sửa giữa lúc đọc.</summary>
+        private static bool TryReadLevels(Dictionary<double, VolumeAnalysisItem> pl, double tick, List<FpLevel> raw)
+        {
+            raw.Clear();
+            try
+            {
+                foreach (var kv in pl)
+                {
+                    var it = kv.Value;
+                    if (it == null) continue;
+                    raw.Add(new FpLevel
+                    {
+                        Tick = FpCore.ToTick(kv.Key, tick),
+                        BidVol = it.SellVolume,             // khớp ở BID = bán chủ động
+                        AskVol = it.BuyVolume,              // khớp ở ASK = mua chủ động
+                        Volume = it.Volume,
+                        Delta = it.Delta,
+                        Trades = it.Trades,
+                        BuyTrades = it.BuyTrades,
+                        SellTrades = it.SellTrades,
+                        MaxOneTrade = FpCore.FixPrimer(it.MaxOneTradeVolume, 0)
+                    });
+                }
+                return true;
+            }
+            catch (InvalidOperationException) { raw.Clear(); return false; }   // collection modified
+            catch (NullReferenceException) { raw.Clear(); return false; }      // bar bị thay giữa lúc đọc
         }
 
         private static double SafeMb(string path)
         {
             try { return new FileInfo(path).Length / 1048576.0; } catch { return 0; }
+        }
+
+        /// <summary>Đổi tên file ghi dở thành *.INCOMPLETE để không bị dùng lẫn như file hoàn chỉnh.</summary>
+        private static string MarkIncomplete(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return "-";
+                string dst = path + ".INCOMPLETE";
+                if (File.Exists(dst)) File.Delete(dst);
+                File.Move(path, dst);
+                return Path.GetFileName(dst);
+            }
+            catch { return Path.GetFileName(path ?? "-") + " (không đổi tên được)"; }
         }
 
         private void Log(string msg, Cfg cfg, int digits)

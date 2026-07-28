@@ -258,7 +258,12 @@ namespace FootprintExport
             Eq(bp, Path.Combine("/tmp", "my_bars.csv"), "file nến nằm cạnh, thêm _bars");
 
             FpCore.MakeNames("  \"/tmp/q.CSV\"  ", "/def", "MGC", "1m", "s", out lp, out bp);
-            Eq(lp, "/tmp/q.CSV", "bỏ dấu ngoặc kép + khoảng trắng khi copy path từ Explorer");
+            Eq(lp, Path.Combine("/tmp", "q.csv"), "bỏ dấu ngoặc kép + khoảng trắng khi copy path từ Explorer");
+            Eq(bp, Path.Combine("/tmp", "q_bars.csv"), "hoa/thường .CSV vẫn ra file nến đúng chỗ");
+
+            FpCore.MakeNames("abc.csv", "/def", "MGC", "1m", "s", out lp, out bp);
+            Eq(lp, Path.Combine("/def", "abc.csv"), "gõ TRƠ tên file -> về thư mục mặc định, không rơi vào CWD Quantower");
+            Eq(bp, Path.Combine("/def", "abc_bars.csv"), "file nến cũng vào thư mục mặc định");
 
             // =============================================================
             //  END-TO-END: sinh CSV giả lập rồi ĐỌC LẠI và đối chiếu

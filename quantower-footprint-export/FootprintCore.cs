@@ -275,9 +275,11 @@ namespace FootprintExport
             {
                 string dir = Path.GetDirectoryName(p);
                 string baseName = Path.GetFileNameWithoutExtension(p);
-                levelsPath = p;
-                barsPath = string.IsNullOrEmpty(dir) ? baseName + "_bars.csv"
-                                                     : Path.Combine(dir, baseName + "_bars.csv");
+                // Gõ trơ tên file ("abc.csv") mà không có thư mục → KHÔNG để rơi vào thư mục làm việc
+                // của Quantower (người dùng sẽ không tìm ra file). Đưa về thư mục mặc định.
+                if (string.IsNullOrEmpty(dir)) dir = defaultDir;
+                levelsPath = Path.Combine(dir, baseName + ".csv");
+                barsPath = Path.Combine(dir, baseName + "_bars.csv");
                 return;
             }
             string outDir = p.Length > 0 ? p : defaultDir;

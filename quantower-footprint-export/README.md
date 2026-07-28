@@ -74,7 +74,7 @@ Ghép bằng **`bar_idx`**, KHÔNG dùng `datetime`: chart theo tick/volume/rang
 
 | Tham số | Mặc định | Ghi chú |
 |---|---|---|
-| Đường dẫn xuất | rỗng | rỗng = `Documents\FootprintExport`. Gõ **thư mục** → tên tự sinh. Gõ **`...\ten.csv`** → dùng luôn, file nến thành `ten_bars.csv` |
+| Đường dẫn xuất | rỗng | rỗng = `Documents\FootprintExport`. Gõ **thư mục** → tên tự sinh. Gõ **`...\ten.csv`** → dùng luôn, file nến thành `ten_bars.csv`. Gõ trơ `ten.csv` (không có thư mục) → vẫn về `Documents\FootprintExport` |
 | Gộp mấy tick / hàng | 1 | 1 = từng tick (footprint gốc). Đặt 5 với vàng = 0,5 giá/hàng — file nhỏ đi ~5 lần |
 | Chỉ xuất N nến gần nhất | 0 | 0 = tất cả |
 | Từ ngày / Đến ngày | rỗng | `yyyy-MM-dd` (nhận cả `dd/MM/yyyy`). Sai định dạng → **bỏ qua + báo trên chart**, không tự đoán |
@@ -88,6 +88,12 @@ Ghép bằng **`bar_idx`**, KHÔNG dùng `datetime`: chart theo tick/volume/rang
 **Xuất lại**: chỉ cần đổi **bất kỳ** tham số nào (kể cả đường dẫn) là chạy lại. Giữ nguyên y hệt cấu hình cũ thì indicator **không xuất trùng** (nếu không, mỗi tick sẽ ghi lại cả file).
 
 **Cỡ file (ước lượng)**: M1 vàng ~12 mức giá/nến → 1 tháng M1 ≈ 28k nến ≈ **330k dòng ≈ 25 MB**. 6 tháng ≈ 150 MB. Trần an toàn **25 triệu dòng** — nếu chạm, indicator **báo rõ "ĐÃ CẮT"** trên chart (không cắt âm thầm).
+
+### Không bao giờ để bạn dùng file sai mà không biết
+- **Xuất lỗi giữa đường** (mất mạng, hết đĩa) → file ghi dở bị **đổi tên thành `*.csv.INCOMPLETE`**. Một CSV cắt giữa dòng trông y như file hoàn chỉnh; đem đi phân tích là hỏng cả nghiên cứu mà không ai biết.
+- **Xuất ra 0 dòng** (lọc ngày sai, feed không có volume thật) → banner báo **màu đỏ "LỖI: KHÔNG XUẤT ĐƯỢC DÒNG NÀO"**, không phải "XONG" màu xanh.
+- **Cuộn chart / nạp thêm lịch sử GIỮA lúc xuất** → platform tính lại Volume Analysis, nến đang đọc có thể bị sửa. Indicator **bỏ riêng nến đó và báo số lượng** (`⚠ bỏ N nến vì VA bị tính lại…`) thay vì huỷ cả lần xuất hoặc ghi số rác. Thấy cảnh báo này thì **nên xuất lại** và đừng chạm chart khi đang xuất.
+- Ngày sai định dạng → **bỏ qua + báo rõ**, không tự đoán ý.
 
 ---
 
@@ -106,7 +112,7 @@ Mục **7a/7b/7c** là quan trọng nhất: nó đối chiếu `PriceLevels` v�
 
 ```bash
 ./build.sh          # -> dist/FootprintExport.dll  (net10.0-windows, Quantower 1.146.x)
-cd tests && dotnet run     # 3.259 assertion, phải PASS hết, FAIL 0
+cd tests && dotnet run     # 3.262 assertion, phải PASS hết, FAIL 0
 cd tests && dotnet run -- --sample /tmp/x && python3 ../verify_export.py /tmp/x/fp_MGCQ26_1m_sample.csv
 ```
 
@@ -115,10 +121,10 @@ Cần `~/quantower-libs/` (2 DLL tham chiếu trích từ installer Quantower �
 **Bố cục source** — tách có mục đích:
 - `FootprintCore.cs` — **lõi thuần**, không tham chiếu Quantower: làm tròn giá, gộp tick/hàng, POC, dọn giá trị mồi, escape CSV, đặt tên file, lọc ngày. Vì thế **test được thật trên Linux**.
 - `FootprintExport.cs` — phần indicator: lấy dữ liệu từ platform, chụp snapshot nến, ghi file ở thread riêng.
-- `tests/` — 3.259 assertion chạy trên Linux, gồm test random có seed cho **bất biến tổng** khi gộp và test **số cột header phải khớp số cột dòng**.
+- `tests/` — 3.262 assertion chạy trên Linux, gồm test random có seed cho **bất biến tổng** khi gộp và test **số cột header phải khớp số cột dòng**.
 
 ### Đã test tới đâu (nói đúng, không thổi)
-- ✅ Lõi: 3.259 assertion PASS trên Linux, gồm property-test 300 vòng random có seed.
+- ✅ Lõi: 3.262 assertion PASS trên Linux, gồm property-test 300 vòng random có seed.
 - ✅ Sinh CSV mẫu bằng **chính code C# thật** → ghi ra đĩa → `verify_export.py` đọc lại: **8/8 mục đạt**.
 - ✅ Quy ước `delta = ask − bid` và `bid+ask ≤ volume` **đối chiếu với 31k nến dữ liệu dxFeed thật** trong `data-export/`.
 - ✅ Build DLL sạch, 0 warning.
@@ -128,3 +134,6 @@ Cần `~/quantower-libs/` (2 DLL tham chiếu trích từ installer Quantower �
 ### Bug đã bắt được trong lúc làm (để không tái phạm)
 1. **Ghi lẫn 2 file**: ban đầu dòng-mức-giá và dòng-nến dùng chung 1 buffer → dòng nến rơi vào file mức giá. Sửa: mỗi file 1 buffer riêng.
 2. **`(bar_idx, price)` trùng**: khi "tick/hàng = 1" tôi bỏ qua bước gộp. Nếu feed báo giá **mịn hơn `TickSize`**, hai giá khác nhau rơi vào cùng tick index → 2 dòng cùng giá trong 1 nến → pivot phía Python sai. **Test random bắt được**. Sửa: luôn gộp qua dictionary, kể cả tick/hàng = 1.
+3. **Có thể treo ở "chờ Volume Analysis" vĩnh viễn**: ban đầu tôi chặn xuất bằng cờ `_vaLoaded`, nhưng cờ đó bị `OnClear` xoá mỗi lần platform tính lại — nếu sự kiện `VolumeAnalysisData_Loaded` không bắn lại (VA đã cache) thì không bao giờ xuất được nữa. Sửa: chỉ tin `VolumeAnalysisCalculationProgress.State == Finished`.
+4. **File cắt dở trông như file thật** + **0 dòng báo màu xanh "XONG"** — hai ca "sai mà im lặng", đã sửa (xem mục trên).
+5. **Gõ trơ `ten.csv`** thì file rơi vào thư mục làm việc của Quantower, người dùng không tìm ra. Sửa: đưa về `Documents\FootprintExport`.

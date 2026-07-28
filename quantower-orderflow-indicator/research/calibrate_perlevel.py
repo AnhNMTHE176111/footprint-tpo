@@ -37,22 +37,69 @@ TICK = opt('--tick', 0.1)
 TARGET = opt('--target', 1.0)
 HORIZON = opt('--horizon', 20, int)
 TRADES = ARGS[ARGS.index('--trades') + 1] if '--trades' in ARGS else None
+FROM = ARGS[ARGS.index('--from') + 1] if '--from' in ARGS else None   # lọc từ ngày YYYY-MM-DD
 
 BASELINE_BARS, MIN_BARS = 100, 40
 MIN_LVL_FLOOR = 5
 
+OHLC = ARGS[ARGS.index('--ohlc') + 1] if '--ohlc' in ARGS else None
+
 ALIAS = {
     'bar_time': ['bar_time', 'time', 'datetime', 'bartime', 'time left', 'timeleft'],
+    'bar_idx': ['bar_idx', 'baridx', 'bar_index'],
     'price': ['price', 'level_price', 'price_level'],
     'price_ticks': ['price_ticks', 'priceticks', 'tick_index'],
     'bid': ['bid_vol', 'bid', 'bidvolume', 'bid_volume', 'sell_vol', 'sell (bid) volume'],
     'ask': ['ask_vol', 'ask', 'askvolume', 'ask_volume', 'buy_vol', 'buy (ask) volume'],
+    # volume THẬT của ô: có thể > bid+ask khi feed không phân loại được phe của một số trade
+    'lvlvol': ['level_volume', 'lvl_vol', 'volume', 'vol'],
     'trades': ['trades', 'ticks', 'n_trades'],
     'o': ['bar_open', 'open'], 'h': ['bar_high', 'high'],
     'l': ['bar_low', 'low'], 'c': ['bar_close', 'close'],
-    'barvol': ['bar_volume', 'volume', 'bar_vol'],
-    'mot': ['max_one_trade_vol', 'max one trade vol.', 'maxonetradevolume'],
+    'barvol': ['bar_volume', 'bar_vol'],
+    'mot': ['max_one_trade', 'max_one_trade_vol', 'max one trade vol.', 'maxonetradevolume'],
 }
+
+
+def load_ohlc(path):
+    """Nạp OHLC từ file bar-level (ghép theo mốc thời gian) — file per-level thường không có."""
+    delim = sniff(path)
+    rd = csv.DictReader(open(path, encoding='utf-8-sig'), delimiter=delim)
+    low = {(f or '').strip().lower(): f for f in (rd.fieldnames or [])}
+    ct = low.get('time left') or low.get('datetime') or low.get('time') or low.get('date')
+    co, ch, cl, cc = (low.get(k) for k in ('open', 'high', 'low', 'close'))
+    if not (ct and co and cc):
+        print(f"--ohlc: thiếu cột thời gian/Open/Close. Header: {rd.fieldnames}"); sys.exit(1)
+    out = {}
+    for row in rd:
+        t = norm_time((row.get(ct) or '').strip())
+        if not t: continue
+        try:
+            out[t] = (float(row[co]), float(row[ch]), float(row[cl]), float(row[cc]))
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
+def norm_time(s):
+    """'2026-07-28 10:51:00.000' | '7/28/2026 10:51:00 AM' → '2026-07-28 10:51'"""
+    s = s.strip()
+    if not s: return ''
+    if '.' in s: s = s.split('.')[0]
+    ampm = ''
+    for tag in (' AM', ' PM', ' am', ' pm'):
+        if s.endswith(tag): ampm = tag.strip().upper(); s = s[:-3].strip()
+    parts = s.split()
+    if len(parts) < 2: return s
+    d, t = parts[0], parts[1]
+    tp = t.split(':')
+    hh = int(tp[0]); mm = tp[1] if len(tp) > 1 else '00'
+    if ampm == 'PM' and hh < 12: hh += 12
+    if ampm == 'AM' and hh == 12: hh = 0
+    if '/' in d:
+        a, b, c = d.split('/')
+        d = f"{int(c):04d}-{int(a):02d}-{int(b):02d}"      # M/D/YYYY
+    return f"{d} {hh:02d}:{int(mm):02d}"
 
 
 def sniff(path):
@@ -87,13 +134,18 @@ def load_bars(path):
         print(f"THIẾU CỘT: {missing + ([] if ('price' in cm or 'price_ticks' in cm) else ['price'])}")
         print(f"Header đọc được: {rd.fieldnames}"); sys.exit(1)
 
-    bars = defaultdict(lambda: {'lvls': [], 'o': None, 'h': None, 'l': None, 'c': None, 'mot': 0.0})
+    ohlc = load_ohlc(OHLC) if OHLC else {}
+    bars = defaultdict(lambda: {'lvls': [], 'o': None, 'h': None, 'l': None, 'c': None,
+                                'mot': 0.0, 'vol': 0.0, 't': ''})
     order = []
     for row in rd:
         t = (row.get(cm['bar_time']) or '').strip()
-        if not t: continue
-        if t not in bars: order.append(t)
-        b = bars[t]
+        # khoá nến: ưu tiên bar_idx (chắc chắn duy nhất) rồi mới tới mốc thời gian
+        key = (row.get(cm['bar_idx']) or '').strip() if 'bar_idx' in cm else t
+        if not key: continue
+        if key not in bars: order.append(key)
+        b = bars[key]
+        b['t'] = t
         pt = fnum(row, cm.get('price_ticks'))
         pr = fnum(row, cm.get('price'))
         if pt is None and pr is None: continue
@@ -101,25 +153,38 @@ def load_bars(path):
         if pr is None: pr = pt * TICK
         bid = fnum(row, cm['bid']) or 0.0
         ask = fnum(row, cm['ask']) or 0.0
-        b['lvls'].append((int(pt), pr, bid, ask))
+        lv = fnum(row, cm.get('lvlvol'))
+        lv = lv if (lv is not None and lv > 0) else bid + ask     # volume ô THẬT (có thể > bid+ask)
+        b['lvls'].append((int(pt), pr, bid, ask, lv))
+        b['vol'] += lv
         for k in ('o', 'h', 'l', 'c'):
             if k in cm and b[k] is None: b[k] = fnum(row, cm[k])
         m = fnum(row, cm.get('mot'))
         if m: b['mot'] = max(b['mot'], m)
 
-    out = []
-    for t in order:
-        b = bars[t]
+    out, joined, skipped = [], 0, 0
+    for key in order:
+        b = bars[key]
         if not b['lvls']: continue
         pts = [x[0] for x in b['lvls']]
-        hi = b['h'] if b['h'] is not None else max(x[1] for x in b['lvls'])
-        lo = b['l'] if b['l'] is not None else min(x[1] for x in b['lvls'])
-        out.append(dict(t=t, lvls=b['lvls'], lo_t=min(pts), hi_t=max(pts),
-                        o=b['o'] if b['o'] is not None else b['lvls'][0][1],
-                        c=b['c'] if b['c'] is not None else b['lvls'][-1][1],
-                        h=hi, l=lo, mot=b['mot'],
-                        vol=sum(x[2] + x[3] for x in b['lvls']),
+        o = h = l = c = None
+        if ohlc:
+            q = ohlc.get(norm_time(b['t']))
+            if q: o, h, l, c = q; joined += 1
+        if b['o'] is not None: o = b['o']
+        if b['h'] is not None: h = b['h']
+        if b['l'] is not None: l = b['l']
+        if b['c'] is not None: c = b['c']
+        if h is None: h = max(x[1] for x in b['lvls'])
+        if l is None: l = min(x[1] for x in b['lvls'])
+        if FROM and b['t'][:10] < FROM: continue          # giai đoạn hợp đồng chưa lỏng
+        if o is None or c is None: skipped += 1; continue  # không ghép được OHLC → bỏ
+        out.append(dict(t=b['t'], lvls=b['lvls'], lo_t=min(pts), hi_t=max(pts),
+                        o=o, c=c, h=h, l=l, mot=b['mot'], vol=b['vol'],
                         delta=sum(x[3] - x[2] for x in b['lvls'])))
+    if OHLC:
+        print(f"ghép OHLC: {joined} nến khớp, bỏ {skipped} nến không khớp → dùng {len(out)} nến"
+              + (f" (từ {FROM})" if FROM else ""))
     return out, cm
 
 
@@ -155,12 +220,12 @@ def analyse(bars, top_k, eff_z, big_z, big_mult, max_displ=2, swing=9, poc_prom=
     fires = {'big': 0, 'abs': 0, 'bars': 0}
     recs = []      # (bar_idx, score, top, components)
     for i, b in enumerate(bars):
-        vols = sorted((x[2] + x[3] for x in b['lvls']), reverse=True)
+        vols = sorted((x[4] for x in b['lvls']), reverse=True)
         if rl.n >= MIN_BARS:
             fires['bars'] += 1
             med = rl.median
-            poc = max(b['lvls'], key=lambda x: x[2] + x[3])
-            pocv = poc[2] + poc[3]
+            poc = max(b['lvls'], key=lambda x: x[4])
+            pocv = poc[4]
             second = vols[1] if len(vols) > 1 else 0.0
             prom_bar = pocv >= poc_prom * max(second, 1e-9)
             rmed = rrange.median
@@ -171,8 +236,7 @@ def analyse(bars, top_k, eff_z, big_z, big_mult, max_displ=2, swing=9, poc_prom=
             sw_lo = swing <= 0 or all(b['l'] <= bars[j]['l'] for j in range(max(0, i - swing), i))
 
             hot_now, big_hit, best = [], False, None
-            for pt, pr, bid, ask in b['lvls']:
-                v = bid + ask
+            for pt, pr, bid, ask, v in b['lvls']:
                 if v < MIN_LVL_FLOOR: continue
                 z = rl.modz(v)
                 if z >= big_z and (big_mult <= 0 or v >= big_mult * med): big_hit = True
@@ -236,7 +300,7 @@ if len(bars) < MIN_BARS + 50:
     print(f"Quá ít nến ({len(bars)}) — cần ≥ {MIN_BARS + 50}."); sys.exit(1)
 
 nl = [len(b['lvls']) for b in bars]
-allv = [x[2] + x[3] for b in bars for x in b['lvls']]
+allv = [x[4] for b in bars for x in b['lvls']]
 print(f"=== DỮ LIỆU ===\nnến: {len(bars)}  |  ô footprint: {len(allv)}")
 print(f"ô/nến: median {st.median(nl):.0f} (min {min(nl)}, max {max(nl)})")
 print(f"volume/ô: median {st.median(allv):.1f}  p90 {sorted(allv)[int(.9*len(allv))]:.0f}  max {max(allv):.0f}")

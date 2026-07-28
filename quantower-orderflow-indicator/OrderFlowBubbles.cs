@@ -33,6 +33,18 @@
 //  Đã BỎ điều kiện "close lùi khỏi cực trị": test 75k nến cho thấy nó kéo hit-rate xuống DƯỚI base.
 //  XÁC NHẬN chỉ đổi viền (giữ mức = vòng trắng, vỡ = mờ đi), KHÔNG trì hoãn tín hiệu.
 //
+//  ---- v3.2 (2026-07-28, SAU khi có footprint per-level THẬT: 538.558 ô) ---------
+//  Đo lại trên dữ liệu thật, với target CHUẨN HOÁ theo biến động (2× median range 100 nến) và
+//  đã bỏ giai đoạn hợp đồng chưa lỏng: base rate về ~50,6% và KHÔNG thành phần nào còn edge.
+//    noResult −7,2pp · prominent −5,8pp · twoSided −1,2σ · divergence −0,0σ · multi ~0 · swing +2,3pp
+//  → mọi trọng số về 0 trừ swing (period 9 → 20). Kiểm chứng chéo 3 nhánh độc lập:
+//    · đa khung M5/M15/M30 KHÔNG cứu được (base M5 48,6%, M30 44,3%; mọi mức điểm trong ±1se)
+//    · LEVEL HOLD: absorption giữ mức KÉM hơn đối chứng −2,8pp; điểm ≥8 −6,6pp (3,7σ)
+//    · E[R] với SL thật: bằng đối chứng đến 3 chữ số
+//  Hiệu ứng duy nhất vững là NGƯỢC DẤU: "ô đậm tại cực trị + range hẹp + POC nổi bật ngay mức"
+//  báo mức SẮP BỊ XUYÊN → gắn nhãn "⚠ Mức DỄ VỠ" (vàng), không gọi là hấp thụ.
+//  ⇒ Bubble là công cụ ĐÁNH DẤU để đọc bằng mắt. "Điểm" là độ đậm hiển thị, KHÔNG phải xác suất.
+//
 //  ---- HỆ MÃ HOÁ HÌNH ---------------------------------------------------------
 //    • Absorption      = TRÒN ĐẶC (sàn px = AbsMinPx).  cyan(đỉnh)/đỏ(đáy)
 //    • Big Trade/HVN   = TRÒN MỜ (halo). Feed KHÔNG cấp MaxOneTradeVolume (đã kiểm 0% trên
@@ -195,8 +207,37 @@ namespace OrderFlowBubbles
         [InputParameter("Absorption · EFFORT: volume/ô z-score ≥", 41, 0.0, 12.0, 0.1, 1)]
         public double AbsEffortZ { get; set; } = 2.5;
 
-        [InputParameter("Absorption · Điểm tối thiểu để vẽ (max 12)", 42, 3, 12, 1, 0)]
-        public int AbsScoreMin { get; set; } = 6;
+        [InputParameter("Absorption · Điểm tối thiểu để vẽ", 42, 3, 12, 1, 0)]
+        public int AbsScoreMin { get; set; } = 4;
+
+        // ---- TRỌNG SỐ từng thành phần (0 = tắt) ----
+        // Mặc định lấy từ đo trên 538.558 ô footprint thật (research/RESEARCH-vong-lap-perlevel):
+        // sau khi chuẩn hoá target theo biến động và bỏ dữ liệu rác, các thành phần noResult /
+        // prominent / twoSided / divergence / multi đo được là VÔ GIÁ TRỊ hoặc GÂY HẠI → trọng số 0.
+        // Để >0 nếu bạn muốn tự thử lại trên feed/khung khác — nhưng hãy calibrate trước.
+        [InputParameter("Absorption · trọng số NO-RESULT (đo: gây hại)", 55, 0, 3, 1, 0)]
+        public int WNoResult { get; set; } = 0;
+
+        [InputParameter("Absorption · trọng số POC nổi bật (đo: gây hại)", 56, 0, 3, 1, 0)]
+        public int WProminent { get; set; } = 0;
+
+        [InputParameter("Absorption · trọng số delta divergence (đo: ~0)", 57, 0, 3, 1, 0)]
+        public int WDivergence { get; set; } = 0;
+
+        [InputParameter("Absorption · trọng số hai phe cùng lớn (đo: gây hại)", 58, 0, 3, 1, 0)]
+        public int WTwoSided { get; set; } = 0;
+
+        [InputParameter("Absorption · trọng số đa nến (đo: ~0)", 59, 0, 3, 1, 0)]
+        public int WMulti { get; set; } = 0;
+
+        [InputParameter("Absorption · trọng số sau swing (đo: +2.3pp)", 66, 0, 3, 1, 0)]
+        public int WSwing { get; set; } = 1;
+
+        // Tổ hợp NGƯỢC DẤU: "ô đậm tại cực trị + range hẹp + POC nổi bật ngay đó" đo được là mức
+        // DỄ VỠ hơn đối chứng (−6,6pp, 3,7σ, đơn điệu, nhất quán 3 tháng) → đổi nhãn thành cảnh báo
+        // xuyên mức, KHÔNG gọi là hấp thụ nữa.
+        [InputParameter("Absorption · gắn nhãn 'DỄ VỠ' cho tổ hợp ngược dấu", 67)]
+        public bool MarkBreakoutRisk { get; set; } = true;
 
         [InputParameter("Absorption · Cách cực trị tối đa (ticks)", 43, 0, 20, 1, 0)]
         public int AbsMaxDisplaceTicks { get; set; } = 2;
@@ -210,8 +251,8 @@ namespace OrderFlowBubbles
         [InputParameter("Absorption · NO-RESULT: price-impact z ≤ −", 46, 0.0, 5.0, 0.1, 1)]
         public double AbsImpactZ { get; set; } = 1.0;
 
-        [InputParameter("Absorption · Sau swing: lookback (Valtos = 9)", 47, 0, 50, 1, 0)]
-        public int AbsSwingPeriod { get; set; } = 9;
+        [InputParameter("Absorption · Sau swing: lookback (đo: 20 tốt hơn 9)", 47, 0, 50, 1, 0)]
+        public int AbsSwingPeriod { get; set; } = 20;
 
         [InputParameter("Absorption · POC nổi bật: POC ≥ × ô nhì", 48, 1.0, 5.0, 0.1, 1)]
         public double AbsPocProminence { get; set; } = 1.5;
@@ -535,22 +576,28 @@ namespace OrderFlowBubbles
                             bool multi = HasRecentHotLevel(idx, k);
 
                             int score = 2                                   // EFFORT (bắt buộc)
-                                      + (noResult ? 2 : 0)
                                       + 1                                   // tại cực trị (đã lọc)
-                                      + (swing ? 1 : 0)
-                                      + (prominent ? 1 : 0)
-                                      + (divergence ? 2 : 0)
-                                      + (twoSided ? 1 : 0)
-                                      + (multi ? 2 : 0);
+                                      + (noResult ? WNoResult : 0)
+                                      + (swing ? WSwing : 0)
+                                      + (prominent ? WProminent : 0)
+                                      + (divergence ? WDivergence : 0)
+                                      + (twoSided ? WTwoSided : 0)
+                                      + (multi ? WMulti : 0);
 
                             if (score >= AbsScoreMin)
                             {
-                                string why = $"Absorption {(top ? "đỉnh" : "đáy")}  điểm {score}/12  vZ={volZ:0.0}"
-                                    + $"  Δô={dPctLvl:P0}"
-                                    + (noResult ? " ·no-result" : "") + (divergence ? " ·divergence" : "")
-                                    + (twoSided ? " ·2 phe" : "") + (prominent ? " ·POC nổi bật" : "")
-                                    + (swing ? " ·sau swing" : "") + (multi ? " ·đa nến" : "");
-                                var b = Solid(price, Shape.Ellipse, top ? BuyColor : SellColor, true, why);
+                                // tổ hợp đo được là mức DỄ VỠ (xem research) → đổi nhãn, không gọi hấp thụ
+                                bool risky = MarkBreakoutRisk && noResult && prominent;
+                                string why = risky
+                                    ? $"⚠ Mức DỄ VỠ {(top ? "đỉnh" : "đáy")} (range hẹp + POC nổi bật ngay mức)"
+                                      + $"  điểm {score}  vZ={volZ:0.0}"
+                                    : $"Ô đậm tại {(top ? "đỉnh" : "đáy")}  điểm {score}  vZ={volZ:0.0}  Δô={dPctLvl:P0}"
+                                      + (swing ? " ·sau swing" : "")
+                                      + (divergence ? " ·divergence" : "") + (twoSided ? " ·2 phe" : "")
+                                      + (noResult ? " ·no-result" : "") + (prominent ? " ·POC nổi bật" : "")
+                                      + (multi ? " ·đa nến" : "");
+                                var col = risky ? Color.Goldenrod : (top ? BuyColor : SellColor);
+                                var b = Solid(price, Shape.Ellipse, col, true, why);
                                 absCands.Add((b, score, volZ, k, top));
                             }
                         }

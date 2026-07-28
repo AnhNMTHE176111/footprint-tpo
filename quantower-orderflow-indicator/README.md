@@ -42,7 +42,7 @@ Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score,
 ## Giải nghĩa & thuật toán (ngưỡng portable, default vàng M1)
 | # | Tín hiệu | Cơ chế + test | Default |
 |---|---|---|---|
-| 1 | **Absorption v3** | **CHẤM ĐIỂM /12** (2026-07-28, xem [research/](research/)): EFFORT (volume ô z) 2đ · **NO-RESULT** (range hẹp / price-impact thấp ~ Kyle lambda) 2đ · tại cực trị 1đ · **sau swing** 1đ · **POC nổi bật** 1đ · **delta divergence** 2đ · **hai phe cùng lớn** 1đ · **đa nến** 2đ → vẽ khi ≥ 6. **Xác nhận** 1–3 nến sau chỉ đổi viền (giữ mức = vòng trắng, vỡ = mờ), KHÔNG trì hoãn tín hiệu. | **BẬT** |
+| 1 | **Absorption v3.2** | Chấm điểm có **TRỌNG SỐ ĐO TỪ DỮ LIỆU THẬT** (538.558 ô, xem [research/](research/)): EFFORT (volume ô z) 2đ + tại cực trị 1đ + **sau swing 20** 1đ → vẽ khi ≥ 4. Các thành phần no-result / POC nổi bật / hai phe / divergence / đa nến **đặt trọng số 0** vì đo được là **vô giá trị hoặc gây hại** (−7,2pp, −5,8pp…). Tổ hợp "range hẹp + POC nổi bật ngay mức" bị đổi nhãn thành **⚠ Mức DỄ VỠ** (vàng) — đo được là mức *sắp bị xuyên*. **Xác nhận** 1–3 nến sau đổi viền, không trì hoãn tín hiệu. | **BẬT** |
 | 2 | **Big Trade → HVN cell** | `MaxOneTradeVolume` (lệnh ĐƠN) z ≥ ngưỡng **VÀ** ≥ ×median. Feed dxFeed **không cấp** field này (0% trên 6 tháng) → tự fallback volume/ô và tooltip ghi **"HVN cell · vol/ô"** cho đúng bản chất. | **BẬT** |
 | 3 | **Big Delta line** | 1 mức có net delta lệch mạnh: `|Δ/Vol| ≥ 0.35` **và** `|Δ|` z cao. Giữ **top-N** mức/nến. | **BẬT** |
 | 4/5 | **Nến delta lớn** | `|Δ/Vol| ≥ 0.30` **và** `|Δ|` z ≥ 2 **và** volume ≥ 0.8× median → tô thân **theo DẤU DELTA** (không theo close). | **BẬT** |

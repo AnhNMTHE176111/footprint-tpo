@@ -848,7 +848,7 @@ namespace RunnerSignal
         private void PollTeleTest()
         {
             ConfigTele();
-            _tele.PollTestRaw($"🔔 TEST — Runner Signal ({Symbol?.Name ?? "?"}) bot chạy OK");
+            _tele.PollTestRaw($"🔔 TEST — Runner Signal ({Symbol?.Name ?? "?"}) bot chạy OK\n— mẫu tin MỞ: 🟢 MUA · CBR · hạng A · Entry/SL/TP\n— mẫu tin ĐÓNG (chạm TP/SL): ✅ WIN +{RR:0.#}R · giá vào→ra · thời lượng\n(nếu nhận được tin này = đường gửi OK; tin ĐÓNG sẽ tự bắn khi lệnh chạm TP/SL)");
         }
 
         private bool BranchOn(bool rev) => rev ? TeleSendRev : TeleSendCbr;
@@ -870,6 +870,7 @@ namespace RunnerSignal
                         string id0 = SigId(s0);
                         _teleSeen.Add(id0);
                         if (s0.Outcome != "running") _teleClosed.Add(id0);   // lệnh cũ đã đóng → không báo
+                        else _teleOpenSent.Add(id0);   // FIX: lệnh đang chạy → coi như "đã mở" để CÒN báo ĐÓNG sau recalc (OnClear wipe _teleOpenSent giữa mở↔đóng)
                     }
                     _teleArmed = true;
                     _teleStatus = $"nạp {_teleSeen.Count} lệnh cũ (không báo) · sẵn sàng";
@@ -1030,6 +1031,17 @@ namespace RunnerSignal
             string wr = closed > 0 ? $" · WR {100.0 * tp / closed:0}%" : "";
             int nRev = sigs.Count(s => s.Scen != null && s.Scen.StartsWith("quay"));
             p.Add(($"RUNNER CBR+VWAP (M1)   ▶{sigs.Count - nRev} ↩{nRev} · ✓{tp} ✗{sl} •{running}{wr}  [CBR {RR:0.#}R · quay đầu {RevRR:0.#}R]", Color.White));
+            // Thống kê R lời/lỗ (TP=+RR nhánh đó, SL=−1R)
+            double totalR = 0;
+            foreach (var s in sigs)
+            {
+                double tr = (s.Scen != null && s.Scen.StartsWith("quay")) ? RevRR : RR;
+                if (s.Outcome == "TP") totalR += tr; else if (s.Outcome == "SL") totalR -= 1;
+            }
+            string rLine = closed > 0
+                ? $"Lời/lỗ: {totalR:+0.0;-0.0}R · TB {totalR / closed:+0.00}R/lệnh ({closed} lệnh đóng)"
+                : "Lời/lỗ: — (chưa có lệnh đóng)";
+            p.Add((rLine, closed > 0 && totalR < 0 ? Color.FromArgb(240, 140, 140) : Color.FromArgb(120, 230, 150)));
             if (_vaTot > 0 && _vaCov < (int)(_vaTot * 0.98) && _vaFirst != DateTime.MinValue)
                 p.Add(($"⚠ footprint chỉ có {_vaCov}/{_vaTot} nến (từ {_vaFirst:dd/MM HH:mm}) — tăng số bar Volume Analysis", Color.FromArgb(255, 190, 120)));
             if (ExportCsv && !string.IsNullOrEmpty(_exportedTo))

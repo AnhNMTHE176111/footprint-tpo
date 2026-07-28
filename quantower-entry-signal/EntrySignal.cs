@@ -18,9 +18,12 @@ namespace EntrySignal
     using System.Collections.Generic;
     using System.Drawing;
     using System.Drawing.Drawing2D;
+    using System.Globalization;
+    using System.IO;
     using System.Linq;
+    using System.Text;
     using TradingPlatform.BusinessLayer;
-    using TpoSuite;   // ProfileEngine (concat)
+    using TpoSuite;   // ProfileEngine (concat) — chứa TeleReport dùng chung
 
     public class EntrySignal : Indicator, IVolumeAnalysisIndicator
     {
@@ -109,6 +112,12 @@ namespace EntrySignal
         public bool EnableS4ArmConfirm { get; set; } = false;   // rút râu = ARM (không cần vol); nến tăng/giảm mạnh vol≥High trong N cây = CONFIRM. Gate cụm≥2 tự lọc. Edge +0.15R@1.5R.
         [InputParameter("KB4: cửa sổ chờ xác nhận (số nến)", 66, 2, 20, 1, 0)]
         public int ArmConfirmWindow { get; set; } = 6;   // rút râu và nến xác nhận cách nhau ≤ N cây
+        // ABSORPTION FILTER (research 6 tháng feed footprint, 4 phân tích hội tụ): delta NGƯỢC phía lệnh
+        // (bán bị hấp thụ ở đáy / mua bị hấp thụ ở đỉnh) → WR 52% vs 36% cùng-phía. Bật → WR 45→52%,
+        // +15.5→+25.5R, cứu tháng lỗ. MẶC ĐỊNH TẮT (live giữ nguyên): khi BẬT, KB2 bỏ yêu cầu delta
+        // cùng-phía (candle-based) và CẢ 2 kịch bản né lệnh có delta 3-nến-chạm-vùng cùng phía. Cần A/B live.
+        [InputParameter("Lọc HẤP THỤ (né delta cùng phía) — cần delta live", 67)]
+        public bool AbsorptionFilter { get; set; } = false;
 
         // ---------- lọc / warm-up ----------
         [InputParameter("Sàn volume (chống nến mỏng)", 70, 0, 500, 1, 0)]
@@ -173,6 +182,50 @@ namespace EntrySignal
         [InputParameter("Độ mờ nền bảng (100-255)", 109, 100, 255, 5, 0)]
         public int PanelOpacity { get; set; } = 215;
 
+        // ================= LỌC THUẬN XU HƯỚNG (tuỳ chọn) =================
+        [InputParameter("Lọc THUẬN xu hướng (proxy TPO)", 112)]
+        public bool TrendFilter { get; set; } = false;   // mặc định TẮT: hại nhánh chạm&đảo ngược-trend đang thắng
+        [InputParameter("Xu hướng: số nến so sánh close", 113, 60, 2000, 20, 0)]
+        public int TrendLookback { get; set; } = 480;     // ~8h M1 — khớp RUNNER v5
+
+        // ================= CẦU NỐI MT5 (tự vào lệnh) =================
+        [InputParameter("Cầu nối MT5: BẬT gửi tín hiệu", 130)]
+        public bool Mt5Bridge { get; set; } = false;
+        [InputParameter("MT5: dry-run (EA chỉ ghi log, KHÔNG vào lệnh)", 131)]
+        public bool Mt5DryRun { get; set; } = true;
+        [InputParameter("MT5: thư mục Files (trống = Common\\Files của MT5)", 132)]
+        public string Mt5Dir { get; set; } = "";
+        [InputParameter("MT5: tên file lệnh (JSONL)", 133)]
+        public string Mt5CmdFile { get; set; } = "entry_cmd.jsonl";   // tách khỏi runner_cmd.jsonl; hoặc đổi = runner_cmd.jsonl để chung 1 EA
+        [InputParameter("MT5: tuổi tín hiệu tối đa (giây) — chống bắn lệnh cũ", 134, 20, 600, 5, 0)]
+        public int Mt5MaxAgeSec { get; set; } = 90;
+        [InputParameter("MT5: chỉ gửi grade A (hợp lưu mạnh)", 135)]
+        public bool Mt5OnlyGradeA { get; set; } = false;
+        // NHỒI theo hợp lưu (research 6 tháng feed footprint: nhồi ×3 khi hợp lưu≥3 → R/MDD 2.05, dương mọi tháng).
+        // Mặc định TẮT (mult=1). Bridge EA nhân lot cơ sở với "size_mult" trong JSONL.
+        [InputParameter("MT5: nhồi khi hợp lưu ≥ (số vùng)", 136, 2, 6, 1, 0)]
+        public int NhoiConflGate { get; set; } = 3;
+        [InputParameter("MT5: hệ số nhồi (×lot; 1 = tắt)", 137, 1, 5, 0.5, 1)]
+        public double NhoiMult { get; set; } = 1.0;
+
+        // ================= BÁO TELEGRAM (mở/đóng lệnh) =================
+        [InputParameter("Báo Telegram: BẬT (mở/đóng lệnh)", 140)]
+        public bool TeleAlerts { get; set; } = false;
+        [InputParameter("Telegram: Bot token", 141)]
+        public string TeleBotToken { get; set; } = "";       // ĐIỀN TAY — repo public, KHÔNG hardcode
+        [InputParameter("Telegram: Chat ID", 142)]
+        public string TeleChatId { get; set; } = "";
+        [InputParameter("Báo khi MỞ lệnh", 143)]
+        public bool TeleAlertOpen { get; set; } = true;
+        [InputParameter("Báo khi ĐÓNG (chạm TP/SL)", 144)]
+        public bool TeleAlertClose { get; set; } = true;
+        [InputParameter("Chỉ báo grade A (hợp lưu mạnh)", 145)]
+        public bool TeleOnlyGradeA { get; set; } = false;
+        [InputParameter("Tuổi tín hiệu tối đa (giây) — chống bắn khi reload", 148, 20, 600, 5, 0)]
+        public int TeleMaxAgeSec { get; set; } = 90;
+        [InputParameter("TG · Gửi thử ngay", 149)]
+        public bool TeleTestNow { get; set; } = false;
+
         private bool _vaLoaded;
         private readonly object _sync = new();
         private readonly object _calc = new();
@@ -184,6 +237,20 @@ namespace EntrySignal
         private DateTime _vaFirst = DateTime.MinValue;
         private readonly PanelDrag _drag = new();
 
+        // ---- cầu nối MT5 ----
+        private bool _mt5Armed;                                 // false = lần quét đầu (nạp lịch sử) → KHÔNG gửi
+        private readonly HashSet<string> _mt5Sent = new();
+        private int _mt5Count;
+        private string _mt5Status;
+        // ---- Telegram (mở + đóng) ----
+        private readonly TeleReport _tele = new();
+        private bool _teleArmed;
+        private readonly HashSet<string> _teleSeen = new();
+        private readonly HashSet<string> _teleOpenSent = new();
+        private readonly HashSet<string> _teleClosed = new();
+        private int _teleSent;
+        private string _teleStatus;
+
         public EntrySignal() : base()
         {
             Name = "Entry Signal (M1)";
@@ -193,9 +260,20 @@ namespace EntrySignal
 
         public bool IsRequirePriceLevelsCalculation => true;
         public void VolumeAnalysisData_Loaded() { lock (_calc) { _vaLoaded = true; _lastN = -1; } Process(); }
-        protected override void OnClear() { _drag.Detach(); lock (_calc) { _vaLoaded = false; _lastN = -1; lock (_sync) _render = null; } }
+        protected override void OnClear()
+        {
+            _drag.Detach();
+            lock (_calc)
+            {
+                _vaLoaded = false; _lastN = -1; lock (_sync) _render = null;
+                // re-attach = nạp lại lịch sử, KHÔNG bắn lệnh/telegram cũ
+                _mt5Armed = false; _mt5Sent.Clear(); _mt5Count = 0; _mt5Status = null;
+                _teleArmed = false; _teleSeen.Clear(); _teleOpenSent.Clear(); _teleClosed.Clear(); _teleSent = 0; _teleStatus = null;
+            }
+        }
         protected override void OnUpdate(UpdateArgs args)
         {
+            PollTeleTest();   // nút gửi thử chạy độc lập với Volume Analysis
             if (!_vaLoaded) return;
             var p = HistoricalData?.VolumeAnalysisCalculationProgress;
             if (p == null || p.State != VolumeAnalysisCalculationState.Finished) return;
@@ -219,6 +297,7 @@ namespace EntrySignal
             public DateTime Time;
             public double O, H, L, C, Vol, Delta, Cum, Vwap, Vma, Vratio;
             public int SinceGap;
+            public int Trend;    // proxy bias TPO: dấu (close − close cách TrendLookback nến) — dùng khi bật lọc thuận xu hướng
             public double Rng => H - L;
             public double Body => Math.Abs(C - O);
             public double UW => H - Math.Max(O, C);
@@ -242,7 +321,7 @@ namespace EntrySignal
             public string Scen; public char Grade; public double Entry, Sl, Tp1, Tp2, RiskT, Rr2;
             public int Confl;        // số vùng THỰC SỰ kích hoạt cùng setup (gộp trigger)
             public int Cluster;      // số vùng NẰM TRONG cụm quanh giá vào (confluence "mắt nhìn") — dùng để lọc
-            public double Vsa; public bool Climax; public List<string> Why = new();
+            public double Vsa; public bool Climax; public int Trend; public List<string> Why = new();
             public string Outcome = "running";
             public DateTime OutTime; // nến chạm SL/TP (để vẽ khối tới đúng chỗ kết thúc)
         }
@@ -268,6 +347,9 @@ namespace EntrySignal
                     var pool = BuildPool(hd, B);
                     var sigs = Scan(hd, B, pool);
                     foreach (var s in sigs) Simulate(B, s);
+
+                    if (Mt5Bridge) EmitMt5(sigs, B);
+                    if (TeleAlerts) EmitTele(sigs, B);
 
                     // lọc hiển thị NGAY trong Process (paint không đụng HistoricalData).
                     // ShowAllHistory → vẽ MỌI tín hiệu (paint tự cull theo trục X nên không nặng).
@@ -315,6 +397,11 @@ namespace EntrySignal
                 b.Vratio = b.Vma > 1e-9 ? b.Vol / b.Vma : 0;
                 b.SinceGap = gap ? 0 : (i > 0 ? B[i - 1].SinceGap + 1 : 999);
             }
+            // proxy xu hướng (TPO bias không có trong data → dùng close vs close TrendLookback nến ~8h,
+            // KHỚP RUNNER v5; EMA30/120 quá nhanh, ngay sau phá đảo chiều còn chỉ hướng cũ).
+            int lb = Math.Max(1, TrendLookback);
+            for (int i = 0; i < B.Count; i++)
+                B[i].Trend = i >= lb ? Math.Sign(B[i].C - B[i - lb].C) : 0;
             return B;
         }
 
@@ -431,26 +518,26 @@ namespace EntrySignal
                     if (z.State == "broke_up" && i - z.BrkBar > 0 && i - z.BrkBar <= RetestBars)
                     {
                         if (b.C < zp - buf * _tick) z.State = "idle";
-                        else if (b.L <= zp + RetestTol * _tick && b.L >= zp - RetestHoldBuf * _tick && LongSignal(b, out var w))
+                        else if (b.L <= zp + RetestTol * _tick && b.L >= zp - RetestHoldBuf * _tick && LongSignal(b, out var w) && (!AbsorptionFilter || DeltaOk(B, i, +1)))
                             em = Emit(raw, B, pool, i, +1, "KB1 phá&hồi", Math.Min(b.L, zp), w, 'A', zp);   // b.L≥vùng-buf: hồi GIỮ vùng (không bắt dao rơi)
                         if (em) { z.Cool = i; z.State = "idle"; }
                     }
                     else if (z.State == "broke_dn" && i - z.BrkBar > 0 && i - z.BrkBar <= RetestBars)
                     {
                         if (b.C > zp + buf * _tick) z.State = "idle";
-                        else if (b.H >= zp - RetestTol * _tick && b.H <= zp + RetestHoldBuf * _tick && ShortSignal(b, out var w))
+                        else if (b.H >= zp - RetestTol * _tick && b.H <= zp + RetestHoldBuf * _tick && ShortSignal(b, out var w) && (!AbsorptionFilter || DeltaOk(B, i, -1)))
                             em = Emit(raw, B, pool, i, -1, "KB1 phá&hồi", Math.Max(b.H, zp), w, 'A', zp);   // b.H≤vùng+buf: hồi GIỮ vùng (không bắt dao rơi)
                         if (em) { z.Cool = i; z.State = "idle"; }
                     }
                     if (!em && EnableS2 && (z.State == "idle" || z.State == "broke_up" || z.State == "broke_dn"))
                     {
-                        if (up && tagged && b.C < zhi && ShortSignal(b, out var w) && b.Delta < 0)
+                        if (up && tagged && b.C < zhi && ShortSignal(b, out var w) && (AbsorptionFilter ? DeltaOk(B, i, -1) : b.Delta < 0))
                         {
                             bool wall = !RequireWallForS2 || Absorption(HdBar(hd, b.HdIdx), b.H, -1) || (S2ClimaxOverride && b.Vratio >= VsaClimax);
                             if (wall)
                                 if (Emit(raw, B, pool, i, -1, "KB2 chạm&đảo", Math.Max(b.H, zp), Append(w, b.Vratio >= VsaClimax ? "climax" : "hấp thụ"), 'B', zp)) { z.Cool = i; z.State = "idle"; }
                         }
-                        else if (dn && tagged && b.C > zlo && LongSignal(b, out var w2) && b.Delta > 0)
+                        else if (dn && tagged && b.C > zlo && LongSignal(b, out var w2) && (AbsorptionFilter ? DeltaOk(B, i, +1) : b.Delta > 0))
                         {
                             bool wall = !RequireWallForS2 || Absorption(HdBar(hd, b.HdIdx), b.L, +1) || (S2ClimaxOverride && b.Vratio >= VsaClimax);
                             if (wall)
@@ -505,6 +592,18 @@ namespace EntrySignal
         private HistoryItemBar HdBar(HistoricalData hd, int absIdx)
             => (absIdx >= 0 && absIdx < hd.Count) ? hd[absIdx, SeekOriginHistory.Begin] as HistoryItemBar : null;
         private static List<string> Append(List<string> w, string s) { var r = new List<string>(w); r.Add(s); return r; }
+
+        // Lọc HẤP THỤ (research feed footprint 6 tháng): giữ lệnh khi delta NHỊP-3-NẾN-chạm-vùng KHÔNG
+        // rõ cùng phía lệnh (long giữ khi ddom≤0 = bán bị hấp thụ; short giữ khi ddom≥0 = mua bị hấp thụ).
+        // Không có dữ liệu delta → giữ (không loại oan). Ngưỡng 0 = tối ưu backtest.
+        private static bool DeltaOk(List<Bar> B, int i, int side)
+        {
+            double d = 0, v = 0;
+            for (int k = Math.Max(0, i - 2); k <= i; k++) { d += B[k].Delta; v += B[k].Vol; }
+            if (v <= 0) return true;
+            double ddom = d / v;
+            return side > 0 ? ddom <= 0 : ddom >= 0;
+        }
 
         // Tường hấp thụ (footprint per-level): tại mức cực trị có 1 mức volume vượt trội +
         // dominance ngược chiều tiếp cận. side=+1 hấp thụ tại ĐÁY (mua), -1 tại ĐỈNH (bán).
@@ -615,7 +714,7 @@ namespace EntrySignal
                 }
             }
             raw.Add(new Sig { Idx = i, Time = b.Time, Side = side, Scen = scen, Grade = grade, Entry = entry, Sl = sl,
-                Tp1 = tp1, Tp2 = tp2, RiskT = risk, Rr2 = rr2, Vsa = b.Vratio, Climax = b.Vratio >= VsaClimax, Why = why,
+                Tp1 = tp1, Tp2 = tp2, RiskT = risk, Rr2 = rr2, Vsa = b.Vratio, Climax = b.Vratio >= VsaClimax, Trend = b.Trend, Why = why,
                 Cluster = ClusterCount(pool, b.Time, zonePrice) });
             return true;
         }
@@ -645,7 +744,13 @@ namespace EntrySignal
                 else { m.Confl++; m.Cluster = Math.Max(m.Cluster, s.Cluster); }
             }
             // GATE theo cụm-gần (confluence "mắt nhìn"): giữ setup có ≥MinConfluence vùng chồng quanh giá vào.
-            return outp.Where(s => s.Cluster >= MinConfluence).ToList();
+            var kept = outp.Where(s => s.Cluster >= MinConfluence);
+            // (tuỳ chọn) lọc THUẬN xu hướng: bỏ LONG khi trend xuống / SHORT khi trend lên.
+            // Backtest dxFeed 5-7/2026: giúp nhánh cluster≥2 (+0.11→+0.16R, cứu tháng 7); nhưng CẮT bớt
+            // nhánh chạm&đảo ngược-trend đang thắng → mặc định TẮT, bật nếu muốn ưu tiên momentum.
+            if (TrendFilter)
+                kept = kept.Where(s => s.Trend == 0 || (s.Side > 0 ? s.Trend > 0 : s.Trend < 0));
+            return kept.ToList();
         }
 
         private void Simulate(List<Bar> B, Sig s)   // bi quan: SL trước TP (chỉ để hiển thị outcome); ghi OutTime
@@ -659,6 +764,231 @@ namespace EntrySignal
                 if (hitTP) { s.Outcome = "TP"; s.OutTime = b.Time; return; }
             }
             s.Outcome = "running"; s.OutTime = B[B.Count - 1].Time;
+        }
+
+        // ================= CẦU NỐI MT5 + TELEGRAM =================
+        // Process() quét LẠI toàn bộ lịch sử mỗi nến → dùng đúng khung chống-trùng của RunnerSignal:
+        //   1) chỉ xét tín hiệu ở nến VỪA ĐÓNG (Idx == B.Count-2)
+        //   2) _armed: lần quét đầu sau attach/reload chỉ NẠP id, không bắn
+        //   3) tuổi tín hiệu ≤ MaxAgeSec so với đồng hồ (bar.Time = mốc MỞ nến, UTC)
+        //   4) id tất định (symbol|phút|hướng|kịch bản) → không lặp; EA lưu id đã xử lý ra file
+        private static bool IsBreak(Sig s) => s.Scen != null && s.Scen.StartsWith("1");   // "1 pha&hoi" vs "2 cham&dao"
+        private string SigId(Sig s) =>
+            $"{Symbol?.Name ?? "X"}|{s.Time:yyyyMMddHHmm}|{(s.Side > 0 ? "B" : "S")}|{(IsBreak(s) ? "P" : "D")}";
+        private static string ReasonVN(Sig s) =>
+            IsBreak(s) ? "phá vùng → hồi giữ gốc → vào nến tiếp diễn"
+                       : "chạm vùng hợp lưu → đảo chiều (hấp thụ)";
+
+        private string Mt5FilesDir()
+        {
+            string dir = Mt5Dir?.Trim();
+            if (!string.IsNullOrEmpty(dir)) return dir;
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                "MetaQuotes", "Terminal", "Common", "Files");
+        }
+
+        private void EmitMt5(List<Sig> sigs, List<Bar> B)
+        {
+            try
+            {
+                if (B.Count < 3) return;
+                int lastClosed = B.Count - 2;
+                double barMin = (B[B.Count - 1].Time - B[B.Count - 2].Time).TotalMinutes;
+                if (barMin <= 0 || barMin > 60) barMin = 1;
+
+                if (!_mt5Armed)
+                {
+                    foreach (var s0 in sigs) _mt5Sent.Add(SigId(s0));
+                    _mt5Armed = true;
+                    double skew = (DateTime.UtcNow - B[B.Count - 1].Time.AddMinutes(barMin)).TotalSeconds;
+                    _mt5Status = $"nạp {_mt5Sent.Count} tín hiệu cũ (KHÔNG gửi) · lệch feed↔đồng hồ {skew:0}s";
+                    return;
+                }
+
+                foreach (var s in sigs.Where(x => x.Idx == lastClosed))
+                {
+                    string id = SigId(s);
+                    if (_mt5Sent.Contains(id)) continue;
+                    if (Mt5OnlyGradeA && s.Grade != 'A') { _mt5Sent.Add(id); continue; }
+                    var closeUtc = s.Time.AddMinutes(barMin);
+                    double age = (DateTime.UtcNow - closeUtc).TotalSeconds;
+                    if (age > Mt5MaxAgeSec || age < -Mt5MaxAgeSec)
+                    {
+                        _mt5Sent.Add(id);
+                        _mt5Status = $"BỎ {s.Time:dd/MM HH:mm} — lệch đồng hồ {age:0}s (>{Mt5MaxAgeSec}s)";
+                        continue;
+                    }
+                    WriteCmd(s, id, closeUtc);
+                    _mt5Sent.Add(id);
+                }
+            }
+            catch (Exception ex) { _mt5Status = "LỖI cầu nối: " + ex.Message; }
+        }
+
+        private void WriteCmd(Sig s, string id, DateTime closeUtc)
+        {
+            var ci = CultureInfo.InvariantCulture;
+            string dir = Mt5FilesDir();
+            Directory.CreateDirectory(dir);
+            string fname = string.IsNullOrWhiteSpace(Mt5CmdFile) ? "entry_cmd.jsonl" : Mt5CmdFile.Trim();
+            string path = Path.Combine(dir, fname);
+
+            double slDist = s.RiskT * _tick;   // KHOẢNG CÁCH (giá futures↔spot lệch basis, chỉ truyền khoảng cách)
+            double sizeMult = s.Cluster >= NhoiConflGate ? NhoiMult : 1.0;   // nhồi khi hợp lưu mạnh (mặc định 1 = tắt)
+            var sb = new StringBuilder();
+            sb.Append('{')
+              .Append("\"id\":\"").Append(id).Append("\",")
+              .Append("\"ts_utc\":\"").Append(closeUtc.ToString("yyyy-MM-dd HH:mm:ss", ci)).Append("\",")
+              .Append("\"src\":\"").Append(Symbol?.Name ?? "?").Append("\",")
+              .Append("\"branch\":\"").Append(IsBreak(s) ? "SCALP_BR" : "SCALP_REV").Append("\",")
+              .Append("\"side\":\"").Append(s.Side > 0 ? "BUY" : "SELL").Append("\",")
+              .Append("\"sl_dist\":").Append(slDist.ToString("0.###", ci)).Append(',')
+              .Append("\"rr\":").Append(RR.ToString("0.##", ci)).Append(',')
+              .Append("\"grade\":\"").Append(s.Grade).Append("\",")
+              .Append("\"vsa\":").Append(s.Vsa.ToString("0.00", ci)).Append(',')
+              .Append("\"cluster\":").Append(s.Cluster.ToString(ci)).Append(',')
+              .Append("\"size_mult\":").Append(sizeMult.ToString("0.##", ci)).Append(',')
+              .Append("\"src_entry\":").Append(s.Entry.ToString("0.0##", ci)).Append(',')
+              .Append("\"src_sl\":").Append(s.Sl.ToString("0.0##", ci)).Append(',')
+              .Append("\"src_tp\":").Append(s.Tp1.ToString("0.0##", ci)).Append(',')
+              .Append("\"dry\":").Append(Mt5DryRun ? "true" : "false")
+              .Append("}\n");
+
+            using (var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+            using (var w = new StreamWriter(fs, new UTF8Encoding(false)))
+                w.Write(sb.ToString());
+
+            _mt5Count++;
+            _mt5Status = $"gửi {_mt5Count} · {s.Time:dd/MM HH:mm} {(s.Side > 0 ? "BUY" : "SELL")} "
+                       + $"{(IsBreak(s) ? "phá&hồi" : "chạm&đảo")} SL {slDist:0.0}giá {RR:0.#}R{(Mt5DryRun ? " [DRY]" : "")}";
+        }
+
+        // ---- Telegram ----
+        private void ConfigTele()
+        {
+            _tele.Enabled = TeleAlerts;
+            _tele.BotToken = (TeleBotToken ?? "").Trim();
+            _tele.ChatId = (TeleChatId ?? "").Trim();
+            _tele.TzOffset = TzOffset;
+            _tele.TestNow = TeleTestNow;
+            _tele.ShareDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EntrySignal");
+        }
+        private void PollTeleTest()
+        {
+            ConfigTele();
+            _tele.PollTestRaw($"🔔 TEST — Entry Signal ({Symbol?.Name ?? "?"}) bot chạy OK\n— mẫu tin MỞ: 🟢 MUA · Phá&Hồi · hạng A · hợp lưu ×3\n— mẫu tin ĐÓNG (chạm TP/SL): ✅ WIN +{RR:0.#}R · giá vào→ra · thời lượng\n(nếu nhận được tin này = đường gửi OK; tin ĐÓNG sẽ tự bắn khi lệnh chạm TP/SL)");
+        }
+
+        private void EmitTele(List<Sig> sigs, List<Bar> B)
+        {
+            try
+            {
+                ConfigTele();
+                if (B.Count < 3) return;
+                int lastClosed = B.Count - 2;
+                double barMin = (B[B.Count - 1].Time - B[B.Count - 2].Time).TotalMinutes;
+                if (barMin <= 0 || barMin > 60) barMin = 1;
+
+                if (!_teleArmed)
+                {
+                    foreach (var s0 in sigs)
+                    {
+                        string id0 = SigId(s0);
+                        _teleSeen.Add(id0);
+                        if (s0.Outcome != "running") _teleClosed.Add(id0);
+                        else _teleOpenSent.Add(id0);   // FIX: lệnh đang chạy → coi như "đã mở" để CÒN báo ĐÓNG sau recalc (OnClear wipe _teleOpenSent giữa mở↔đóng)
+                    }
+                    _teleArmed = true;
+                    _teleStatus = $"nạp {_teleSeen.Count} lệnh cũ (không báo) · sẵn sàng";
+                    return;
+                }
+
+                foreach (var s in sigs)
+                {
+                    string id = SigId(s);
+                    bool ok = !TeleOnlyGradeA || s.Grade == 'A';
+
+                    // MỞ
+                    if (!_teleSeen.Contains(id))
+                    {
+                        if (TeleAlertOpen && ok && s.Idx == lastClosed)
+                        {
+                            var closeUtc = s.Time.AddMinutes(barMin);
+                            double age = (DateTime.UtcNow - closeUtc).TotalSeconds;
+                            if (age <= TeleMaxAgeSec && age >= -TeleMaxAgeSec)
+                            {
+                                _tele.SendRaw(ComposeOpen(s));
+                                _teleOpenSent.Add(id);
+                                _teleSent++;
+                                _teleStatus = $"MỞ {(s.Side > 0 ? "MUA" : "BÁN")} {(IsBreak(s) ? "phá&hồi" : "chạm&đảo")} {s.Time.AddHours(TzOffset):HH:mm} · đã gửi {_teleSent}";
+                            }
+                        }
+                        _teleSeen.Add(id);
+                    }
+
+                    // ĐÓNG (chỉ lệnh đã báo mở)
+                    if (TeleAlertClose && !_teleClosed.Contains(id) && _teleOpenSent.Contains(id)
+                        && (s.Outcome == "TP" || s.Outcome == "SL"))
+                    {
+                        _tele.SendRaw(ComposeClose(s));
+                        _teleClosed.Add(id);
+                        _teleSent++;
+                        _teleStatus = $"ĐÓNG {(s.Outcome == "TP" ? "✓TP" : "✗SL")} {(s.Side > 0 ? "MUA" : "BÁN")} {s.OutTime.AddHours(TzOffset):HH:mm} · đã gửi {_teleSent}";
+                    }
+                }
+            }
+            catch (Exception ex) { _teleStatus = "LỖI Telegram: " + ex.Message; }
+        }
+
+        private string ComposeOpen(Sig s)
+        {
+            double slPts = s.RiskT * _tick;
+            double tpPts = slPts * RR;
+            string dirVN = s.Side > 0 ? "🟢 MUA (LONG)" : "🔴 BÁN (SHORT)";
+            string branch = IsBreak(s) ? "Phá&Hồi" : "Chạm&Đảo";
+            var sb = new StringBuilder();
+            sb.Append("🔔 LỆNH MỚI (Scalp)\n");
+            sb.Append(dirVN).Append(" · ").Append(branch).Append(" · hạng ").Append(s.Grade)
+              .Append(" · hợp lưu ×").Append(s.Cluster);
+            if (NhoiMult > 1.0 && s.Cluster >= NhoiConflGate)
+                sb.Append("  ⚡NHỒI ×").Append(NhoiMult.ToString("0.#"));
+            sb.Append('\n');
+            sb.Append("Vào (Entry): ").Append(Fmt(s.Entry)).Append('\n');
+            sb.Append("SL: ").Append(Fmt(s.Sl)).Append("  (").Append(slPts.ToString("0.0")).Append(" giá)\n");
+            sb.Append("TP: ").Append(Fmt(s.Tp1)).Append("  (").Append(tpPts.ToString("0.0")).Append(" giá · ").Append(RR.ToString("0.#")).Append("R)\n");
+            if (ExtendToNextZone && s.Rr2 > RR + 0.05)
+                sb.Append("TP2 (nới vùng kế): ").Append(Fmt(s.Tp2)).Append("  (").Append(s.Rr2.ToString("0.#")).Append("R)\n");
+            sb.Append("Lý do: ").Append(ReasonVN(s)).Append('\n');
+            if (s.Why != null && s.Why.Count > 0) sb.Append("• ").Append(string.Join(" · ", s.Why)).Append('\n');
+            sb.Append("⏱ ").Append(s.Time.AddHours(TzOffset).ToString("HH:mm dd/MM"))
+              .Append(" · ").Append(Symbol?.Name ?? "?");
+            return sb.ToString();
+        }
+
+        private string ComposeClose(Sig s)
+        {
+            bool win = s.Outcome == "TP";
+            double exit = win ? s.Tp1 : s.Sl;
+            string dirVN = s.Side > 0 ? "MUA (LONG)" : "BÁN (SHORT)";
+            string branch = IsBreak(s) ? "Phá&Hồi" : "Chạm&Đảo";
+            string head = win ? "✅ CHỐT LỜI (TP)" : "🛑 DỪNG LỖ (SL)";
+            string rRes = win ? "+" + RR.ToString("0.#") + "R" : "-1.0R";
+            var sb = new StringBuilder();
+            sb.Append(head).Append(" · ").Append(dirVN).Append(" · ").Append(branch).Append('\n');
+            sb.Append("Kết quả: ").Append(rRes).Append('\n');
+            sb.Append("Vào ").Append(Fmt(s.Entry)).Append(" → ra ").Append(Fmt(exit)).Append('\n');
+            sb.Append("Mở ").Append(s.Time.AddHours(TzOffset).ToString("HH:mm"))
+              .Append(" → đóng ").Append(s.OutTime.AddHours(TzOffset).ToString("HH:mm dd/MM"))
+              .Append("  ·  ").Append(Dur(s.OutTime - s.Time));
+            return sb.ToString();
+        }
+
+        private static string Dur(TimeSpan t)
+        {
+            if (t.TotalMinutes < 1) return "<1p";
+            int h = (int)t.TotalHours, m = t.Minutes;
+            return h > 0 ? $"{h}h{m:00}p" : $"{m}p";
         }
 
         private List<(double price, double strength, int side)> CurrentClusters(List<PZone> pool, DateTime now, double nowPrice)
@@ -690,6 +1020,18 @@ namespace EntrySignal
             int closed = tp + sl;
             string wr = closed > 0 ? $" · WR {100.0 * tp / closed:0}%" : "";
             p.Add(($"ENTRY SIGNAL (M1)   {pool.Count} tín hiệu · ✓{tp} ✗{sl} •{running}{wr}", Color.White));
+            // Thống kê R lời/lỗ (1 lot: TP=+RR, SL=−1R); + R khi nhồi nếu bật
+            double baseR = tp * RR - sl;
+            double nhoiR = 0;
+            foreach (var s in pool)
+            {
+                double m = (NhoiMult > 1 && s.Cluster >= NhoiConflGate) ? NhoiMult : 1;
+                if (s.Outcome == "TP") nhoiR += m * RR; else if (s.Outcome == "SL") nhoiR -= m;
+            }
+            string rLine = closed > 0
+                ? $"Lời/lỗ: {baseR:+0.0;-0.0}R (1 lot) · TB {baseR / closed:+0.00}R/lệnh" + (NhoiMult > 1 ? $" · nhồi ×{NhoiMult:0.#}≥{NhoiConflGate}: {nhoiR:+0.0;-0.0}R" : "")
+                : "Lời/lỗ: — (chưa có lệnh đóng)";
+            p.Add((rLine, closed > 0 && baseR < 0 ? Color.FromArgb(240, 140, 140) : Color.FromArgb(120, 230, 150)));
             // cảnh báo vùng quét thực tế: nến cũ hơn _vaFirst chưa có footprint → không bắn được
             if (_vaTot > 0 && _vaCov < (int)(_vaTot * 0.98) && _vaFirst != DateTime.MinValue)
                 p.Add(($"⚠ footprint chỉ có {_vaCov}/{_vaTot} nến (từ {_vaFirst:dd/MM HH:mm}) — tăng số bar tính Volume Analysis để thấy lịch sử xa hơn", Color.FromArgb(255, 190, 120)));
@@ -703,6 +1045,11 @@ namespace EntrySignal
                 p.Add(($"{oc} {dir} {s.Grade} {s.Scen} | E {Fmt(s.Entry)} SL {Fmt(s.Sl)} ({s.RiskT * _tick:0.0}đ) TP {Fmt(s.Tp1)}→{Fmt(s.Tp2)} ({s.Rr2:0.0}R)", col));
                 p.Add(($"    hợp lưu ×{s.Cluster} · {string.Join(" · ", s.Why)}", Color.Silver));
             }
+            if (TrendFilter) p.Add(("↕ lọc thuận xu hướng: BẬT", Color.FromArgb(180, 200, 160)));
+            if (Mt5Bridge)
+                p.Add((("⇄ MT5: " + (_mt5Status ?? "chờ tín hiệu…")), Color.FromArgb(255, 200, 120)));
+            if (TeleAlerts)
+                p.Add((("📨 Tele: " + (_teleStatus ?? "chờ tín hiệu…")), Color.FromArgb(150, 210, 255)));
             return p;
         }
 

@@ -99,6 +99,27 @@ Absorption **giữ mức kém hơn** đối chứng, và **điểm càng cao m�
 cả 3 tháng. E[R] bằng đối chứng đúng đến 3 chữ số; MFE/R của absorption chỉ "đẹp" vì SL hẹp hơn
 (0,60 vs 0,80). Ma trận target chuẩn hoá × horizon: không ô nào vượt 1σ.
 
+## Vòng 5 — biến phát hiện âm thành thứ dùng được (`breakout_edge.py`)
+
+Nếu tổ hợp kia báo mức *sắp bị xuyên*, thì đo trực tiếp **BREAK-20** (mức có bị close xuyên trong
+20 nến, buffer = max(2 tick, 0,2×medRange)) so đối chứng ghép cặp, kèm **E[R] breakout** thật
+(entry stop tại mức ±1 tick, SL = phía đối diện nến tín hiệu, TP 2R, tie→SL):
+
+| tín hiệu | BREAK-20 | đối chứng | chênh | E[R] | ổn định |
+|---|---|---|---|---|---|
+| **range nến ≤ 0,9× median** (bar-level) | **73,6%** (n=2.873) | 69,0% | **+4,6pp (4,9σ)** | −0,134 | T6 73,4% / T7 73,7%; q0–q3: 75,5/73,8/75,9/69,5% |
+| tổ hợp "dễ vỡ" per-level (z≥2,5 + hẹp + POC sát mức) | 76,3% (n=76) | 70,2% | +6,2pp (1,1σ) | −0,048 | T6 53,8% vs T7 81,0% ✗ |
+| POC sát cực trị + nổi bật | 72,6% (n=536) | 70,1% | +2,5pp (1,2σ) | −0,024 | ổn nhưng yếu |
+| ô đậm z≥2,5 tại cực trị | 68,2% (n=584) | 70,3% | **−2,2pp** | −0,117 | — |
+
+**Đây là hiệu ứng vững nhất của toàn bộ nghiên cứu — và nó thuần bar-level:** độ rộng nến quyết
+định độ bền của cực trị. Cơ chế rõ ràng: nến hẹp tạo cực trị mà chưa có sự từ chối thật; nến rộng có
+wick dài nghĩa là giá đã bị đẩy lùi thật sự → mức bền hơn. Ô đậm per-level tại cực trị thậm chí làm
+mức *bền hơn một chút* (−2,2pp break), ngược hẳn nhãn "absorption" đang gán cho nó.
+
+**Nhưng E[R] âm ở mọi nhóm** (−0,02 … −0,13, chưa trừ phí) → đây là thông tin để **định giá độ bền
+của một mức** (đặt SL, chọn mức nào đáng tin làm S/R), **không phải setup vào lệnh breakout**.
+
 ## Hàm ý cho indicator
 
 1. **Tháo bộ điểm.** `noResult`, `prominent`, `twoSided` phải về trọng số **0** (đo được là gây

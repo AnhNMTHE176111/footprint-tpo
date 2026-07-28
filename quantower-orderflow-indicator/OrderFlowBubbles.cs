@@ -236,7 +236,7 @@ namespace OrderFlowBubbles
         // Tổ hợp NGƯỢC DẤU: "ô đậm tại cực trị + range hẹp + POC nổi bật ngay đó" đo được là mức
         // DỄ VỠ hơn đối chứng (−6,6pp, 3,7σ, đơn điệu, nhất quán 3 tháng) → đổi nhãn thành cảnh báo
         // xuyên mức, KHÔNG gọi là hấp thụ nữa.
-        [InputParameter("Absorption · gắn nhãn 'DỄ VỠ' cho tổ hợp ngược dấu", 67)]
+        [InputParameter("Absorption · gắn nhãn 'CỰC TRỊ YẾU' khi nến hẹp (đo: 4.9σ)", 67)]
         public bool MarkBreakoutRisk { get; set; } = true;
 
         [InputParameter("Absorption · Cách cực trị tối đa (ticks)", 43, 0, 20, 1, 0)]
@@ -531,6 +531,7 @@ namespace OrderFlowBubbles
             double barRange = bar.High - bar.Low;
             double rangeMed = _rBarRange.Median;
             bool noResultRange = ready && rangeMed > 0 && barRange <= AbsRangeRatio * rangeMed;
+            double rangeRatioNow = rangeMed > 0 ? barRange / rangeMed : 0;
             double impact = barVol > 0 ? Math.Abs(bar.Close - bar.Open) / barVol : 0;
             bool noResultImpact = ready && _rBarImpact.BarCount >= MinBars && _rBarImpact.ModZ(impact) <= -AbsImpactZ;
             bool noResult = noResultRange || noResultImpact;
@@ -586,10 +587,14 @@ namespace OrderFlowBubbles
 
                             if (score >= AbsScoreMin)
                             {
-                                // tổ hợp đo được là mức DỄ VỠ (xem research) → đổi nhãn, không gọi hấp thụ
-                                bool risky = MarkBreakoutRisk && noResult && prominent;
+                                // Cực trị của nến HẸP dễ bị xuyên hơn hẳn: 73,6% vs 69,0% đối chứng
+                                // (+4,6pp, 4,9σ, n=2873, ổn định cả 2 tháng và cả 4 quartile biến động).
+                                // Đây là hiệu ứng đo được VỮNG NHẤT trong toàn bộ nghiên cứu — và nó
+                                // thuần bar-level. Cơ chế: nến hẹp tạo cực trị mà không có sự từ chối
+                                // thật; nến rộng có wick dài = đã bị đẩy lùi thật → mức bền hơn.
+                                bool risky = MarkBreakoutRisk && noResultRange;
                                 string why = risky
-                                    ? $"⚠ Mức DỄ VỠ {(top ? "đỉnh" : "đáy")} (range hẹp + POC nổi bật ngay mức)"
+                                    ? $"⚠ Cực trị YẾU {(top ? "đỉnh" : "đáy")} — nến hẹp ({rangeRatioNow:0.0#}× median), mức dễ bị xuyên"
                                       + $"  điểm {score}  vZ={volZ:0.0}"
                                     : $"Ô đậm tại {(top ? "đỉnh" : "đáy")}  điểm {score}  vZ={volZ:0.0}  Δô={dPctLvl:P0}"
                                       + (swing ? " ·sau swing" : "")

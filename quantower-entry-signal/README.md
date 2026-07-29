@@ -80,7 +80,26 @@ hướng nến `close>open`; edge thật = **hợp lưu + retest-giữ-vùng + V
   `%LOCALAPPDATA%\EntrySignal\tele_log.txt`. Điền token/chat_id **bằng tay** (repo public). Nút "TG · Gửi
   thử ngay". Build 0/0. **CHƯA test live Windows.**
 
-## WyckoffRunner v6 (2026-07-29) — nâng cấp CBR theo lời pro trader CORVEN
+## WyckoffRunner v7 (2026-07-29) — sau cổng audit chống overfit
+
+**Trạng thái hiện tại của DLL.** Đọc [research/wyckoff/AUDIT_V7.md](research/wyckoff/AUDIT_V7.md) (cổng
+chặn) + [research/wyckoff/PARITY_V7.md](research/wyckoff/PARITY_V7.md) (đối chiếu C#↔Python) trước khi sửa
+bất cứ gì.
+
+| Kịch bản | Trạng thái | Trong DLL |
+|---|---|---|
+| **KB1** — CBR phá range → chờ hồi → tiếp diễn | ✅ PASS **có điều kiện** | **BẬT**, nhánh duy nhất được cấp vốn |
+| **KB2** — quay đầu tại VWAP | ❌ FAIL (p=0.072; LONG EV chỉ +0.154R) | Có code, **`EnableReversal=false`** — bật chỉ để thu log OOS |
+| **KB3** — scalp biên↔biên trong range | ❌ KILL (chết ở 2 tick phí; 0 range VALID trong 6 tháng OOS) | **Không có dòng code nào** |
+
+- Parity thuật toán C#↔Python: **33/33 tín hiệu khớp, 0 lệch** (entry & SL khớp tới 0,0 tick).
+  Parity DLL-trong-Quantower: **chưa đo** — cần CSV live từ máy Windows.
+- Sửa 1 lỗi parity thật ở GĐ9: `liqbase` (C# lấy mean `Vol` không gồm nến hiện tại; Python lấy mean `Vma`
+  có gồm) — 363/103.857 nến ra quyết định khác nhau, nhưng 0 tín hiệu đổi trên cửa sổ này. Đã sửa.
+- ⚠ **Không có một điểm dữ liệu OOS nào** cho toàn dự án. Kỳ vọng dùng để tính vốn là **+0,7R/lệnh**
+  (đầu dưới), không phải +1,424R của in-sample. Log live = phép OOS đầu tiên.
+
+### v6 (nền của v7) — nâng cấp CBR theo lời pro trader CORVEN
 
 `WyckoffRunner.cs` = clone của `RunnerSignal.cs` (v5 đang chạy live) để thử nâng cấp mà không đụng bản
 đang ship. Toàn bộ kế hoạch, số liệu và giới hạn: **[WYCKOFF_V6_PLAN.md](WYCKOFF_V6_PLAN.md)** +

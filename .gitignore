@@ -17,3 +17,7 @@ atas-orderflow-indicator/tools/*.dll
 
 # Anh render tu bo bai giang Wyckoff - qua nang, khong commit
 data-export/wyckoff/extracted/images/
+
+# Rac build cua parity harness (chi commit source .cs + .csproj)
+quantower-entry-signal/research/wyckoff/parity/bin/
+quantower-entry-signal/research/wyckoff/parity/obj/

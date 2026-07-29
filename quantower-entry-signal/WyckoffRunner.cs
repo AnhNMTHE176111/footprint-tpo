@@ -38,6 +38,26 @@
 //  (sạch, dxFeed GCQ26 5-7/2026, chỉ nhánh CBR): n 77→33, WR 37.7%→48.5% (hoặc 57.6% ở RR3),
 //  MDD 11R→3R. Nhánh QUAY_DAU giữ nguyên logic v2 (2026-07-28), chỉ dọn comment/label sai
 //  (RevApproachBars/Cooldown/SlCapPts không ràng buộc reversal — xem input tương ứng).
+//
+//  === v7 (2026-07-29) — SAU CỔNG AUDIT GĐ8. Đọc research/wyckoff/AUDIT_V7.md trước khi sửa. ===
+//  Cổng audit (Opus xhigh, 12 hướng phản biện) phán quyết:
+//    · KB1 (CBR phá→hồi→tiếp diễn) = PASS CÓ ĐIỀU KIỆN → nhánh DUY NHẤT được cấp vốn.
+//      Cố bác bằng 8 hướng không bác được: Monte Carlo 3000 lần vào-lệnh-ngẫu-nhiên cùng hình học
+//      rủi ro cho p=0.0003; sống sau Bonferroni ×94 cấu hình (p=0.028); 18/18 trục tham số không có
+//      "đỉnh nhọn"; cả hai phía dương (LONG EV+1.143 / SHORT +1.632); sống tới >40 tick phí/lệnh.
+//    · KB2 (QUAY ĐẦU tại VWAP) = FAIL → EnableReversal MẶC ĐỊNH TẮT (xem comment tại input 66).
+//    · KB3 (scalp biên↔biên trong range) = FAIL/KILL → KHÔNG CÓ DÒNG CODE NÀO trong file này.
+//      Chết ở 2 tick phí (EV −0.036R), 0 range VALID trong 6 tháng OOS. Đừng "thêm lại cho đủ 3".
+//  Hai feature v7 từng thiết kế (RangeMode=1 range cấu trúc, BIAS_ON bias phiên TPO) đều KHÔNG PASS
+//  ⟹ KHÔNG port vào đây. Cấu hình đóng băng = AUDIT_V7.md §14, khớp 27/27 tham số với file này.
+//
+//  ⚠⚠ GIỚI HẠN BẰNG CHỨNG — đọc trước khi cấp vốn (AUDIT_V7 §7, BASELINE.md §0):
+//  KHÔNG có MỘT điểm dữ liệu out-of-sample nào cho toàn bộ dự án. Cửa sổ OOS 2025-11→2026-04 chỉ có
+//  171 nến qua gate trên 6 tháng (0,33% so với 52.160 nến của 3 tháng in-sample) ⟹ n=0. 100% số liệu
+//  đến từ MỘT cửa sổ 3 tháng, MỘT regime (vàng tạo đỉnh), MỘT hợp đồng (GCQ26).
+//  ⟹ Kỳ vọng dùng để TÍNH VỐN là +0.7R/lệnh (đầu dưới), KHÔNG phải +1.424R của in-sample.
+//  ⟹ Log live là phép OOS ĐẦU TIÊN. Trước khi có nó: "đủ để thử vốn nhỏ + ghi log", KHÔNG phải
+//     "hệ thống đã được xác nhận".
 // ============================================================================
 namespace WyckoffRunner
 {
@@ -192,8 +212,15 @@ namespace WyckoffRunner
         public int DeadEndHour { get; set; } = 8;
 
         // ---------- QUAY ĐẦU v2 — đảo chiều tại VWAP (2026-07-28, khớp reversal_vwap.py) ----------
-        [InputParameter("Bật nhánh QUAY ĐẦU (đảo chiều tại VWAP)", 66)]
-        public bool EnableReversal { get; set; } = true;
+        // ⚠ v7/GĐ8: MẶC ĐỊNH TẮT. AUDIT_V7.md §13 phán quyết nhánh này = FAIL, KHÔNG cấp vốn:
+        //   · null vào-lệnh-ngẫu-nhiên: EV quan sát +0.389 = đúng p95 của null ⟹ p=0.072 (không có ý nghĩa)
+        //   · sau hiệu chỉnh ≥61 cấu hình: p → >1
+        //   · tách phía (chưa từng báo cáo ở GĐ6): LONG EV chỉ +0.154R (n=13) — gần bằng 0. Toàn bộ
+        //     8.5R/10.5R đến từ SHORT trong regime "vàng tạo đỉnh" ⟹ rất có thể là regime, không phải edge.
+        //   · điểm dữ liệu OOS duy nhất tồn tại: n=9, WR 33%, EV −0.167R
+        // BẬT LẠI CHỈ ĐỂ THU LOG OOS (không cấp vốn thật) — xem BASELINE.md §0.
+        [InputParameter("Bật nhánh QUAY ĐẦU (đảo chiều tại VWAP) — v7: TẮT, chưa được cấp vốn", 66)]
+        public bool EnableReversal { get; set; } = false;
         [InputParameter("Quay đầu: RR mục tiêu (TP) — đảo chiều trần ~1.3R", 67, 1.0, 4.0, 0.25, 2)]
         public double RevRR { get; set; } = 1.5;
         [InputParameter("Quay đầu: VSA xác nhận tối thiểu", 68, 1.0, 4.0, 0.1, 1)]
@@ -500,11 +527,17 @@ namespace WyckoffRunner
                 if (q.Count > VsaPeriod) rollSum -= q.Dequeue();
                 b.Vma = q.Count > 0 ? rollSum / q.Count : b.Vol;
                 b.Vratio = b.Vma > 1e-9 ? b.Vol / b.Vma : 0;
-                // TB-vol dài (KHÔNG gồm nến này) → tỉ lệ thanh khoản portable
+                // TB-vol dài → tỉ lệ thanh khoản portable.
+                // v7/GĐ9 SỬA PARITY: trước đây C# lấy trung bình của Vol (khối lượng thô) và KHÔNG gồm nến
+                // hiện tại; Python `add_liqbase()` (entry_dxfeed.py) lấy trung bình của VMA và CÓ gồm nến
+                // hiện tại. Đã đo trên 103.857 nến: 363 nến (0,35%) ra quyết định LIQ khác nhau, lệch tương
+                // đối trung vị 0,41% (max 84,7% ở đầu chuỗi khi cửa sổ còn ngắn). Trên 5–7/2026 việc này
+                // KHÔNG đổi tín hiệu nào (33/33 khớp cả hai cách) — nhưng vẫn sửa cho khớp Python từng dòng,
+                // vì "không đổi trên cửa sổ này" không có nghĩa là không đổi trên dữ liệu live.
+                lq.Enqueue(b.Vma); liqSum += b.Vma;
+                if (lq.Count > liqW) liqSum -= lq.Dequeue();
                 double liqMean = lq.Count > 0 ? liqSum / lq.Count : b.Vol;
                 b.LiqRatio = liqMean > 1e-9 ? b.Vma / liqMean : 1.0;
-                lq.Enqueue(b.Vol); liqSum += b.Vol;
-                if (lq.Count > liqW) liqSum -= lq.Dequeue();
                 ef = double.IsNaN(ef) ? b.C : ef + kf * (b.C - ef);
                 es = double.IsNaN(es) ? b.C : es + ks * (b.C - es);
                 b.Bias = ef > es + 3 * _tick ? 1 : ef < es - 3 * _tick ? -1 : 0;

@@ -1,0 +1,37 @@
+﻿# FILE 4/5 — kich ban QUAY DAU. v5 va v7 GIONG HET NHAU (cung 28 lenh, cung +12.0R):
+# v6/v7 chi nang cap CBR, khong sua QUAY DAU.
+# Thong ke: n=28 WR=57.1% tong=+12.0R EV=+0.429
+# LUU Y: kich ban nay dang TAT trong DLL — AUDIT_V7 phan quyet FAIL (p=0.072,
+# chet sau Bonferroni, LONG EV chi +0.154R, OOS n=9 EV -0.167R).
+# Review de hieu vi sao no yeu, KHONG phai de bat lai.
+# ⚠ Cot CHAM_1_5 / LOI_GI / CO_CHE_NGHI_NGO / GHI_CHU de TRONG cho ban dien.
+# ⚠ QUY TAC VANG: tim CO CHE lap lai duoc, KHONG phai "le nay dang le thang". Moi quy tac rut ra tu day chi la GIA THUYET, phai kiem tren du lieu thang 8 moi duoc sua cau hinh dong bang.
+stt,ngay_gio,gio_VN,ban,kich_ban,huong,entry,SL,TP,RR,KQ,R,giu_bao_lau,VSA,climax,hop_luu,grade,gia_pha,retrace_%,leg_gia,tp_vuong_vung,ket_thuc_luc,chi_tiet,CHAM_1_5,LOI_GI,CO_CHE_NGHI_NGO,GHI_CHU
+1,2026-05-22 07:10,14:10,v7-WyckoffRunner,QUAY_DAU,SHORT,4559.3,4561.0,4556.75,1.5,WIN,+1.5,4p,2.20,tim,0,B,,,,-,2026-05-22 07:14,đảo chiều VWAP 4560.581 · rút râu trên · VSA 2.2x tím · hấp thụ ✓,,,,
+2,2026-05-27 20:59,03:59,v7-WyckoffRunner,QUAY_DAU,LONG,4488.5,4486.379,4491.681,1.5,WIN,+1.5,1h01,3.12,tim,0,B,,,,-,2026-05-27 22:00,đảo chiều VWAP 4486.579 · rút râu dưới · VSA 3.1x tím · hấp thụ ✓,,,,
+3,2026-05-27 22:38,05:38,v7-WyckoffRunner,QUAY_DAU,LONG,4492.3,4489.4,4496.65,1.5,LOSS,-1.0,3p,2.88,tim,0,B,,,,-,2026-05-27 22:41,đảo chiều VWAP 4490.776 · rút râu dưới · VSA 2.9x tím · hấp thụ ✓,,,,
+4,2026-06-03 10:08,17:08,v7-WyckoffRunner,QUAY_DAU,SHORT,4490.4,4496.1,4481.85,1.5,WIN,+1.5,36p,3.05,tim,1,B,,,,0.4R,2026-06-03 10:44,đảo chiều VWAP 4494.765 · rút râu trên · VSA 3.1x tím · hấp thụ ✓ · TP vướng vùng ↧0.4R,,,,
+5,2026-06-04 18:58,01:58,v7-WyckoffRunner,QUAY_DAU,LONG,4505.4,4504.2,4507.2,1.5,WIN,+1.5,2p,2.25,tim,0,B,,,,-,2026-06-04 19:00,đảo chiều VWAP 4505.338 · rút râu dưới · VSA 2.2x tím · hấp thụ ✓,,,,
+6,2026-06-08 01:07,08:07,v7-WyckoffRunner,QUAY_DAU,LONG,4358.8,4354.3,4365.55,1.5,LOSS,-1.0,7p,1.87,-,0,B,,,,1.4R,2026-06-08 01:14,đảo chiều VWAP 4356.916 · rút râu dưới · VSA 1.9x · TP vướng vùng ↧1.4R,,,,
+7,2026-06-08 14:39,21:39,v7-WyckoffRunner,QUAY_DAU,LONG,4344.5,4338.8,4353.05,1.5,WIN,+1.5,7p,2.74,tim,0,B,,,,1.4R,2026-06-08 14:46,đảo chiều VWAP 4339.09 · rút râu dưới · VSA 2.7x tím · hấp thụ ✓ · TP vướng vùng ↧1.4R,,,,
+8,2026-06-09 09:25,16:25,v7-WyckoffRunner,QUAY_DAU,LONG,4356.7,4355.392,4358.662,1.5,LOSS,-1.0,2p,3.60,tim,0,B,,,,-,2026-06-09 09:27,đảo chiều VWAP 4355.592 · rút râu dưới · VSA 3.6x tím · hấp thụ ✓,,,,
+9,2026-06-09 13:31,20:31,v7-WyckoffRunner,QUAY_DAU,SHORT,4356.0,4357.7,4353.45,1.5,LOSS,-1.0,2p,1.93,-,1,B,,,,0.1R,2026-06-09 13:33,đảo chiều VWAP 4357.415 · rút râu trên · VSA 1.9x · TP vướng vùng ↧0.1R,,,,
+10,2026-06-11 09:30,16:30,v7-WyckoffRunner,QUAY_DAU,SHORT,4098.4,4102.2,4092.7,1.5,LOSS,-1.0,2p,3.42,tim,0,B,,,,-,2026-06-11 09:32,đảo chiều VWAP 4100.741 · rút râu trên · VSA 3.4x tím · hấp thụ ✓,,,,
+11,2026-06-12 19:32,02:32,v7-WyckoffRunner,QUAY_DAU,LONG,4228.4,4225.767,4232.35,1.5,LOSS,-1.0,2p,2.40,tim,0,B,,,,-,2026-06-12 19:34,đảo chiều VWAP 4225.967 · rút râu dưới · VSA 2.4x tím · hấp thụ ✓,,,,
+12,2026-06-22 18:21,01:21,v7-WyckoffRunner,QUAY_DAU,SHORT,4207.0,4208.5,4204.75,1.5,WIN,+1.5,11p,2.22,tim,2,A,,,,-,2026-06-22 18:32,đảo chiều VWAP 4208.239 · rút râu trên · VSA 2.2x tím · hấp thụ ✓ · hợp lưu ×2,,,,
+13,2026-06-23 11:21,18:21,v7-WyckoffRunner,QUAY_DAU,SHORT,4144.8,4150.62,4136.069,1.5,WIN,+1.5,27p,2.61,tim,0,B,,,,-,2026-06-23 11:48,đảo chiều VWAP 4150.42 · rút râu trên · VSA 2.6x tím · hấp thụ ✓,,,,
+14,2026-07-01 09:30,16:30,v7-WyckoffRunner,QUAY_DAU,SHORT,3990.9,3993.4,3987.15,1.5,LOSS,-1.0,2p,3.36,tim,0,B,,,,0.8R,2026-07-01 09:32,đảo chiều VWAP 3993.158 · rút râu trên · VSA 3.4x tím · hấp thụ ✓ · TP vướng vùng ↧0.8R,,,,
+15,2026-07-03 16:34,23:34,v7-WyckoffRunner,QUAY_DAU,SHORT,4181.5,4183.0,4179.25,1.5,LOSS,-1.0,11p,2.22,tim,1,B,,,,0.1R,2026-07-03 16:45,đảo chiều VWAP 4182.336 · rút râu trên · VSA 2.2x tím · hấp thụ ✓ · TP vướng vùng ↧0.1R,,,,
+16,2026-07-06 18:04,01:04,v7-WyckoffRunner,QUAY_DAU,LONG,4169.3,4168.1,4171.1,1.5,LOSS,-1.0,1p,5.77,tim,0,B,,,,-,2026-07-06 18:05,đảo chiều VWAP 4168.565 · rút râu dưới · VSA 5.8x tím · hấp thụ ✓,,,,
+17,2026-07-07 22:41,05:41,v7-WyckoffRunner,QUAY_DAU,SHORT,4111.0,4112.7,4108.45,1.5,LOSS,-1.0,1p,3.00,tim,0,B,,,,-,2026-07-07 22:42,đảo chiều VWAP 4112.13 · rút râu trên · VSA 3.0x tím · hấp thụ ✓,,,,
+18,2026-07-08 20:21,03:21,v7-WyckoffRunner,QUAY_DAU,LONG,4085.1,4083.9,4086.9,1.5,WIN,+1.5,9p,2.11,-,0,B,,,,-,2026-07-08 20:30,đảo chiều VWAP 4084.234 · rút râu dưới · VSA 2.1x,,,,
+19,2026-07-10 18:25,01:25,v7-WyckoffRunner,QUAY_DAU,SHORT,4112.7,4115.964,4107.804,1.5,WIN,+1.5,17p,3.44,tim,0,B,,,,0.6R,2026-07-10 18:42,đảo chiều VWAP 4115.764 · rút râu trên · VSA 3.4x tím · hấp thụ ✓ · TP vướng vùng ↧0.6R,,,,
+20,2026-07-13 05:11,12:11,v7-WyckoffRunner,QUAY_DAU,SHORT,4076.5,4081.1,4069.6,1.5,WIN,+1.5,12p,2.24,tim,0,B,,,,-,2026-07-13 05:23,đảo chiều VWAP 4080.785 · rút râu trên · VSA 2.2x tím · hấp thụ ✓,,,,
+21,2026-07-13 22:59,05:59,v7-WyckoffRunner,QUAY_DAU,SHORT,4007.4,4010.634,4002.55,1.5,WIN,+1.5,31p,2.17,-,0,B,,,,-,2026-07-13 23:30,đảo chiều VWAP 4010.434 · rút râu trên · VSA 2.2x,,,,
+22,2026-07-15 10:14,17:14,v7-WyckoffRunner,QUAY_DAU,SHORT,4040.2,4042.6,4036.6,1.5,WIN,+1.5,9p,4.13,tim,1,B,,,,0.9R,2026-07-15 10:23,đảo chiều VWAP 4040.81 · rút râu trên · VSA 4.1x tím · hấp thụ ✓ · TP vướng vùng ↧0.9R,,,,
+23,2026-07-15 16:01,23:01,v7-WyckoffRunner,QUAY_DAU,LONG,4052.8,4050.698,4055.954,1.5,LOSS,-1.0,1p,1.82,-,0,B,,,,1.5R,2026-07-15 16:02,đảo chiều VWAP 4050.898 · rút râu dưới · VSA 1.8x · TP vướng vùng ↧1.5R,,,,
+24,2026-07-16 09:16,16:16,v7-WyckoffRunner,QUAY_DAU,SHORT,4041.8,4043.4,4039.4,1.5,WIN,+1.5,5p,5.33,tim,0,B,,,,1.0R,2026-07-16 09:21,đảo chiều VWAP 4042.998 · rút râu trên · VSA 5.3x tím · hấp thụ ✓ · TP vướng vùng ↧1.0R,,,,
+25,2026-07-22 19:52,02:52,v7-WyckoffRunner,QUAY_DAU,LONG,4137.7,4135.203,4141.446,1.5,LOSS,-1.0,2p,3.66,tim,0,B,,,,-,2026-07-22 19:54,đảo chiều VWAP 4135.403 · rút râu dưới · VSA 3.7x tím · hấp thụ ✓,,,,
+26,2026-07-26 23:46,06:46,v7-WyckoffRunner,QUAY_DAU,LONG,4094.9,4092.844,4097.984,1.5,WIN,+1.5,4p,3.68,tim,0,B,,,,-,2026-07-26 23:50,đảo chiều VWAP 4093.044 · rút râu dưới · VSA 3.7x tím · hấp thụ ✓,,,,
+27,2026-07-27 07:11,14:11,v7-WyckoffRunner,QUAY_DAU,LONG,4100.8,4099.2,4103.2,1.5,WIN,+1.5,2p,2.11,-,0,B,,,,-,2026-07-27 07:13,đảo chiều VWAP 4099.648 · rút râu dưới · VSA 2.1x,,,,
+28,2026-07-28 06:40,13:40,v7-WyckoffRunner,QUAY_DAU,SHORT,4051.3,4053.066,4048.651,1.5,WIN,+1.5,6p,2.05,-,0,B,,,,1.3R,2026-07-28 06:46,đảo chiều VWAP 4052.866 · rút râu trên · VSA 2.1x · TP vướng vùng ↧1.3R,,,,

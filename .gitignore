@@ -14,3 +14,6 @@ atas-orderflow-indicator/tools/*.dll
 
 # Rac pycache cua script research
 **/__pycache__/
+
+# Anh render tu bo bai giang Wyckoff - qua nang, khong commit
+data-export/wyckoff/extracted/images/

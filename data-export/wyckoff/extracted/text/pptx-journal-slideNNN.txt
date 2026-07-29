@@ -1,0 +1,378 @@
+=== SLIDE 1 ===
+BUỔI 1
+--- NOTES SLIDE 1 ---
+33
+=== SLIDE 2 ===
+=== SLIDE 3 ===
+3
+=== SLIDE 4 ===
+4
+=== SLIDE 5 ===
+5
+--- NOTES SLIDE 5 ---
+75
+=== SLIDE 6 ===
+=== SLIDE 7 ===
+BUỔI 2
+=== SLIDE 8 ===
+=== SLIDE 9 ===
+Bạn này hiểu bài khá tốt và rất chăm gửi vào hẳn slide cho ADMIN hơn 20 vd , ADMIN sr chỉ xem qua k có thời gian sửa từng bài tập cho bạn .
+25- Trần Thái Lâm 
+GẮN NHÃN SP là gì?? SP thành ST[B] , khu vực LPS cần làm rõ khối lượng 
+=== SLIDE 10 ===
+47- Huynh An Ril
+Điểm Test là LPS [C] , nhìn chung hình này vẽ khá tốt cần là rõ Volume
+=== SLIDE 11 ===
+LPS[C]
+=== SLIDE 12 ===
+37- Trần Đức Trung
+Hiểu bài khá tốt, gắn ở những mức cần thiết 
+=== SLIDE 13 ===
+UT
+ST
+LPS[C]
+LPS[D]
+=== SLIDE 14 ===
+Hình vẽ khá chuẩn tốt , cần làm rõ khối lượng 
+24- Lâm Văn Trình
+=== SLIDE 15 ===
+=== SLIDE 16 ===
+Hiểu bài sâu , gửi hơn 30 VD rất chăm chỉ =&gt; Tuyên dương 
+Vẽ rất tốt theo sát từng diễn biến giá, SPRING LÀ LPS[C] 
+22- Nguyễn Ngọc Thu
+=== SLIDE 17 ===
+LPS[C]
+LPS[D]
+LPS[D]
+=== SLIDE 18 ===
+Gắn nhãn tốt , Làm rõ khối lượng
+05- Từ Quốc Đạt
+=== SLIDE 19 ===
+=== SLIDE 20 ===
+PS
+MSOS
+BU/LPS
+=== SLIDE 21 ===
+Gắn nhãn ổn , làm rõ Khối lượng
+CHoCH1 phần tô màu qua ST [A] mới chuẩn 
+93- Petter Phan
+=== SLIDE 22 ===
+=== SLIDE 23 ===
+Gắn nhãn tốt , cần làm rõ khối lượng
+87- Nguyễn Thị Vân
+=== SLIDE 24 ===
+74- 
+Đăng
+Tấn
+Phát
+=== SLIDE 25 ===
+73- 
+Nguyễn
+Năng
+Công
+Nguyên
+GẮN NHÃN TỐT , THIẾU VOL
+=== SLIDE 26 ===
+=== SLIDE 27 ===
+SC
+AR
+ST
+SOS
+PHASE A
+PHASE B
+PHASE C
+PHASE D
+=== SLIDE 28 ===
+69- 
+Lê
+Nguyễn
+Toàn
+Thắng
+=== SLIDE 29 ===
+64- 
+Nguyễn
+ Minh 
+Phúc
+=== SLIDE 30 ===
+UT
+LPS
+=== SLIDE 31 ===
+56 – 
+Trần
+Anh
+Tuấn
+=== SLIDE 32 ===
+sos
+ST
+LPS
+PHASE C
+PHASE D
+PHASE A
+PHASE B
+=== SLIDE 33 ===
+0+MẠNH TÙNG 
+=== SLIDE 34 ===
+190 LA MYA
+=== SLIDE 35 ===
+162- Nguyễn Anh Quốc
+=== SLIDE 36 ===
+163- Bùi Nguyễn Thanh Bạch
+=== SLIDE 37 ===
+SPRING [C]
+=== SLIDE 38 ===
+173- Nguyễn Bích Thuỷ
+UT
+=== SLIDE 39 ===
+BUỔI 3
+=== SLIDE 40 ===
+=== SLIDE 41 ===
+=== SLIDE 42 ===
+=== SLIDE 43 ===
+=== SLIDE 44 ===
+=== SLIDE 45 ===
+=== SLIDE 46 ===
+=== SLIDE 47 ===
+=== SLIDE 48 ===
+ST[B]
+=== SLIDE 49 ===
+=== SLIDE 50 ===
+=== SLIDE 51 ===
+Local redistribution as LPSY ?
+=== SLIDE 52 ===
+Local redistribution as LPSY ?
+=== SLIDE 53 ===
+=== SLIDE 54 ===
+=== SLIDE 55 ===
+SC
+ST[B]
+AR
+ST[A]
+LPS[C]
+BCLX
+AR
+ST[A]
+LPSY[C]
+Phase A
+Phase A
+Phase B
+Phase B
+Minor SOW
+UT [B]
+=== SLIDE 56 ===
+BCLX
+AR
+ST[A]
+ST[B]
+Minor SOW[B]
+LPSY[C]
+Phase A
+Phase B
+=== SLIDE 57 ===
+=== SLIDE 58 ===
+SC
+AR
+ST[A]
+ST[B]
+ST[B]
+LPS[C]
+ST[B]
+=== SLIDE 59 ===
+=== SLIDE 60 ===
+BUỔI 4
+=== SLIDE 61 ===
+PHASE A
+PHASE D
+PHASE C
+PHASE B
+UTAD[C]
+=== SLIDE 62 ===
+=== SLIDE 63 ===
+ST[B]
+ATTEMPT TO ST FAILED
+LPSY [C]
+PHASE D
+PHASE A
+PHASE C
+PHASE B
+=== SLIDE 64 ===
+PHASE A
+PHASE D
+PHASE C
+PHASE B
+MSOW
+LPSY[C]
+=== SLIDE 65 ===
+20 - NGUYỄN NGỌC THU
+MSOW
+RE-DISTRIBUTION
+PHASE D
+PHASE C
+PHASE B
+PHASE A
+LPSY[D]
+=== SLIDE 66 ===
+MSOW [D]
+LPSY  [D]
+PHASE D
+PHASE C
+PHASE B
+PHASE A
+=== SLIDE 67 ===
+=== SLIDE 68 ===
+PHASE C
+PHASE B
+PHASE A
+LPSY[C]
+ST[B]
+PHASE D
+=== SLIDE 69 ===
+LPSY[C]
+PHASE C
+PHASE B
+PHASE A
+PHASE D
+=== SLIDE 70 ===
+63 - Nguyễn Văn Hiệp
+64 - Nguyễn Minh Phúc
+ST[B]
+=== SLIDE 71 ===
+selling
+selling
+selling
+selling
+psy
+=== SLIDE 72 ===
+=== SLIDE 73 ===
+selling
+=== SLIDE 74 ===
+=== SLIDE 75 ===
+302 – HARMONY ONE
+=== SLIDE 76 ===
+Phase A
+Phase D
+Phase C
+Phase B
+=== SLIDE 77 ===
+=== SLIDE 78 ===
+L
+psy
+[C]
+=== SLIDE 79 ===
+=== SLIDE 80 ===
+Msow
+m
+sow[B]
+selling
+selling
+LPSY[C]
+Phase C
+Phase D
+Phase A
+Phase B
+=== SLIDE 81 ===
+=== SLIDE 82 ===
+=== SLIDE 83 ===
+MSOW[D]
+=== SLIDE 84 ===
+192-CAO ĐẠI
+M
+sow
+lpsy
+Phase A
+Phase B
+Phase C
+Phase D
+=== SLIDE 85 ===
+lpsy
+=== SLIDE 86 ===
+=== SLIDE 87 ===
+MAJOR SOW
+=== SLIDE 88 ===
+BCLX
+=== SLIDE 89 ===
+SOW
+LPSY
+ST
+LPSY
+119  DOAN ANH TU
+=== SLIDE 90 ===
+=== SLIDE 91 ===
+0 - Phan Thanh Tu
+UTAD[C] SAI LÀ LPSY[C], UT[B] LÀ ST[B ĐỂ Ý NÓ CAM KẾT Ở KHÁNG CỰ , THIẾU MSOW
+=== SLIDE 92 ===
+LPSY [C]
+Phase A
+Phase B
+Phase C
+Phase D
+ST
+sow
+=== SLIDE 93 ===
+=== SLIDE 94 ===
+SOW
+123 - Nguyễn 
+Quý
+Hoàng
+=== SLIDE 95 ===
+=== SLIDE 96 ===
+BUỔI 5
+=== SLIDE 97 ===
+=== SLIDE 98 ===
+=== SLIDE 99 ===
+=== SLIDE 100 ===
+=== SLIDE 101 ===
+=== SLIDE 102 ===
+=== SLIDE 103 ===
+=== SLIDE 104 ===
+=== SLIDE 105 ===
+=== SLIDE 106 ===
+=== SLIDE 107 ===
+=== SLIDE 108 ===
+=== SLIDE 109 ===
+=== SLIDE 110 ===
+=== SLIDE 111 ===
+=== SLIDE 112 ===
+=== SLIDE 113 ===
+=== SLIDE 114 ===
+=== SLIDE 115 ===
+BUỔI 6
+=== SLIDE 116 ===
+=== SLIDE 117 ===
+=== SLIDE 118 ===
+=== SLIDE 119 ===
+=== SLIDE 120 ===
+=== SLIDE 121 ===
+=== SLIDE 122 ===
+=== SLIDE 123 ===
+=== SLIDE 124 ===
+=== SLIDE 125 ===
+=== SLIDE 126 ===
+=== SLIDE 127 ===
+=== SLIDE 128 ===
+=== SLIDE 129 ===
+BUỔI 
+7
+=== SLIDE 130 ===
+=== SLIDE 131 ===
+=== SLIDE 132 ===
+=== SLIDE 133 ===
+=== SLIDE 134 ===
+=== SLIDE 135 ===
+=== SLIDE 136 ===
+=== SLIDE 137 ===
+=== SLIDE 138 ===
+=== SLIDE 139 ===
+=== SLIDE 140 ===
+=== SLIDE 141 ===
+=== SLIDE 142 ===
+=== SLIDE 143 ===
+=== SLIDE 144 ===
+=== SLIDE 145 ===
+=== SLIDE 146 ===
+=== SLIDE 147 ===
+=== SLIDE 148 ===
+=== SLIDE 149 ===
+=== SLIDE 150 ===
+=== SLIDE 151 ===
+=== SLIDE 152 ===
+=== SLIDE 153 ===

@@ -1,0 +1,817 @@
+                         8xTRADING GROUP
+                       Contact information:
+    Telegram group :
+    https://t.me/joinchat/pLGA6juL48xkZTc1
+
+Youtube :https://www.youtube.com/c/8xTRADING
+                                        29-Phạm Thị Thùy Nhiên
+
+
+
+
+CHoCH1 : thiếu CHoBEV giảm ở ST
+CHoCH2 : thiếu ChoBEV giảm ở kháng cự
+                                       Phạm Thị Thùy Nhiên -29
+
+
+
+
+Gắn nhãn đúng thiếu mô tả khối lượng
+                                          51- Nguyễn Anh Tuấn
+
+
+
+
+CHoCH 1 : ChoBEV giảm phải đến điểm ST gần SC
+CHoCH 2 : Chưa cho thấy ChoBEV tăng phá vỡ TR
+                                51- Nguyễn Anh Tuấn
+
+
+
+
+Điểm Test là LPS[C] tiềm năng
+                                      51- Nguyễn Anh Tuấn
+                PHASE A         PHASE B     PHASE C    PHASE D
+
+
+
+
+                                                             BU/LPS
+
+
+
+
+                                              LPS[C]
+
+
+
+
+Điểm Test là LPS[C] tiềm năng
+                                        51- Nguyễn Anh Tuấn
+
+
+
+
+Phase A xác định sai , UT gắn nhãn thay thế bằng AR, SPRING THÀNH ST[B]
+PHASE A           PHASE B      PHASE C   PHASE D
+
+   AR
+
+
+
+
+          ST[A]
+
+
+                       ST[B]
+                                LPS[C]
+                                          33- Hà Huy Hùng
+
+
+
+
+Phase C là Spring NGAY ST , LPS LÀ TEST
+PHASE A   PHASE B   PHASE C     PHASE D
+
+
+
+                              MSOS
+
+
+                                 BU/LPS
+
+
+
+
+                        TEST
+               SPRING
+25- Trần Thái Lâm
+
+
+
+
+Bạn này hiểu bài khá tốt và rất chăm gửi vào hẳn slide cho ADMIN hơn 20 vd , ADMIN sr chỉ
+xem qua k có thời gian sửa từng bài tập cho bạn .
+GẮN NHÃN SP là gì?? SP thành ST[B] , khu vực LPS cần làm rõ khối lượng
+                                  PHASE D
+
+                                   MSOS
+PHASE A    PHASE B   PHASE C
+
+
+
+
+                                      LPS[D]
+
+
+
+
+                        LPS [C]
+          ST [B]
+                       50- Phạm văn Thiện
+
+
+
+
+CHoCH 2 : sai , không rõ ràng
+KHÔNG RÕ RÀNG
+         50- Phạm văn Thiện
+
+
+
+
+Phase C sai , cần làm rõ LPS [C] tiềm năng
+Làm rõ khối lượng trong quá trình gắn nhãn
+                      LPS[C]
+
+PHASE A   PHASE B   PHASE C PHASE D
+                                       49- Nguyễn Thanh Phú
+
+
+
+
+CHoCH 2 : Thiếu ChoBEV giảm ở thành kháng cự cho thấy sự cạn cung
+49- Nguyễn Thanh Phú
+
+
+
+
+Phase [C] sai , sau khi Failed SOS chuyển thành UT[B] thì LPS[C] tiềm năng
+PHASE A           PHASE B     PHASE C   PHASE D
+
+
+
+                      UT[B]
+
+
+
+
+          ST[B]
+                              LPS[C]
+                                      48- Huỳnh Thái Khương
+
+
+
+
+Thiếu gắn nhãn MSOS, Phase D mở rộng hơn
+PHASE A   PHASE B   PHASE C   PHASE D
+                               MSOS
+  47- Huynh An Ril
+
+
+
+
+CHoCH 2 :THIẾU CHOBEV
+   47- Huynh An Ril
+
+
+
+
+Đây là 1 Case khá thú vị , khi SC là một vùng TR nhỏ , điểm ST1 phải được đánh là SC, AR
+được đánh ở mức cao hơn ,ST2 đánh dấu sự dừng lại Phase A , UT[B] là minor SOS
+PHASE A             PHASE B   PHASE C    PHASE D
+
+
+
+
+          AR
+
+
+
+
+               ST     ST[B]
+                                LPS[C]
+    SC
+                                   47- Huynh An Ril
+
+
+
+
+Điểm Test là LPS [C] , nhìn chung hình này vẽ khá tốt cần là rõ Volume
+LPS[C]
+      37- Trần Đức Trung
+
+
+
+
+Hiểu bài khá tốt, gắn ở những mức cần thiết
+UT
+
+
+
+                   LPS[D]
+     ST
+          LPS[C]
+       24- Lâm Văn Trình
+
+
+
+
+Hình vẽ khá chuẩn tốt , cần làm rõ khối lượng
+ 24- Lâm Văn Trình
+
+
+
+
+Phase C sai , Spring là LPS [C] ,cần đọc lại Spring là gì ?
+PHASE A   PHASE B   PHASE C   PHASE D
+
+
+
+
+                              MSOS[D]
+
+
+
+
+                    LPS[C]
+                                                           22- Nguyễn Ngọc Thu
+
+
+
+Hiểu bài sâu , gửi hơn 30 VD rất chăm chỉ => Tuyên dương
+
+Vẽ rất tốt theo sát từng diễn biến giá, SPRING LÀ LPS[C]
+PHASE A   PHASE B   PHASE C            PHASE D
+
+
+
+
+                                       LPS[D]
+
+
+                              LPS[D]
+
+
+
+
+                     LPS[C]
+                                                  22- Nguyễn Ngọc Thu
+
+
+
+
+SOS ở Phase D phải ở đỉnh mới cao hơn phía trên
+          PHASE B   PHASE C   PHASE D
+PHASE A
+
+                              MSOS[D]
+
+
+
+                               BU/LPS
+   16 – Nguyễn Minh Đức
+
+
+
+
+Sai Phase A , Spring [C] là LPS [C] bởi vì Spring phải có giá thấp nhất trong suốt TR
+PHASE A       PHASE B   PHASE C   PHASE D
+
+
+
+
+                                            BU/LPS
+
+
+      ST[A]
+
+
+                        LPS[C]
+                    06- Nguyễn Duy Hung
+
+
+
+
+09- Lê Hoàng Hà
+
+
+
+
+  vẽ hình đep , SAI SRING
+                  LPS[D]
+         LPS[D]
+
+
+
+LPS[C]
+                                   05- Từ Quốc Đạt
+
+
+
+
+Gắn nhãn tốt , Làm rõ khối lượng
+      05- Từ Quốc Đạt
+
+
+
+
+VOL LỚN QUÁ , CẤU TRÚC CHƯA CHẠY HẾT CÓ THỂ PHÂN PHỐI
+     MSOS
+
+
+
+
+            BU/LPS
+
+
+
+
+PS
+                      01- Nguyễn Hải Đăng
+
+
+
+
+Cần làm rõ khối lượng, GẮN NHÃN SAI PHASE A
+                                  PHASE D
+PHASE A       PHASE B   PHASE C      MSOS
+
+
+    AR
+
+
+
+
+         ST
+                                 93- Petter Phan
+
+
+
+
+Gắn nhãn ổn , làm rõ Khối lượng
+CHoCH1 phần tô màu qua ST [A] mới chuẩn
+                                                       93- Petter Phan
+
+
+
+
+CHoCH1 : thiếu ChoBEV AR-ST   Test là LPS [C ] , vẽ hình khá đẹp
+LPS[C]
+   87- Nguyễn Thị Vân
+
+
+
+
+Phase D xác định chưa đúng , sau khi bị Failed cần mở rông TR hơn , 1 sự thử nghiệm Phase C
+BÊN CẠNH ĐÓ THAY ĐỔI DÁN NHÃN UT THÀNH AR , SPRING THÀNH ST
+PHASE A   PHASE B           PHASE C
+                    UT[B]
+
+
+   AR
+
+
+
+
+                            LPS[C]
+
+    ST
+  87- Nguyễn Thị Vân
+
+
+
+
+Gắn nhãn tốt , cần làm rõ khối lượng
+PHASE A   PHASE B   PHASE C   PHASE D
+
+
+
+
+                                        BU/LPS
+                                                           86- Cao Tuấn Đạt
+
+     XU HƯỚNG TĂNG
+
+
+
+
+Xác định bối cảnh sai , tích lũy nằm trong bối cảnh giảm
+               86- Cao Tuấn Đạt
+
+
+
+
+SAI BỐI CẢNH
+       80- Mai Văn Vũ
+
+
+
+
+SAI BỐI CẢNH
+   74- ĐĂNG TẤN PHÁT
+
+
+
+
+PHASE C SAI , Phase E cuối cùng
+PHASE A                          PHASE B      PHASE C          PHASE D   PHASE E
+
+
+
+
+          Bỏ bớt ST ghi những ST quan trọng
+
+                                                        Test       Lps
+74- Đăng Tấn Phát
+                                   PHASE C   PHASE D
+PHASE A             PHASE B
+
+               UT
+
+
+
+
+                              ST
+          ST in Phase B
+                       73- Nguyễn Năng Công Nguyên
+
+
+GẮN NHÃN TỐT , THIẾU VOL
+          73- Nguyễn Năng Công Nguyên
+
+
+
+
+SAI PHASE A, SAI SOS
+                               PHASE D
+PHASE A    PHASE B   PHASE C
+                                  SOS
+
+
+     AR
+
+
+
+
+SC    ST
+                       72 -Min Thy Hoàng Anh
+
+
+
+
+CHOCH1 , CHOCH 2 SAI
+          71 Lý Phú
+
+
+
+
+SAI SOS
+                                  SOS
+
+Phase A   Phase B   Phase C   Phase D
+
+
+
+
+                                        LPS
+                   72- Lý Phú
+
+
+
+
+PHASE C RỘNG QUÁ
+                              Phase D
+Phase A   Phase B   Phase C
+               69- Lê Nguyễn Toàn Thắng
+
+
+
+
+HIỂU BÀI TỐT
+   64- Nguyễn Minh Phúc
+
+
+
+
+HIỂU BÀI TỐT , VẼ HÌNH ĐẸP THIẾU VOL
+                         63- Phạm Văn Hiệp
+
+
+
+PHASE C CHỈ LÀ SPRING THÔI , SAI PHASE A
+                                    SOS
+
+
+PHASE A        PHASE B    PHASE C   PHASE D
+
+
+
+          AR
+
+
+
+
+                         Spring
+              60- Đồng Khắc Thắng
+
+
+
+
+PHASE C SAI
+PHASE A   PHASE B   PHASE C
+                              PHASE D
+          57- Trần Thanh Tân
+
+
+
+
+SAI LPS
+UT
+
+
+
+
+     LPS
+56 – Trần Anh Tuấn
+PHASE A   PHASE B   PHASE C     PHASE D
+
+
+
+                              sos
+
+
+
+                                          LPS
+
+
+
+   ST
+                      133.TNBAO
+
+
+
+
+KHÔNG PHẢI TÍCH LŨY
+Ko phải cấu trúc
+Ngưỡng hỗ trợ là gì ?
+LPS ko phải SPL
+123 – Nguyễn Huy Hoàng
+TRÍ TƯỞNG TƯỢNG
+PHONG PHÚ
+120- NGUYỄN HOÀNG KHA
+Thêm MA làm gì ?
+                119 – Đoàn Anh Tú
+
+
+
+
+SAI HOÀN TOÀN
+                           119 – Đoàn Anh Tú
+
+
+
+
+CẤU TRÚC CHƯA HOÀN CHỈNH
+Chưa tạo được đỉnh cao hơn không thể gọi là lps
+                            110 – Trần Thanh Nhân
+
+
+
+
+Thiếu Phase
+Định Nghĩa Cấu Trúc Yếu ?
+PHASE A   PHASE B   PHASE C   PHASE D
+                                         110 Trần Thanh Nhân
+
+
+
+
+Nếu muốn vẽ như cấu trúc ban đầu phải cắt đoạn trước ra , nhưng không được làm điều đó vì sẽ sai toàn bộ
+cấu trúc
+                                                              SOS
+                     UT
+           AR
+
+
+
+                ST                                      LPS
+
+
+SC                        ST
+                                         Spring
+     Phase A                   Phase B    Phase C   Phase D
+ 0+MẠNH TÙNG
+
+
+
+
+HÌNH KHÁ ỔN
+LƯU Ý: CHỈ NÊN GẮN NHÃN ST Ở NHỮNG VỊ TRÍ QUAN TRỌNG ĐỂ HÌNH ĐỠ RỐI
+152- Nguyễn Đức Mạnh
+
+
+
+
+                       Mũi tên không hiểu có ý
+                               nghĩa gì
+
+
+
+
+    SAI
+155- Đỗ Mạnh Hùng
+
+
+
+
+Sai bối cảnh, để vẽ tích luỹ đầu tiên phải xác minh trước nó là trend GIẢM
+                                                        156- Phạm Hoàng Thuận
+
+
+
+
+Chưa đánh dấu rõ sự thay đổi hành vi và thay đổi đặc tính, lưu ý là phải vừa thể hiện
+trên hình vừa giải thích, SPRING SAI THÀNH ST , LPS C TIỀM NĂNG
+                               156- Phạm Hoàng Thuận
+
+
+
+          PHASE B               PHASE D
+PHASE A             PHASE C
+
+
+
+
+           ST[B]      LPS[C]
+                  289 - Trịnh Xuân Học
+
+
+
+
+Xác định SOS sai, PHASE C SAI
+          SOS
+
+
+
+
+                BU
+
+
+
+
+LPS [C]
+                           296 – Quyết Văn Vũ
+
+
+
+
+HÌNH ĐÚNG,GẮN NHÃN SAI ,
+LPS[D]
+                                         190 LA MYA
+
+
+
+
+Gắn nhãn, chia phase OK, Hình sạch đẹp
+Lưu ý: chỉ gắn nhãn ST ở những nơi cần thiết
+                                     197 – Khúc Văn Hiệp
+
+
+
+
+PHASE A SAI , UT THÀNH AR , SPRING SAI
+                                   SOS
+
+PHASE A
+          AR   PHASE B   PHASE C   PHASE D
+
+
+
+
+          ST
+                          LPS[C]
+                                         279 – Lê Đức Mạnh
+
+
+
+
+Gắn nhãn đúng nhưng nhìn hình bị rồi, lưu ý cách vẽ hình, bỏ mâý khung ở text thì sẽ đỡ rối hơn
+        300 – Mạnh Trí (Gần 15 hình – Nhiều nhất)
+
+
+
+
+Sai SOS , xác định phase D sai, DI CHUYỂN TĂNG QUÁ NHIỀU LPS
+SOS
+158- Hoàng Minh Dũng
+
+
+
+
+    Gắn nhãn sai, sai bối cảnh tích luỹ
+  151- Đỗ Văn Mười
+
+
+
+        151- Đỗ Văn Mười
+
+
+
+
+Khá chính xác, gắn thiếu UT, PHASE C RỘNG QUÁ, SAI VỊ TRÍ BU/LPS
+PHASE A   PHASE B   PHASE C   PHASE D
+
+
+           UT
+
+
+                                        BU/LPS
+  154 Nguyễn Bá Huy
+
+
+
+
+PHASE C RỘNG QUÁ , SOS CHƯA RÕ RÀNG LẮM , THIẾU VOL
+         SOS
+
+
+
+
+LPS[C]
+                                        157-PHẠM THÌ Hà LÝ
+
+
+
+
+Failed SOS không phải failed upthurst
+UT
+
+
+
+
+     LPS[C]
+ 160 – Đỗ Thanh Hiếu
+
+
+
+
+Hình nhìn rối, nhìn vào ghi chú không biết đang nói phần nào
+                       161 – CAO HUY ĐẶNG
+
+
+
+
+Sai UT, , vẽ ngưỡng hỗ trợ nên chú ý râu nến
+LPS[C]
+                  162- Nguyễn Anh Quốc
+
+
+
+
+Bài làm tốt, nhưng chưa được hoc up-slopping
+                       163- Bùi Nguyễn Thanh Bạch
+
+
+
+
+Vẽ đường line dài ra
+SPRING [C]
+164- Võ Ngọc Tôn
+
+
+
+
+Sai spring
+LPS[C]
+                           AR
+
+
+
+
+                                   ST                                  165- PHÙNG VĂN THUỶ
+                    SC                                TEST
+
+                                             SPRING
+                         PHASE A                             PHASE D
+                                        PHASE B PHASE C
+
+
+
+
+sai xác định Phase A, chưa note và ghi chú rõ về thay đổi đặc tính và hành vi
+                                     194-TRÍ VINH
+
+
+
+
+HÌNH RỐI QUÁ , KHÔNG THỂ CHẤM ĐƯỢC
+   196-Minh Nhựt
+
+
+
+
+SAI SPRING
+LPS [C]
+                     173- Nguyễn Bích Thuỷ
+
+
+
+
+                            UT
+
+
+
+
+Bài làm tốt, gắn nhãn thêm UT
+

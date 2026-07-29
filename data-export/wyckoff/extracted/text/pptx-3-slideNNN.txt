@@ -1,0 +1,603 @@
+=== SLIDE 1 ===
+8xTRADING GROUP
+WYCKOFF 
+METHOD
+Contact information
+:
+Telegram group : https://t.me/joinchat/pLGA6juL48xkZTc1 
+Youtube
+ :https://www.youtube.com/c/8xTRADING 
+--- NOTES SLIDE 1 ---
+7
+=== SLIDE 2 ===
+PSY — 
+N
+guồn 
+cung sơ bộ
+, nơi mà nhà điều hành tổng hợp bắt đầu bán sản phẩm sau khi giá di chuyển tăng 
+mạnh
+ kèm 
+k
+hối 
+lượng 
+và 
+chênh lệch giá mở rộng, báo hiệu rằng một sự thay đổi 
+trong
+xu 
+hướng có thể đang đến gần.
+BC
+LX
+— Cao trào mua
+, trong đó thường có sự gia tăng rõ rệt về khối lượng và chênh lệch 
+giá
+ tăng
+. 
+Lực mua đạt đỉnh điểm, 
+nơi mà 
+công 
+chúng bắt đầu đổ xô 
+mua
+vào 
+đây
+là thời điểm mà 
+thị trường có rất nhiều tin tức tốt được tung ra. Các nhà điều hành lợi dụng nó để bán ra các sản phẩm của mình . 
+AR — Phản ứng tự động
+. Với 
+lực
+mua dữ dội đã giảm đi đáng kể sau 
+BC
+LX
+và sự 
+chốt lời của các nhà điều hành tổng hợp và các nhà giao dịch nhỏ lẻ tham giá bán theo
+. 
+Mức thấp của đợt bán tháo này giúp xác định ranh 
+giới
+ biên
+dưới của phân phối 
+TR
+.
+ST - 
+T
+hử 
+nghiệm thứ cấp
+, nơi mà giá quay lại khu vực 
+BCLX
+ để kiểm tra sự cân bằng cung / cầu tại các mức giá này. Đỉnh tiếp theo được xác 
+nhận
+, 
+thường 
+cung 
+phải lớn hơn 
+cầu
+ để CO giữ giá trong TR
+, 
+do đó khối lượng và mức chênh lệch sẽ giảm khi giá tiếp cận vùng kháng cự của 
+BC
+LX
+thành lập 
+ST
+[A]
+. 
+ST
+[B]
+có thể ở dạng khác tạo ra (
+UT
+), trong đó giá di chuyển trên mức kháng cự  
+BCLX
+ và 
+nhanh 
+chóng đảo chiều để đóng dưới mức kháng cự. 
+Sau UT
+, giá thường kiểm tra 
+biên
+giới dưới của TR.
+SOW — Dấu 
+h
+i
+ệu 
+của sự suy 
+yếu
+ giá
+, 
+có thể quan sát được 
+khi
+ giá
+di 
+chuyển
+ xuống
+biên
+dưới 
+của TR
+, 
+thường
+xảy
+ra 
+với biên độ giảm với mức 
+chênh 
+lệch và khối lượng tăng. 
+Việc cam kết dưới hỗ trợ 
+AR
+ban 
+đầu cho 
+thấy 
+sự 
+thay đổi đặc tính trong hành động giá của sản phẩm 
+nguồn cung 
+bây giờ là 
+c
+hiếm
+ưu thế.
+LPSY — Điểm 
+kháng
+ cự
+cuối cùng
+. Sau khi kiểm tra mức 
+kháng cự cục bộ ở 
+biên dưới TR 
+, 
+một đợt phục hồi yếu ớt trên biên độ hẹp cho thấy thị trường đang gặp khó khăn đáng kể trong việc tăng giá. Việc không thể tăng 
+đến các mức 
+có 
+thể là do nguồn cầu 
+yếu
+-
+nguồn cung đáng kể 
+hoặc
+nguồn cầu mạnh – nguồn cung mạnh hơn 
+. 
+LPSY 
+thể hiện sự cạn kiệt nguồn cầu và những đợt 
+bán hàng 
+cuối 
+cùng của các nhà điều hành tổng hợp trước khi việc giảm giá bắt đầu mạnh mẽ hơn.
+UTAD — Bẫy tăng giá 
+chính 
+phân 
+phối
+. UTAD là tín hiệu cho thấy sự dấu hiệu sức mạnh SOS bị thất bại đi đến  phân phối 
+nó giống như 
+một 
+Spring/ 
+Shak
+e
+out 
+ở biên dưới trong TR tích lũy. Nó 
+tạo ra một hành động tăng giá nhắm kiểm tra nguồn cầu ở biên trên TR phân phối  
+và 
+nguồn cung bắt đầu tăng lên mạnh mẽ hơn
+. 
+Tương tự như Spring/ Shakeout , UTAD không phải là một thành phần cấu trúc bắt buộc: TR trong phân phối
+.
+Biểu 
+đồ # 1 chứa UTAD, trong khi TR trong 
+Biểu
+đồ phân phối # 2 thì không.
+=== SLIDE 3 ===
+PSY
+Preliminary supply
+BCLX
+Buying climax
+AR
+Auto rally
+ST
+Secondary climax
+UT
+Upthrust
+UTAD
+Upthrust after Distribution
+SOW
+Sign of weakness
+LPSY
+Last point of supply
+CÁC THUẬT NGỮ WYCKOFF
+(PHÂN PHỐI)
+=== SLIDE 4 ===
+Phase A
+: 
+T
+rong 
+phân phối TR đánh dấu 
+“
+S
+ự 
+dừng lại của xu hướng tăng trước 
+đó
+”
+. 
+Cho đến thời điểm này, nguồn cầu 
+đang
+chiếm ưu thế và 
+  dấu hiệu đầu tiên 
+việc 
+nguồn 
+cung
+ bắt đầu
+tham gia thị trường 
+ở  điểm 
+cung 
+sơ bộ 
+(PSY) 
+và 
+mua cao trào 
+(BCLX
+). 
+Những sự kiện này thường được theo sau bởi một phản ứng tự động 
+(AR) 
+và một 
+thử nghiệm 
+thứ 
+cấp 
+(ST) 
+của 
+BCLX
+, thường là khi khối lượng giảm dần. Tuy nhiên, xu hướng tăng cũng có thể kết thúc mà không có hành động cao trào, thay vào đó thể hiện sự cạn kiệt của nguồn cầu với mức chênh lệch và khối lượng 
+giảm
+ dần 
+“ rút ngắn lực đẩy”
+được thực hiện trên 
+m
+ỗ
+i 
+đợt tăng trước khi nguồn cung đáng kể xuất hiện.
+Phase
+B
+: Chức năng 
+là 
+“
+xây 
+dựng nguyên 
+nhân
+”
+để chuẩn bị cho một xu hướng giảm mới. Trong thời gian này, các nhà điều hành tổng hợp đang bán số lượng lớn hàng của họ 
+để chuẩn bị cho
+sự sụt giảm tiếp theo. Các điểm 
+Giai đoạn B trong phân phối tương tự như các điểm được thực hiện cho Giai đoạn B trong tích lũy, ngoại trừ 
+tay mạnh bắt đầu 
+là 
+bán từng phần sản phẩm khi TR phát triển, với mục tiêu cạn kiệt càng nhiều nguồn cầu còn lại càng tốt. Quá trình này để lại 
+dấu chân
+rằng cung / cầu cán cân nghiêng về cung thay vì cầu
+.
+Phase
+C
+: Trong quá trình phân phối, Giai đoạn C có thể tự 
+hình thành 
+(UT
+) 
+hoặc 
+UTAD
+. Như đã lưu ý ở trên, 
+UT
+/UTAD 
+ngược lại 
+Spring. 
+Nó nằm ở mức kháng cự TR nhanh chóng đảo chiều và đóng cửa trong TR. Đây là bài 
+“
+kiểm 
+tra nguồn cầu còn 
+lại
+”
+. 
+Nó 
+là 
+bẫy 
+tăng giá 
+, 
+dường 
+như báo hiệu sự phục hồi của xu hướng tăng nhưng trên thực tế là nhằm mục đích đánh lừa các nhà giao dịch bằng phá vỡ giả
+. UT 
+hoặc 
+UTAD
+ cho phép nhà điều hành tổng hợp bán thêm sản phẩm với giá cao cho các nhà đầu tư nhỏ lẻ đang mua lên ở mức này . Các 
+tổ chức theo dấu chân của tay mạnh 
+có 
+thể muốn bắt đầu các vị thế bán sau UT hoặc UTAD. Tỷ lệ rủi ro / phần thưởng thường 
+rất lớn 
+. 
+Tuy nhiên
+, "tay mạnh" 
+tạo ra các 
+UT
+ để 
+liên 
+tục ngăn chặn các nhà giao dịch bắt đầu các vị thế bán 
+khống, 
+vì vậy thường an toàn hơn nếu đợi đến 
+Giai đoạn D và 
+xác nhận 
+LPSY
+.
+Phase D
+: 
+Đến 
+sau khi các kiểm tra thử nghiệm ở Giai đoạn C cho chúng ta thấy nguồn cầu cuối cùng. Trong Giai đoạn D
+,
+ hành động
+ giá
+đi 
+đến 
+cam kết dưới mức 
+hỗ 
+trợ TR. Bằng chứng cho thấy 
+“
+nguồn 
+cung đang chiếm ưu thế rõ 
+ràng
+”
+mức chênh lệch và khối lương 
+tăng 
+lên kèm theo sự phá vỡ rõ ràngở hỗ trợ hoặc giảm xuống dưới 
+vùng 
+giữa của 
+TR
+sau UT hoặc UTAD
+. Thường có nhiều lực đẩy yếu 
+trong 
+Giai đoạn D; những 
+LPSY
+ này đại diện cho cơ hội tuyệt vời để bắt đầu hoặc thêm vào các vị thế bán. Bất cứ ai vẫn còn ở vị thế mua dài hạn trong Giai đoạn D thì hãy thoát khỏi nhanh chóng.
+Phase E
+: Chính thức đi vào xu hướng giảm
+;
+“
+hành 
+động giá rời khỏi 
+TR
+”
+và nguồn cung 
+kiểm soát
+ thị trưởng
+. 
+Một khi Hỗ trợ TR bị phá vỡ 
+bằng hành động 
+MAJROR 
+SOW, 
+sự phá vỡ này thường được kiểm tra với một đợt phục hồi không thành công tại 
+các vùng
+gần 
+hỗ
+ trợ
+. 
+Những 
+l
+ực 
+đẩy tiếp theo trong 
+sự di chuyển 
+giảm 
+giá 
+này
+thường yếu 
+ớt. 
+Sau một 
+ sự 
+di 
+chuyển xuống mạnh mẽ, hành động cao trào bán  có thể báo hiệu sự bắt đầu của 
+TR
+ tái 
+phân phối 
+hoặc tích lũy.
+=== SLIDE 5 ===
+=== SLIDE 6 ===
+=== SLIDE 7 ===
+Cấu trúc phân phối với độ dốc hướng xuống
+Đây là cấu trúc 
+phân phối yếu nhất
+. Sau khi xác định được các sự kiện đầu tiên cho thấy sự dừng lại của xu hướng trước đó, điều kiện thuận lợi cho sự suy yếu tràn ngập thị trường sẽ gây ra sự phát triển của các chuyển động tiếp theo dưới dạng độ cao 
+của đỉnh và đáy giảm dần
+.
+Có thể thấy, xuất hiện một 
+kênh đi xuống 
+- nơi giá bật ra khỏi các 
+cực trị 
+của nó theo các diễn biến
+Chìa khóa là sự 
+thử nghiệm giai 
+đoạn C 
+làm phát sinh chuyển động phá vỡ đi 
+xuống
+(trong 
+trường hợp này là 
+UTAD
+. 
+Nhiều ý kiến cho rằng sự kiện này tăng thêm sự tự tin cho người vận hành khi thiết lập các kịch bản và do đó chúng ta nên đợi sự xuất hiện của nó.
+Cú sốc vượt ra khỏi 
+biên trên 
+cấu trúc cho 
+thấy tình trạng 
+mua quá 
+nhiều
+. 
+Cú sốc càng lớn và rõ ràng, nó sẽ càng khẳng định sự thật là nó đã chiếm được thanh khoản lớn hơn và do đó, chuyển động 
+đảo chiều sẽ 
+có xung lực lớn hơn.
+Kịch bản này chắc chắn khó giao 
+dịch. 
+Do người bán có quyền kiểm soát gần như hoàn toàn, giá sẽ di chuyển rất nhanh. Chúng ta phải hoàn toàn tập trung, nếu không chúng ta có khả năng bỏ lỡ sự vận động này
+=== SLIDE 8 ===
+=== SLIDE 9 ===
+=== SLIDE 10 ===
+Cấu trúc phân phối với độ dốc hướng lên:
+Cấu trúc thể 
+hiện 
+một sức mạnh nhất định
+, cho thây nhu cầu lớn của người mua áp đảo người bán bằng chứng là sự liên tiếp của 
+đỉnh đáy 
+mới cao hơn 
+đỉnh đáy cũ ,cho 
+đến khi, trong bước phát triển cuối cùng, 
+sự quyết liệt của người bán
+ trở nên rõ ràng ngăn chặn giá không đẩy lên được 
+nữa, 
+bán nhiều hàng hơn xoay chuyển cấu trúc thành 
+quá trình phân phối
+.
+Rút ngắn động lượng 
+SOT
+ , một hành động hữu  ích để đánh giá sự thiếu quan tầm của người mua trong sự phát triển giá trị ở vùng giá gần kháng cự . Trong trường hợp này, giá có thể tạo ra đỉnh mới nhưng đỉnh mới thấp hơn đỉnh cũ, cho thấy sự 
+thiếu động 
+lượng.
+Hoặc hành động giá không thể tiến tới những điểm chạm trước đó  trong cấu trúc cho thấy nỗ lực không đủ lớn cũng như là hành động nguồn cung bắt đầu tăng lên và nhiều nhất từ khi phát triển cấu trúc .
+Như mọi khi, cấu trúc có một phẩm chất phân phối khi có sự 
+rung chuyển (UTAD
+) ở phần trên cùng của cấu trúc ở dạng dư thừa đạt đến tình trạng mua quá mức; hoặc đến một số mức tối đa trước đó có liên quan.
+=== SLIDE 11 ===
+=== SLIDE 12 ===
+=== SLIDE 13 ===
+Trong quá trình phân phối, 
+khối lượng cao hoặc bất thường 
+có thể được xác định trong quá trình phát triển phạm vi phân phối.
+Quá trình phân phối diễn ra khác hoàn toàn. Một đặc điểm quan trọng của các quá trình này là chúng có 
+xu hướng phát triển nhanh hơn 
+nhiều so với các quá trình tích lũy. Và đây là lý do tại sao bạn có thể thấy sự biến động lớn về giá và khối lượng giao dịch cao liên tiếp. Thời gian ngắn hơn này buộc phải thực hiện các giao dịch với tốc độ nhất định; trong khi ở quá trình tích lũy, một lượng thời gian nhất định được tiêu thụ cho đến khi các 
+sản phẩm 
+đã 
+được bán hết, trong quá trình phân phối, sự cấp bách phải bán gây ra sự phát triển nhanh chóng kèm theo sự biến động cao.
+Khối lượng tổng thể trong việc phát triển Phân phối
+=== SLIDE 14 ===
+=== SLIDE 15 ===
+Dấu hiệu khối lượng #1 : 
+Dấu hiệu nguồn cung tăng từ 
+Phase A- D 
+, 
+thể 
+hiện các phản ứng giảm sẽ tăng dần từ trái sang phải nơi mà tay mạnh sẽ thực hiện bán từng phần với số lượng tăng dần thể hiện thông qua khối lượng , chúng ta có thể thấy việc tăng nguồn cung ở phase B, khiến tạo ra những hành động suy yếu giá nhỏ như 
+minor SOW 
+tiếp tục 
+. 
+Phase 
+C
+, 
+khi có một bẫy tăng giá ở 
+UTAD
+ chẳng hạn , nơi mà tay mạnh bán lượng hàng nhiều nhất trong vùng bởi vì đây là vùng giá tốt hơn , nhiều người mua hơn tạo ra sự thanh khoản lớn, dọc đâu đó ở giữa 
+TR có 
+thể nơi bán lần cuối của tay mạnh và chính thức họ không còn hàng và thoát khỏi thị trường . Điều này làm hành vi giá cam kết suy yếu xuống vùng hỗ trợ thì nguồn cung tiếp tục gia tăng ở Phase D quyết định rũ bõ người mua cố chấp  , bán mạnh đi vào phân phối .
+=== SLIDE 16 ===
+=== SLIDE 17 ===
+Dấu hiệu khối lượng #2 : 
+Khối lượng ở Phase A giảm dần đến Phase B sau đó tăng mạnh ở Phase D, lý giải được điều này có vẻ như tay mạnh họ sẽ không hoạt động ở phase B để cho công chúng họ tự hung hăng, phấn khích mua vào   hành động này được mô tả ở Phase A và đầu Phase B là một tái tích lũy tiềm năng khi có những hành vi giá phá vỡ cam kết một phần trên thành kháng cự nhưng sau đó xuất hiện một bẫy tăng giá 
+UTAD 
+thể hiện phẩm chất phân phối ở Phase C, tiếp tục thể hiện áp đảo người bán qua phase D , tăng dấu hiệu nguồn cung rũ bỏ công chúng còn mặt kẹt hàng ở trong phạm vi giao dịch này .
+=== SLIDE 18 ===
+ST[B]
+=== SLIDE 19 ===
+=== SLIDE 20 ===
+Ít phổ biến
+=== SLIDE 21 ===
+=== SLIDE 22 ===
+Giảm trong khung thời gian/ Cấu trúc thay đổi từ lớn tới nhỏ
+=== SLIDE 23 ===
+Local redistribution as LPSY ?
+=== SLIDE 24 ===
+Local redistribution as LPSY ?
+=== SLIDE 25 ===
+Source : Rubén Villahermosa
+AR
+ST
+PSY
+ST
+BC
+Upthrust
+LPSY
+SOW
+BC
+ST
+AR
+SOW
+=== SLIDE 26 ===
+=== SLIDE 27 ===
+=== SLIDE 28 ===
+Sự thất bại về mặt duy
+ trì
+ cấu trúc
+Đây là một khái niệm rất đơn giản có thể giúp chúng ta khi đánh giá 
+diễn biến của các chuyển động
+.
+Lỗi này có thể được tìm thấy trong tất cả các loại cấu trúc; cả trong cấu trúc 
+xu hướng tăng 
+hoặc 
+xu hướng giảm 
+và cấu trúc nằm 
+ngang.
+Điều đầu tiên là xác định cấu trúc logic tuân theo bước đi của giá. Điều này sẽ được quyết định bởi những lần phản ứng thành công – khẳng định cấu trúc được hình thành bởi 
+hai khu vực cung và cầu
+. Đây là chìa khóa ban đầu: để xác định cấu trúc mà giá đã xác thực. Bạn càng có nhiều 
+“lần chạm”, 
+bạn càng tự tin vào cấu trúc đó.
+Nếu 
+không có sự thay đổi về giá ở phía đối diện và thay vào đó tạo ra một 
+ngã rẽ trước khi đến khu vực đó
+, chúng ta sẽ nói rằng nó đã phát triển một cấu trúc thất bại và tín hiệu này cho biết thêm sự chắc chắn của kịch bản thiên về sự thay đổi giá cuối cùng.
+Cùng với khái niệm này, người ta hiểu rằng sự hỗ trợ cuối cùng của cung hoặc cầu (Điểm hỗ trợ cuối cùng và Điểm cuối cùng của cung) là những thất bại về cấu trúc trong đó giá bị chặn khi đang nỗ lực tìm kiếm 
+một cú sốc
+, bắt đầu từ thời điểm đó là hình thành sự phá vỡ cấu trúc.
+SC
+AR
+ST[A]
+ST[B]
+LPS[C]
+BCLX
+AR
+ST[A]
+ST[B]
+ST[B]
+LPSY[C]
+Source : Rubén Villahermosa
+=== SLIDE 29 ===
+SC
+ST[B]
+AR
+ST[A]
+LPS[C]
+BCLX
+AR
+ST[A]
+LPSY[C]
+Phase A
+Phase A
+Phase B
+Phase B
+Minor SOW
+UT [B]
+=== SLIDE 30 ===
+Ví dụ về cấu trúc thất bại biểu thị 
+điểm yếu 
+được tìm thấy khi giá, sau khi xác nhận cấu trúc trong một số trường hợp, không thể tiếp tục di chuyển theo logic chuyển động hiện tại 
+và không thể đạt đến đỉnh.
+Rất ít khả năng cho sự tiếp tục chuyển động này đến thời điểm đó cho thấy điểm yếu tiềm ẩn
+. Người mua đã không còn kiểm soát thị trường và người bán ngày càng xuất hiện nhiều hơn.
+Dấu hiệu này không gợi ý sự đảo chiều giá ngay lập tức; nó chỉ là một yếu tố khác cần được tính đến khi để đọc hiểu thị trường.
+.
+Sự thất bại về mặt duy
+ trì
+ cấu trúc dốc- phân
+ phối
+=== SLIDE 31 ===
+BCLX
+AR
+ST[A]
+ST[B]
+Minor SOW[B]
+LPSY[C]
+Phase A
+Phase B
+=== SLIDE 32 ===
+=== SLIDE 33 ===
+Tài sản thể hiện sức mạnh cơ bản có được khi giá không thể chạm đến đáy.
+Nói cách khác, nếu giá đang lên đến đỉnh và giảm dần xuống đáy mà thị phần của chúng hoàn toàn phù hợp trong giới hạn trên và dưới, chúng ta sẽ khuyến khích thị trường tiếp tục theo cách tương tự và do đó chúng ta sẽ 
+tìm kiếm một thử nghiệm mới ở bên đối diện
+. Nếu trong quá trình phát triển của một chuyển động như vậy, giá quay đầu mà không đạt đến độ thấp đó, chúng ta sẽ nói rằng thị trường đã tạo ra một sự thất bại về cấu trúc và đó là một dấu hiệu của sức mạnh thị trường 
+vì người mua không cho phép giá giảm xuống thấp hơn.
+Sự thất bại về mặt duy
+ trì
+ cấu trúc dốc- tích
+ lũy
+=== SLIDE 34 ===
+SC
+AR
+ST[A]
+ST[B]
+ST[B]
+LPS[C]
+ST[B]
+=== SLIDE 35 ===

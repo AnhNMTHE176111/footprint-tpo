@@ -12,8 +12,9 @@
 | DLL đã build | ✅ [dist/WyckoffRunner.dll](../../dist/WyckoffRunner.dll) — 83.968 byte, md5 `6e78c447c6edf2db0cc5f63f5f21f301` |
 | Parity thuật toán C#↔Python | ✅ **ĐẠT** — 33/33 tín hiệu, 0 lệch |
 | Parity **DLL-trong-Quantower** | ✅ **ĐẠT** — 33/33 CBR khớp, 0 lệch giá trị (0.0 tick), 2 tín hiệu "chỉ C#" đã giải thích = ngoài cửa sổ dữ liệu Python |
-| Dữ liệu live đã thu | **63 tín hiệu** (35 CBR + 28 QUAY_DAU), 2026-05-22 → 2026-07-29 — nhưng là **REPLAY lịch sử**, không phải forward |
-| Kết luận về chiến lược từ live | **Chưa có gì.** Replay ≠ OOS. Điểm thật sự ngoài mẫu: **n=3** → KHÔNG KẾT LUẬN |
+| Cấu hình đóng băng | ✅ **ĐÚNG** (từ lượt 2) — chỉ còn CBR, kịch bản QUAY ĐẦU đã tắt |
+| Dữ liệu live đã thu | **35 tín hiệu CBR**, 2026-05-26 → 2026-07-29 — nhưng là **REPLAY lịch sử**, không phải forward |
+| Kết luận về chiến lược từ live | **Chưa có gì.** Replay ≠ OOS. Điểm thật sự ngoài mẫu: **n=2** → KHÔNG KẾT LUẬN |
 
 > ⚠ **Câu quan trọng nhất của cả file này:** cho tới khi có CSV live và `parity_v7.py --live` báo ĐẠT,
 > **mọi lệch giữa live và backtest đều CÓ THỂ do port sai**, không phải do chiến lược. Đừng vội kết luận
@@ -68,7 +69,7 @@ Copy [dist/WyckoffRunner.dll](../../dist/WyckoffRunner.dll) vào thư mục indi
 | 48 | Lọc thanh khoản | **BẬT** |
 | 77 | Lọc phiên chết | **BẬT** |
 | 72 | Phiên chết tính theo **UTC** | **BẬT** ← quan trọng, đây là lỗi v5 |
-| 66 | **Bật nhánh QUAY ĐẦU** | **TẮT** ← KB2 chưa được cấp vốn |
+| 66 | **Bật kịch bản QUAY ĐẦU** | **TẮT** ← KB2 chưa được cấp vốn |
 
 ### Bước 3 — An toàn trước khi chạy thật
 
@@ -108,7 +109,7 @@ nghi ngờ (nến thiếu? volume khác? warmup chưa đủ? tín hiệu ở n�
 
 [AUDIT_V7.md](AUDIT_V7.md) §H đã đo độ nhạy chi phí. Khi có số spread thực tế, so với bảng này:
 
-| Nhánh | Sống tới | Thực tế vàng M1 | Kết luận |
+| Kịch bản | Sống tới | Thực tế vàng M1 | Kết luận |
 |---|---:|---|---|
 | **KB1** (đang cấp vốn) | **>40 tick/lệnh** | 2–3 tick | ✅ biên rất rộng |
 | KB2 (đang tắt) | 9 tick | 2–3 tick | ⚠ biên mỏng: EV chỉ +0.294R ở 2 tick |
@@ -230,16 +231,16 @@ QUAY_DAU(KB2) n= 28 WR= 57.1% tong=+12.0R EV=+0.429 | 05: +2.0( 3) 06: +2.5(10) 
 Mốc backtest Python để so: CBR `n=33 WR=48.5% +47.0R EV=+1.424`. Live replay `n=35 WR=45.7% +45.0R EV=+1.286`
 — chênh **đúng bằng 2 lệnh thua ngoài mẫu** đã nói ở trên, không có sai lệch nào khác.
 
-#### 4. 🔴 Phát hiện cấu hình: nhánh QUAY_ĐẦU (KB2) ĐANG BẬT — trái cấu hình đóng băng
+#### 4. 🔴 Phát hiện cấu hình: kịch bản QUAY ĐẦU (KB2) ĐANG BẬT — trái cấu hình đóng băng
 
 28/63 tín hiệu là `QUAY_DAU`. Nhưng [AUDIT_V7.md](AUDIT_V7.md) phán quyết **KB2 = FAIL** (p=0.072, OOS n=9
-EV −0.167R) và §1 bảng input của file này ghi rõ **index 66 "Bật nhánh QUAY ĐẦU" = TẮT**. Mặc định trong DLL
+EV −0.167R) và §1 bảng input của file này ghi rõ **index 66 "Bật kịch bản QUAY ĐẦU" = TẮT**. Mặc định trong DLL
 đã là `false`.
 
 ⇒ Người dùng đã **bật tay** input 66, hoặc dùng chart có preset cũ lưu sẵn giá trị `true`. Quantower lưu giá
 trị input theo template chart, nên **DLL mới không tự ghi đè preset cũ**.
 
-**Việc cần làm:** tắt index 66 về **TẮT**. KB2 chưa qua cổng audit — chạy nó thật là giao dịch bằng nhánh đã
+**Việc cần làm:** tắt index 66 về **TẮT**. KB2 chưa qua cổng audit — chạy nó thật là giao dịch bằng kịch bản đã
 bị FAIL. (Replay cho KB2 EV +0.429R nhìn có vẻ ổn, nhưng đó chính là in-sample của cái đã bị bác; số đẹp trên
 cửa sổ đã dùng để chọn tham số không phải bằng chứng.)
 
@@ -254,3 +255,55 @@ cửa sổ đã dùng để chọn tham số không phải bằng chứng.)
 1. **Tắt input 66** (QUAY ĐẦU) → chỉ chạy CBR.
 2. Chạy **forward** ≥2 tuần **không xoá file CSV**, rồi gửi lại. Kỳ vọng ~5–6 lệnh CBR/2 tuần.
 3. Lượt sau chỉ tính điểm ngoài mẫu (sau 2026-07-27), tích luỹ tới n≥25 mới được kết luận.
+
+---
+
+### 2026-07-29 — lượt 2: đã tắt QUAY ĐẦU, cấu hình giờ ĐÚNG. Parity vẫn ĐẠT. Vẫn là replay.
+
+Cùng đường dẫn file, người dùng xuất lại sau khi tắt input 66. File 11.291 → 5.911 byte, 63 → **35 tín hiệu,
+100% CBR**.
+
+#### 1. ✅ Việc cần làm ở lượt 1 đã xong
+
+`nhanh` chỉ còn `CBR` (35/35), không còn dòng `QUAY_DAU` nào. Cấu hình đóng băng của
+[AUDIT_V7.md](AUDIT_V7.md) §14 giờ được tôn trọng: **chỉ KB1 chạy**.
+
+#### 2. ✅ Parity live: vẫn **ĐẠT**, kết quả không đổi
+
+```
+TONG KET: khop 33 | chi Python 0 | chi C# 2 | lech gia tri 0 | tong lech 2/35 = 5.7%
+```
+
+Hai tín hiệu "chỉ C#" vẫn là 07-28 và 07-29, vẫn cùng nguyên nhân đã ghi ở lượt 1 (dxFeed CSV của Python hết
+ở 2026-07-27 15:56). Trong khoảng hai bên đều có dữ liệu: **33/33 khớp, lệch 0.0 tick → 0.0%**.
+
+**Kiểm tra chéo quan trọng:** so từng ô của 35 dòng CBR ở lượt 2 với 35 dòng CBR ở lượt 1 → **0 ô lệch**.
+Nghĩa là tắt input 66 **không** làm xê dịch kịch bản CBR: không có tín hiệu CBR nào trước đây bị router 1-vị-thế
+gạt vì trùng giờ với một lệnh QUAY_DAU. Đây là điều cần kiểm chứ không được giả định — nếu có lệch, con số
+in-sample của KB1 sẽ khác.
+
+#### 3. Số liệu (in-sample replay — KHÔNG phải kết quả live)
+
+```
+CBR (KB1)  n= 35 WR= 45.7% tong=+45.0R EV=+1.286 | 05: +5.0( 5) 06:+22.0(18) 07:+18.0(12) ✓ thang am=0
+  LONG     n= 14 WR= 42.9% tong=+16.0R EV=+1.143 | 05: -1.0( 1) 06: +7.0( 8) 07:+10.0( 5)   thang am=1
+  SHORT    n= 21 WR= 47.6% tong=+29.0R EV=+1.381 | 05: +6.0( 4) 06:+15.0(10) 07: +8.0( 7) ✓ thang am=0
+```
+
+So mốc Python `n=33 WR=48.5% +47.0R EV=+1.424`: chênh **đúng bằng 2 lệnh thua ngoài mẫu**, không sai lệch khác.
+
+#### 4. Điều KHÔNG đổi so với lượt 1 — vẫn chưa có forward test
+
+Tín hiệu đầu vẫn là **2026-05-26**, tức vẫn là replay toàn bộ lịch sử trên chart, không phải log tiến theo
+thời gian thực. Phần ngoài mẫu vẫn chỉ là 2 lệnh (07-28, 07-29), **cả hai LOSS, −2.0R, n=2 → KHÔNG KẾT LUẬN**.
+
+Tắt input 66 sửa được **cấu hình**, không tạo thêm **dữ liệu**. Muốn có bằng chứng OOS thì chỉ có một cách:
+để nó chạy tiếp về phía trước.
+
+#### 5. Việc cần làm tiếp
+
+1. Cứ để chart chạy, **≥2 tuần**, không đổi input nào nữa.
+2. Trước khi xuất lần sau: **đổi tên file CSV cũ** (vd `..._2026-07-29.csv`) rồi mới lấy file mới, để giữ
+   lịch sử — `ExportSignals()` ghi đè cùng đường dẫn.
+3. Lượt 3 chỉ tính tín hiệu sau 2026-07-27 15:56. Tích luỹ tới **n≥25** mới được nói bất cứ điều gì về
+   việc chiến lược có chạy ngoài thực tế hay không.

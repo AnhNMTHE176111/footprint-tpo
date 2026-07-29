@@ -93,3 +93,28 @@
 > ⚠️ Lỗi dịch riêng của tài liệu TPO: sách Keppler bản dịch có chỗ biến **mức giá thành giờ** (vd "13 giờ 10 phút" thực ra là **giá 1310**), số liệu chép sai — luôn đối chiếu hình gốc. Sách TraderViet: định nghĩa IB tự mâu thuẫn (đã chuẩn hóa = 60'), quy tắc Spike viết sai chiều. Cụm dịch máy hay gặp trong bản Keppler: "Hồ sơ thị trường" = Market Profile, "số dư ban đầu / khoảng cân bằng ban đầu" = Initial Balance, "phần mở rộng / phạm vi mở rộng" = Range Extension, "sự phát triển trừ/âm" = Minus Development, "bản in đơn" = Single Print, "gờ" = Ledge.
 
 > Thiếu từ nào trong lúc học, mình sẽ bổ sung vào đây.
+
+---
+
+## 🤖 Thuật ngữ dự án indicator (Wyckoff Runner) — **CỐ ĐỊNH, không dùng từ đồng nghĩa**
+
+Chốt 2026-07-30: trước đó Claude dùng lẫn "kịch bản"/"nhánh"/"setup" cho cùng một thứ, gây rối. Từ nay:
+
+| Dùng từ này | KHÔNG dùng | Nghĩa |
+|---|---|---|
+| **kịch bản** (KB1/KB2/KB3) | ~~nhánh~~, ~~setup~~, ~~scenario~~, ~~branch~~ | Một cách vào lệnh độc lập. Chỉ có **3** kịch bản, cố định. |
+| **CBR** | ~~phá range~~ (thiếu nghĩa) | Viết tắt **C**onsolidation → **B**reak → **R**etest → **R**esume: co cụm → phá → hồi về giữ mép → vào nến tiếp diễn. = KB1. |
+| **QUAY ĐẦU** | ~~reversal~~, ~~đảo chiều~~ | Vào lệnh ngược khi giá bị VWAP đẩy lại. = KB2. |
+| **biên↔biên** | ~~range scalp~~, ~~edge-to-edge~~ | Mua mép dưới / bán mép trên trong range. = KB3. |
+| **BẬT / TẮT** | ~~enable~~, ~~on/off~~ | Trạng thái kịch bản trong DLL. |
+
+**Ba kịch bản và trạng thái (theo `AUDIT_V7.md`, đóng băng):**
+
+| | Tên đầy đủ | Trạng thái | Trong DLL |
+|---|---|---|---|
+| **KB1** | CBR (co cụm→phá→hồi→tiếp diễn) | ✅ PASS có điều kiện | **BẬT** — kịch bản duy nhất được cấp vốn |
+| **KB2** | QUAY ĐẦU tại VWAP | ❌ FAIL (p=0.072, chết sau Bonferroni) | có code, **TẮT** (`EnableReversal=false`) |
+| **KB3** | biên↔biên trong range | ❌ KILL (chết ở 2 tick phí) | **không có dòng code nào** |
+
+⚠ "Cả 2 kịch bản" chỉ đúng khi nói về **thống kê lịch sử** (KB1+KB2 đã có số). Nói về **DLL đang chạy** thì
+chỉ có **1 kịch bản: KB1**.

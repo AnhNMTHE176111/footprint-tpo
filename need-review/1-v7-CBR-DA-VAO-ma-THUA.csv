@@ -1,0 +1,24 @@
+﻿# FILE 1/5 — UU TIEN CAO NHAT. v7 WyckoffRunner, kich ban CBR, cac lenh DA VAO va THUA.
+# Day la TIEN THAT se mat. Tim co che o day => TANG EV, khong phai them lenh.
+# Thong ke nhom nay: n=18 WR=0.0% tong=-18.0R EV=-1.000
+# ⚠ Cot CHAM_1_5 / LOI_GI / CO_CHE_NGHI_NGO / GHI_CHU de TRONG cho ban dien.
+# ⚠ QUY TAC VANG: tim CO CHE lap lai duoc, KHONG phai "le nay dang le thang". Moi quy tac rut ra tu day chi la GIA THUYET, phai kiem tren du lieu thang 8 moi duoc sua cau hinh dong bang.
+stt,ngay_gio,gio_VN,ban,kich_ban,huong,entry,SL,TP,RR,KQ,R,giu_bao_lau,VSA,climax,hop_luu,grade,gia_pha,retrace_%,leg_gia,tp_vuong_vung,ket_thuc_luc,chi_tiet,CHAM_1_5,LOI_GI,CO_CHE_NGHI_NGO,GHI_CHU
+1,2026-05-26 09:44,16:44,v7-WyckoffRunner,CBR,SHORT,4545.8,4548.8,4533.8,4.0,LOSS,-1.0,1p,2.48,tim,0,B,4548.3,96,2.5,-,2026-05-26 09:45,phá 4548.3 · hồi 96% · leg 2.5giá · VSA 2.5x tím,,,,
+2,2026-05-26 17:58,00:58,v7-WyckoffRunner,CBR,SHORT,4523.6,4527.2,4509.2,4.0,LOSS,-1.0,28p,2.30,tim,0,B,4527.6,83,3.6,-,2026-05-26 18:26,phá 4527.6 · hồi 83% · leg 3.6giá · VSA 2.3x tím,,,,
+3,2026-05-29 09:50,16:50,v7-WyckoffRunner,CBR,LONG,4569.6,4565.4,4586.4,4.0,LOSS,-1.0,2p,2.85,tim,1,B,4563.9,65,4.9,-,2026-05-29 09:52,phá 4563.9 · hồi 65% · leg 4.9giá · VSA 2.8x tím,,,,
+4,2026-06-02 13:59,20:59,v7-WyckoffRunner,CBR,SHORT,4532.1,4535.4,4518.9,4.0,LOSS,-1.0,1p,2.06,-,0,B,4535.9,79,3.4,0.3R,2026-06-02 14:00,phá 4535.9 · hồi 79% · leg 3.4giá · VSA 2.1x · TP vướng vùng ↧0.3R,,,,
+5,2026-06-03 09:34,16:34,v7-WyckoffRunner,CBR,SHORT,4470.3,4473.4,4457.9,4.0,LOSS,-1.0,3p,4.73,tim,0,B,4473.9,90,6.7,-,2026-06-03 09:37,phá 4473.9 · hồi 90% · leg 6.7giá · VSA 4.7x tím,,,,
+6,2026-06-04 16:15,23:15,v7-WyckoffRunner,CBR,LONG,4508.4,4505.4,4520.4,4.0,LOSS,-1.0,57p,3.71,tim,1,B,4506.4,89,5.4,1.1R,2026-06-04 17:12,phá 4506.4 · hồi 89% · leg 5.4giá · VSA 3.7x tím · TP vướng vùng ↧1.1R,,,,
+7,2026-06-15 13:34,20:34,v7-WyckoffRunner,CBR,LONG,4384.5,4378.2,4409.7,4.0,LOSS,-1.0,18p,2.87,tim,0,B,4377.9,94,8.5,-,2026-06-15 13:52,phá 4377.9 · hồi 94% · leg 8.5giá · VSA 2.9x tím,,,,
+8,2026-06-16 08:13,15:13,v7-WyckoffRunner,CBR,LONG,4359.4,4356.4,4371.4,4.0,LOSS,-1.0,3h23,2.50,tim,2,A,4357.8,90,3.9,2.8R,2026-06-16 11:36,phá 4357.8 · hồi 90% · leg 3.9giá · VSA 2.5x tím · hợp lưu ×2 · TP vướng vùng ↧2.8R,,,,
+9,2026-06-16 12:56,19:56,v7-WyckoffRunner,CBR,LONG,4374.1,4370.9,4386.9,4.0,LOSS,-1.0,5p,2.64,tim,0,B,4370.0,82,6.0,1.5R,2026-06-16 13:01,phá 4370.0 · hồi 82% · leg 6.0giá · VSA 2.6x tím · TP vướng vùng ↧1.5R,,,,
+10,2026-06-17 17:37,00:37,v7-WyckoffRunner,CBR,LONG,4393.3,4390.3,4405.3,4.0,LOSS,-1.0,23p,9.88,tim,0,B,4384.3,65,18.5,-,2026-06-17 18:00,phá 4384.3 · hồi 65% · leg 18.5giá · VSA 9.9x tím,,,,
+11,2026-06-18 11:06,18:06,v7-WyckoffRunner,CBR,SHORT,4268.7,4272.8,4252.3,4.0,LOSS,-1.0,1h06,2.86,tim,0,B,4273.2,88,4.9,-,2026-06-18 12:12,phá 4273.2 · hồi 88% · leg 4.9giá · VSA 2.9x tím,,,,
+12,2026-06-18 15:36,22:36,v7-WyckoffRunner,CBR,SHORT,4248.2,4253.4,4227.4,4.0,LOSS,-1.0,5p,2.27,tim,0,B,4256.0,74,10.6,2.1R,2026-06-18 15:41,phá 4256.0 · hồi 74% · leg 10.6giá · VSA 2.3x tím · TP vướng vùng ↧2.1R,,,,
+13,2026-06-29 10:02,17:02,v7-WyckoffRunner,CBR,SHORT,4044.4,4048.1,4029.6,4.0,LOSS,-1.0,8p,2.86,tim,0,B,4051.3,74,13.2,-,2026-06-29 10:10,phá 4051.3 · hồi 74% · leg 13.2giá · VSA 2.9x tím,,,,
+14,2026-07-06 00:06,07:06,v7-WyckoffRunner,CBR,SHORT,4184.6,4190.1,4162.6,4.0,LOSS,-1.0,3p,3.72,tim,1,B,4193.2,69,10.8,0.6R,2026-07-06 00:09,phá 4193.2 · hồi 69% · leg 10.8giá · VSA 3.7x tím · TP vướng vùng ↧0.6R,,,,
+15,2026-07-06 09:34,16:34,v7-WyckoffRunner,CBR,SHORT,4149.4,4152.5,4137.0,4.0,LOSS,-1.0,2p,5.13,tim,0,B,4153.4,78,5.0,-,2026-07-06 09:36,phá 4153.4 · hồi 78% · leg 5.0giá · VSA 5.1x tím,,,,
+16,2026-07-21 18:32,01:32,v7-WyckoffRunner,CBR,LONG,4089.1,4085.6,4103.1,4.0,LOSS,-1.0,15p,4.31,tim,1,B,4083.2,72,9.3,-,2026-07-21 18:47,phá 4083.2 · hồi 72% · leg 9.3giá · VSA 4.3x tím,,,,
+17,2026-07-22 14:07,21:07,v7-WyckoffRunner,CBR,LONG,4162.3,4158.4,4177.9,4.0,LOSS,-1.0,8p,2.76,tim,0,B,4155.1,74,13.7,-,2026-07-22 14:15,phá 4155.1 · hồi 74% · leg 13.7giá · VSA 2.8x tím,,,,
+18,2026-07-28 13:47,20:47,v7-WyckoffRunner,CBR,SHORT,4022.3,4025.5,4009.5,4.0,LOSS,-1.0,2p,2.67,tim,0,B,4026.9,79,7.6,-,2026-07-28 13:49,phá 4026.9 · hồi 79% · leg 7.6giá · VSA 2.7x tím,,,,

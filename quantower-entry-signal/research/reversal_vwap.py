@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+CANH BAO (2026-07-29): day la PROTOTYPE CU, KHONG PHAI replicator dung cua ban dang ship.
+Lech it nhat 4 hang so voi WyckoffRunner.cs/RunnerSignal.cs: WICK_FRAC 0.45 (C# 0.50),
+SL_CAP_T 60 (C# 70 = SlCapPts 7.0), RR 3.0 (C# RevRR 1.5), va THIEU han gate TrendOk.
+Chi con dung lam LOADER (bars()/hit()/VSA_MA/TICK) cho imp_reversal_sweep.py — dung so tu
+detect() trong FILE NAY la SAI. Replicator dung = imp_reversal_sweep.py::detect (LIVE dict
+khop tung hang so C#). `optimize_loop.py` van dang import module nay — ket qua toi uu cua no
+noi ve tham so CU, khong phai ban dang ship.
+
 REVERSAL v1 — thiet ke lai nhanh QUAY_DAU theo 4 setup that cua user (27-7).
 Bai hoc tu live CSV (98 lenh QUAY_DAU, net -6R, WR 23%):
   - climax tim (22%) ~ hap thu (26%)  -> gate climax VO NGHIA

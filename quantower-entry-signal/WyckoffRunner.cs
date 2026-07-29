@@ -1,21 +1,23 @@
 // ============================================================================
 //  WyckoffRunner  —  Tín hiệu RUNNER CBR (Consolidation→Break→Retest→Resume) M1 (QUANTOWER)
 // ============================================================================
-//  Mô hình LITERAL của user rút từ 6 setup thật: "phá VÙNG CO, chờ HỒI (giữ trên
-//  gốc phá), VÀO nến TIẾP DIỄN". TP 3R (giữ runner). KHÁC con scalp EntrySignal
-//  (phá vùng→retest, 1.5R) — đây là chiến lược riêng, chạy song song, DLL riêng.
+//  Clone của RunnerSignal.cs (v5 đang chạy live) để nâng cấp theo lời pro trader CORVEN mà
+//  không đụng bản đang ship. Mô hình LITERAL rút từ 6 setup thật: "phá VÙNG CO, chờ HỒI (giữ
+//  trên gốc phá), VÀO nến TIẾP DIỄN". TP giữ runner. KHÁC con scalp EntrySignal (phá vùng→
+//  retest, 1.5R) — đây là chiến lược riêng, chạy song song, DLL riêng.
 //
 //  Neo = RANGE nội bộ (RangeLen nến trước, span trong [RangeMin..RangeMax] = vùng
 //  co hẹp thật, KHÔNG phải zone profile). BREAK = nến đóng vượt cạnh range + VSA
-//  climax(≥2.0) + thân mạnh. HOLD = trong WaitBars nến giá hồi nhưng GIỮ (không đóng
-//  lại hẳn trong range). RESUME = nến đóng vượt cực trị nhịp hồi → vào tại close.
-//  SL = cực trị nhịp hồi ± buf (sàn 3đ, trần 7đ). Chỉ bắn NẾN ĐÃ ĐÓNG (không repaint).
+//  climax(≥2.0) + thân mạnh + nền SẠCH (không vừa quét hụt ngược — xem BREAK SẠCH v6).
+//  HOLD = trong WaitBars nến giá hồi nhưng GIỮ (không đóng lại hẳn trong range). RESUME =
+//  nến đóng vượt cực trị nhịp hồi → vào tại close. SL = cực trị nhịp hồi ± buf (sàn 3đ,
+//  trần 7đ). Chỉ bắn NẾN ĐÃ ĐÓNG (không repaint).
 //
-//  Logic KHỚP research/entry_cbr.py + optimize_loop.py (backtest thanh khoản 5-7/2026,
-//  dxFeed GCQ26). Vùng hợp lưu (co_vung) và TP-vướng-vùng CHỈ là info hiển thị.
-//  Build: build-runner.sh (concat ProfileEngine).
+//  Logic KHỚP research/wyckoff/cbr_v6.py (backtest thanh khoản 5-7/2026, dxFeed GCQ26; số
+//  chuẩn = research/wyckoff/final_table.py). Vùng hợp lưu (co_vung) và TP-vướng-vùng CHỈ là
+//  info hiển thị. Build: build-wyckoff.sh (concat ProfileEngine).
 //
-//  === NÂNG CẤP 2026-07-28 (đối chiếu live CSV 221 lệnh + 9 tháng data + 4 setup đảo chiều) ===
+//  === NÂNG CẤP 2026-07-28 (đối chiếu live CSV 140 lệnh + 9 tháng data + 4 setup đảo chiều) ===
 //  Phát hiện: nhánh cũ QUAY ĐẦU LỖ (-6R, WR23%, gate climax/VSA/co_vung VÔ NGHĨA); CBR
 //  thắng theo XU HƯỚNG, thua NGƯỢC (thg6 crash -550 → LONG -19R). Bốn cải tiến ĐO ĐƯỢC:
 //   1) LỌC THUẬN XU HƯỚNG (proxy TPO bias, close vs close ~8h): thg6 -16R→+5R, net +18→+35R,
@@ -24,8 +26,18 @@
 //   3) VÀO ĐÚNG PHÍA VWAP + LỌC THANH KHOẢN (vma ≥ 0.75× TB dài): WR 33→37%, giữ net.
 //   4) QUAY ĐẦU XÂY LẠI quanh VWAP (4 setup user đều neo VWAP): bỏ gate vô nghĩa, chỉ giữ
 //      VWAP + rút râu + đóng mạnh + VSA≥1.8 + THUẬN trend; TP 1.5R (đảo chiều trần ~1.3R,
-//      KHÔNG phải 3R). Kết quả: WR 23→56%, -6R→+10R. Absorption footprint = bonus grade LIVE.
-//  Portfolio (CBR@3R + Quay đầu@1.5R): WR ~39%, +48R/3 tháng, cả 3 tháng dương.
+//      KHÔNG phải 3R). Kết quả: WR 23→56%, -6R→+10R. Absorption footprint = bonus HIỂN THỊ
+//      "hấp thụ ✓" (KHÔNG nâng grade — grade chỉ do Cluster>=MinConfluence quyết định).
+//  Portfolio (CBR@3R + Quay đầu@1.5R): WR ~39%, +48R/3 tháng, cả 3 tháng dương. (Số v5, xem
+//  BASELINE.md cho số v6 đã sửa parity — đừng trộn 2 bộ số.)
+//
+//  === v6 (2026-07-29, xem WYCKOFF_V6_PLAN.md + research/wyckoff/BASELINE.md) ===
+//  Sửa lỗi khung giờ chết cắt NHẦM (neo giờ hiển thị → no-op tuyệt đối; sửa neo UTC —
+//  DeadUseUtc). Thêm BREAK SẠCH (CleanBreak/NoCounterSweep): bỏ cú phá ngay sau quét hụt
+//  cạnh đối diện (Wyckoff Phase B chưa qua D). PullMax 0.90→1.00. RR 3.0→4.0. Trên nền v6
+//  (sạch, dxFeed GCQ26 5-7/2026, chỉ nhánh CBR): n 77→33, WR 37.7%→48.5% (hoặc 57.6% ở RR3),
+//  MDD 11R→3R. Nhánh QUAY_DAU giữ nguyên logic v2 (2026-07-28), chỉ dọn comment/label sai
+//  (RevApproachBars/Cooldown/SlCapPts không ràng buộc reversal — xem input tương ứng).
 // ============================================================================
 namespace WyckoffRunner
 {
@@ -103,7 +115,10 @@ namespace WyckoffRunner
         [InputParameter("SL sàn (giá)", 60, 0.5, 8, 0.1, 1)]
         public double SlFloorPts { get; set; } = 3.0;
         [InputParameter("SL trần (giá) — quá thì bỏ", 61, 1, 12, 0.1, 1)]
-        public double SlCapPts { get; set; } = 7.0;
+        public double SlCapPts { get; set; } = 7.0;   // v6: tự kiểm sweep 6.0→99.9 giá trên nhánh QUAY_DAU
+                                                       // (n=27 mọi mức từ 6.0 trở lên) — không ràng buộc cho
+                                                       // reversal (SL reversal luôn ngắn, neo VWAP/cực trị).
+                                                       // Có tác dụng thật cho CBR.
         [InputParameter("SL đệm ngoài cực trị hồi (tick)", 62, 0, 20, 1, 0)]
         public int SlBuf { get; set; } = 2;
         [InputParameter("RR mục tiêu (TP, giữ runner)", 63, 1, 8, 0.5, 1)]
@@ -111,7 +126,10 @@ namespace WyckoffRunner
                                                 // (CORVEN). Sweep dxFeed 5-7/26 đơn điệu tăng tới 8R; chọn 4.0 vì
                                                 // giữ WR 50% + MDD 3R. RR5 = +66R nhưng WR 47%, MDD 5R.
         [InputParameter("Cooldown mỗi phía (số nến)", 64, 0, 60, 1, 0)]
-        public int Cooldown { get; set; } = 15;
+        public int Cooldown { get; set; } = 15;   // v6: tự kiểm sweep 5→30 trên nhánh QUAY_DAU (n=27) — ra
+                                                   // ĐÚNG cùng 27 lệnh mọi giá trị → không ràng buộc cho
+                                                   // reversal (mẫu quá thưa để chạm ngưỡng). Có tác dụng thật
+                                                   // cho CBR (chưa sweep riêng).
         [InputParameter("Gộp tín hiệu trùng (số nến)", 65, 1, 20, 1, 0)]
         public int DedupBars { get; set; } = 6;
 
@@ -124,6 +142,11 @@ namespace WyckoffRunner
         public double TrendTolPts { get; set; } = 1.0;
         [InputParameter("CBR: vào ĐÚNG phía VWAP", 47)]
         public bool VwapAlign { get; set; } = true;      // LONG khi entry≥VWAP; SHORT khi ≤VWAP
+                                                          // v6: NO-OP trên dxFeed 5-7/2026 (0 lệnh khác biệt
+                                                          // bật/tắt) — "phá lên+thuận trend" gần như luôn ở
+                                                          // trên VWAP phiên. Giữ bật (có thể khác trên live/
+                                                          // cửa sổ khác), nhưng ĐỪNG tính đây là 1 lớp lọc
+                                                          // đã chứng minh — xem BASELINE.md §4.
         [InputParameter("Lọc thanh khoản (vma ≥ k×TB dài)", 48)]
         public bool LiquidityFilter { get; set; } = true; // COMEX/US session > Á mỏng (portable, không hardcode giờ)
         [InputParameter("Thanh khoản: k (× TB dài)", 49, 0.0, 3.0, 0.05, 2)]
@@ -148,16 +171,24 @@ namespace WyckoffRunner
         [InputParameter("Sạch: nến quét phải đóng lại ≥ (vị trí đóng)", 36, 0.2, 0.9, 0.05, 2)]
         public double CleanClosePos { get; set; } = 0.50;
 
-        // ---------- Lọc PHIÊN CHẾT (research 148 lệnh THẬT 2026-07-28) ----------
-        // Khung 02–08h (giờ hiển thị = UTC+TzOffset ≈ giờ CME nghỉ/settlement 17-18h ET): CBR ở khung này
-        // WR 10%, −19R, XẤU cả 3 tháng. CHỈ cắt CBR (reversal khung này 4/4 THẮNG → MIỄN): WR 36→43%, +38→+57R.
+        // ---------- Lọc PHIÊN CHẾT (research 140 lệnh THẬT 2026-07-28, v6 sửa lại 2026-07-29) ----------
+        // Khung UTC 02–08 (≈ giờ CME nghỉ/settlement quanh 17-18h ET, KHÔNG phải giờ hiển thị): CBR ở khung
+        // này WR 9.7%, −19R, XẤU cả 3 tháng. CHỈ cắt CBR (reversal khung này 4/4 THẮNG +6R trong UTC 02–08
+        // → MIỄN): WR 37.7→47.3%, +39→+49R.
+        // v6 FIX: bản trước neo khung theo giờ HIỂN THỊ (tUtc + TzOffset) — với TzOffset=7 mặc định, việc
+        // này cắt nhầm UTC [19:00,01:00) thay vì [02:00,08:00), một khung đã bị lọc thanh khoản làm rỗng sẵn
+        // → bộ lọc là NO-OP tuyệt đối trên baseline, khối lỗ thật ở UTC 02–08 KHÔNG bị chặn. DeadUseUtc=true
+        // neo trực tiếp theo UTC — bền với TzOffset và DST vì khung chết là hiện tượng THỊ TRƯỜNG (giờ sàn),
+        // không phải giờ người dùng nhìn thấy trên chart.
         // Mặc định BẬT — đã validate trên CSV LIVE C# (cùng engine, không phải proxy), robust cả 3 tháng.
         // Tắt ô này nếu muốn so A/B với bản không lọc.
         [InputParameter("Lọc phiên chết: BỎ lệnh CBR khung giờ chết (mặc định BẬT)", 77)]
         public bool SkipDeadSession { get; set; } = true;
-        [InputParameter("Phiên chết: giờ BẮT ĐẦU (giờ hiển thị 0-23)", 78, 0, 23, 1, 0)]
+        [InputParameter("Phiên chết: tính theo giờ UTC (v6 — bền TzOffset/DST, khuyến nghị BẬT)", 72)]
+        public bool DeadUseUtc { get; set; } = true;
+        [InputParameter("Phiên chết: giờ BẮT ĐẦU (UTC nếu DeadUseUtc, ngược lại giờ hiển thị, 0-23)", 78, 0, 23, 1, 0)]
         public int DeadStartHour { get; set; } = 2;
-        [InputParameter("Phiên chết: giờ KẾT THÚC (không gồm, 0-24)", 79, 0, 24, 1, 0)]
+        [InputParameter("Phiên chết: giờ KẾT THÚC (không gồm, UTC nếu DeadUseUtc, 0-24)", 79, 0, 24, 1, 0)]
         public int DeadEndHour { get; set; } = 8;
 
         // ---------- QUAY ĐẦU v2 — đảo chiều tại VWAP (2026-07-28, khớp reversal_vwap.py) ----------
@@ -170,12 +201,23 @@ namespace WyckoffRunner
         [InputParameter("Quay đầu: dung sai chạm VWAP (tick)", 74, 2, 40, 1, 0)]
         public int VwapTolTicks { get; set; } = 12;
         [InputParameter("Quay đầu: số nến tiếp cận VWAP", 75, 2, 20, 1, 0)]
-        public int RevApproachBars { get; set; } = 6;
+        public int RevApproachBars { get; set; } = 6;   // v6: tự kiểm sweep 1→999 nến — ra ĐÚNG cùng 27 lệnh
+                                                         // mọi giá trị = TAUTOLOGY, KHÔNG lọc gì. Lý do: gate
+                                                         // rejShort/rejLong đã ép C so VWAP, mà VWAP là TB
+                                                         // tích luỹ chậm → "tiếp cận đúng phía" trong appro
+                                                         // nến gần như luôn tự thoả. Giữ input để không đổi
+                                                         // hành vi ngoài phạm vi plan; muốn thật sự lọc phải
+                                                         // THIẾT KẾ LẠI điều kiện bối cảnh, không chỉnh số nến.
         [InputParameter("Quay đầu: rút râu ≥ (rau/range)", 69, 0.3, 1.0, 0.05, 2)]
         public double WickFrac { get; set; } = 0.50;
-        [InputParameter("Hấp thụ per-level (footprint LIVE) = nâng grade A", 76, 0.3, 1.0, 0.05, 2)]
+        // v6 FIX comment: AbsDom/RevClimaxOverride KHÔNG nâng Grade (đã lầm tưởng). Grade thật chỉ do
+        // `s.Grade = s.Cluster >= MinConfluence ? 'A' : 'B'` (xem Enrich) — `wall` chỉ được Why.Add("hấp
+        // thụ ✓") làm bonus HIỂN THỊ, không đọc vào Grade. Đối chiếu CSV live: 21/28 lệnh QUAY_DAU có tag
+        // "hấp thụ ✓" nhưng grade = 27 B / 1 A. Vì per-level không backtest offline được nên KHÔNG biến
+        // đây thành gate quyết định grade — giữ nguyên là bonus hiển thị.
+        [InputParameter("Hấp thụ per-level (footprint LIVE) = bonus hiển thị 'hấp thụ ✓'", 76, 0.3, 1.0, 0.05, 2)]
         public double AbsDom { get; set; } = 0.60;
-        [InputParameter("Quay đầu: climax tím = nâng grade (bonus)", 73)]
+        [InputParameter("Quay đầu: climax tím = bonus hiển thị 'hấp thụ ✓' (KHÔNG nâng grade)", 73)]
         public bool RevClimaxOverride { get; set; } = true;
 
         // ---------- lọc / warm-up ----------
@@ -315,8 +357,8 @@ namespace WyckoffRunner
 
         public WyckoffRunner() : base()
         {
-            Name = "Runner Signal (CBR M1)";
-            Description = "Runner CBR M1: phá vùng co → chờ hồi giữ leg → vào nến tiếp diễn (TP 3R). Bắn nến đóng. Cần Volume Analysis. Add vào chart M1.";
+            Name = "Wyckoff Runner (CBR M1, v6)";
+            Description = "Runner CBR M1 v6: phá vùng co (nền SẠCH) → chờ hồi giữ leg → vào nến tiếp diễn (TP mặc định 4R). Bắn nến đóng. Cần Volume Analysis. Add vào chart M1.";
             SeparateWindow = false;
         }
 
@@ -631,17 +673,22 @@ namespace WyckoffRunner
                 }
             }
             if (EnableReversal) raw.AddRange(ScanReversal(hd, B, pool));
-            // Lọc phiên chết TRƯỚC dedup/cooldown. CHỈ cắt CBR — reversal MIỄN (verify 148 lệnh THẬT:
-            // reversal trong khung chết 4/4 THẮNG +6R; cắt cả 2 nhánh +51R, chỉ cắt CBR +57R). Idx = nến vào.
+            // Lọc phiên chết TRƯỚC dedup/cooldown. CHỈ cắt CBR — reversal MIỄN: trong khung UTC 02–08 (khung
+            // ĐÚNG sau fix v6), reversal là 4 THẮNG/0 THUA +6R — miễn trừ có cơ sở. (Trước fix, khung C# cắt
+            // nhầm UTC 19–01 khiến reversal trong khung đó ra 4W/4L +2R — tệ hơn phần ngoài khung — nên lúc
+            // đó luận cứ "miễn vì reversal thắng" chưa đúng; nay đã đúng vì khung cắt đã đổi sang UTC 02–08.)
+            // Idx = nến vào.
             if (SkipDeadSession && DeadStartHour != DeadEndHour)
                 raw.RemoveAll(s => !IsRev(s) && InDeadWindow(B[s.Idx].Time));
             return Cooldown_(Dedup(raw));
         }
 
-        // Giờ (hiển thị = UTC+TzOffset) rơi vào khung chết? Hỗ trợ khung qua nửa đêm (start > end).
+        // Giờ rơi vào khung chết? v6: mặc định neo theo UTC (DeadUseUtc=true) vì khung chết là hiện tượng
+        // THỊ TRƯỜNG (CME nghỉ/settlement), không phải giờ hiển thị của user — neo theo giờ hiển thị sẽ sai
+        // ngay khi đổi TzOffset hoặc vào DST (xem comment ở khối input phía trên). Hỗ trợ khung qua nửa đêm.
         private bool InDeadWindow(DateTime tUtc)
         {
-            int h = tUtc.AddHours(TzOffset).Hour;
+            int h = DeadUseUtc ? tUtc.Hour : tUtc.AddHours(TzOffset).Hour;
             return DeadStartHour <= DeadEndHour
                 ? (h >= DeadStartHour && h < DeadEndHour)
                 : (h >= DeadStartHour || h < DeadEndHour);

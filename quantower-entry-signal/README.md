@@ -80,6 +80,28 @@ hướng nến `close>open`; edge thật = **hợp lưu + retest-giữ-vùng + V
   `%LOCALAPPDATA%\EntrySignal\tele_log.txt`. Điền token/chat_id **bằng tay** (repo public). Nút "TG · Gửi
   thử ngay". Build 0/0. **CHƯA test live Windows.**
 
+## WyckoffRunner v6 (2026-07-29) — nâng cấp CBR theo lời pro trader CORVEN
+
+`WyckoffRunner.cs` = clone của `RunnerSignal.cs` (v5 đang chạy live) để thử nâng cấp mà không đụng bản
+đang ship. Toàn bộ kế hoạch, số liệu và giới hạn: **[WYCKOFF_V6_PLAN.md](WYCKOFF_V6_PLAN.md)** +
+**[research/wyckoff/BASELINE.md](research/wyckoff/BASELINE.md)** (baseline đã đóng băng, kèm lệnh tái lập).
+
+Thay đổi chính so với v5:
+- **Sửa lỗi khung giờ chết**: bản v5 neo khung theo giờ HIỂN THỊ (`TzOffset`) nên vô tình cắt nhầm khung
+  UTC 19–01 (vốn đã rỗng vì lọc thanh khoản) thay vì khung UTC 02–08 (khối lỗ thật). v6 thêm input
+  `DeadUseUtc` (mặc định BẬT) neo trực tiếp theo UTC.
+- **BREAK SẠCH** (`CleanBreak`): bỏ cú phá ngay sau một cú quét hụt cạnh đối diện (thị trường còn đang
+  xoay 2 chiều — Wyckoff Phase B, chưa sang Phase D).
+- `PullMax` 0.90→1.00, `RR` 3.0→4.0 (mặc định mới, có input để A/B).
+- Build riêng: `./build-wyckoff.sh` → `dist/WyckoffRunner.dll` (0 warning).
+- Nhánh QUAY_DAU (đảo chiều VWAP) giữ nguyên logic v2, chỉ dọn lại comment/label sai (`RevApproachBars`,
+  `Cooldown`, `SlCapPts` không thực sự ràng buộc nhánh reversal trên mẫu hiện có; `AbsDom`/
+  `RevClimaxOverride` chỉ là bonus hiển thị "hấp thụ ✓", KHÔNG nâng grade).
+
+**Giới hạn** (xem đầy đủ ở BASELINE.md §giới hạn): dxFeed là proxy yếu so với feed live (scalp WR 61%
+fp-m1 vs 42% dxFeed cùng kỳ); n=33 lệnh CBR/3 tháng; cửa sổ 5–7/2026 là regime vàng tạo đỉnh, chưa phải
+out-of-sample thật; backtest không mô hình spread/slippage/phí.
+
 ## RunnerSignal — Báo Telegram (mở lệnh + đóng bởi SL/TP)
 `RunnerSignal.cs` tự bắn Telegram **2 sự kiện mỗi lệnh**:
 - **🔔 Mở lệnh** khi có tín hiệu MỚI ở nến vừa đóng — nội dung gọn: hướng (MUA/BÁN), nhánh (CBR hay

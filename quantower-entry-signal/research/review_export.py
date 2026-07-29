@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """TASK C — xuat bang REVIEW cho user tag tay (Phase 1 human-in-the-loop).
-Nguon: RunnerSignal_signals.csv (148 lenh THAT). Them: phien, co-bi-loc-phien-chet,
+Nguon: RunnerSignal_signals.csv (140 lenh THAT: CBR 112 / QUAY_DAU 28; sua 2026-07-29,
+truoc ghi nham 148). Them: phien, co-bi-loc-phien-chet,
 cac feature da parse (retrace/leg/absorb/wick), + 2 cot TRONG de user dien: diem_1_5, ly_do.
 Xuat UTF-8-BOM de Excel hien tieng Viet dung. Sort theo thoi gian."""
 import csv, re

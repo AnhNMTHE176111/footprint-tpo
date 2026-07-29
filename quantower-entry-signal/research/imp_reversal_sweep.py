@@ -4,14 +4,18 @@
 IMP_REVERSAL_SWEEP — map count<->WR frontier for the QUAY_DAU (reversal-at-VWAP) branch.
 Reuses reversal_vwap.py loaders/_finalize (VWAP/VSA/wick/body identical to RunnerSignal.cs).
 Replicates ScanReversal + EmitRev + TrendOk + per-side cooldown EXACTLY (LIVE gate values),
-then sweeps each gate one at a time. dxFeed 'Time left' == VN display time (UTC+7) — verified
-by matching live QUAY_DAU entry prices/times. So entry-bar hour = dead-session hour directly.
+then sweeps each gate one at a time. CORRECTION (2026-07-29): dxFeed 'Time left' is UTC, NOT
+VN display time — proven in WYCKOFF_V6_PLAN.md Buoc 1 (hour 21 has 0 bars = CME break at
+17:00 ET = 21:00 UTC; export filename timestamp is 22:56 but last row is 15:56 = 7h offset).
+apply_dead()/dead_lo/dead_hi below take an UTC hour, matching WyckoffRunner.cs DeadUseUtc=true.
 
 LIVE ground truth (RunnerSignal_signals.csv, C#): QUAY_DAU n=28 settled, WR 57%, EV +0.429R,
 total +12.0R at RevRR=1.5 (16W/12L).
 """
-import csv
+import csv, sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "wyckoff"))
 import reversal_vwap as rv
+import cbr_v6 as V6   # counter_sweep() for BUOC 6 test (BREAK SACH cho QUAY_DAU)
 from collections import defaultdict, OrderedDict
 
 TICK = rv.TICK
@@ -33,6 +37,9 @@ LIVE = dict(
     cooldown=15,                      # Cooldown
     rr=1.5,                           # RevRR
     dead=False, dead_lo=2, dead_hi=8, # SkipDeadSession / DeadStartHour / DeadEndHour
+    clean_mode=None,                  # BUOC 6 (v6 plan Sec.7): None=tat, 'clean'=doi hoi SACH (nhu
+                                       # CBR NoCounterSweep), 'dirty'=doi hoi CO quet nguoc gan do
+    cl_look=20, cl_w=5, cl_close=0.50,  # tham so cho V6.counter_sweep(), khop CleanLook/CleanWin/CleanClosePos
 )
 
 # ---------------- data ----------------
@@ -78,6 +85,14 @@ def detect(B, **kw):
         if touch_up and rej_short and appro_up: side=-1; anchor=max(b['hi'],vw)
         elif touch_dn and rej_long and appro_dn: side=+1; anchor=min(b['lo'],vw)
         if side==0: continue
+        if P['clean_mode'] is not None:
+            # BUOC 6 (v6 plan Sec.7): approach direction = huong tiep can VWAP (nguoc voi side vi day
+            # la reversal/fade). SHORT (side=-1) tiep can tu duoi len => up=True; LONG (side=+1) tiep
+            # can tu tren xuong => up=False. Dung LAI ham V6.counter_sweep() cua CBR, KHONG viet lai.
+            appro_up_dir = (side < 0)
+            dirty = V6.counter_sweep(B, i, appro_up_dir, P['cl_look'], P['cl_w'], P['cl_close'])
+            if P['clean_mode'] == 'clean' and dirty: continue
+            if P['clean_mode'] == 'dirty' and not dirty: continue
         if tf and trend_at(B,i,tN,ttol)!=side: continue   # TrendOk (before cooldown, matches C#)
         entry=b['c']
         if side>0: sl=anchor-buf; risk=(entry-sl)/TICK

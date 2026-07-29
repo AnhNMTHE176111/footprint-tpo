@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""PHASE 0 — Feature-lift tren 148 lenh RUNNER THAT (RunnerSignal_signals.csv, C# sinh).
+"""PHASE 0 — Feature-lift tren 140 lenh RUNNER THAT (CBR 112 / QUAY_DAU 28,
+RunnerSignal_signals.csv, C# sinh). (So dung la 140, khong phai 148 — sua 2026-07-29.)
 Muc tieu: tim subset nao co ky vong (EV) am/duong manh -> ung vien BO LOC.
 Trung thuc: bao ca kich thuoc cell (n) — cell nho = khong tin duoc, chi la gia thuyet."""
 import csv, re, statistics as st

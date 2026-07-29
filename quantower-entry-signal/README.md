@@ -88,7 +88,7 @@ bất cứ gì.
 
 | Kịch bản | Trạng thái | Trong DLL |
 |---|---|---|
-| **KB1** — CBR phá range → chờ hồi → tiếp diễn | ✅ PASS **có điều kiện** | **BẬT**, nhánh duy nhất được cấp vốn |
+| **KB1** — CBR: co cụm → phá → hồi → tiếp diễn | ✅ PASS **có điều kiện** | **BẬT**, kịch bản duy nhất được cấp vốn |
 | **KB2** — quay đầu tại VWAP | ❌ FAIL (p=0.072; LONG EV chỉ +0.154R) | Có code, **`EnableReversal=false`** — bật chỉ để thu log OOS |
 | **KB3** — scalp biên↔biên trong range | ❌ KILL (chết ở 2 tick phí; 0 range VALID trong 6 tháng OOS) | **Không có dòng code nào** |
 

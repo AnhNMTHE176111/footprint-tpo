@@ -12,7 +12,7 @@
 | DLL đã build | ✅ [dist/WyckoffRunner.dll](../../dist/WyckoffRunner.dll) — 83.968 byte, md5 `6e78c447c6edf2db0cc5f63f5f21f301` |
 | Parity thuật toán C#↔Python | ✅ **ĐẠT** — 33/33 tín hiệu, 0 lệch |
 | Parity **DLL-trong-Quantower** | ✅ **ĐẠT** — 33/33 CBR khớp, 0 lệch giá trị (0.0 tick), 2 tín hiệu "chỉ C#" đã giải thích = ngoài cửa sổ dữ liệu Python |
-| Cấu hình đóng băng | ✅ **ĐÚNG** (từ lượt 2) — chỉ còn CBR, nhánh QUAY ĐẦU đã tắt |
+| Cấu hình đóng băng | ✅ **ĐÚNG** (từ lượt 2) — chỉ còn CBR, kịch bản QUAY ĐẦU đã tắt |
 | Dữ liệu live đã thu | **35 tín hiệu CBR**, 2026-05-26 → 2026-07-29 — nhưng là **REPLAY lịch sử**, không phải forward |
 | Kết luận về chiến lược từ live | **Chưa có gì.** Replay ≠ OOS. Điểm thật sự ngoài mẫu: **n=2** → KHÔNG KẾT LUẬN |
 
@@ -69,7 +69,7 @@ Copy [dist/WyckoffRunner.dll](../../dist/WyckoffRunner.dll) vào thư mục indi
 | 48 | Lọc thanh khoản | **BẬT** |
 | 77 | Lọc phiên chết | **BẬT** |
 | 72 | Phiên chết tính theo **UTC** | **BẬT** ← quan trọng, đây là lỗi v5 |
-| 66 | **Bật nhánh QUAY ĐẦU** | **TẮT** ← KB2 chưa được cấp vốn |
+| 66 | **Bật kịch bản QUAY ĐẦU** | **TẮT** ← KB2 chưa được cấp vốn |
 
 ### Bước 3 — An toàn trước khi chạy thật
 
@@ -109,7 +109,7 @@ nghi ngờ (nến thiếu? volume khác? warmup chưa đủ? tín hiệu ở n�
 
 [AUDIT_V7.md](AUDIT_V7.md) §H đã đo độ nhạy chi phí. Khi có số spread thực tế, so với bảng này:
 
-| Nhánh | Sống tới | Thực tế vàng M1 | Kết luận |
+| Kịch bản | Sống tới | Thực tế vàng M1 | Kết luận |
 |---|---:|---|---|
 | **KB1** (đang cấp vốn) | **>40 tick/lệnh** | 2–3 tick | ✅ biên rất rộng |
 | KB2 (đang tắt) | 9 tick | 2–3 tick | ⚠ biên mỏng: EV chỉ +0.294R ở 2 tick |
@@ -231,16 +231,16 @@ QUAY_DAU(KB2) n= 28 WR= 57.1% tong=+12.0R EV=+0.429 | 05: +2.0( 3) 06: +2.5(10) 
 Mốc backtest Python để so: CBR `n=33 WR=48.5% +47.0R EV=+1.424`. Live replay `n=35 WR=45.7% +45.0R EV=+1.286`
 — chênh **đúng bằng 2 lệnh thua ngoài mẫu** đã nói ở trên, không có sai lệch nào khác.
 
-#### 4. 🔴 Phát hiện cấu hình: nhánh QUAY_ĐẦU (KB2) ĐANG BẬT — trái cấu hình đóng băng
+#### 4. 🔴 Phát hiện cấu hình: kịch bản QUAY ĐẦU (KB2) ĐANG BẬT — trái cấu hình đóng băng
 
 28/63 tín hiệu là `QUAY_DAU`. Nhưng [AUDIT_V7.md](AUDIT_V7.md) phán quyết **KB2 = FAIL** (p=0.072, OOS n=9
-EV −0.167R) và §1 bảng input của file này ghi rõ **index 66 "Bật nhánh QUAY ĐẦU" = TẮT**. Mặc định trong DLL
+EV −0.167R) và §1 bảng input của file này ghi rõ **index 66 "Bật kịch bản QUAY ĐẦU" = TẮT**. Mặc định trong DLL
 đã là `false`.
 
 ⇒ Người dùng đã **bật tay** input 66, hoặc dùng chart có preset cũ lưu sẵn giá trị `true`. Quantower lưu giá
 trị input theo template chart, nên **DLL mới không tự ghi đè preset cũ**.
 
-**Việc cần làm:** tắt index 66 về **TẮT**. KB2 chưa qua cổng audit — chạy nó thật là giao dịch bằng nhánh đã
+**Việc cần làm:** tắt index 66 về **TẮT**. KB2 chưa qua cổng audit — chạy nó thật là giao dịch bằng kịch bản đã
 bị FAIL. (Replay cho KB2 EV +0.429R nhìn có vẻ ổn, nhưng đó chính là in-sample của cái đã bị bác; số đẹp trên
 cửa sổ đã dùng để chọn tham số không phải bằng chứng.)
 
@@ -278,7 +278,7 @@ Hai tín hiệu "chỉ C#" vẫn là 07-28 và 07-29, vẫn cùng nguyên nhân 
 ở 2026-07-27 15:56). Trong khoảng hai bên đều có dữ liệu: **33/33 khớp, lệch 0.0 tick → 0.0%**.
 
 **Kiểm tra chéo quan trọng:** so từng ô của 35 dòng CBR ở lượt 2 với 35 dòng CBR ở lượt 1 → **0 ô lệch**.
-Nghĩa là tắt input 66 **không** làm xê dịch nhánh CBR: không có tín hiệu CBR nào trước đây bị router 1-vị-thế
+Nghĩa là tắt input 66 **không** làm xê dịch kịch bản CBR: không có tín hiệu CBR nào trước đây bị router 1-vị-thế
 gạt vì trùng giờ với một lệnh QUAY_DAU. Đây là điều cần kiểm chứ không được giả định — nếu có lệch, con số
 in-sample của KB1 sẽ khác.
 

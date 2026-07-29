@@ -12,9 +12,9 @@ chọn model/effort nào; phần sau dòng `=== PROMPT ===` là nội dung dán.
 
 | GĐ | Việc | Model | Effort | Cần trước | Output chính |
 |---:|------|-------|--------|-----------|--------------|
-| 0 | Trích xuất cơ học PDF/PPTX → text + ảnh | Sonnet 5 | low | — | `data-export/wyckoff/extracted/` + `EXTRACT_REPORT.md` |
-| 1 | Chưng cất lý thuyết phần 1–12 | Sonnet 5 | medium | 0 | `data-export/wyckoff/THEORY.md`, `WYCKOFF_RULES.md` |
-| 2 | Chưng cất journal 153 slide chart | Sonnet 5 | medium | 0 | `data-export/wyckoff/CHART_CASES.md` |
+| 0 | Trích xuất cơ học PDF/PPTX → text + ảnh | Sonnet 5 | low | — | ✅ **XONG** — `extracted/` (1048 ảnh, 289MB) + `EXTRACT_REPORT.md` |
+| 1 | Chưng cất **lý thuyết** (1, 3.pptx, 5, 6, 12, 8) | Sonnet 5 | medium | 0 | `data-export/wyckoff/THEORY.md`, `WYCKOFF_RULES.md` |
+| 2 | Chưng cất **chữa bài** — 4 lượt 2a→2d, 806 ảnh | Sonnet 5 | medium | 0 | `data-export/wyckoff/CHART_CASES.md` |
 | 3 | Kiểm kê năng lực dữ liệu | Sonnet 5 | high | — | `quantower-entry-signal/research/DATA_CAPABILITY.md` |
 | 4 | **THIẾT KẾ đặc tả 3 kịch bản** ⭐ | **Opus 5** | **xhigh** | 1,2,3 | `quantower-entry-signal/SPEC_V7_3KB.md` |
 | 5 | Dọn nợ v6 + chốt baseline | Sonnet 5 | medium | — | v6 done + `research/wyckoff/BASELINE.md` |
@@ -27,12 +27,15 @@ chọn model/effort nào; phần sau dòng `=== PROMPT ===` là nội dung dán.
 ## Thứ tự & song song
 
 ```
-GĐ0 ──┬─> GĐ1 ─┐
-      └─> GĐ2 ─┤
-GĐ3 ───────────┴─> GĐ4 (Opus xhigh) ─┬─> GĐ6 ─┐
-GĐ5 (chạy song song bất kỳ lúc nào) ─┘        ├─> GĐ8 (cổng) ─> GĐ9 ─> GĐ10
-                                     └─> GĐ7 ─┘
+GĐ0 ✅ ─┬─> GĐ1 (lý thuyết, rẻ) ─────────┐
+        └─> GĐ2a→2b→2c→2d (806 ảnh) ────┤
+GĐ3 ────────────────────────────────────┴─> GĐ4 (Opus xhigh) ─┬─> GĐ6 ─┐
+GĐ5 (độc lập, chạy sớm được) ─────────────────────────────────┘        ├─> GĐ8 (cổng) ─> GĐ9 ─> GĐ10
+                                                              └─> GĐ7 ─┘
 ```
+
+**Sau GĐ0 — chạy song song ngay 3 phiên:** GĐ1, GĐ3, GĐ5. Rồi lần lượt GĐ2a→2d (cột dài nhất, 806 ảnh,
+nên bắt đầu sớm và rải qua nhiều lượt). GĐ4 chỉ mở khi GĐ1 + GĐ2 + GĐ3 đều xong.
 
 - GĐ0 → 1,2: bắt buộc tuần tự (1,2 cần file đã trích xuất).
 - GĐ3 và GĐ5 độc lập, chạy lúc nào cũng được, nhưng **GĐ5 phải xong trước GĐ6/GĐ7** vì nó chốt baseline để so.

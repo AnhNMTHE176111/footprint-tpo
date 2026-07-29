@@ -15,13 +15,24 @@ Nếu hết context giữa đường, phiên sau đọc `THEORY.md` là biết �
 
 === PROMPT ===
 
-Đọc `data-export/wyckoff/EXTRACT_REPORT.md` trước. Việc của bạn: **chưng cất toàn bộ lý thuyết Wyckoff (phần 1–12)** thành 2 file markdown làm nguồn bền vững, để mọi phiên sau đọc file này thay vì mở lại PDF/ảnh.
+Đọc `data-export/wyckoff/EXTRACT_REPORT.md` trước. Việc của bạn: **chưng cất phần LÝ THUYẾT** thành 2 file markdown làm nguồn bền vững, để mọi phiên sau đọc file này thay vì mở lại PDF/ảnh.
+
+⚠ **Phạm vi đã thu hẹp sau GĐ0** (đừng làm quá phạm vi): mục "Bản đồ nhanh" của `EXTRACT_REPORT.md` cho thấy
+`2.pdf`, `4.pdf`, `7.pdf` **không phải lý thuyết** — chúng là **chữa bài học viên** (có tên học viên, nhận xét
+kiểu "Sai Phase C, UTAD [C] SAI", "Gắn nhãn ổn, hiểu bài tốt"), cùng bản chất với journal → **thuộc GĐ2, không
+làm ở đây**.
+
+Phạm vi GĐ1 = **lý thuyết**: `1.pdf` (4 thuyết Wyckoff), `5.pdf` (phân tích điểm mạnh/yếu, tốc độ),
+`6.pdf` (cấu trúc tích luỹ dốc lên, vùng BU), `12.pdf` (hấp thụ ngang/dọc), `3.pptx` (từ vựng sự kiện Wyckoff),
+`8.pdf` (tái phân phối). Bỏ `9.pdf` (trùng md5 `8.pdf`); **thiếu phần 10, 11** — ghi nhận trong output.
 
 Đây là việc **trích xuất + hệ thống hoá**, KHÔNG phải việc thiết kế chiến lược. Đừng đề xuất setup trade ở lượt này.
 
 ## Cách làm — BẮT BUỘC theo lô, checkpoint sau mỗi lô
 
-Xử lý **từng file một** theo thứ tự 1, 2, 3(pptx), 4, 5, 6, 7, 8, 12 (bỏ 9.pdf — trùng 8.pdf; thiếu 10, 11).
+Xử lý **từng file một** theo thứ tự: `1.pdf` → `3.pptx` → `5.pdf` → `6.pdf` → `12.pdf` → `8.pdf`.
+Text của các file này dày (>300 ký tự/trang, `12.pdf` 686) nên **đọc text là đủ làm khung**; chỉ mở ảnh khi
+cần đọc chart cụ thể — riêng `8.pdf` (49 ảnh, nội dung "tái phân phối" nằm trên chart) thì phải xem ảnh nhiều hơn.
 
 Với mỗi file:
 1. Đọc text đã trích (`extracted/text/`). Nếu text rỗng/vô nghĩa → đọc ảnh trang trong `extracted/images/`,
@@ -89,7 +100,7 @@ Bảng luật **có thể code**, theo đúng khuôn đã dùng cho pro trader (
 
 ## Xong khi nào
 
-- [ ] Bảng tiến độ trong `THEORY.md` đủ 9 file ở trạng thái `xong`
+- [ ] Bảng tiến độ trong `THEORY.md` đủ **6 nguồn lý thuyết** (1, 3.pptx, 5, 6, 12, 8) ở trạng thái `xong`
 - [ ] Đủ Phase A–E + đủ bộ sự kiện tích luỹ và phân phối, mỗi cái tách ĐỊNH NGHĨA GỐC vs HỆ QUẢ ĐIỂN HÌNH
 - [ ] `WYCKOFF_RULES.md` có ≥ 15 luật, mỗi luật đủ 5 cột, cột "feature code được" đủ cụ thể để code
 - [ ] Có mục "Mâu thuẫn / mơ hồ" (không được để rỗng — tài liệu dịch/slide luôn có chỗ mơ hồ)

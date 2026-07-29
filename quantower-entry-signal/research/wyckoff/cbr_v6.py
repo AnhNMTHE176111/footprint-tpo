@@ -275,24 +275,43 @@ def post(sig, C):
         sig = [s for s in sig if s['hour'] in C['SESS']]
     return [s for s in sig if s['ym'] in MONTHS]
 
-def hit(B, i, side, sl, tp):
+def hit(B, i, side, sl, tp, maxbars=None, dead_at=None):
+    """maxbars/dead_at mac dinh None => hanh vi CU HET (KB1/KB2, NO-OP). KB3 (SPEC_V7_3KB.md §6.5.1)
+    truyen 2 tham so nay -> them 2 outcome moi 'TO' (timeout)/'BREAK' (range vo nguoc lenh),
+    tra ve (outcome, r_thuc) thay vi chi outcome."""
     for j in range(i + 1, len(B)):
         b = B[j]
         if (b['lo'] <= sl) if side == 'LONG' else (b['hi'] >= sl):
-            return 'SL'
+            return ('SL', -1.0)
         if (b['hi'] >= tp) if side == 'LONG' else (b['lo'] <= tp):
-            return 'TP'
-    return 'open'
+            return ('TP', None)
+        if dead_at is not None and j >= dead_at:
+            r = (b['c'] - B[i]['entry_px']) if side == 'LONG' else (B[i]['entry_px'] - b['c'])
+            return ('BREAK', r / abs(B[i]['entry_px'] - sl))
+        if maxbars is not None and j - i >= maxbars:
+            r = (b['c'] - B[i]['entry_px']) if side == 'LONG' else (B[i]['entry_px'] - b['c'])
+            return ('TO', r / abs(B[i]['entry_px'] - sl))
+    return ('open', 0.0)
 
 def evaluate(B, sig, C):
     out = []
     for s in sig:
         r = s['risk_t'] * TICK
-        tp = s['entry'] + C['RR'] * r if s['side'] == 'LONG' else s['entry'] - C['RR'] * r
-        o = hit(B, s['i'], s['side'], s['sl'], tp)
+        if s.get('tp') is not None:              # KB3: TP tuyet doi (bien doi dien) => RR bien thien
+            tp = s['tp']; rr = abs(tp - s['entry']) / r
+            B[s['i']]['entry_px'] = s['entry']    # can cho hit() tinh r_thuc khi TO/BREAK
+            o, r_thuc = hit(B, s['i'], s['side'], s['sl'], tp,
+                            maxbars=s.get('maxbars'), dead_at=s.get('dead_at'))
+        else:                                     # KB1/KB2: y NGUYEN duong cu (NO-OP)
+            rr = C['RR']
+            tp = s['entry'] + rr * r if s['side'] == 'LONG' else s['entry'] - rr * r
+            o2 = hit(B, s['i'], s['side'], s['sl'], tp)
+            o, r_thuc = (o2 if isinstance(o2, tuple) else (o2, None))
         if o == 'open':
             continue
-        s2 = dict(s); s2['r'] = C['RR'] if o == 'TP' else -1.0
+        s2 = dict(s); s2['rr_real'] = rr
+        s2['r'] = rr if o == 'TP' else (-1.0 if o == 'SL' else r_thuc)
+        s2['outcome'] = o
         out.append(s2)
     return out
 

@@ -64,11 +64,13 @@ def load_cs(path, live=False):
                     return cols[n]
             return None
 
-        cT = pick('time', 'thoi gian', 'datetime', 'time_utc')
-        cS = pick('side', 'phia')
+        # ten cot: 'time/side/entry/sl' = harness offline;
+        #          'ngay_gio/huong/entry/SL/risk_gia/nhanh' = CSV that do WyckoffRunner.ExportSignals() ghi
+        cT = pick('time', 'ngay_gio', 'thoi gian', 'datetime', 'time_utc')
+        cS = pick('side', 'huong', 'phia')
         cE = pick('entry', 'gia vao')
         cL = pick('sl')
-        cR = pick('risk_t', 'risk')
+        cR = pick('risk_t', 'risk_gia', 'risk')
         cB = pick('nhanh', 'branch', 'scenario')
         if not (cT and cS and cE):
             raise SystemExit(f"CSV thieu cot bat buoc. Header: {rd.fieldnames}")

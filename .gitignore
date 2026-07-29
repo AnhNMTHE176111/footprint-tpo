@@ -11,3 +11,6 @@ atas-orderflow-indicator/tools/*.dll
 # Rac build cua project test (chi commit source + dist/*.dll)
 **/tests/bin/
 **/tests/obj/
+
+# Rac pycache cua script research
+**/__pycache__/

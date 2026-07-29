@@ -38,7 +38,8 @@ rows.sort(key=lambda r:r['ngay_gio'])
 out=[]
 for i,r in enumerate(rows,1):
     h=hour(r); ph=phien(h); retr,leg,absb,wick=parse(r)
-    dead="BỎ(phiên chết)" if 2<=h<8 else ""
+    # Filter THẬT: CHỈ bỏ CBR trong [02,08); reversal MIỄN (đã verify 4/4 THẮNG khung này)
+    dead="BỎ(phiên chết)" if (2<=h<8 and r['nhanh'].strip()=='CBR') else ""
     tvv=r['tp_vuong_vung'].strip(); tvv='' if tvv=='-' else tvv
     out.append([i,r['ngay_gio'],ph,dead,r['nhanh'].strip(),r['huong'].strip(),
         r['entry'],r['SL'],r['TP'],r['RR'],r['KQ'].strip(),rval(r),r['VSA'],

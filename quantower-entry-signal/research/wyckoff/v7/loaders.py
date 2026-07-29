@@ -68,10 +68,38 @@ def ib_from_m1(B, sess, minutes=60):
     return max(b['hi'] for b in bars), min(b['lo'] for b in bars)
 
 
+# ⚠⚠ LOI DU LIEU DA XAC NHAN (AUDIT_V7 §G, do lai 2026-07-29):
+# fp-m1-6-month.csv co cot Volume HONG trong 2026-06-04 -> 2026-06-26:
+#   22.297 / 29.850 nen thang 6 (74,7%) co Volume=0 DU Ticks(from bar)>0 => chac chan hong,
+#   khong phai phien vang. OHLC van DUNG (audit doi chieu gia khop tuyet doi voi dxFeed).
+# HE QUA: moi feature dua tren volume (vma, vratio, VSA, gate volfloor, liqratio, VWAP) SAI
+# trong khoang do. Bat ky ket luan nao chay tren thang 6 cua file NAY deu vo hieu.
+# CACH DUNG DUNG: loai thang 6 (xem FPM1_VOLUME_BAD_FROM/TO) hoac chi dung OHLC + Delta.
+FPM1_VOLUME_BAD_FROM = "2026-06-04"
+FPM1_VOLUME_BAD_TO   = "2026-06-26"
+
+
+def fpm1_volume_ok(b):
+    """True neu nen b nam NGOAI vung Volume hong cua fp-m1-6-month.csv (AUDIT_V7 §G).
+    Dung de loc truoc khi tinh bat ky thong ke nao co volume tren file nay."""
+    d = b['dt'].strftime("%Y-%m-%d")
+    return not (FPM1_VOLUME_BAD_FROM <= d <= FPM1_VOLUME_BAD_TO)
+
+
+def _warn_fpm1_volume(B, path):
+    bad = sum(1 for b in B if b['v'] == 0)
+    if bad:
+        print(f"⚠ {path}: {bad}/{len(B)} nen co Volume=0 (loi du lieu da biet, "
+              f"{FPM1_VOLUME_BAD_FROM}->{FPM1_VOLUME_BAD_TO}, AUDIT_V7 §G). "
+              f"MOI feature volume trong khoang do KHONG dung duoc — loc bang loaders.fpm1_volume_ok().")
+    return B
+
+
 def load_fp_m1(path="fp-m1-6-month.csv"):
     """fp-m1 (CO Delta/Delta%/Bid-Ask volume), nhan UTC+7. Dung rieng cho feature fp-only
-    (SPEC §3 'Bo du lieu'). KHONG so truc tiep so voi dxFeed (n khac, mui gio khac)."""
-    return E.load_fpm1(path)
+    (SPEC §3 'Bo du lieu'). KHONG so truc tiep so voi dxFeed (n khac, mui gio khac).
+    ⚠ Volume hong 2026-06 — xem ghi chu FPM1_VOLUME_BAD_* o tren."""
+    return _warn_fpm1_volume(E.load_fpm1(path), path)
 
 
 def load_fp_m1_full(path="fp-m1-6-month.csv"):
@@ -104,7 +132,7 @@ def load_fp_m1_full(path="fp-m1-6-month.csv"):
         b['ddom'] = b['delta'] / b['v'] if b['v'] > 0 else 0.0
         b['since_gap'] = 0 if gap else (B[i - 1]['since_gap'] + 1 if i > 0 else 999)
         b['ym'] = b['dt'].strftime('%Y-%m')
-    return B
+    return _warn_fpm1_volume(B, path)
 
 
 def load_tpo_daily(path="TPO-chart-daily.csv"):

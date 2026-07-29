@@ -396,7 +396,16 @@ def evalset(B,S,label,C,by_month=True):
             wr=f"WR{sum(s['o3']=='TP' for s in g)/len(gs):.0%}" if gs else "-"
             print(f"     {sc:<18} n={len(g):3} 3R {sum(s['r3p'] for s in g):+5.0f}R {wr}")
 
+# AUDIT_V7 §1.2: calc_volfloor() la LOOK-AHEAD — percentile-30 tinh tren TOAN BO du lieu
+# >=2026-05 roi dung o MOI nen (ke ca nen dau chuoi). Phep cat chuoi cho 5.0/5.0/6.0/12.0/16.0
+# thay vi 17.0 o 5/5 diem cat. Ban va da duoc audit chung minh KHONG doi mot con so nao:
+# chot cung 20.0 cho khop RunnerSignal.cs => KB1 van n=33 WR=48.5% +47.0R EV=+1.424.
+# DUNG calc_volfloor() cho code moi. Hang so duoi day la duong nhan-qua duy nhat.
+VOLFLOOR_FROZEN=20.0
+
 def calc_volfloor(B):
+    # ⚠ LOOK-AHEAD — GIU LAI CHI DE TAI LAP script research cu (research/*.py truoc 2026-07-29).
+    # Code moi phai dung VOLFLOOR_FROZEN. Xem AUDIT_V7.md §1.2.
     # lien-thong: percentile-30 cua volume tren cac nen 'day du' (liquid) => portable floor
     liq=[b['v'] for b in B if b['ym']>='2026-05']
     liq.sort()

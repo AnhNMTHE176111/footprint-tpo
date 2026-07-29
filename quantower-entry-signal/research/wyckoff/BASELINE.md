@@ -4,6 +4,29 @@
 > (đọc trước file đó để hiểu bối cảnh) + `final_table.py` + `imp_reversal_sweep.py` (đã sửa 2026-07-29).
 > Dữ liệu: dxFeed GCQ26, cửa sổ 5–7/2026 (xem §Giới hạn).
 
+## 0. ⚠️ ĐỌC TRƯỚC KHI TRÍCH BẤT KỲ SỐ NÀO Ở FILE NÀY (bổ sung 2026-07-29, sau GĐ8)
+
+[AUDIT_V7.md](AUDIT_V7.md) §7 đã kiểm và kết luận: **toàn bộ số ở file này KHÔNG có một điểm dữ liệu
+out-of-sample nào.** Cửa sổ OOS 2025-11→2026-04 không chạy được (chỉ **171** nến qua gate trên 6 tháng, so
+với **52.160** nến của 3 tháng in-sample = **0,33%**) → KB1/KB2/KB3 đều `n=0`. 100% số liệu đến từ **một**
+cửa sổ 3 tháng, **một** regime (vàng tạo đỉnh), **một** hợp đồng.
+
+**Hệ quả bắt buộc khi tính vốn** (AUDIT_V7 §13, điều kiện #3):
+
+| | |
+|---|---|
+| EV in-sample của KB1 | +1.424R/lệnh |
+| **Kỳ vọng được phép dùng để tính kích thước vị thế** | **+0.7R** (đầu dưới của khoảng chiết khấu +0.7…+1.4R) |
+| Vì sao chiết khấu | kẻ sống sót của **≥94** cấu hình trên cùng một cửa sổ; Bonferroni đưa p 0.0003 → 0.028 — vẫn sống nhưng biên mỏng hơn con số thô rất nhiều |
+
+> **Live log là phép OOS ĐẦU TIÊN của cả dự án.** Trước khi có nó, KB1 chỉ ở mức "đủ bằng chứng để thử bằng
+> vốn nhỏ và ghi log", **không phải** "hệ thống đã được xác nhận". Mọi báo cáo live sau này phải so với
+> +0.7R, không so với +1.424R.
+
+**Trạng thái 3 kịch bản sau cổng GĐ8:** `KB1 = PASS (có điều kiện)` · `KB2 = FAIL` (p=0.072; phía LONG chỉ
+EV +0.154R → port ở dạng `EnableReversal=false`, **không cấp vốn**) · `KB3 = FAIL/KILL` (chết ở 2 tick phí,
+0 range VALID trong 6 tháng OOS → **không port**).
+
 ## 1. Bảng số CHUẨN (mỗi nhánh + portfolio gộp)
 
 ```
@@ -134,6 +157,27 @@ QUAY_DAU 28) trên `RunnerSignal_signals.csv` — đã sửa (`review_runner.py`
 ## 7. Việc CHƯA làm (còn lại trong plan, không thuộc phạm vi lượt này)
 
 - **Bước 7 — Replicator CBR exact** (`WYCKOFF_V6_PLAN.md` §8): `cbr_v6.py` chưa mô phỏng `Dedup` gộp
-  CBR+reversal, `volfloor` lệch (percentile 17.0 vs C# cứng 20), C# bỏ nến cuối còn Python quét hết.
-  Đây là nợ hạ tầng, làm khi cần độ tin cậy cao hơn cho vòng sau.
+  CBR+reversal, C# bỏ nến cuối còn Python quét hết. Đây là nợ hạ tầng, làm khi cần độ tin cậy cao hơn.
+  ✅ Phần **`volfloor` lệch đã XONG** — xem §8 bên dưới.
 - Kết luận rõ ràng cho BREAK SẠCH/QUAY_DAU (§4) — cần soi cơ chế ở effort cao hơn.
+
+## 8. Đã sửa sau cổng GĐ8 (2026-07-29) — 3 điều kiện tiền đề của AUDIT_V7 §13
+
+| # | Việc | Trạng thái | Bằng chứng |
+|---|------|-----------|-----------|
+| 1 | **Look-ahead `volfloor`** — `calc_volfloor()` lấy percentile-30 volume của *toàn bộ* dữ liệu ≥2026-05 rồi dùng ở **mọi** nến (kể cả nến đầu chuỗi) | ✅ **XONG** | Thêm hằng `VOLFLOOR_FROZEN=20.0` ở [entry_dxfeed.py](../entry_dxfeed.py) (khớp `RunnerSignal.cs`); 2 chỗ gọi trong v7 ([run_kb12.py](v7/run_kb12.py), [run_kb3.py](v7/run_kb3.py)) đã chuyển sang hằng. Chạy lại: **GOLDEN OK**, KB1 vẫn `n=33 WR=48.5% +47.0R EV=+1.424`, KB2 vẫn `n=27 EV=+0.389`, portfolio vẫn `n=60 +57.5R` — **không đổi một con số nào**, đúng như audit §1.2 dự đoán. `calc_volfloor()` giữ lại (có cảnh báo) chỉ để tái lập ~15 script research cũ. |
+| 2 | **Router 1-vị-thế chưa từng được dữ liệu nào test** (bỏ 0 lệnh trong 3 tháng) | ✅ **XONG** | Router tách thành `engine.route_one_position()` (dùng chung, không còn hàm lồng trong `run_kb3.py`) + [test_router.py](v7/test_router.py): **15/15 PASS**, phủ đúng nhánh chưa từng chạy (chồng thời gian, vào đúng phút đóng lệnh cũ → bỏ, ưu tiên khi trùng phút, không xếp hàng) + 2 tính chất bất biến trên 300 tín hiệu chồng dày (0 cặp chồng thời gian, giữ+bỏ=tổng). Đây là **bảng đối chiếu parity cho GĐ9**. |
+| 3 | **Kỳ vọng dùng để tính vốn** phải là +0.7R, không phải +1.424R | ✅ **XONG** | Ghi ở §0 của file này. |
+
+**Lỗi dữ liệu phát hiện thêm — cột Volume của `fp-m1-6-month.csv` hỏng tháng 6/2026:**
+
+Đo lại xác nhận đúng như audit §G: **22.297 / 29.850 nến tháng 6 (74,7%) có `Volume=0` dù
+`Ticks(from bar)>0`** → chắc chắn lỗi dữ liệu, không phải phiên vắng. Vùng hỏng **liền khối
+`2026-06-04` → `2026-06-26`** (19 ngày). OHLC vẫn đúng (audit đối chiếu giá khớp tuyệt đối với dxFeed).
+
+- **Hệ quả:** mọi feature dựa trên volume (`vma`, `vratio`, VSA, gate `volfloor`, `liqratio`, VWAP) **sai**
+  trong khoảng đó. Bất kỳ kết luận nào chạy trên tháng 6 của **file này** đều vô hiệu.
+- **Đã chặn tái phát:** cả 2 loader `load_fp_m1()` / `load_fp_m1_full()` trong
+  [loaders.py](v7/loaders.py) giờ **in cảnh báo** khi gặp `Volume=0`, kèm hằng
+  `FPM1_VOLUME_BAD_FROM/TO` và hàm lọc `fpm1_volume_ok(b)`.
+- ⚠ **Không ảnh hưởng** số chuẩn ở §1: chúng chạy trên **dxFeed**, không phải fp-m1.

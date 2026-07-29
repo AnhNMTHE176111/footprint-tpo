@@ -248,7 +248,7 @@ def step8_kb2_delta_fpm1(S):
 
 def main():
     B = E.load_m1()
-    vf = E.calc_volfloor(B)
+    vf = E.VOLFLOOR_FROZEN          # AUDIT_V7 §1.2: khong dung calc_volfloor() (look-ahead)
     E.VOLFLOOR_AUTO = vf
     V.prepare(B)
     print(f"dxFeed M1={len(B)} nen | {B[0]['dt']} -> {B[-1]['dt']} (UTC) | volfloor={vf}")

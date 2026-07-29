@@ -17,7 +17,7 @@ sys.path.insert(0, "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/r
 import entry_dxfeed as E
 import cbr_v6 as V6
 import imp_reversal_sweep as REV
-import features, s3_edge2edge as K3, report
+import features, s3_edge2edge as K3, report, engine
 
 TICK = E.TICK
 MONTHS = ('2026-05', '2026-06', '2026-07')
@@ -45,7 +45,7 @@ def find_exit(Barr, i, side, sl, tp, maxbars=None, dead_at=None):
 
 def main():
     B = E.load_m1()
-    vf = E.calc_volfloor(B); E.VOLFLOOR_AUTO = vf
+    vf = E.VOLFLOOR_FROZEN; E.VOLFLOOR_AUTO = vf   # AUDIT_V7 §1.2: khong dung calc_volfloor()
     V6.prepare(B)
     pool = E.build_zones(B)
     P = dict(features.DEFAULT_P)
@@ -198,15 +198,9 @@ def main():
         allsig = []
         for br in branches:
             allsig += br
-        allsig.sort(key=lambda x: (x['dt'], x['prio']))
-        busy_until = None
-        kept, dropped = [], defaultdict(int)
-        for s in allsig:
-            if busy_until is not None and s['dt'] <= busy_until:
-                dropped[s['branch']] += 1
-                continue
-            kept.append(s)
-            busy_until = s['exit_dt']
+        # ROUTER dong bang o engine.route_one_position() — dung chung voi test_router.py
+        # (AUDIT_V7 §11.2: nhanh 'bo vi dang co vi the' bo 0 lenh tren du lieu that -> phai co unit test)
+        kept, dropped = engine.route_one_position(allsig)
         print(f"--- {label} --- (tin hieu bi bo vi 1-vi-the: {dict(dropped)})")
         report.line(label, kept)
         return kept, dropped

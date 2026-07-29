@@ -142,6 +142,36 @@ def run_box(B, C, vf, bias_at=None):
     return raw
 
 
+def route_one_position(allsig):
+    """ROUTER 1-VI-THE (AUDIT_V7 §11.2 dieu kien #2).
+
+    Vao: list dict co 'dt' (thoi diem vao), 'exit_dt' (thoi diem dong), 'prio' (nho = uu tien cao),
+         'branch' (ten nhanh, chi de dem).
+    Ra:  (kept, dropped) — kept la cac tin hieu THUC SU vao lenh; dropped[branch] = so tin hieu bi bo
+         vi luc do dang co vi the.
+
+    LUAT (dong bang, phai khop RunnerSignal.cs):
+      1. Sap xep theo (dt, prio): cung mot phut thi nhanh prio nho hon duoc vao truoc.
+      2. Dang co vi the (busy_until) => bo MOI tin hieu co dt <= busy_until. So sanh la '<=':
+         tin hieu vao DUNG phut dong lenh cu bi BO (bao thu — live khong the vao lai tuc thi).
+      3. Khong xep hang: tin hieu bi bo la bo han, KHONG vao lai sau khi lenh cu dong.
+
+    ⚠ Nhanh 'bo vi dang co vi the' bo 0 lenh tren du lieu 5-7/2026 (trung vi giu lenh chi 9 phut)
+    => KHONG duoc du lieu that kiem. Day la ly do phai co test tong hop: test_router.py.
+    """
+    from collections import defaultdict
+    allsig = sorted(allsig, key=lambda x: (x['dt'], x['prio']))
+    busy_until = None
+    kept, dropped = [], defaultdict(int)
+    for s in allsig:
+        if busy_until is not None and s['dt'] <= busy_until:
+            dropped[s['branch']] += 1
+            continue
+        kept.append(s)
+        busy_until = s['exit_dt']
+    return kept, dropped
+
+
 def scan_box(B, C, vf, bias_at=None):
     raw = run_box(B, C, vf, bias_at=bias_at)
     sig = cbr_v6.post(cbr_v6.cooldown(cbr_v6.dedup(raw), C['COOL']), C)

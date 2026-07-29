@@ -11,7 +11,7 @@
 | 7.pdf (lượt 2a) | 193 | p001–p030 (case #1–23) | **đang làm** |
 | 2.pdf (lượt 2b) | 192 | p001–p048 (case #1–22) | **đang làm** |
 | 4.pdf (lượt 2c) | 233 | p001–p010 (case #1–5) | **đang làm** |
-| Tổng hợp chart đẹp Journal.pptx (lượt 2d) | 188 | s001–s039 (Buổi 1–2 hết, case #M1–M5 + #J1–J22), còn s040–s188 (Buổi 3–7) chưa xem | **đang làm** |
+| Tổng hợp chart đẹp Journal.pptx (lượt 2d) | 188 | s001–s039 đọc hết (Buổi 1–2, case #M1–M5 + #J1–J22); s040–s092 chỉ **lấy mẫu rải rác** (~17 ảnh, tìm ra thêm Ca #J23); s093–s188 (phần lớn Buổi 4 cuối + Buổi 5–7) **CHƯA xem** | **dở dang — cần lượt sau tiếp tục** |
 
 ## Bảng tra nhanh — 7.pdf
 
@@ -636,6 +636,7 @@
 | J20 | [s035.png](extracted/images/journal/s035.png) | 162-Nguyễn Anh Quốc | (symbol không đọc rõ) — tự giải thích CHoCH bằng lời rất chi tiết |
 | J21 | [s036.png](extracted/images/journal/s036.png)/[s037.png](extracted/images/journal/s037.png) | 163-Bùi Nguyễn Thanh Bạch | NEAR/USDT 4h — có nhãn "SPRING[C]" |
 | J22 | [s038.png](extracted/images/journal/s038.png) | 173-Nguyễn Bích Thuỷ | OGN/USDT 45m — chỉ tự vẽ, không có nhận xét giáo viên đọc được |
+| J23 | [s091.png](extracted/images/journal/s091.png)/[s092.png](extracted/images/journal/s092.png) (Buổi 4) | 0-Phan Thanh Tu | ICP/USDT M15 — Phân phối, UTAD sai là LPSY[C], UT[B] sai là ST[B], thiếu MSOW |
 
 ### Các mẫu lý thuyết (M1–M5) — Buổi 1, không phải bài chữa học viên
 
@@ -842,3 +843,20 @@
 - **Dấu hiệu quyết định:** học viên vẽ thêm 2 đường "Resistance Lines" / "Support Lines" song song hơi nghiêng lên (không phải ngang tuyệt đối) bao quanh toàn bộ range — cách vẽ biên hơi khác chuẩn ngang thường thấy, có thể là do range hơi dốc lên nhẹ
 - **Đọc được số:** TR quanh 0.95–1.00 USDT (OGN, biên dưới) tới 0.98–1.00 (biên trên, ước lượng vì 2 đường gần sát nhau), SOS bứt lên tới 1.17+
 - **Code được?** biên range hơi nghiêng (không phải ngang tuyệt đối) có thể code bằng regression thay vì đường ngang cố định; `chưa ghép được nhận xét` cho phần đánh giá
+
+#### Ca #J23 — 0-Phan Thanh Tu · ICP/USDT M15, "Day 03_Homework 1.1" (Journal ảnh s091–s092, Buổi 4)
+ảnh: [s091.png](extracted/images/journal/s091.png) (có dòng sửa) · [s092.png](extracted/images/journal/s092.png) (chart sạch, không chữ sửa)
+- **Cấu trúc:** Phân phối (distribution) Phase A→E
+- **Học viên gán:** PSY, BCLX, AR, ST (Phase A) → mSOW[B], UT[B], mSOW[B] (Phase B, 2 lần mSOW[B]) → **UTAD** (Phase C) → (Phase D, không nhãn giữa) → LPSY (ngay đầu Phase E)
+- **Giảng viên sửa (nguyên văn):** "UTAD[C] SAI LÀ LPSY[C], UT[B] LÀ ST[B] ĐỂ Ý NÓ CAM KẾT Ở KHÁNG CỰ, THIẾU MSOW" — 2 lỗi cùng lúc: (1) điểm học viên gọi **UTAD** ở đầu Phase C thực ra là **LPSY[C]**; (2) điểm học viên gọi **UT[B]** ở Phase B thực ra là **ST[B]** — lý do: giá "cam kết ở kháng cự" (đóng cửa giữ trên/tại vùng kháng cự thay vì thọc qua rồi rút ngay như UT thật); (3) thiếu hẳn nhãn **MSOW** (Major Sign of Weakness) cho cú rơi mạnh cuối Phase D
+- **Dấu hiệu quyết định:** đây là ca hiếm gặp nhầm lẫn **2 tầng thuật ngữ cùng lúc** trong 1 bài: (a) UTAD vs LPSY — nhầm giữa "đỉnh test kháng cự" và "đáy hỗ trợ cuối" cho thấy học viên chưa phân biệt được UTAD (ở đỉnh, Phase C phân phối) với LPSY (ở đáy, Phase C phân phối); (b) UT[B] vs ST[B] — tiêu chí phân biệt mới bổ sung: nếu giá **đóng cửa cam kết tại/trên vùng kháng cự** (không có đuôi nến thọc lên rồi rút mạnh về) → nên gọi ST[B] (test giữ được), không phải UT[B] (upthrust, đặc trưng là thọc qua rồi bị đẩy lùi ngay)
+- **Đọc được số:** TR quanh 49.0–51.5 USDT (ICP), MSOW rơi từ ~51.5 xuống ~45.0
+- **Code được?** một phần — "giá đóng cửa cam kết tại kháng cự" (close ở gần/trên mức kháng cự, không phải chỉ chạm bằng wick) đo được bằng so sánh close vs high của nến; việc thiếu nhãn MSOW là do học viên bỏ sót một sự kiện, không phải lỗi khái niệm — cần đối chiếu "có cú giảm mạnh phá đáy Phase D chưa" bằng code (breakdown detection), giống mẫu Failed SOS/MSOW đã thấy ở M5, J11, J16
+
+### Buổi 3–7 (s040–s188) — mới khảo sát sơ bộ, CHƯA đọc hết
+
+`[Claude tổng hợp]` Do giới hạn thời lượng lượt này, chỉ **lấy mẫu** (~15 ảnh rải rác: s040–s042, s048, s055, s058, s064–s066, s069–s071, s090–s092) trong khoảng s040–s188 để đánh giá bản chất nội dung, CHƯA đọc tuần tự đầy đủ. Quan sát sơ bộ:
+- **Buổi 3 (s040 → ~s059):** hầu như toàn bộ là **chart mẫu lý thuyết do giáo viên/admin tự vẽ** (không có tên học viên, watermark 8xTRADING), minh hoạ cấu trúc **Phân phối** (Distribution) — các thuật ngữ mới xuất hiện: minor SOW, major SOW, LPSY[C]/LPSY[D], UT[B], "ATTEMPT TO UT + FAIL", kênh giá dốc xuống (down-sloping channel) vẽ bằng 2 đường song song. Không phải bài chữa học viên nên không tính vào thống kê lỗi.
+- **Buổi 4 (~s060 → ~s095):** xen kẽ mẫu lý thuyết và **bài chữa học viên thật** (đã xác nhận đọc được: J23 ở s091–s092 "0-Phan Thanh Tu"; còn thấy tên "20-Nguyễn Ngọc Thu" ở s065 với case **"RE-DISTRIBUTION"** đáng chú ý — sau MSOW/SOW, giá đi ngang một đoạn trong vùng tô vàng rồi mới giảm tiếp, được gọi là tái phân phối chứ không phải Phase E hồi phục; và "64-Nguyễn Minh Phúc" ở s070, LINK/USDT). Cả buổi này là **Phân phối**, khác hẳn Buổi 1–2 (chủ yếu Tích luỹ).
+- **Buổi 5–7 (s096 → s188):** theo text trích xuất (`pptx-journal-slideNNN.txt`, slide 96–153) HẦU HẾT SLIDE RỖNG (không có text nào), nghĩa là hoặc slide trắng chuyển tiếp hoặc toàn bộ nội dung nằm trên ảnh chart chèn mà không có text box PowerPoint đi kèm — **chưa xác minh bằng ảnh**, cần lượt sau đọc trực tiếp s096–s188 mới biết chắc có case gì.
+- ⚠️ **Còn khoảng 170/188 ảnh của Journal.pptx (s040–s188, trừ ~17 ảnh đã xem) CHƯA được đọc tuần tự đầy đủ** — số liệu thống kê và danh sách case ở trên (J1–J23) chỉ đại diện cho Buổi 1–2 + 1 ca lẻ Buổi 4, KHÔNG đại diện cho toàn bộ Journal.pptx.

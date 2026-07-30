@@ -42,6 +42,10 @@ namespace M30SessionZones
         public bool UseVolume { get; set; } = true;
         [InputParameter("Số phiên gần nhất xét vùng", 23, 2, 40, 1, 0)]
         public int ZoneLookbackSessions { get; set; } = 10;
+        [InputParameter("Hiện HVN tuần/ngày (nút khối lượng)", 24)]
+        public bool ShowHvn { get; set; } = true;
+        [InputParameter("Số HVN tối đa mỗi khung", 25, 1, 8, 1, 0)]
+        public int MaxHvn { get; set; } = 3;
 
         // ---------- hiển thị ----------
         [InputParameter("Hiện bảng phiên", 30)]
@@ -59,6 +63,10 @@ namespace M30SessionZones
         public Color ResColor { get; set; } = Color.FromArgb(0xEF, 0x53, 0x50);
         [InputParameter("Màu naked POC", 42)]
         public Color NakedColor { get; set; } = Color.Gold;
+        // Sách dùng VÀNG cho "Nhiều nút" (HVN), nhưng vàng đã dành cho naked POC
+        // → HVN dùng CAM để phân biệt được trên chart.
+        [InputParameter("Màu HVN", 43)]
+        public Color HvnColor { get; set; } = Color.FromArgb(0xFF, 0x8F, 0x00);
 
         // ---------- Telegram (tổng hợp đầu ngày + trước phiên Mỹ) ----------
         [InputParameter("Gửi Telegram", 50)]
@@ -329,6 +337,35 @@ namespace M30SessionZones
             }
             int SideOf(double p) => p > nowPrice ? -1 : p < nowPrice ? 1 : 0;
 
+            // ---- HVN gộp nhiều phiên (TUẦN + NGÀY) --------------------------
+            //  Trader chuyên nghiệp canh giá ở HVN của TPO tuần/ngày, KHÔNG ở
+            //  biên VA từng phiên (xem HVN-VA-TRADER-PRO.md). Nên đây là nhóm
+            //  vùng mạnh nhất, đặt điểm cao hơn biên VA phiên.
+            if (ShowHvn && completed.Count > 0)
+            {
+                // "tuần" = toàn bộ phiên đang xét; "ngày" = các phiên trong 24h cuối
+                var wkRows = ProfileEngine.RowsOver(hd, blocks[startBlk].from,
+                                                    blocks[blocks.Count - 2].to, rowStep, UseVolume);
+                foreach (var (p, ratio) in ProfileEngine.FindHvn(wkRows, tick).Take(MaxHvn))
+                    zones.Add(new Zone { Center = p, Lo = p, Hi = p, Type = "hvn_week",
+                        Side = SideOf(p), Strength = Math.Min(95, 70 + ratio * 6),
+                        Label = $"HVN tuần ×{ratio:0.0}" });
+
+                var dayStart = completed[completed.Count - 1].End.AddHours(-24);
+                int dFrom = -1;
+                for (int i = startBlk; i < blocks.Count - 1; i++)
+                    if (hd[blocks[i].from, SeekOriginHistory.Begin] is HistoryItemBar bb
+                        && bb.TimeLeft >= dayStart) { dFrom = blocks[i].from; break; }
+                if (dFrom >= 0)
+                {
+                    var dyRows = ProfileEngine.RowsOver(hd, dFrom, blocks[blocks.Count - 2].to, rowStep, UseVolume);
+                    foreach (var (p, ratio) in ProfileEngine.FindHvn(dyRows, tick).Take(MaxHvn))
+                        zones.Add(new Zone { Center = p, Lo = p, Hi = p, Type = "hvn_day",
+                            Side = SideOf(p), Strength = Math.Min(88, 64 + ratio * 6),
+                            Label = $"HVN ngày ×{ratio:0.0}" });
+                }
+            }
+
             // naked POC
             foreach (var sp in completed)
             {
@@ -397,7 +434,10 @@ namespace M30SessionZones
             {
                 foreach (var z in rs.Zones.OrderBy(z => z.Strength))   // yếu vẽ trước
                 {
-                    Color col = z.Type == "naked_poc" ? NakedColor : z.Side > 0 ? SupColor : z.Side < 0 ? ResColor : Color.Gray;
+                    bool isHvn = z.Type == "hvn_week" || z.Type == "hvn_day";
+                    Color col = z.Type == "naked_poc" ? NakedColor
+                              : isHvn ? HvnColor
+                              : z.Side > 0 ? SupColor : z.Side < 0 ? ResColor : Color.Gray;
                     float yLo = (float)conv.GetChartY(z.Lo), yHi = (float)conv.GetChartY(z.Hi);
                     float yTop = Math.Min(yLo, yHi), yBot = Math.Max(yLo, yHi);
                     int alpha = (int)Math.Clamp(30 + z.Strength * 0.8, 30, 120);
@@ -408,7 +448,12 @@ namespace M30SessionZones
                     }
                     float ym = (yTop + yBot) / 2;
                     if (ym < clip.Top || ym > clip.Bottom) continue;
-                    using var pen = new Pen(col, z.Type == "naked_poc" ? 2f : 1.2f)
+                    // HVN tuần đậm nhất (vùng canh lệnh chính), HVN ngày vừa,
+                    // naked POC nét đứt, còn lại nét mảnh.
+                    float pw = z.Type == "hvn_week" ? 2.4f
+                             : z.Type == "hvn_day" ? 1.8f
+                             : z.Type == "naked_poc" ? 2f : 1.2f;
+                    using var pen = new Pen(col, pw)
                     { DashStyle = z.Type == "naked_poc" ? DashStyle.Dash : DashStyle.Solid };
                     gr.DrawLine(pen, clip.Left, ym, clip.Right, ym);
                     using var f = new Font("Arial", 8, FontStyle.Bold);

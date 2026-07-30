@@ -3,7 +3,7 @@
 // ============================================================================
 //  Thuần logic (không phụ thuộc Indicator/GDI). Dựng profile phiên từ footprint
 //  (VolumeAnalysisData.PriceLevels) hoặc TPO (High/Low nến), tính POC/VA (rule 2
-//  hàng 70%), IB, và các vùng (naked POC, cụm POC, biên VA, HVN).
+//  hàng 70%), IB, và các vùng (naked POC, cụm POC, biên VA, HVN — xem FindHvn).
 //
 //  ĐƯỢC CONCAT vào đầu mỗi file indicator khi build (xem build-tpo.sh). Vì vậy
 //  MỌI `using` đặt BÊN TRONG namespace (không có using top-level) để nối file hợp lệ.
@@ -347,6 +347,68 @@ namespace TpoSuite
                 else { flush(); cur = new List<double> { s[i] }; }
             }
             flush();
+            return res;
+        }
+
+        // Hàng giá gộp trên [from..to] — dùng cho profile nhiều phiên (tuần/ngày).
+        // Ưu tiên volume thật (footprint); rỗng thì rơi về TPO (đếm nến phủ).
+        public static SortedDictionary<double, double> RowsOver(
+            HistoricalData hd, int from, int to, double rowStep, bool useVolume)
+        {
+            var rows = useVolume ? VolumeRows(hd, from, to, rowStep) : null;
+            if (rows == null || rows.Count == 0) rows = TpoRows(hd, from, to, rowStep);
+            return rows;
+        }
+
+        // ---- HVN (High Volume Node) — nút khối lượng cao ---------------------
+        //  KHÁC POC: POC chỉ có MỘT (đỉnh cao nhất của phân bố). HVN có thể có
+        //  NHIỀU — mỗi nơi khối lượng tụ thành "nút". Sách (ebook §HVN, §Setup 2
+        //  "Nhiều nút") coi đây là vùng S/R mạnh nhất và dùng khung 30 phút.
+        //
+        //  Cách tìm: làm mượt phân bố → lấy đỉnh cực bộ → giữ đỉnh đủ cao so với
+        //  trung bình → gộp đỉnh quá gần nhau (giữ cái mạnh hơn).
+        //  Trả (giá, tỉ lệ so với trung bình), mạnh trước.
+        //  Đã đối chiếu bản Python trên dữ liệu thật (hvn_research.py).
+        //  minSepTicks<=0 → tự co giãn theo độ rộng profile (xem ghi chú bên dưới).
+        public static List<(double price, double ratio)> FindHvn(
+            SortedDictionary<double, double> rows, double tick,
+            int smoothTicks = 5, double minRatio = 1.5, double minSepTicks = 0)
+        {
+            var res = new List<(double, double)>();
+            if (rows == null || rows.Count < 3) return res;
+            var prices = rows.Keys.ToArray();
+            var w = rows.Values.ToArray();
+            int n = w.Length;
+            double avg = w.Average();
+            if (avg <= 0) return res;
+
+            // Khoảng cách tối thiểu giữa 2 HVN phải CO GIÃN theo độ rộng profile.
+            // Cố định 20 tick thì với profile tuần (range ~700 tick) một nút duy
+            // nhất bị tách thành 3 HVN sát nhau (4085/4089/4095) — phí cả 3 khe.
+            // Lấy 8% độ rộng, kẹp trong [20, 120] tick.
+            if (minSepTicks <= 0)
+            {
+                double widthTicks = (prices[n - 1] - prices[0]) / tick;
+                minSepTicks = Math.Clamp(widthTicks * 0.08, 20, 120);
+            }
+
+            // làm mượt bằng cửa sổ ±smoothTicks (khử răng cưa tick lẻ)
+            var sm = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                int a = Math.Max(0, i - smoothTicks), z = Math.Min(n - 1, i + smoothTicks);
+                double s = 0; for (int k = a; k <= z; k++) s += w[k];
+                sm[i] = s / (z - a + 1);
+            }
+
+            var peaks = new List<(double price, double weight, double ratio)>();
+            for (int i = 1; i < n - 1; i++)
+                if (sm[i] >= sm[i - 1] && sm[i] >= sm[i + 1] && sm[i] >= minRatio * avg)
+                    peaks.Add((prices[i], sm[i], sm[i] / avg));
+
+            foreach (var p in peaks.OrderByDescending(x => x.weight))
+                if (res.All(k => Math.Abs(p.price - k.Item1) / tick >= minSepTicks))
+                    res.Add((p.price, p.ratio));
             return res;
         }
     }

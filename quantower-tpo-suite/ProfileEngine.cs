@@ -204,6 +204,19 @@ namespace TpoSuite
             return rows;
         }
 
+        // ATR đơn giản (trung bình High-Low, không EMA) của n nến kết thúc tại idx.
+        // Dùng để co giãn bán kính lọc vùng / dung sai gộp theo biến động hiện tại —
+        // KHÔNG dùng hằng số tick cứng vì range vàng khác nhau rất nhiều theo giai đoạn
+        // (đối chiếu prototype: tháng 6 crash biến động gấp nhiều lần tháng 7 êm).
+        public static double Atr(HistoricalData hd, int idx, int n = 20)
+        {
+            int from = Math.Max(0, idx - n + 1);
+            double sum = 0; int cnt = 0;
+            for (int i = from; i <= idx; i++)
+                if (hd[i, SeekOriginHistory.Begin] is HistoryItemBar b) { sum += b.High - b.Low; cnt++; }
+            return cnt > 0 ? sum / cnt : 0;
+        }
+
         // TPO rows (giá->số nến phủ) từ High/Low trên [from..to].
         public static SortedDictionary<double, double> TpoRows(HistoricalData hd, int from, int to, double rowStep)
         {
@@ -407,6 +420,43 @@ namespace TpoSuite
                     peaks.Add((prices[i], sm[i], sm[i] / avg));
 
             foreach (var p in peaks.OrderByDescending(x => x.weight))
+                if (res.All(k => Math.Abs(p.price - k.Item1) / tick >= minSepTicks))
+                    res.Add((p.price, p.ratio));
+            return res;
+        }
+
+        // ---- LVN (Low Volume Node) — nghịch đảo HVN ---------------------------
+        //  Nơi giá XUYÊN QUA NHANH vì không có gì đỡ (ít volume). KHÔNG phải vùng
+        //  canh vào lệnh — dùng để (a) biết chỗ không nên kỳ vọng phản ứng,
+        //  (b) đặt SL phía sau. Tìm ĐÁY cực bộ, giữ đáy đủ thấp so với trung bình.
+        public static List<(double price, double ratio)> FindLvn(
+            SortedDictionary<double, double> rows, double tick,
+            int smoothTicks = 5, double maxRatio = 0.5, double minSepTicks = 0)
+        {
+            var res = new List<(double, double)>();
+            if (rows == null || rows.Count < 3) return res;
+            var prices = rows.Keys.ToArray();
+            var w = rows.Values.ToArray();
+            int n = w.Length;
+            double avg = w.Average();
+            if (avg <= 0) return res;
+            if (minSepTicks <= 0)
+                minSepTicks = Math.Clamp((prices[n - 1] - prices[0]) / tick * 0.08, 20, 120);
+
+            var sm = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                int a = Math.Max(0, i - smoothTicks), z = Math.Min(n - 1, i + smoothTicks);
+                double s = 0; for (int k = a; k <= z; k++) s += w[k];
+                sm[i] = s / (z - a + 1);
+            }
+
+            var troughs = new List<(double price, double weight, double ratio)>();
+            for (int i = 1; i < n - 1; i++)
+                if (sm[i] <= sm[i - 1] && sm[i] <= sm[i + 1] && sm[i] <= maxRatio * avg)
+                    troughs.Add((prices[i], sm[i], sm[i] / avg));
+
+            foreach (var p in troughs.OrderBy(x => x.weight))     // yếu nhất trước = LVN rõ nhất
                 if (res.All(k => Math.Abs(p.price - k.Item1) / tick >= minSepTicks))
                     res.Add((p.price, p.ratio));
             return res;

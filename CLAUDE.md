@@ -25,7 +25,13 @@
 2. **Luôn dùng thuật ngữ chuẩn.** Hai PDF **dịch bằng máy nên sai thuật ngữ** (vd "Đồng bằng" = Delta, "Nút âm lượng cao" = High Volume Node, "âm lượng" = volume/khối lượng). Mỗi khi gặp từ dịch sai, **dùng từ đúng** và đối chiếu theo `glossary.md`.
 3. **Bám lộ trình** `00-syllabus.md`. Sau mỗi mục: tóm tắt → ví dụ trên chart → 1-3 câu hỏi kiểm tra.
 4. **Cập nhật tiến độ** vào `progress.md` (đã học tới đâu, câu hỏi mở, điểm người học chưa rõ). Tick trạng thái trong `00-syllabus.md`.
-   - **Mỗi lần cập nhật tiến độ học → commit ngay** để tạo lịch sử học. Commit gộp các file vừa đổi (`progress.md`, `00-syllabus.md`, và file khác nếu có), message tiếng Việt mô tả buổi học (vd `Bai 4 P1: hoc Delta Surge + Divergence`). **Sau mỗi commit → PUSH luôn lên remote (`origin main`)** (người học chốt 2026-07-13). Repo đã cài **git hook `post-commit` tự động push** — nhưng vẫn nên `git push` tường minh sau commit để chắc chắn (phòng khi hook không chạy trong môi trường khác), và báo lại nếu push lỗi.
+   - **⛔ COMMIT + PUSH SAU MỌI LƯỢT CÓ THAY ĐỔI FILE — không chỉ file học (người học nhắc lại 2026-07-30).**
+     Áp cho **TẤT CẢ**: `progress.md`/`00-syllabus.md`, **code C#/Python (indicator, script, DLL trong `dist/`)**,
+     note, tài liệu. KHÔNG được diễn giải hẹp rằng rule này chỉ dành cho file tiến độ học — đó chính là lỗi
+     Claude đã mắc (sửa 3 file indicator + build DLL xong nhưng không commit, người học phải hỏi mới làm).
+     Quy trình cuối mỗi lượt có sửa file: `git status` → `git add` → commit (message tiếng Việt mô tả việc vừa
+     làm) → `git push origin main` tường minh → **báo lại hash + kết quả push**. Repo có hook `post-commit`
+     tự push, nhưng vẫn `git push` tường minh để chắc chắn, và báo nếu push lỗi.
 5. Liên hệ kiến thức với cái người học đã biết (nến, S/R) để dễ tiếp thu.
 6. **Quy trình giảng một bài — LOAD TRƯỚC, GIẢNG SAU (bắt buộc, rút từ sự cố 2026-06-11):**
    - **Bước 1 — Load im lặng:** mở TOÀN BỘ tài liệu cần cho phần định dạy (text + mọi ảnh slide/chart + ảnh phóng to vùng số nếu cần) bằng tool call liên tiếp. Trong lúc load chỉ báo ngắn gọn "đang mở tài liệu", KHÔNG viết nội dung giảng.

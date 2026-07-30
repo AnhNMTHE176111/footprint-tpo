@@ -405,9 +405,13 @@ namespace WyckoffRunner
         protected override void OnUpdate(UpdateArgs args)
         {
             PollTeleTest();                       // nút "gửi thử" chạy ĐỘC LẬP với VA (bấm là gửi ngay)
-            if (!_vaLoaded) return;
             var p = HistoricalData?.VolumeAnalysisCalculationProgress;
             if (p == null || p.State != VolumeAnalysisCalculationState.Finished) return;
+            // FIX BUG MẤT PANEL: KHÔNG chờ callback VolumeAnalysisData_Loaded(). Quantower chỉ gọi callback
+            // đó khi footprint được TÍNH MỚI; nếu VA đã tính xong sẵn (reload chart, attach lại indicator,
+            // đổi khung...) callback KHÔNG bắn → _vaLoaded mãi false → Process() và cả panel bị chặn vĩnh
+            // viễn, phải xoá & cài lại indicator mới hiện. State==Finished đã đủ điều kiện đọc footprint.
+            if (!_vaLoaded) lock (_calc) { _vaLoaded = true; _lastN = -1; }
             Process();
         }
 
@@ -1241,7 +1245,7 @@ namespace WyckoffRunner
         public override void OnPaintChart(PaintChartEventArgs args)
         {
             base.OnPaintChart(args);
-            if (CurrentChart == null || !_vaLoaded) return;
+            if (CurrentChart == null) return;   // KHÔNG chặn theo _vaLoaded: _render==null bên dưới đã đủ (xem fix mất panel ở OnUpdate)
             _drag.Attach(CurrentChart);
             var win = CurrentChart.Windows[args.WindowIndex];
             if (!win.IsMainWindow) return;

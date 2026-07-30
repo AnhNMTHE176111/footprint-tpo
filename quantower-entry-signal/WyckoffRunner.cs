@@ -1010,7 +1010,7 @@ namespace WyckoffRunner
         private void PollTeleTest()
         {
             ConfigTele();
-            _tele.PollTestRaw($"🔔 TEST — Runner Signal ({Symbol?.Name ?? "?"}) bot chạy OK\n— mẫu tin MỞ: 🟢 MUA · CBR · hạng A · Entry/SL/TP\n— mẫu tin ĐÓNG (chạm TP/SL): ✅ WIN +{RR:0.#}R · giá vào→ra · thời lượng\n(nếu nhận được tin này = đường gửi OK; tin ĐÓNG sẽ tự bắn khi lệnh chạm TP/SL)");
+            _tele.PollTestRaw($"🔔 TEST — Wyckoff Runner ({Symbol?.Name ?? "?"}) bot chạy OK\n— mẫu tin MỞ: 🟢 MUA · CBR · hạng A · Entry/SL/TP\n— mẫu tin ĐÓNG (chạm TP/SL): ✅ WIN +{RR:0.#}R · giá vào→ra · thời lượng\n(nếu nhận được tin này = đường gửi OK; tin ĐÓNG sẽ tự bắn khi lệnh chạm TP/SL)");
         }
 
         private bool BranchOn(bool rev) => rev ? TeleSendRev : TeleSendCbr;
@@ -1088,7 +1088,7 @@ namespace WyckoffRunner
                                  : "phá vùng co → hồi giữ gốc → vào nến tiếp diễn";
             var sb = new StringBuilder();
             sb.Append("🔔 LỆNH MỚI\n");
-            sb.Append(dirVN).Append(" · Runner ").Append(branch).Append(" · hạng ").Append(s.Grade).Append('\n');
+            sb.Append(dirVN).Append(" · Wyckoff Runner ").Append(branch).Append(" · hạng ").Append(s.Grade).Append('\n');
             sb.Append("Vào (Entry): ").Append(Fmt(s.Entry)).Append('\n');
             sb.Append("SL: ").Append(Fmt(s.Sl)).Append("  (").Append(slPts.ToString("0.0")).Append(" giá)\n");
             sb.Append("TP: ").Append(Fmt(s.Tp1)).Append("  (").Append(tpPts.ToString("0.0")).Append(" giá · ").Append(rr.ToString("0.#")).Append("R)\n");
@@ -1109,7 +1109,7 @@ namespace WyckoffRunner
             string head = win ? "✅ CHỐT LỜI (TP)" : "🛑 DỪNG LỖ (SL)";
             string rRes = win ? "+" + rr.ToString("0.#") + "R" : "-1.0R";
             var sb = new StringBuilder();
-            sb.Append(head).Append(" · ").Append(dirVN).Append(" · Runner ").Append(branch).Append('\n');
+            sb.Append(head).Append(" · ").Append(dirVN).Append(" · Wyckoff Runner ").Append(branch).Append('\n');
             sb.Append("Kết quả: ").Append(rRes).Append('\n');
             sb.Append("Vào ").Append(Fmt(s.Entry)).Append(" → ra ").Append(Fmt(exit)).Append('\n');
             sb.Append("Mở ").Append(s.Time.AddHours(TzOffset).ToString("HH:mm"))
@@ -1127,15 +1127,23 @@ namespace WyckoffRunner
 
         // ================= XUẤT CSV (đối chiếu C#↔Python + tách WR nhánh CBR vs quay đầu) =================
         // Ghi TOÀN BỘ tín hiệu mỗi khi có nến mới (ghi đè cùng file). Cột nhanh=CBR/QUAY_DAU để soi 2 nhánh.
+        // Tên file = tên panel + ngày hiện tại → mỗi ngày một file riêng, không ghi đè chồng ngày cũ.
+        private static string SafeFileName(string s)
+        {
+            foreach (char c in Path.GetInvalidFileNameChars()) s = s.Replace(c, '_');
+            return s;
+        }
+        private static string DailyCsvName() => $"{SafeFileName("WYCKOFF RUNNER CBR+VWAP v6 (M1)")}_{DateTime.Now:yyyy-MM-dd}.csv";
+
         private void ExportSignals(List<Sig> sigs)
         {
             try
             {
                 string path = ExportPath?.Trim();
                 if (string.IsNullOrEmpty(path))
-                    path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "WyckoffRunner_signals.csv");
+                    path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), DailyCsvName());
                 else if (Directory.Exists(path))
-                    path = Path.Combine(path, "WyckoffRunner_signals.csv");
+                    path = Path.Combine(path, DailyCsvName());
 
                 var ci = CultureInfo.InvariantCulture;
                 var sb = new StringBuilder();
@@ -1193,7 +1201,7 @@ namespace WyckoffRunner
             string wr = closed > 0 ? $" · WR {100.0 * tp / closed:0}%" : "";
             int nRev = sigs.Count(s => s.Scen != null && s.Scen.StartsWith("quay"));
             string deadTag = (SkipDeadSession && DeadStartHour != DeadEndHour) ? $" · ⛔{DeadStartHour:00}-{DeadEndHour:00}h" : "";
-            p.Add(($"RUNNER CBR+VWAP (M1)   ▶{sigs.Count - nRev} ↩{nRev} · ✓{tp} ✗{sl} •{running}{wr}{deadTag}  [CBR {RR:0.#}R · quay đầu {RevRR:0.#}R]", Color.White));
+            p.Add(($"WYCKOFF RUNNER CBR+VWAP v6 (M1)   ▶{sigs.Count - nRev} ↩{nRev} · ✓{tp} ✗{sl} •{running}{wr}{deadTag}  [CBR {RR:0.#}R · quay đầu {RevRR:0.#}R]", Color.White));
             // Thống kê R lời/lỗ (TP=+RR nhánh đó, SL=−1R)
             double totalR = 0;
             foreach (var s in sigs)

@@ -182,6 +182,12 @@ namespace EntrySignal
         [InputParameter("Độ mờ nền bảng (100-255)", 109, 100, 255, 5, 0)]
         public int PanelOpacity { get; set; } = 215;
 
+        // ================= XUẤT CSV (đối chiếu C#↔Python + lưu lịch sử theo ngày) =================
+        [InputParameter("Xuất CSV toàn bộ tín hiệu", 118)]
+        public bool ExportCsv { get; set; } = false;
+        [InputParameter("Đường dẫn CSV (trống = thư mục Documents)", 119)]
+        public string ExportPath { get; set; } = "";
+
         // ================= LỌC THUẬN XU HƯỚNG (tuỳ chọn) =================
         [InputParameter("Lọc THUẬN xu hướng (proxy TPO)", 112)]
         public bool TrendFilter { get; set; } = false;   // mặc định TẮT: hại nhánh chạm&đảo ngược-trend đang thắng
@@ -231,6 +237,12 @@ namespace EntrySignal
         private readonly object _calc = new();
         private RenderState _render;
         private int _digits = 1;
+        // cache vùng đã dựng (POC/VAH/VAL theo phiên + D-1) để KHỎI build lại toàn bộ lịch sử mỗi nến —
+        // LookbackSessions=0 (mặc định) quét MỌI phiên; build lại từ đầu mỗi nến mới sẽ ngày càng chậm
+        // (O(lịch sử) mỗi lần) và panel biến mất/đứng hình cho tới khi gỡ-cài-lại indicator.
+        private readonly List<PZone> _poolCache = new();
+        private int _sessDone, _dayDone;
+        private string _lastError;
         private double _tick = 0.1;
         private int _lastN = -1;
         private int _vaCov, _vaTot;          // số nến có footprint (Δ) / tổng nến → báo vùng quét thực tế
@@ -250,6 +262,8 @@ namespace EntrySignal
         private readonly HashSet<string> _teleClosed = new();
         private int _teleSent;
         private string _teleStatus;
+        // ---- xuất CSV ----
+        private string _exportedTo;
 
         public EntrySignal() : base()
         {
@@ -266,6 +280,7 @@ namespace EntrySignal
             lock (_calc)
             {
                 _vaLoaded = false; _lastN = -1; lock (_sync) _render = null;
+                _poolCache.Clear(); _sessDone = 0; _dayDone = 0; _lastError = null;
                 // re-attach = nạp lại lịch sử, KHÔNG bắn lệnh/telegram cũ
                 _mt5Armed = false; _mt5Sent.Clear(); _mt5Count = 0; _mt5Status = null;
                 _teleArmed = false; _teleSeen.Clear(); _teleOpenSent.Clear(); _teleClosed.Clear(); _teleSent = 0; _teleStatus = null;
@@ -350,6 +365,7 @@ namespace EntrySignal
 
                     if (Mt5Bridge) EmitMt5(sigs, B);
                     if (TeleAlerts) EmitTele(sigs, B);
+                    if (ExportCsv) ExportSignals(sigs);
 
                     // lọc hiển thị NGAY trong Process (paint không đụng HistoricalData).
                     // ShowAllHistory → vẽ MỌI tín hiệu (paint tự cull theo trục X nên không nặng).
@@ -361,8 +377,16 @@ namespace EntrySignal
 
                     lock (_sync) _render = new RenderState { Sigs = show, Clusters = clusters, Panel = BuildPanel(show, now), Digits = _digits };
                     _lastN = n;
+                    _lastError = null;
                 }
-                catch { /* giữ indicator sống; giữ _render cũ */ }
+                catch (Exception ex)
+                {
+                    // KHÔNG nuốt lỗi im lặng: trước đây catch rỗng khiến panel "biến mất" vô thời hạn
+                    // nếu Process() lỗi ngay lần chạy đầu (chưa có _render cũ để giữ) — phải xoá/cài lại
+                    // indicator mới thấy lại. Nay: vẫn giữ indicator sống, nhưng LUÔN hiện ra lỗi để biết.
+                    _lastError = ex.Message;
+                    lock (_sync) _render ??= new RenderState { Sigs = new List<Sig>(), Clusters = null, Panel = new List<(string, Color)> { ($"⚠ LỖI: {ex.Message}", Color.FromArgb(255, 120, 120)) }, Digits = _digits };
+                }
             }
         }
 
@@ -408,7 +432,6 @@ namespace EntrySignal
         // ================= dựng pool vùng từ M1 =================
         private List<PZone> BuildPool(HistoricalData hd, List<Bar> B)
         {
-            var pool = new List<PZone>();
             double rowStep = _tick * Math.Max(1, RowTicks);
 
             // ---- blocks phiên (đổi nhãn Á/Âu/Mỹ hoặc gap>SessionGap) ----
@@ -417,32 +440,44 @@ namespace EntrySignal
             // nên scan chỉ bắn nơi vùng còn sống). Đây là fix bug "số entry chững ~4": trước đây chỉ
             // 12 phiên cuối có session-zone → lịch sử bị đói vùng → thiếu hợp lưu. Nay khớp backtest.
             int startBlk = LookbackSessions > 0 ? Math.Max(0, sBlocks.Count - 1 - LookbackSessions) : 0;
-            for (int i = startBlk; i < sBlocks.Count - 1; i++)   // bỏ block đang chạy
+            // CACHE: build lại TOÀN BỘ lịch sử (LookbackSessions=0) mỗi khi có nến mới là O(lịch sử) mỗi
+            // lần → càng chạy lâu càng chậm, panel "biến mất" tới khi gỡ-cài-lại indicator (reset trạng
+            // thái). Chỉ dựng vùng cho phiên/ngày MỚI đóng từ lần quét trước, giữ phần cũ trong _poolCache.
+            if (LookbackSessions > 0 || startBlk < _sessDone)
+            {
+                // sliding window (giới hạn, rẻ) hoặc lịch sử bị nạp lại/rút ngắn → build lại từ đầu, an toàn.
+                _poolCache.Clear(); _sessDone = 0; _dayDone = 0;
+            }
+            for (int i = Math.Max(_sessDone, startBlk); i < sBlocks.Count - 1; i++)   // bỏ block đang chạy
             {
                 string lab = LabelOf(GetTime(hd, sBlocks[i].from));
                 var sp = ProfileEngine.BuildProfile(hd, sBlocks[i].from, sBlocks[i].to, _tick, rowStep, true, 0, lab);
                 if (!sp.Valid) continue;
                 DateTime ready = GetTime(hd, sBlocks[i].to), exp = ready.AddDays(ZoneExpireDays);
-                Add(pool, sp.Poc, $"POC {VN(lab)}", 70, ready, exp);
-                Add(pool, sp.Vah, $"VAH {VN(lab)}", 58, ready, exp);
-                Add(pool, sp.Val, $"VAL {VN(lab)}", 58, ready, exp);
-                Add(pool, sp.High, $"Đỉnh {VN(lab)}", 52, ready, exp);
-                Add(pool, sp.Low, $"Đáy {VN(lab)}", 52, ready, exp);
+                Add(_poolCache, sp.Poc, $"POC {VN(lab)}", 70, ready, exp);
+                Add(_poolCache, sp.Vah, $"VAH {VN(lab)}", 58, ready, exp);
+                Add(_poolCache, sp.Val, $"VAL {VN(lab)}", 58, ready, exp);
+                Add(_poolCache, sp.High, $"Đỉnh {VN(lab)}", 52, ready, exp);
+                Add(_poolCache, sp.Low, $"Đáy {VN(lab)}", 52, ready, exp);
             }
+            _sessDone = Math.Max(_sessDone, sBlocks.Count - 1);
 
             // ---- ngày (tách bằng gap>DayGap) → mức D-1 ----
             var dBlocks = ProfileEngine.GroupByGap(hd, DayGapMin);
-            for (int i = 1; i < dBlocks.Count; i++)
+            for (int i = Math.Max(_dayDone, 1); i < dBlocks.Count; i++)
             {
                 var prev = ProfileEngine.BuildProfile(hd, dBlocks[i - 1].from, dBlocks[i - 1].to, _tick, rowStep, true, 0, "D");
                 if (!prev.Valid) continue;
                 DateTime ready = GetTime(hd, dBlocks[i].from), exp = ready.AddDays(1).AddHours(6);
-                Add(pool, prev.Vah, "D-1 VAH", 66, ready, exp);
-                Add(pool, prev.Val, "D-1 VAL", 66, ready, exp);
-                Add(pool, prev.Poc, "D-1 POC", 72, ready, exp);
-                Add(pool, prev.High, "D-1 Đỉnh", 60, ready, exp);
-                Add(pool, prev.Low, "D-1 Đáy", 60, ready, exp);
+                Add(_poolCache, prev.Vah, "D-1 VAH", 66, ready, exp);
+                Add(_poolCache, prev.Val, "D-1 VAL", 66, ready, exp);
+                Add(_poolCache, prev.Poc, "D-1 POC", 72, ready, exp);
+                Add(_poolCache, prev.High, "D-1 Đỉnh", 60, ready, exp);
+                Add(_poolCache, prev.Low, "D-1 Đáy", 60, ready, exp);
             }
+            _dayDone = Math.Max(_dayDone, dBlocks.Count);
+
+            var pool = new List<PZone>(_poolCache);
             // VWAP động (giá cập nhật theo từng bar khi scan)
             pool.Add(new PZone { Price = 0, Kind = "VWAP", Strength = 64, ReadyTime = DateTime.MinValue, ExpireTime = DateTime.MaxValue, IsVwap = true });
             return pool;
@@ -991,6 +1026,56 @@ namespace EntrySignal
             return h > 0 ? $"{h}h{m:00}p" : $"{m}p";
         }
 
+        // ================= XUẤT CSV (đối chiếu C#↔Python + lưu lịch sử theo ngày) =================
+        // Tên file = tên panel + ngày hiện tại → mỗi ngày một file riêng, không ghi đè chồng ngày cũ.
+        private static string SafeFileName(string s)
+        {
+            foreach (char c in Path.GetInvalidFileNameChars()) s = s.Replace(c, '_');
+            return s;
+        }
+        private static string DailyCsvName() => $"{SafeFileName("ENTRY SIGNAL (M1)")}_{DateTime.Now:yyyy-MM-dd}.csv";
+
+        private void ExportSignals(List<Sig> sigs)
+        {
+            try
+            {
+                string path = ExportPath?.Trim();
+                if (string.IsNullOrEmpty(path))
+                    path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), DailyCsvName());
+                else if (Directory.Exists(path))
+                    path = Path.Combine(path, DailyCsvName());
+
+                var ci = CultureInfo.InvariantCulture;
+                var sb = new StringBuilder();
+                sb.Append("ngay_gio,kich_ban,huong,entry,SL,risk_gia,TP1,TP2,RR,VSA,climax,hop_luu,grade,KQ,ket_thuc_luc,chi_tiet\n");
+                foreach (var s in sigs.OrderBy(x => x.Idx))
+                {
+                    string kb = IsBreak(s) ? "PHA_HOI" : "CHAM_DAO";
+                    string huong = s.Side > 0 ? "LONG" : "SHORT";
+                    string kq = s.Outcome == "TP" ? "WIN" : s.Outcome == "SL" ? "LOSS" : "open";
+                    string ct = "\"" + string.Join(" · ", s.Why ?? new List<string>()).Replace("\"", "'") + "\"";
+                    sb.Append(s.Time.ToString("yyyy-MM-dd HH:mm")).Append(',')
+                      .Append(kb).Append(',').Append(huong).Append(',')
+                      .Append(s.Entry.ToString("0.0##", ci)).Append(',')
+                      .Append(s.Sl.ToString("0.0##", ci)).Append(',')
+                      .Append((s.RiskT * _tick).ToString("0.0", ci)).Append(',')
+                      .Append(s.Tp1.ToString("0.0##", ci)).Append(',')
+                      .Append(s.Tp2.ToString("0.0##", ci)).Append(',')
+                      .Append(s.Rr2.ToString("0.#", ci)).Append(',')
+                      .Append(s.Vsa.ToString("0.00", ci)).Append(',')
+                      .Append(s.Climax ? "tim" : "-").Append(',')
+                      .Append(s.Cluster.ToString(ci)).Append(',')
+                      .Append(s.Grade).Append(',')
+                      .Append(kq).Append(',')
+                      .Append(s.OutTime.ToString("yyyy-MM-dd HH:mm")).Append(',')
+                      .Append(ct).Append('\n');
+                }
+                File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));
+                _exportedTo = $"{sigs.Count} lệnh → {path}";
+            }
+            catch (Exception ex) { _exportedTo = "LỖI ghi CSV: " + ex.Message; }
+        }
+
         private List<(double price, double strength, int side)> CurrentClusters(List<PZone> pool, DateTime now, double nowPrice)
         {
             var active = pool.Where(z => now >= z.ReadyTime && now <= z.ExpireTime && !z.IsVwap && !double.IsNaN(z.Price) && z.Price > 0)
@@ -1036,7 +1121,13 @@ namespace EntrySignal
             if (_vaTot > 0 && _vaCov < (int)(_vaTot * 0.98) && _vaFirst != DateTime.MinValue)
                 p.Add(($"⚠ footprint chỉ có {_vaCov}/{_vaTot} nến (từ {_vaFirst:dd/MM HH:mm}) — tăng số bar tính Volume Analysis để thấy lịch sử xa hơn", Color.FromArgb(255, 190, 120)));
             var recent = pool.OrderByDescending(s => s.Idx).Take(Math.Max(2, PanelRows)).ToList();
-            if (recent.Count == 0) { p.Add(("(chưa có setup hợp lưu ≥2)", Color.Gray)); return p; }
+            if (recent.Count == 0)
+            {
+                p.Add(("(chưa có setup hợp lưu ≥2)", Color.Gray));
+                if (!string.IsNullOrEmpty(_lastError))
+                    p.Add(($"⚠ lần quét trước LỖI (đang hiện dữ liệu cũ): {_lastError}", Color.FromArgb(255, 160, 120)));
+                return p;
+            }
             foreach (var s in recent)
             {
                 Color col = s.Side > 0 ? LongColor : ShortColor;
@@ -1050,6 +1141,10 @@ namespace EntrySignal
                 p.Add((("⇄ MT5: " + (_mt5Status ?? "chờ tín hiệu…")), Color.FromArgb(255, 200, 120)));
             if (TeleAlerts)
                 p.Add((("📨 Tele: " + (_teleStatus ?? "chờ tín hiệu…")), Color.FromArgb(150, 210, 255)));
+            if (ExportCsv && !string.IsNullOrEmpty(_exportedTo))
+                p.Add(($"💾 CSV: {_exportedTo}", Color.FromArgb(150, 220, 150)));
+            if (!string.IsNullOrEmpty(_lastError))
+                p.Add(($"⚠ lần quét trước LỖI (đang hiện dữ liệu cũ): {_lastError}", Color.FromArgb(255, 160, 120)));
             return p;
         }
 

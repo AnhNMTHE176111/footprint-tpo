@@ -997,15 +997,23 @@ namespace RunnerSignal
 
         // ================= XUẤT CSV (đối chiếu C#↔Python + tách WR nhánh CBR vs quay đầu) =================
         // Ghi TOÀN BỘ tín hiệu mỗi khi có nến mới (ghi đè cùng file). Cột nhanh=CBR/QUAY_DAU để soi 2 nhánh.
+        // Tên file = tên panel + ngày hiện tại → mỗi ngày một file riêng, không ghi đè chồng ngày cũ.
+        private static string SafeFileName(string s)
+        {
+            foreach (char c in Path.GetInvalidFileNameChars()) s = s.Replace(c, '_');
+            return s;
+        }
+        private static string DailyCsvName() => $"{SafeFileName("RUNNER CBR+VWAP (M1)")}_{DateTime.Now:yyyy-MM-dd}.csv";
+
         private void ExportSignals(List<Sig> sigs)
         {
             try
             {
                 string path = ExportPath?.Trim();
                 if (string.IsNullOrEmpty(path))
-                    path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "RunnerSignal_signals.csv");
+                    path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), DailyCsvName());
                 else if (Directory.Exists(path))
-                    path = Path.Combine(path, "RunnerSignal_signals.csv");
+                    path = Path.Combine(path, DailyCsvName());
 
                 var ci = CultureInfo.InvariantCulture;
                 var sb = new StringBuilder();

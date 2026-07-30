@@ -455,6 +455,13 @@ namespace RunnerSignal
         }
 
         private bool Gate(Bar b) => b.Vol >= VolFloor && b.SinceGap >= WarmupBars && b.Vma >= VolFloor * 0.6;
+        // Gate MỀM cho nến HỒI trong leg (2026-07-30): hồi vol thấp là DẤU HIỆU TỐT (không có bên
+        // đối kháng), không phải nến rác — chỉ đòi cấu trúc (đã qua warm-up + đủ nền TB) để tiếp tục
+        // theo dõi leg, KHÔNG đòi sàn volume của riêng nến đó. Nến VÀO (resume) vẫn phải qua Gate() đầy
+        // đủ ở điều kiện entry — chỉ nến HỒI ở giữa được nới. Bug cũ: 1 nến hồi vol<sàn → `break` huỷ
+        // TOÀN BỘ leg, bỏ sót nến tiếp diễn ngay sau đó dù đạt mọi điều kiện (vd 2026-07-29 23:57 vol=7
+        // huỷ leg, bỏ sót entry 00:00 lãi +3R).
+        private bool GateSoft(Bar b) => b.SinceGap >= WarmupBars && b.Vma >= VolFloor * 0.6;
         // GATE chung (2026-07-28): thuận xu hướng (proxy TPO bias) + đúng phía VWAP + thanh khoản đủ
         private bool TrendOk(Bar b, int side) => !TrendFilter || b.Trend == side;
         private bool VwapOk(Bar b, int side) => !VwapAlign || (side > 0 ? b.C >= b.Vwap : b.C <= b.Vwap);
@@ -546,7 +553,7 @@ namespace RunnerSignal
                 for (int j = i + 1; j < jEnd; j++)
                 {
                     var bj = B[j];
-                    if (!Gate(bj)) break;
+                    if (!GateSoft(bj)) break;
                     // đóng trở lại HẲN trong range → hủy leg
                     if (up ? bj.C < edge - HoldTolTicks * _tick : bj.C > edge + HoldTolTicks * _tick) break;
 
@@ -559,7 +566,7 @@ namespace RunnerSignal
                         double retr = leg > 0 ? depth / leg : 0;
                         bool held = up ? pullExt >= edge - HoldTolTicks * _tick : pullExt <= edge + HoldTolTicks * _tick;
                         bool resume = (up ? (bj.C > B[j - 1].H && bj.C > bj.O) : (bj.C < B[j - 1].L && bj.C < bj.O)) && bj.Brat >= ResumeBody;
-                        if (j >= since + 2 && retr >= PullMin && retr <= PullMax && held && resume)
+                        if (j >= since + 2 && retr >= PullMin && retr <= PullMax && held && resume && Gate(bj))
                         {
                             double entry = bj.C, sl, risk;
                             if (up) { sl = pullExt - SlBuf * _tick; risk = (entry - sl) / _tick; }

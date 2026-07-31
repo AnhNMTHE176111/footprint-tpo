@@ -107,6 +107,13 @@ namespace SessionZonesNs
         public string TeleShareDir { get; set; } = "";
         [InputParameter("TG · Gửi thử ngay (bật rồi tắt)", 58)]
         public bool TeleTestNow { get; set; } = false;
+        // Bạn add indicator này trên NHIỀU tab/chart cùng symbol (M30 + 2 tab M1) →
+        // nếu bật ở cả 3, mỗi tab tự kiểm mốc + có thể bắn Telegram riêng, dễ ra 3 tin
+        // cùng lúc (nhất là khi 3 tab lệch "Lệch giờ" nhau). CHỈ bật "true" ở ĐÚNG 1 tab
+        // (khuyên: tab M1 tôi trade) — các tab còn lại để false, chart vẫn hiện panel
+        // bình thường, chỉ không tự gửi tin.
+        [InputParameter("TG · Tab này ĐƯỢC gửi (chỉ bật 1 tab/chart)", 59)]
+        public bool TeleIsSender { get; set; } = false;
 
         private bool _vaLoaded;
         private readonly object _sync = new();
@@ -233,11 +240,26 @@ namespace SessionZonesNs
                 }
 
                 double nowPrice = last.Close;
+
+                // VWAP neo NGÀY/TUẦN (cộng dồn từ đầu kỳ tới nến hiện tại) — CORVEN dùng
+                // "Vwap ngày scalp" (CAU_HOI_CAN_THONG_NHAT.md, ghi chú §W5/§C1), tuần dùng
+                // cho KB-A hold dài. Tự tính lại (không đọc indicator VWAP có sẵn của
+                // Quantower — API không cho 1 indicator đọc giá trị của indicator khác trên
+                // chart) bằng đúng công thức đã kiểm chứng offline (zones_corven.py §2).
+                var daySpansV = ProfileEngine.GroupByGap(hd, GapMinutes);
+                var weekSpansV = ProfileEngine.WeekSpans(hd, WeekGapHours);
+                int dayFrV = daySpansV.Count > 0 ? daySpansV[daySpansV.Count - 1].from : 0;
+                int weekFrV = weekSpansV.Count > 0 ? weekSpansV[weekSpansV.Count - 1].fr : 0;
+                double vwapDay = ProfileEngine.VwapAt(hd, dayFrV, n - 1);
+                double vwapWeek = ProfileEngine.VwapAt(hd, weekFrV, n - 1);
+
                 var panel = new List<(string, Color)>();
                 panel.Add(("PHIÊN HÔM NAY", Color.White));
                 AddSentence(panel, asia, null, tick);
                 AddSentence(panel, europe, asia, tick);
                 AddSentence(panel, us, europe, tick, devTag: last.Label == "MY");
+                panel.Add(($"VWAP ngày {Fmt(vwapDay)} ({(nowPrice >= vwapDay ? "giá trên" : "giá dưới")}) · VWAP tuần {Fmt(vwapWeek)} ({(nowPrice >= vwapWeek ? "giá trên" : "giá dưới")})",
+                    Color.Gainsboro));
 
                 // gợi ý bias Mỹ
                 var (decision, lean, conf, reasons) = UsBias(hd, asia, europe, us, last, tick, rowStep);
@@ -285,7 +307,7 @@ namespace SessionZonesNs
                 var tele = new List<string>();
                 tele.Add($"🇺🇸 Phiên Mỹ: {decision} — {(lean > 0 ? "MUA" : lean < 0 ? "BÁN" : "TRUNG TÍNH")} ({conf}/100)");
                 if (reasons.Count > 0) tele.Add($"Lý do: {reasons[0]}");
-                tele.Add($"Giá hiện tại: {Fmt(nowPrice)}");
+                tele.Add($"Giá hiện tại: {Fmt(nowPrice)} · VWAP ngày {Fmt(vwapDay)} ({(nowPrice >= vwapDay ? "trên" : "dưới")}) · VWAP tuần {Fmt(vwapWeek)} ({(nowPrice >= vwapWeek ? "trên" : "dưới")})");
                 if (canhLenh.Count > 0)
                 {
                     tele.Add("Vùng quan trọng:");
@@ -296,6 +318,8 @@ namespace SessionZonesNs
                         tele.Add($"• {sd} {pr} · {z.Label} [{z.Strength:0}]");
                     }
                 }
+                if (boiCanh.Count > 0)
+                    tele.Add($"Bối cảnh (tham khảo): {string.Join(" · ", boiCanh.Take(3).Select(z => $"{z.Label} {Fmt(z.Center)}"))}");
                 ConfigTele();
                 _tele.Run(hd, Symbol?.Name, "zone", tele);
             }
@@ -305,6 +329,7 @@ namespace SessionZonesNs
         {
             _tele.Enabled = TeleEnabled;
             _tele.TestNow = TeleTestNow;
+            _tele.IsSender = TeleIsSender;
             _tele.BotToken = TeleBotToken?.Trim() ?? "";
             _tele.ChatId = TeleChatId?.Trim() ?? "";
             _tele.ShareDir = TeleShareDir ?? "";
@@ -433,7 +458,7 @@ namespace SessionZonesNs
                 // "tuần" = TUẦN CME ĐÃ ĐÓNG gần nhất (không phải ZoneLookbackSessions
                 // trượt) — xem WeekGapHours ở trên. Cần ít nhất 2 tuần trong hd mới có
                 // 1 tuần đã đóng để dùng; nếu chưa đủ thì tạm dùng tuần đang chạy.
-                var weekSpans = WeekSpans(hd, WeekGapHours);
+                var weekSpans = ProfileEngine.WeekSpans(hd, WeekGapHours);
                 if (weekSpans.Count >= 2)
                 {
                     var pw = weekSpans[weekSpans.Count - 2];
@@ -523,23 +548,6 @@ namespace SessionZonesNs
             // (đã giới hạn MaxLvn ở trên), nhưng vẫn áp lọc tầm với.
             zones.AddRange(lvnZones.Where(z => Math.Abs(z.Center - nowPrice) <= radius));
             return zones.OrderByDescending(z => z.Strength).ToList();
-        }
-
-        // Ranh giới TUẦN trong hd (M30): khoảng trống > gapHours giữa 2 nến liên tiếp
-        // (cuối tuần CME đóng T6 tối -> mở lại CN tối, ~46h). Span cuối = tuần ĐANG
-        // CHẠY; span áp chót = tuần ĐÃ ĐÓNG gần nhất, dùng làm nguồn HVN tuần.
-        private static List<(int fr, int to)> WeekSpans(HistoricalData hd, double gapHours)
-        {
-            var spans = new List<(int fr, int to)>();
-            int n = hd.Count, fr = 0; DateTime prev = DateTime.MinValue; bool have = false;
-            for (int i = 0; i < n; i++)
-            {
-                if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b) continue;
-                if (have && (b.TimeLeft - prev).TotalHours > gapHours) { spans.Add((fr, i - 1)); fr = i; }
-                prev = b.TimeLeft; have = true;
-            }
-            if (have) spans.Add((fr, n - 1));
-            return spans;
         }
 
         // Xếp theo điểm, đảm bảo tối thiểu 2 vùng mỗi phía (nếu có đủ), rồi cắt còn cap.

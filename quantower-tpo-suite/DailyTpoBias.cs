@@ -40,6 +40,11 @@ namespace DailyTpoBias
         [InputParameter("Dùng volume theo giá (tắt = TPO letters)", 14)]
         public bool UseVolume { get; set; } = true;
 
+        // Ranh giới TUẦN cho VWAP tuần — cùng cơ chế với SessionZones.cs (xem
+        // ProfileEngine.WeekSpans): gap > ngưỡng này giữa 2 nến M30 = hết 1 tuần CME.
+        [InputParameter("Gap tách TUẦN cho VWAP tuần (giờ)", 15, 20, 60, 1, 0)]
+        public int WeekGapHours { get; set; } = 30;
+
         // ---------- hiển thị ----------
         [InputParameter("Hiện bảng bias", 20)]
         public bool ShowPanel { get; set; } = true;
@@ -84,6 +89,12 @@ namespace DailyTpoBias
         public string TeleShareDir { get; set; } = "";
         [InputParameter("TG · Gửi thử ngay (bật rồi tắt)", 58)]
         public bool TeleTestNow { get; set; } = false;
+        // Xem SessionZones.cs: nếu add cả 2 indicator (bias + zone) trên cùng chart,
+        // cả hai cùng ghi vào 1 tin Telegram gộp — nhưng chỉ 1 trong số các instance
+        // đang chạy (bias/zone, nhiều tab) nên là nơi thực sự BẤM GỬI. Khuyên: bật true
+        // ở CÙNG tab với SessionZones đã bật TeleIsSender, hoặc chỉ bật ở 1 trong 2.
+        [InputParameter("TG · Tab này ĐƯỢC gửi (chỉ bật 1 tab/chart)", 59)]
+        public bool TeleIsSender { get; set; } = false;
 
         private bool _vaLoaded;
         private readonly object _sync = new();
@@ -151,7 +162,40 @@ namespace DailyTpoBias
                 double RangeTypical = ranges.Count > 0 ? ProfileEngine.Median(ranges) : 900;
                 double IBTypical = ibs.Count > 0 ? ProfileEngine.Median(ibs) : 100;
 
-                var rs = ComputeBias(dev, prior, tick, RangeTypical, IBTypical);
+                // ---- VWAP neo NGÀY/TUẦN — "vwap ngày scalp" (CORVEN), tuần cho KB-A ----
+                double vwapDay = ProfileEngine.VwapAt(hd, dg.from, dg.to);
+                var weekSpans = ProfileEngine.WeekSpans(hd, WeekGapHours);
+                int weekFr = weekSpans.Count > 0 ? weekSpans[weekSpans.Count - 1].fr : dg.from;
+                double vwapWeek = ProfileEngine.VwapAt(hd, weekFr, dg.to);
+
+                // ---- HVN tuần/ngày ĐÃ ĐÓNG — CHỈ để CẢNH BÁO "gần HVN" (không chấm
+                // điểm hướng: CORVEN xác nhận cả fade LẪN break-retest đều xảy ra tại
+                // HVN — CAU_HOI_CAN_THONG_NHAT.md §C2 — nên không có dấu rõ ràng).
+                SortedDictionary<double, double> wkRows = null, dyRows = null;
+                if (weekSpans.Count >= 2)
+                {
+                    var pw = weekSpans[weekSpans.Count - 2];
+                    wkRows = ProfileEngine.RowsOver(hd, pw.fr, pw.to, rowStep, UseVolume);
+                }
+                else if (weekSpans.Count == 1)
+                {
+                    var pw = weekSpans[0];
+                    wkRows = ProfileEngine.RowsOver(hd, pw.fr, pw.to, rowStep, UseVolume);
+                }
+                if (prior != null && prior.Valid) dyRows = ProfileEngine.RowsOver(hd, prior.FromIdx, prior.ToIdx, rowStep, UseVolume);
+
+                (double price, double ratio, string tf)? nearestHvn = null;
+                void Consider(SortedDictionary<double, double> rows, string tf)
+                {
+                    if (rows == null) return;
+                    foreach (var (p, ratio) in ProfileEngine.FindHvn(rows, tick).Take(3))
+                        if (nearestHvn == null || Math.Abs(p - dev.Close) < Math.Abs(nearestHvn.Value.price - dev.Close))
+                            nearestHvn = (p, ratio, tf);
+                }
+                Consider(wkRows, "tuần");
+                Consider(dyRows, "ngày");
+
+                var rs = ComputeBias(dev, prior, tick, RangeTypical, IBTypical, vwapDay, vwapWeek, nearestHvn);
                 rs.Dev = dev; rs.Prior = prior;
                 lock (_sync) _render = rs;
 
@@ -164,6 +208,7 @@ namespace DailyTpoBias
         {
             _tele.Enabled = TeleEnabled;
             _tele.TestNow = TeleTestNow;
+            _tele.IsSender = TeleIsSender;
             _tele.BotToken = TeleBotToken?.Trim() ?? "";
             _tele.ChatId = TeleChatId?.Trim() ?? "";
             _tele.ShareDir = TeleShareDir ?? "";
@@ -176,7 +221,8 @@ namespace DailyTpoBias
         }
 
         private RenderState ComputeBias(SessionProfile dev, SessionProfile prior, double tick,
-                                        double RangeTypical, double IBTypical)
+                                        double RangeTypical, double IBTypical,
+                                        double vwapDay, double vwapWeek, (double price, double ratio, string tf)? nearestHvn)
         {
             int bracket = dev.Bars;
             bool priorOk = prior != null && prior.Valid;
@@ -239,6 +285,24 @@ namespace DailyTpoBias
                 else if (dev.Open < prior.Val) { s = -0.4; why = "Mở dưới vùng giá trị hôm qua"; }
                 if (s != 0) sig.Add((s, 8.0, why));
             }
+            // F — giá vs VWAP ngày (w15). CORVEN: "vwap ngày scalp" — trên/dưới VWAP là
+            // dấu hiệu bias trực tiếp, không mơ hồ như HVN (§C1/§C2). Chỉ tính khi VWAP
+            // đã đủ nến để có ý nghĩa (không phải ngay nến mở).
+            if (!double.IsNaN(vwapDay) && bracket >= 2)
+            {
+                double distTicks = (dev.Close - vwapDay) / tick;
+                double s = ProfileEngine.Clamp(distTicks / (0.15 * RangeTypical), -1, 1);
+                if (Math.Abs(s) > 0.05)
+                    sig.Add((s, 15.0, $"Giá {(s > 0 ? "trên" : "dưới")} VWAP ngày ({distTicks:+0;-0}t)"));
+            }
+            // H — giá vs VWAP tuần (w10, nhẹ hơn ngày vì đây là bias NGÀY)
+            if (!double.IsNaN(vwapWeek) && bracket >= 2)
+            {
+                double distTicks = (dev.Close - vwapWeek) / tick;
+                double s = ProfileEngine.Clamp(distTicks / (0.5 * RangeTypical), -1, 1);
+                if (Math.Abs(s) > 0.05)
+                    sig.Add((s, 10.0, $"Giá {(s > 0 ? "trên" : "dưới")} VWAP tuần ({distTicks:+0;-0}t)"));
+            }
 
             // tổng hợp
             double S = 0, fired = 0;
@@ -251,6 +315,20 @@ namespace DailyTpoBias
             int cSign = S >= 18 ? 1 : S <= -18 ? -1 : 0;
             double Cp = bracket < IbBars ? 68 : bracket < IbBars + 3 ? 90 : 95;
             int confidence = (int)Math.Round(Math.Min(Cp, 100 * Math.Min(1, Math.Abs(S) / 40)) * (0.4 + 0.6 * a));
+
+            // HVN gần giá → KHÔNG chấm hướng (§C2: cả fade lẫn break-retest đều xảy ra),
+            // chỉ hạ tin cậy + cảnh báo chờ phản ứng rõ ràng trước khi tin bias.
+            string hvnNote = null;
+            if (nearestHvn != null)
+            {
+                double distT = Math.Abs(nearestHvn.Value.price - dev.Close) / tick;
+                double nearTol = Math.Max(10, 0.02 * RangeTypical);
+                if (distT <= nearTol)
+                {
+                    confidence = (int)Math.Round(confidence * 0.75);
+                    hvnNote = $"⚠ Gần HVN {nearestHvn.Value.tf} ×{nearestHvn.Value.ratio:0.0} (cách {distT:0}t) — chờ phản ứng rõ trước khi tin bias";
+                }
+            }
 
             string phase = bracket < IbBars ? "Mở cửa / tạo IB" : bracket < IbBars + 3 ? "IB xong (quyết định)" : "Giữa/cuối phiên";
             string dayType = DayTypeGuess(dev, bracket, IBTypical, tick);
@@ -274,6 +352,9 @@ namespace DailyTpoBias
                 string wide = dev.IbRangeTicks > 1.4 * IBTypical ? "rộng" : dev.IbRangeTicks < 0.7 * IBTypical ? "hẹp" : "vừa";
                 panel.Add(($"IB nay: {Fmt(dev.IbLow)}–{Fmt(dev.IbHigh)} ({wide} vs {IBTypical:0}t)", Color.Gainsboro));
             }
+            if (!double.IsNaN(vwapDay))
+                panel.Add(($"VWAP ngày {Fmt(vwapDay)} ({(dev.Close >= vwapDay ? "giá trên" : "giá dưới")}) · VWAP tuần {Fmt(vwapWeek)} ({(dev.Close >= vwapWeek ? "giá trên" : "giá dưới")})", Color.Gainsboro));
+            if (hvnNote != null) panel.Add((hvnNote, Color.Khaki));
 
             // ---- tổng hợp GỌN cho Telegram ----
             var tele = new List<string>();
@@ -282,6 +363,8 @@ namespace DailyTpoBias
             if (reasons.Count > 0) tele.Add($"Lý do: {reasons[0]}");
             if (priorOk) tele.Add($"Hôm qua: VAH {Fmt(prior.Vah)} · POC {Fmt(prior.Poc)} · VAL {Fmt(prior.Val)}");
             if (!double.IsNaN(dev.IbHigh)) tele.Add($"IB nay: {Fmt(dev.IbLow)}–{Fmt(dev.IbHigh)}");
+            if (!double.IsNaN(vwapDay)) tele.Add($"VWAP ngày {Fmt(vwapDay)} ({(dev.Close >= vwapDay ? "trên" : "dưới")}) · VWAP tuần {Fmt(vwapWeek)} ({(dev.Close >= vwapWeek ? "trên" : "dưới")})");
+            if (hvnNote != null) tele.Add(hvnNote);
 
             return new RenderState { Panel = panel, Tele = tele };
         }

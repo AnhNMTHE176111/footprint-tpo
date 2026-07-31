@@ -373,6 +373,42 @@ namespace TpoSuite
             return rows;
         }
 
+        // Ranh giới TUẦN trong hd (M30 hoặc khung khác): khoảng trống > gapHours giữa 2
+        // nến liên tiếp (cuối tuần CME đóng T6 tối -> mở lại CN tối, ~46h). Span cuối =
+        // tuần ĐANG CHẠY; span áp chót = tuần ĐÃ ĐÓNG gần nhất. Dùng chung cho SessionZones
+        // (nguồn HVN tuần) và DailyTpoBias (neo VWAP tuần) — xem CAU_HOI_CAN_THONG_NHAT.md §A1.
+        public static List<(int fr, int to)> WeekSpans(HistoricalData hd, double gapHours)
+        {
+            var spans = new List<(int fr, int to)>();
+            int n = hd.Count, fr = 0; DateTime prev = DateTime.MinValue; bool have = false;
+            for (int i = 0; i < n; i++)
+            {
+                if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b) continue;
+                if (have && (b.TimeLeft - prev).TotalHours > gapHours) { spans.Add((fr, i - 1)); fr = i; }
+                prev = b.TimeLeft; have = true;
+            }
+            if (have) spans.Add((fr, n - 1));
+            return spans;
+        }
+
+        // VWAP neo từ nến `from`, cộng dồn tới nến `to`, trả giá trị TẠI `to` (giống
+        // vwap_series trong zones_corven.py, đã kiểm chứng offline — §2). Dùng typical
+        // price (H+L+C)/3 × volume; fallback = Close nếu chưa có volume.
+        public static double VwapAt(HistoricalData hd, int from, int to)
+        {
+            if (from < 0 || to < from) return double.NaN;
+            double sumPv = 0, sumV = 0, lastClose = double.NaN;
+            for (int i = from; i <= to; i++)
+            {
+                if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b) continue;
+                double v = b.VolumeAnalysisData?.Total?.Volume ?? 0;
+                double tp = (b.High + b.Low + b.Close) / 3.0;
+                sumPv += tp * v; sumV += v;
+                lastClose = b.Close;
+            }
+            return sumV > 0 ? sumPv / sumV : lastClose;
+        }
+
         // ---- HVN (High Volume Node) — nút khối lượng cao ---------------------
         //  KHÁC POC: POC chỉ có MỘT (đỉnh cao nhất của phân bố). HVN có thể có
         //  NHIỀU — mỗi nơi khối lượng tụ thành "nút". Sách (ebook §HVN, §Setup 2
@@ -474,6 +510,13 @@ namespace TpoSuite
     internal sealed class TeleReport
     {
         public bool Enabled, TestNow;
+        // Nhiều chart/tab có thể cùng add 1 indicator trên cùng symbol (vd SessionZones
+        // gắn cả M30 + 2 tab M1) — mỗi instance đều cố gắng bắn Telegram, dễ ra NHIỀU tin
+        // cùng lúc nếu cấu hình (TzOffset/GapMinutes) lệch nhau giữa các tab dù cùng
+        // symbol → khoá lock khác nhau. Chỉ 1 instance (bật IsSender=true) mới thực sự
+        // kiểm mốc + gửi; các instance khác vẫn ghi section (để Compose gộp) nhưng
+        // không tự bắn tin.
+        public bool IsSender = true;
         public string BotToken = "", ChatId = "", ShareDir = "";
         public int TzOffset = 7;
         public int UsStartMin = 1160;      // 19:20 VN (COMEX vàng mở pit)
@@ -494,6 +537,7 @@ namespace TpoSuite
             try
             {
                 PublishSection(symbol, kind, lines);
+                if (!IsSender) return;
                 if (string.IsNullOrWhiteSpace(BotToken) || string.IsNullOrWhiteSpace(ChatId)) return;
 
                 long now = DateTime.UtcNow.Ticks;

@@ -412,7 +412,24 @@ namespace WyckoffRunner
             // đổi khung...) callback KHÔNG bắn → _vaLoaded mãi false → Process() và cả panel bị chặn vĩnh
             // viễn, phải xoá & cài lại indicator mới hiện. State==Finished đã đủ điều kiện đọc footprint.
             if (!_vaLoaded) lock (_calc) { _vaLoaded = true; _lastN = -1; }
-            Process();
+            // FIX BUG "biến mất khi refresh data": 1 exception không bắt trong Process() có thể khiến
+            // Quantower coi indicator lỗi và gỡ khỏi chart (phải cắm lại). Bọc lại để: (a) 1 tick lỗi
+            // chỉ bị bỏ qua thay vì crash cả indicator, (b) ghi log để tra được nguyên nhân thật lần sau.
+            try { Process(); }
+            catch (Exception ex) { LogErr(ex, "OnUpdate/Process"); }
+        }
+
+        private void LogErr(Exception ex, string where)
+        {
+            try
+            {
+                // cùng thư mục %LOCALAPPDATA%\WyckoffRunner với tele_log.txt (xem ConfigTele)
+                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WyckoffRunner");
+                Directory.CreateDirectory(dir);
+                File.AppendAllText(Path.Combine(dir, "error_log.txt"),
+                    $"{DateTime.UtcNow.AddHours(TzOffset):yyyy-MM-dd HH:mm:ss} [{Name}] {where}: {ex}\n");
+            }
+            catch { }
         }
 
         private string Fmt(double p) => double.IsNaN(p) ? "—" : Math.Round(p, _digits).ToString("0.0##");
@@ -1204,7 +1221,16 @@ namespace WyckoffRunner
             int closed = tp + sl;
             string wr = closed > 0 ? $" · WR {100.0 * tp / closed:0}%" : "";
             int nRev = sigs.Count(s => s.Scen != null && s.Scen.StartsWith("quay"));
-            string deadTag = (SkipDeadSession && DeadStartHour != DeadEndHour) ? $" · ⛔{DeadStartHour:00}-{DeadEndHour:00}h" : "";
+            string deadTag = "";
+            if (SkipDeadSession && DeadStartHour != DeadEndHour)
+            {
+                if (DeadUseUtc)
+                {
+                    int vnFrom = (DeadStartHour + TzOffset) % 24, vnTo = (DeadEndHour + TzOffset) % 24;
+                    deadTag = $" · ⛔UTC{DeadStartHour:00}-{DeadEndHour:00}h (VN{vnFrom:00}-{vnTo:00}h)";
+                }
+                else deadTag = $" · ⛔VN{DeadStartHour:00}-{DeadEndHour:00}h";
+            }
             p.Add(($"WYCKOFF RUNNER CBR+VWAP v6 (M1)   ▶{sigs.Count - nRev} ↩{nRev} · ✓{tp} ✗{sl} •{running}{wr}{deadTag}  [CBR {RR:0.#}R · quay đầu {RevRR:0.#}R]", Color.White));
             // Thống kê R lời/lỗ (TP=+RR nhánh đó, SL=−1R)
             double totalR = 0;

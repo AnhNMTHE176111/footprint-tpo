@@ -128,16 +128,22 @@ namespace RunnerSignal
         [InputParameter("Thanh khoản: cửa sổ TB (số nến)", 43, 100, 5000, 50, 0)]
         public int LiquidityWindow { get; set; } = 1000;
 
-        // ---------- Lọc PHIÊN CHẾT (research 148 lệnh THẬT 2026-07-28) ----------
-        // Khung 02–08h (giờ hiển thị = UTC+TzOffset ≈ giờ CME nghỉ/settlement 17-18h ET): CBR ở khung này
-        // WR 10%, −19R, XẤU cả 3 tháng. CHỈ cắt CBR (reversal khung này 4/4 THẮNG → MIỄN): WR 36→43%, +38→+57R.
-        // Mặc định BẬT — đã validate trên CSV LIVE C# (cùng engine, không phải proxy), robust cả 3 tháng.
-        // Tắt ô này nếu muốn so A/B với bản không lọc.
+        // ---------- Lọc PHIÊN CHẾT (research CBR n=140, xem BASELINE.md/WYCKOFF_V6_PLAN.md) ----------
+        // ⚠ SỬA LỖI (2026-07-31, phát hiện khi user hỏi vì sao 7-8h sáng VN bị cấm): bar.TimeLeft
+        // LÀ GIỜ UTC, KHÔNG phải giờ VN (comment cũ ở đây từng khẳng định nhầm "== giờ VN" —
+        // WYCKOFF_V6_PLAN.md §BƯỚC 5 đã chứng minh SAI). Khung xấu thật đo được trên dữ liệu là
+        // UTC 02h-08h (CBR WR 9.7%, −19R) — quy đổi ra giờ VN (+7) là **09h-15h chiều**, KHÔNG
+        // phải 2h-8h sáng. Bản cũ (DeadUseUtc mặc định false) cộng nhầm TzOffset trước khi so
+        // sánh nên lại đi cấm nhầm VN 2h-8h SÁNG (khung này CHƯA HỀ được đo, không phải khung đã
+        // validate) — vô tình chặn luôn 7-8h sáng dù dữ liệu không hề nói khung đó xấu.
+        // Mặc định BẬT lọc + DeadUseUtc=true để khớp đúng khung đã đo. Tắt ô lọc nếu muốn so A/B.
         [InputParameter("Lọc phiên chết: BỎ lệnh CBR khung giờ chết (mặc định BẬT)", 77)]
         public bool SkipDeadSession { get; set; } = true;
-        [InputParameter("Phiên chết: giờ BẮT ĐẦU (giờ hiển thị 0-23)", 78, 0, 23, 1, 0)]
+        [InputParameter("Phiên chết: neo theo giờ UTC (tắt = giờ hiển thị VN)", 76)]
+        public bool DeadUseUtc { get; set; } = true;
+        [InputParameter("Phiên chết: giờ BẮT ĐẦU (UTC nếu DeadUseUtc, ngược lại giờ hiển thị, 0-23)", 78, 0, 23, 1, 0)]
         public int DeadStartHour { get; set; } = 2;
-        [InputParameter("Phiên chết: giờ KẾT THÚC (không gồm, 0-24)", 79, 0, 24, 1, 0)]
+        [InputParameter("Phiên chết: giờ KẾT THÚC (không gồm, UTC nếu DeadUseUtc, 0-24)", 79, 0, 24, 1, 0)]
         public int DeadEndHour { get; set; } = 8;
 
         // ---------- QUAY ĐẦU v2 — đảo chiều tại VWAP (2026-07-28, khớp reversal_vwap.py) ----------
@@ -323,7 +329,24 @@ namespace RunnerSignal
             // đổi khung...) callback KHÔNG bắn → _vaLoaded mãi false → Process() và cả panel bị chặn vĩnh
             // viễn, phải xoá & cài lại indicator mới hiện. State==Finished đã đủ điều kiện đọc footprint.
             if (!_vaLoaded) lock (_calc) { _vaLoaded = true; _lastN = -1; }
-            Process();
+            // FIX BUG "biến mất khi refresh data": 1 exception không bắt trong Process() có thể khiến
+            // Quantower coi indicator lỗi và gỡ khỏi chart (phải cắm lại). Bọc lại để: (a) 1 tick lỗi
+            // chỉ bị bỏ qua thay vì crash cả indicator, (b) ghi log để tra được nguyên nhân thật lần sau.
+            try { Process(); }
+            catch (Exception ex) { LogErr(ex, "OnUpdate/Process"); }
+        }
+
+        private void LogErr(Exception ex, string where)
+        {
+            try
+            {
+                // cùng thư mục %LOCALAPPDATA%\RunnerSignal với tele_log.txt (xem ConfigTele)
+                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RunnerSignal");
+                Directory.CreateDirectory(dir);
+                File.AppendAllText(Path.Combine(dir, "error_log.txt"),
+                    $"{DateTime.UtcNow.AddHours(TzOffset):yyyy-MM-dd HH:mm:ss} [{Name}] {where}: {ex}\n");
+            }
+            catch { }
         }
 
         private string Fmt(double p) => double.IsNaN(p) ? "—" : Math.Round(p, _digits).ToString("0.0##");
@@ -596,10 +619,12 @@ namespace RunnerSignal
             return Cooldown_(Dedup(raw));
         }
 
-        // Giờ (hiển thị = UTC+TzOffset) rơi vào khung chết? Hỗ trợ khung qua nửa đêm (start > end).
+        // Giờ rơi vào khung chết? v6: mặc định neo theo UTC (DeadUseUtc=true) vì khung chết là hiện
+        // tượng gắn với giờ UTC/CME, không phải giờ địa phương của trader (xem giải thích ở khai báo
+        // DeadUseUtc bên trên). Hỗ trợ khung qua nửa đêm (start > end).
         private bool InDeadWindow(DateTime tUtc)
         {
-            int h = tUtc.AddHours(TzOffset).Hour;
+            int h = DeadUseUtc ? tUtc.Hour : tUtc.AddHours(TzOffset).Hour;
             return DeadStartHour <= DeadEndHour
                 ? (h >= DeadStartHour && h < DeadEndHour)
                 : (h >= DeadStartHour || h < DeadEndHour);
@@ -1074,7 +1099,16 @@ namespace RunnerSignal
             int closed = tp + sl;
             string wr = closed > 0 ? $" · WR {100.0 * tp / closed:0}%" : "";
             int nRev = sigs.Count(s => s.Scen != null && s.Scen.StartsWith("quay"));
-            string deadTag = (SkipDeadSession && DeadStartHour != DeadEndHour) ? $" · ⛔{DeadStartHour:00}-{DeadEndHour:00}h" : "";
+            string deadTag = "";
+            if (SkipDeadSession && DeadStartHour != DeadEndHour)
+            {
+                if (DeadUseUtc)
+                {
+                    int vnFrom = (DeadStartHour + TzOffset) % 24, vnTo = (DeadEndHour + TzOffset) % 24;
+                    deadTag = $" · ⛔UTC{DeadStartHour:00}-{DeadEndHour:00}h (VN{vnFrom:00}-{vnTo:00}h)";
+                }
+                else deadTag = $" · ⛔VN{DeadStartHour:00}-{DeadEndHour:00}h";
+            }
             p.Add(($"RUNNER CBR+VWAP (M1)   ▶{sigs.Count - nRev} ↩{nRev} · ✓{tp} ✗{sl} •{running}{wr}{deadTag}  [CBR {RR:0.#}R · quay đầu {RevRR:0.#}R]", Color.White));
             // Thống kê R lời/lỗ (TP=+RR nhánh đó, SL=−1R)
             double totalR = 0;

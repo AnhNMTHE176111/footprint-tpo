@@ -160,6 +160,78 @@ một mức bất kỳ ở cùng vị trí cho kết quả y hệt.
    được overfit bằng backtest.
 4. Nếu vẫn muốn theo FADE: port **chỉ ghi CSV**, forward 2–4 tuần, chỉ bật gửi lệnh nếu EV ≥ +0.10R sau phí.
 
+## 9. ⭐ Quản lý lệnh của pro trader — đã mô phỏng, và nó GIẢI THÍCH con số "WR 80%"
+
+> Người học cung cấp 2026-07-31: *"ngày vài chục lệnh, M1, RR 1:3. Chờ setup đủ yếu tố rồi **nhồi 5–7 lệnh**:
+> 2 lệnh TP 1:3 chốt nhanh chắc tiền, 2 lệnh để chạy 1:5, 1 lệnh treo đi xe đến điểm cao nhất của **HVN ngày
+> hoặc tuần** — mất lệnh đó thì các lệnh khác đã đủ lãi. Lệnh nào **đi được 1R rồi thì BE lệnh lại**."*
+> Script: [crow_mgmt.py](crow_mgmt.py). Mô phỏng đúng quy tắc trên, áp lên 3 nguồn tín hiệu khác nhau.
+> Runner = TP tại D-1 High (LONG) / D-1 Low (SHORT) nếu xa hơn 5R, không thì 8R; hết phiên chưa đạt thì thoát ở close.
+
+### 9.1 "WR 80%" là tỷ lệ lệnh KHÔNG LỖ, không phải tỷ lệ ăn TP
+
+Với BE-tại-1R, mỗi lệnh có 3 kết cục: TP / **BE (hoà)** / SL. Đo trên CBR v5 (hệ đang chạy):
+
+| Quy tắc BE | WR thô (chỉ TP) | **WR không-lỗ (TP+BE)** | Tổng R (5 lệnh/cụm) |
+|---|---|---|---|
+| BE tại 0.5R | 15.6% | **78.2%** | +27.5R |
+| BE tại 1.0R (như anh ấy) | 19.3% | **63.6%** | +29.1R |
+| BE tại 1.5R | 24.7% | 54.5% | +35.7R |
+| BE tại 2.0R | 28.7% | 50.9% | +42.9R |
+| **Không BE** | 36.0% | 36.7% | **+57.1R** |
+
+⇒ Con số **80%** rơi đúng vào vùng "BE sớm + đếm lệnh hoà là thắng". **Không có mâu thuẫn nào** giữa
+"WR 80%" của anh ấy và "WR 29%" trong bảng §2 — hai con số đo hai thứ khác nhau. Điều này cũng có nghĩa
+**WR 80% không phải bằng chứng hệ có edge**: kết cục BE là hoà, và tôi đã kiểm bằng nhánh Crow âm
+(§9.3) — nó cho WR-không-lỗ 47% mà vẫn lỗ.
+
+### 9.2 BE sớm là thứ tốn tiền nhất trong cả quy tắc
+
+Trên chính hệ v5 đang chạy: BE-tại-1R làm **mất gần một nửa R** (+57.1R → +29.1R). Cơ chế rõ: lệnh bị BE
+là lệnh đã đi đúng hướng 1R rồi bị hồi về entry — phần lớn trong số đó **sau đó vẫn chạy tới TP**, nhưng
+mình đã bị đóng. Đây là đánh đổi trực tiếp: **mua win rate bằng tiền thật**.
+
+### 9.3 Nhồi lệnh + chia TP: ý "1 lệnh treo đi xe" là ý ĐÚNG và đo được
+
+Phân rã từng chân (v5, BE 1R, n=55 setup):
+
+| Chân | TP đạt | R trung bình/lệnh |
+|---|---|---|
+| 2× TP 3R | 23.6% | +0.345 |
+| 2× TP 5R | 16.4% | +0.455 |
+| **1× runner (HVN D-1 / 8R)** | 16.4% | **+1.045** |
+
+Thử các cách chia 5 lệnh (không BE):
+
+| Phân bổ | Tổng R | Mọi tháng dương |
+|---|---|---|
+| chỉ 5× TP 3R (= v5 đang ship) | +49.0R | ✓ |
+| pro trader: 2×3R + 2×5R + 1×runner | +57.1R | ✓ |
+| nâng runner: 1×3R + 1×5R + 3×runner | +75.4R | ✓ |
+| **chỉ runner (5× HVN/8R)** | **+93.6R** | ✓ |
+
+⇒ Hai kết luận đo được: (a) **cấu trúc nhồi + chia TP của anh ấy tốt hơn TP 3R cứng của v5** (+57 vs +49R);
+(b) **chân đóng góp gần như toàn bộ lợi nhuận là chân runner đi tới HVN**, không phải 2 chân "chốt nhanh chắc tiền".
+Khớp với `RULES.md R7` ("SL càng ngắn thì tỉ lệ lệnh TP 5–6R càng nhiều") và với kết luận cũ của v5 (RR 3 > RR 1.5 cho CBR).
+
+⚠️ **Giới hạn:** n = 55 setup, và chân runner chỉ có 9 lần đạt TP ⇒ tổng R của nó do rất ít lệnh quyết định.
+Chưa kiểm null model cho riêng phần phân bổ. Đừng đọc "+93.6R" như một con số chắc chắn — đọc nó như
+"hướng phân bổ đang bị đặt sai, nghiêng quá nhiều về chốt sớm".
+
+### 9.4 Quản lý lệnh KHÔNG tạo ra edge
+
+Áp đúng bộ quy tắc đó lên nhánh Crow âm (−73R): thành −6.4R (WR-không-lỗ 47.3%) — **vẫn âm**, tháng 6 vẫn −42R.
+Nhồi lệnh + BE + chia TP chỉ **tái phân phối** kết quả, không biến tín hiệu xấu thành tốt. Ngược lại, áp lên
+FADE+CONFIRM (+22R) thành +24.8R — gần như không đổi.
+
+### 9.5 Đề xuất cải tiến cho hệ đang chạy (chưa làm, cần bạn quyết)
+
+1. **Bỏ hoặc dời BE về ≥1.5R** trong bất cứ nhánh nào có BE. Có bằng chứng trực tiếp: mỗi bậc BE sớm hơn
+   đổi ~6–14R trên 3 tháng.
+2. **Thêm scale-out cho RunnerSignal**: giữ 1 phần TP 3R (như hiện tại) + 1 phần đi tới **HVN ngày/tuần**.
+   Việc này cần sửa cả `mt5-runner-bridge` (hiện gửi 1 lệnh/tín hiệu) nên tôi **chưa tự làm** — đây là thay
+   đổi cách chốt lời của hệ đang trade tiền thật.
+
 ## Phụ lục — số phép thử đã dùng (để đếm đa phép thử)
 
 Vòng 1 (lõi + sweep): 27 · Vòng 1 gates + partition: 13 · Vòng 2 (COMPRESS/CONFIRM/FADE): 20 ·

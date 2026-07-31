@@ -1,5 +1,27 @@
 # RESULTS_KB2_ZONES — neo KB2 vào "VÙNG CANH" của M30SessionZones v2
 
+> ## 🔴 GIỚI HẠN PHẠM VI — đọc trước khi trích dẫn kết quả này (thêm 2026-07-31, sau khi chốt SPEC)
+>
+> Người học đã chốt hệ CORVEN thật ([CORVEN_SPEC_V1.md](../../../data-export/messages-with-pro-trader/CORVEN_SPEC_V1.md)).
+> Đối chiếu lại thì bài test dưới đây **đo phần lớn là thứ CORVEN KHÔNG dùng**:
+>
+> | Trong test này | Trong hệ CORVEN |
+> |---|---|
+> | 7 loại vùng (va_edge, priorhl, naked_poc, poc_cluster, value_band, hvn_day, hvn_week) | **CHỈ HVN** (tuần + ngày) + VWAP |
+> | Vùng dựng theo **từng phiên Á-Âu-Mỹ** | ❌ "Tất nhiên là không rồi" — chỉ khung **ngày/tuần** |
+> | Chỉ 1 play: **chạm → fade** | **HAI** play: chạm→đảo chiều **VÀ** phá→hồi→đánh tiếp (break-retest) |
+> | Gate của KB2 (wick/cpos/body/VSA) | **Nến xác nhận M1** + big trade/imbalance |
+> | RR 1.5 | **RR 1:3** |
+>
+> **Cái vẫn đứng vững:** thang điểm "VÙNG CANH" **như đang code** chạy ngược (điểm cao → EV thấp), và
+> **đối chứng ngẫu nhiên bác bỏ** vị trí vùng — nên **không ship bộ vùng 7-loại này vào KB2**. Đó là
+> kết luận về **indicator hiện tại**, và nó khớp với việc 5/7 loại vùng không nằm trong hệ CORVEN.
+>
+> **Cái KHÔNG được suy ra từ đây:** "fade tại HVN là sai". Test này chưa đo đúng phiên bản của CORVEN.
+> Đáng chú ý: `hvn_week` là loại vùng **duy nhất dương** (n=7, WR 57%, EV +0.429) — đúng loại vùng duy
+> nhất anh ấy dùng cho nhánh WR cao nhất. n=7 quá nhỏ để kết luận, nhưng đó là **hướng phải đo lại**,
+> không phải hướng đã bị bác bỏ.
+
 > Viết 2026-07-31. Câu hỏi của người học: KB2 (`QUAY_DAU`) hiện chỉ neo vào **VWAP** (n=27, EV +0.389,
 > FAIL audit vì mỏng). `M30SessionZones` v2 đã lọc ra nhóm **VÙNG CANH** có chấm điểm (HVN tuần 70-95,
 > HVN ngày 64-88, naked POC 72, cụm POC 78, băng giá trị 55) + gộp hợp lưu đa khung. **Neo reversal vào

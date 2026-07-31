@@ -9,7 +9,10 @@
 
 ---
 
-## A. KB-A — nhánh vùng TUẦN, hold dài (vùng tối lớn nhất)
+## A. KB-A — nhánh vùng TUẦN ~~hold dài~~ (ĐÃ TRẢ LỜI 2026-07-31)
+
+> ✅ **Đã chốt xong. Bản tổng hợp để code: [CORVEN_SPEC_V1.md](CORVEN_SPEC_V1.md).**
+> Các câu còn để trống ở mục C5/D/E là **không chặn** — suy được từ câu trả lời khác hoặc chưa cần.
 
 Cả 36 ảnh TRANSCRIPT + đoạn chat 3 kịch bản đều **không có một tiêu chí vào lệnh nào** cho nhánh này.
 Mà đây là kịch bản CORVEN xếp *đầu tiên*.
@@ -17,32 +20,32 @@ Mà đây là kịch bản CORVEN xếp *đầu tiên*.
 **A1. [CHẶN] VWAP tuần neo từ mốc nào?** Mở tuần (CME mở lại Chủ nhật ~23:00 VN / 16:00 UTC)? Hay
 rolling 5 ngày trượt? Hai cách cho ra hai đường khác nhau hẳn, code khác nhau hẳn.
 
-> *Trả lời:*
+> *Trả lời:* **ĐÚNG là neo ĐẦU TUẦN** — "vì 1 tuần reset 1 lần". Không phải rolling.
 
 **A2. [CHẶN] TPO tuần dựng thế nào?** Gộp cả 5 ngày thành **một** profile duy nhất? Dùng gì trong đó —
 chỉ POC, hay cả VAH/VAL, hay cả HVN/LVN?
 
-> *Trả lời:*
+> *Trả lời:* **CHỈ quan tâm HVN thôi.** Không dùng POC/VAH/VAL của tuần.
 
 **A3. [CHẶN] "Hold dài" là bao lâu?** Trong ngày → đóng trước phiên Mỹ? Qua đêm? Vài ngày? Và RR mục
 tiêu của nhánh này khoảng bao nhiêu?
 
-> *Trả lời:*
+> *Trả lời:* **Chỉ TRONG NGÀY** (không qua đêm). RR ưu tiên 1:5 nhưng "thôi ta cứ 1:4". → xem §6 SPEC: chốt mặc định **1:3** theo Q9, quét thêm 1:4/1:5.
 
 **A4. [CHẶN] SL của KB-A neo đâu?** Chắc chắn không thể là 2-4 giá như R7 (nhánh scalp) — vùng tuần
 thì nhiễu rộng hơn nhiều. Neo ngoài biên vùng? Theo ATR ngày?
 
-> *Trả lời:*
+> *Trả lời:* **Giống hệt nhánh scalp chạm vùng.** Khác biệt duy nhất là tỉ lệ ăn cao hơn. ⇒ KB-A KHÔNG phải swing, SL vẫn chặt.
 
 **A5.** Chạm vùng tuần là **vào luôn**, hay vẫn phải chờ xác nhận M5/M1 như R8 ("thiếu mỗi xác nhận
 trong m5, m1")?
 
-> *Trả lời:*
+> *Trả lời:* **Vẫn canh ở M1, chờ nến xác nhận rồi vào.**
 
 **A6.** Nhánh này **một tuần ra mấy lệnh**? Nếu chỉ 1-2 lệnh/tuần thì backtest 3 tháng chỉ được ~20
 lệnh — biết trước để khỏi kỳ vọng ý nghĩa thống kê.
 
-> *Trả lời:*
+> *Trả lời:* **Loanh quanh chục lệnh** (≈10 lệnh/tuần → ~120 lệnh/3 tháng).
 
 ---
 
@@ -54,23 +57,23 @@ cái nút bấm**: tín hiệu vào lệnh.
 **B1. [CHẶN] Tín hiệu VÀO cụ thể là gì?** Imbalance xếp tầng (stacked imbalance)? Delta bùng đột biến?
 Bubble/khối lượng to bất thường tại một mức? Hay "thấy tàu đang chạy thì nhảy lên"?
 
-> *Trả lời:*
+> *Trả lời:* Trong **1 move có xu hướng** thì **không cần VSA/volume**. Thấy nến có **big trade** hoặc **imbalance** / dấu hiệu **đẩy lực chủ động** là vào. Ví dụ: move tăng → nến có **bubble big trade ở 30% DƯỚI của nến**, **delta xanh**, **thân nến vừa đủ dài đẹp** → scalp LONG. (Tra sách để liệt kê đủ các tín hiệu đẩy chủ động.)
 
 **B2. [CHẶN] Nhận biết "tàu" bằng gì?** "Ko cản tàu" nghĩa là phải xác định được đang có tàu. Bằng CVD
 dốc? Bằng chuỗi nến cùng chiều? Bằng delta liên tiếp cùng dấu?
 
-> *Trả lời:*
+> *Trả lời:* **Chuỗi nến cùng chiều + delta liên tiếp cùng dấu** → đang thuận xu hướng tạo thành 1 move. **Không cần** delta ngày càng to.
 
 **B3. [LỆCH] Số học của nhánh này không khớp.** RULES.md ghi CORVEN nói **RR 1:5–1:6** và **WR 65-70%**.
 Nhưng KB-C là "**vài chục lệnh/ngày**". Nếu 30 lệnh/ngày mà WR 65% ở RR5 thì mỗi ngày ăn ~+95R —
 không thực tế. Nên chắc là: **RR 5-6 chỉ dành cho vài lệnh đặc biệt (giờ động, SL siêu chặt)**, còn
 phần lớn lệnh scalp ăn nhỏ (1-2R?), và **WR 65-70% là của nhánh nào**? Nhờ phân xử chỗ này.
 
-> *Trả lời:*
+> *Trả lời:* **80% là số của CORVEN — bỏ, không quan tâm nữa.** Chốt cho hệ mình: **RR 1:3 cố định cho MỌI kịch bản**, **WR mục tiêu 40-50%**.
 
 **B4.** Lệnh KB-C giữ bao lâu — vài chục giây, vài phút? Và TP theo R cố định hay theo "hết lực thì ra"?
 
-> *Trả lời:*
+> *Trả lời:* **TP theo R.**
 
 ---
 
@@ -81,7 +84,7 @@ trong KB-C** — cấm mean-revert ở biên range nhỏ. Nó **không** cấm f
 vì chính CORVEN nói "Vwap ngày scap". Nếu tôi hiểu sai thì nhánh KB2 QUAY_DAU của mình sai từ gốc chứ
 không chỉ sai số liệu.
 
-> *Trả lời:*
+> *Trả lời:* **SAI.** "Đánh break" = **giá break ra khỏi VÙNG GIÁ, chờ HỒI về + có tín hiệu rồi đánh** (break-retest), không liên quan biên range M1.
 
 **C2. [LỆCH] Quan trọng — CORVEN dùng HVN thế nào?** Tôi đo được kết quả **ngược** với cách indicator
 M30SessionZones đang dán nhãn: fade tại HVN/POC/băng giá trị cho EV **âm** (HVN ngày −0.375R), còn biên
@@ -89,23 +92,23 @@ VA thì dương. Cơ chế: HVN là vùng giá **được chấp nhận** → gi
 Vậy CORVEN coi HVN là **vùng canh đảo chiều**, hay là **vùng giá sẽ đi qua / mục tiêu chốt lời**?
 Đây là câu tôi cần nhất, vì nó quyết định có phải sửa nhãn "VÙNG CANH" của indicator hay không.
 
-> *Trả lời:*
+> *Trả lời:* **Cả hai:** "chạm phá rồi hồi" **HOẶC** "giá đảo chiều ở HVN". ⇒ CORVEN fade tại HVN thật, và cũng đánh break-retest tại HVN.
 
 **C3.** CORVEN có dùng **HVN/LVN** không, hay chỉ dùng **POC / VAH / VAL / VWAP**? (Ghi chú cũ của mình
 là "HVN tuần/ngày + VWAP", nhưng chat mới anh ấy chỉ nói VWAP và TPO, không nhắc chữ HVN.)
 
-> *Trả lời:*
+> *Trả lời:* (suy từ A2/C2) **Chỉ HVN.**
 
 **C4. [KIỂM]** Ghi chú cũ: CORVEN "**không quan tâm lắm**" VAH/VAL/POC **từng phiên Á-Âu-Mỹ**, chỉ dùng
 khung ngày/tuần. Còn đúng không? Nếu đúng thì indicator M30SessionZones vẽ vùng theo từng phiên là
 **đang vẽ thứ anh ấy không dùng**.
 
-> *Trả lời:*
+> *Trả lời:* **"Tất nhiên là không rồi"** — KHÔNG dùng VAH/VAL/POC từng phiên Á-Âu-Mỹ. ⇒ M30SessionZones đang vẽ thứ không dùng.
 
 **C5.** R5 nói "**mỗi phiên một bias, khoá theo phiên**". Với KB-A khung tuần thì có **bias tuần** tương
 tự không? Hay bias vẫn tính theo phiên rồi chỉ dùng để chọn thời điểm vào?
 
-> *Trả lời:*
+> *Trả lời:* (chưa hỏi — không chặn)
 
 ---
 
@@ -114,24 +117,26 @@ tự không? Hay bias vẫn tính theo phiên rồi chỉ dùng để chọn th�
 **D1. [CHẶN cho việc ưu tiên] Trong 3 kịch bản, cái nào ra tiền chính?** Nếu KB-A đóng góp 70% lợi
 nhuận thì mình đang xây sai chỗ hoàn toàn — cả 3 engine hiện tại đều là intraday, không có nhánh tuần.
 
-> *Trả lời:*
+> *Trả lời:* **KB-A (vùng tuần) có winrate CAO NHẤT** — "lệnh canh tuần sẽ winrate cao hơn 2 cách scap
+> kia". ⇒ ưu tiên xây KB-A trước.
 
 **D2.** Con số **WR 65-70%** là từ **nhật ký lệnh thật** hay là cảm nhận/ước lượng? Và tính trên cả 3
 kịch bản gộp hay riêng một nhánh? (Tôi hỏi không phải để bắt lỗi anh ấy — mà vì mình đang lấy số đó
 làm mốc so sánh cho bot, nếu nó là ước lượng thì phải hạ trọng số.)
 
-> *Trả lời:*
+> *Trả lời:* **Bỏ hẳn số của CORVEN** ("80% là tổng của anh ấy, mình ko quan tâm nữa"). Mốc của hệ mình:
+> RR 1:3, WR mục tiêu 40-50%.
 
 **D3.** CORVEN có bao giờ **không giao dịch cả ngày** không, và điều kiện nào thì anh ấy đứng ngoài?
 (Hệ mình chưa có luật "hôm nay không đánh".)
 
-> *Trả lời:*
+> *Trả lời:* (chưa hỏi — không chặn)
 
 **D4.** Anh ấy chạy Sierra Chart trên `GCQ26_FUT_CME`. Đến kỳ đáo hạn thì **đổi mã thế nào**, và có
 đổi cách đọc vùng khi thanh khoản chuyển sang tháng sau không? (Liên quan trực tiếp: GCQ26 vừa qua
 First Notice Day 31/07, data của mình đang xấu dần.)
 
-> *Trả lời:*
+> *Trả lời:* (chưa hỏi — không chặn, nhưng sẽ cần khi chuyển live)
 
 ---
 
@@ -142,4 +147,5 @@ First Notice Day 31/07, data của mình đang xấu dần.)
 làm việc khác nhau: (a) thì tôi phải xây KB-A dù chưa đo được; (b) thì tôi nên bỏ nhánh nào không
 chứng minh được bằng số, bất kể pro trader nói gì.
 
-> *Trả lời:*
+> *Trả lời:* (chưa trả lời trực tiếp, nhưng câu B3 cho thấy nghiêng về **(b)**: bỏ số của CORVEN, tự
+> chốt RR/WR mục tiêu riêng ⇒ dùng hệ CORVEN làm **giả thuyết**, còn quyết định bằng **số đo**.)

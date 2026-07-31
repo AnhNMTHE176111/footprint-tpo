@@ -100,15 +100,20 @@ KB-B. Ánh xạ đúng:
 | **KB-C** scalp follow order flow | **R1** (leg phải do lệnh CHỦ ĐỘNG đẩy, không phải limit kê) · **R3** (loại leg do quét stop) · **R9** (chất lượng nến trong leg) · **W3/W5** ("đừng đánh UT sớm", "đánh break thôi chú") · **R7** (bóp SL 2-4 giá, RR 5-6) |
 | **Xuyên suốt cả 3** | **R5** (mỗi phiên một bias, khoá theo phiên) · **R6** (RR theo entry time) · **C1** (score ~70% checklist, không AND-gate cứng) · **C2** (WR 65-70%) |
 
-**Hai điều mới nhìn ra khi ghép:**
+**Hai điều tôi suy ra khi ghép — CẢ HAI ĐỀU SAI, người học đã đính chính 2026-07-31:**
 
-1. **"Đánh break thôi chú" (W5) và "chạm vùng phản ứng" KHÔNG mâu thuẫn** — chúng thuộc **hai kịch bản
-   khác nhau**. W5 nói trong ngữ cảnh *range M1 của KB-C*: trong range thì đừng mean-revert, chờ break.
-   Còn "chạm vùng phản ứng" là KB-A/KB-B, vùng ở đây là **VWAP/TPO khung ngày-tuần**, không phải biên
-   range M1. Trong RULES.md tôi đã ghi W5 là "nhánh QUAY_DAU đi ngược lời khuyên này" — **cách đọc đó
-   quá rộng**: W5 cấm fade biên range M1, không cấm fade tại VWAP ngày.
-2. **R7 (SL 2-4 giá, RR 5-6) thuộc riêng KB-C**, không phải quy tắc chung. KB-A "hold dài" theo vùng
-   tuần thì SL 2-4 giá là vô nghĩa. Nếu đem R7 áp cho nhánh vùng tuần sẽ bị đá stop liên tục.
+1. ❌ Tôi suy: *"W5 'đánh break thôi' nói về range M1 của KB-C, cấm fade biên range M1, không cấm fade
+   tại VWAP ngày."* → **Sai.** "Break" nghĩa là **phá ra khỏi VÙNG (HVN) rồi chờ HỒI về + có tín hiệu**
+   = break-retest, và nó là **một trong HAI play tại cùng vùng HVN** (play kia là chạm → đảo chiều).
+   Không hề có chuyện "cấm fade".
+2. ❌ Tôi suy: *"R7 SL 2-4 giá chỉ cho KB-C; KB-A hold dài theo vùng tuần thì SL 2-4 giá là vô nghĩa,
+   áp vào sẽ bị đá stop liên tục."* → **Sai, vì tiền đề sai.** KB-A **không** phải swing: nó vào lệnh
+   **trên M1** y như scalp, đóng **trong ngày**, SL neo **giống nhánh scalp chạm vùng**. Khác biệt duy
+   nhất là **vùng thuộc khung tuần** nên tỉ lệ thắng cao hơn.
+
+**Bài học chung của hai lỗi:** tôi lấy chữ "hold dài" và "break" rồi **suy diễn thêm ngữ cảnh không có
+trong nguyên văn** (hold dài → swing đa ngày → SL rộng; break → range M1). Lần sau gặp từ mơ hồ thì
+**hỏi**, đừng dựng ngữ cảnh. Bản chốt đúng: [CORVEN_SPEC_V1.md](CORVEN_SPEC_V1.md).
 
 **Hệ quả về mặt bằng chứng:** vì chỉ có **một** pro trader, sự trùng khớp ở §3 **không phải hai nguồn
 độc lập xác nhận nhau**. Nó là: một hệ thống chủ quan (CORVEN) + một phép đo khách quan (backtest

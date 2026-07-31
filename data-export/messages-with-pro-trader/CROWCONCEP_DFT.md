@@ -4,7 +4,12 @@
 > người học capture 7 ảnh màn hình ngày **2026-07-31**. File này là bản chép + chưng dịch sang dạng **code được**.
 > Ảnh gốc nằm trong chat, **chưa lưu vào repo** — nếu còn file thì bỏ vào `data-export/messages-with-pro-trader/crowconcep-img/`.
 >
-> ⚠️ **Chưa backtest.** Mọi con số/ngưỡng dưới đây là suy ra từ mô tả, chưa đo trên data.
+> ⚠️ **ĐÃ BACKTEST 2026-07-31 — kết quả ÂM.** Xem
+> [research/crow/RESULTS_CROW.md](../../quantower-entry-signal/research/crow/RESULTS_CROW.md).
+> Tóm lại: lõi "chase momentum sau nến phát lực" **âm hơn ngẫu nhiên có ý nghĩa** (−73R/3 tháng, z=−2.39);
+> **X3 DMA làm tệ hơn**; **X5 vị trí bubble không mang thông tin** (bị đối chứng "mức giá ngẫu nhiên trong
+> cùng nến" bác bỏ); X6/X7/X8 đều KILL. Chỉ nhánh **vào NGƯỢC hướng impulse** dương (+22R) nhưng z=+1.14,
+> chết ở phí 3 tick → **chưa ship gì**. Các ngưỡng trong bảng X1–X9 dưới đây vẫn là suy ra từ mô tả video.
 
 ---
 

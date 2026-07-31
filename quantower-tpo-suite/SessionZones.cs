@@ -1,17 +1,19 @@
 // ============================================================================
-//  M30SessionZones  —  Phiên Á/Âu/Mỹ + Vùng cần quan tâm cho QUANTOWER
+//  SessionZones  —  Phiên Á/Âu/Mỹ + Vùng cần quan tâm cho QUANTOWER
 // ============================================================================
-//  Add vào chart M30. Gộp nến 30' thành khối phiên Á/Âu/Mỹ (theo giờ-trong-ngày
-//  + gap tách cuối tuần/bảo trì). Sinh tường thuật "phiên nào làm gì" + gợi ý
-//  "Mỹ ưu tiên gì" (tiếp diễn/phá/đảo/fade), và vẽ VÙNG: naked POC (nam châm),
-//  cụm POC, biên VA phiên, đỉnh/đáy phiên + gợi ý target cho lệnh đang chạy.
+//  Add vào chart bất kỳ (M1, M5, M30...) — TỰ LẤY dữ liệu M30 của cùng symbol
+//  qua Symbol.GetHistory() nếu chart hiện tại không phải M30 (xem ResolveHd()).
+//  Gộp nến 30' thành khối phiên Á/Âu/Mỹ (theo giờ-trong-ngày + gap tách cuối
+//  tuần/bảo trì). Sinh tường thuật "phiên nào làm gì" + gợi ý "Mỹ ưu tiên gì"
+//  (tiếp diễn/phá/đảo/fade), và vẽ VÙNG: naked POC (nam châm), cụm POC, biên VA
+//  phiên, đỉnh/đáy phiên + gợi ý target cho lệnh đang chạy.
 //
 //  Giờ phiên = phút-trong-ngày, giờ local = bar.TimeLeft + TzOffset (giả định
 //  TimeLeft là UTC; nếu feed trả local, đặt TzOffset=0). Mặc định VN (+7):
 //  Á 05:00–12:30, Âu 12:30–19:00, Mỹ 19:00–04:00. Cần Volume Analysis.
 //  Build: concat ProfileEngine.cs + file này. Chi tiết: PLAN.md.
 // ============================================================================
-namespace M30SessionZones
+namespace SessionZonesNs
 {
     using System;
     using System.Collections.Generic;
@@ -21,7 +23,7 @@ namespace M30SessionZones
     using TradingPlatform.BusinessLayer;
     using TpoSuite;
 
-    public class M30SessionZones : Indicator, IVolumeAnalysisIndicator
+    public class SessionZones : Indicator, IVolumeAnalysisIndicator
     {
         // ---------- giờ phiên (phút trong ngày, giờ local) ----------
         [InputParameter("Lệch giờ (bar.TimeLeft UTC → local)", 10, -12, 14, 1, 0)]
@@ -108,23 +110,69 @@ namespace M30SessionZones
         private readonly PanelDrag _drag = new();   // kéo-thả bảng bằng chuột
         private readonly TeleReport _tele = new();  // gửi tổng hợp lên Telegram
 
-        public M30SessionZones() : base()
+        // ---- Tự nhận diện timeframe chart: nếu KHÔNG phải M30, tự lấy history
+        // M30 phụ của cùng symbol qua Symbol.GetHistory() thay vì bắt người dùng
+        // add đúng chart M30 (dễ nhầm khi muốn xem vùng trên chart M1 để vào lệnh).
+        private HistoricalData _hd30;         // history M30 dùng để tính — của chart chính hoặc phụ
+        private bool _ownHd30;                // true nếu _hd30 là history PHỤ (tự lấy, phải tự Dispose)
+        private static readonly Period Period30 = new Period(BasePeriod.Minute, 30);
+
+        public SessionZones() : base()
         {
-            Name = "M30 Session Zones";
-            Description = "Gộp phiên Á/Âu/Mỹ + tường thuật + gợi ý bias Mỹ + vẽ vùng (naked POC, cụm POC, biên VA). Cần Volume Analysis. Add vào chart M30.";
+            Name = "Session Zones";
+            Description = "Gộp phiên Á/Âu/Mỹ + tường thuật + gợi ý bias Mỹ + vẽ vùng (naked POC, cụm POC, biên VA, HVN/LVN). Cần Volume Analysis. Add vào chart bất kỳ — tự lấy dữ liệu M30.";
             SeparateWindow = false;
         }
 
         public bool IsRequirePriceLevelsCalculation => true;
-        public void VolumeAnalysisData_Loaded() { lock (_calc) { _vaLoaded = true; } Process(); }
-        protected override void OnClear() { _drag.Detach(); lock (_calc) { _vaLoaded = false; lock (_sync) _render = null; } }
+
+        protected override void OnInit()
+        {
+            base.OnInit();
+            bool isM30 = HistoricalData?.Aggregation is HistoryAggregationTime t && t.Period.Equals(Period30);
+            if (isM30)
+            {
+                _hd30 = HistoricalData;
+                _ownHd30 = false;
+            }
+            else
+            {
+                var srcAgg = HistoricalData?.Aggregation as HistoryAggregationTime;
+                var histType = srcAgg?.HistoryType ?? HistoryType.Last;
+                _hd30 = Symbol.GetHistory(Period30, histType, DateTime.UtcNow.AddDays(-45));
+                _ownHd30 = true;
+                _hd30.NewHistoryItem += OnHd30NewBar;
+                var prog = _hd30.CalculateVolumeProfile(new VolumeAnalysisCalculationParameters { CalculatePriceLevels = true });
+                if (prog != null) prog.StateChanged += OnVaStateChanged; else { lock (_calc) _vaLoaded = true; }
+            }
+        }
+
+        private void OnVaStateChanged(object sender, VolumeAnalysisTaskEventArgs e)
+        {
+            if (e?.CalculationState != VolumeAnalysisCalculationState.Finished) return;
+            lock (_calc) _vaLoaded = true;
+            Process();
+        }
+
+        private void OnHd30NewBar(object sender, HistoryEventArgs e) => Process();
+
+        public void VolumeAnalysisData_Loaded() { if (!_ownHd30) { lock (_calc) { _vaLoaded = true; } Process(); } }
+        protected override void OnClear()
+        {
+            _drag.Detach();
+            if (_ownHd30 && _hd30 != null) { _hd30.NewHistoryItem -= OnHd30NewBar; _hd30.Dispose(); }
+            lock (_calc) { _vaLoaded = false; lock (_sync) _render = null; }
+        }
         protected override void OnUpdate(UpdateArgs args)
         {
             ConfigTele();
             _tele.PollTest(Symbol?.Name);        // nút gửi thử: xử lý ngay, không đợi VA
             if (!_vaLoaded) return;
-            var p = HistoricalData.VolumeAnalysisCalculationProgress;
-            if (p == null || p.State != VolumeAnalysisCalculationState.Finished) return;
+            if (!_ownHd30)
+            {
+                var p = HistoricalData.VolumeAnalysisCalculationProgress;
+                if (p == null || p.State != VolumeAnalysisCalculationState.Finished) return;
+            }
             Process();
         }
 
@@ -146,7 +194,8 @@ namespace M30SessionZones
                 double tick = Symbol?.TickSize ?? 0;
                 if (tick <= 0) return;
                 _digits = Math.Max(0, (int)Math.Round(-Math.Log10(tick)));
-                var hd = HistoricalData;
+                var hd = _hd30;
+                if (hd == null) return;
                 int n = hd.Count; if (n == 0) return;
                 double rowStep = tick * Math.Max(1, RowTicks);
 

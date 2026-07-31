@@ -3,7 +3,7 @@
 # Moi `using` trong cac file nam BEN TRONG namespace -> noi file hop le.
 #   Usage: ./build-tpo.sh            (build ca 2)
 #          ./build-tpo.sh daily      (chi DailyTpoBias)
-#          ./build-tpo.sh m30        (chi M30SessionZones)
+#          ./build-tpo.sh zones      (chi SessionZones)
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ENGINE="$HERE/ProfileEngine.cs"
@@ -23,8 +23,8 @@ build_one() {
 
 case "${1:-all}" in
   daily) build_one "$HERE/DailyTpoBias.cs" DailyTpoBias ;;
-  m30)   build_one "$HERE/M30SessionZones.cs" M30SessionZones ;;
+  zones) build_one "$HERE/SessionZones.cs" SessionZones ;;
   *)     build_one "$HERE/DailyTpoBias.cs" DailyTpoBias
-         build_one "$HERE/M30SessionZones.cs" M30SessionZones ;;
+         build_one "$HERE/SessionZones.cs" SessionZones ;;
 esac
 rm -rf "$TMP"

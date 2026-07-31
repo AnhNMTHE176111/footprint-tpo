@@ -73,12 +73,13 @@ Dùng lại nguyên trạng, **không sửa**: `v7/loaders.py`, `v7/report.py` (
 
 ## §2. BỐN CHẶN phải xử lý TRƯỚC khi đo (không làm là mọi số vô nghĩa)
 
-### 2.1 🔴 `volfloor` look-ahead — AUDIT A = FAIL, **vẫn chưa sửa**
-`volfloor` hiện là **percentile-30 của TOÀN BỘ dữ liệu ≥2026-05** → mỗi lệnh tháng 5 đang dùng thông tin
-tháng 7. Mọi con số baseline đều nhiễm lỗi này.
-**Sửa:** đổi sang **rolling causal** — percentile-30 của N ngày **trước** nến đang xét (đề xuất N=20).
-**Điểm dừng:** chạy lại GOLDEN KB1+KB2 với volfloor causal → **ghi lại BASELINE mới**. Nếu số tụt nhiều
-thì đó là số thật, và mọi so sánh sau này phải so với số mới, không so với +47R/+10.5R cũ.
+### 2.1 ✅ `volfloor` look-ahead — ĐÃ SỬA (phiên 2026-07-29, trước cả khi viết plan này)
+Ghi chú P0 lúc lập plan bị lỗi thời: đã kiểm lại 2026-07-31, `BASELINE.md` §8 ghi rõ việc này **XONG** —
+`VOLFLOOR_FROZEN=20.0` (khớp hằng số cứng trong `RunnerSignal.cs`, không look-ahead), 2 nơi gọi trong
+`v7/run_kb12.py` / `v7/run_kb3.py` đã chuyển sang dùng hằng này thay vì `calc_volfloor()` percentile-30
+nhìn trước. Chạy lại `run_kb12.py` hôm nay xác nhận: **GOLDEN OK**, KB1 vẫn `n=33 WR=48.5% EV=+1.424
+MDD=3R`, KB2 vẫn `n=27 EV=+0.389` — khớp tuyệt đối BASELINE, không đổi số. ⇒ **P0 coi như đã xong, không
+cần làm lại.** Mốc so ở §6.1 vẫn dùng nguyên, không cần đo lại BASELINE mới.
 
 ### 2.2 🟠 RR 1:3 cho PLAY1 xung đột với số đã đo
 Người học chốt **RR 1:3 cho mọi kịch bản**. Nhưng repo đã đo **MFE trần của lệnh đảo chiều ≈ 1.3R**
@@ -178,7 +179,7 @@ Mỗi pha: chạy → in bảng (dùng `report.line`) → **dừng, báo ngườ
 
 | Pha | Việc | Đầu ra | Cổng để đi tiếp |
 |---|---|---|---|
-| **P0** | Sửa `volfloor` causal (§2.1); tái lập GOLDEN KB1+KB2 | BASELINE mới | GOLDEN khớp từng lệnh với bản cũ **khi tắt** sửa; số mới ghi rõ |
+| **P0** | ✅ **Đã xong trước plan này** (§2.1) — chỉ xác nhận lại GOLDEN | GOLDEN OK, số khớp BASELINE cũ | (đã qua) |
 | **P1** | `zones_corven.py` + in 13 mốc tuần + đếm vùng/tuần | Bảng vùng + ảnh chart để mắt kiểm | Mốc tuần đúng bằng mắt; HVN tuần trông hợp lý trên chart |
 | **P2** | **Probe MFE** cho PLAY1 tại HVN (§2.2) | Phân phối MFE theo R | `P(MFE≥3R)` ≥35% → RR3; <20% → báo lại, chờ quyết |
 | **P3** | KB-A: PLAY1 + PLAY2 tại vùng tuần, `ConfirmOn` A/B, `W_CLOSED` vs `W_RUNNING` | Bảng n/WR/EV/MDD + partition | §6 PASS/KILL |
@@ -196,7 +197,7 @@ Mỗi pha: chạy → in bảng (dùng `report.line`) → **dừng, báo ngườ
 
 ### 6.1 Mốc so
 KB1 @RR4: n=33 WR 48.5% EV +1.424 MDD 3R · KB2 @RR1.5: n=27 WR 55.6% EV +0.389 MDD 5R
-([BASELINE.md](research/wyckoff/BASELINE.md)) — ⚠ cả hai **sẽ phải đo lại** sau P0.
+([BASELINE.md](research/wyckoff/BASELINE.md)) — ✅ đã xác nhận lại 2026-07-31 sau P0, không đổi số.
 Mục tiêu người học chốt: **WR 40-50% @ RR3** ⇒ EV thiết kê **+0.60 … +1.00R**. Hoà vốn tại RR3 = **25%**.
 
 ### 6.2 Ngưỡng mỗi nhánh

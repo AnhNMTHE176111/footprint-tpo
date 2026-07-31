@@ -62,6 +62,12 @@ namespace SessionZonesNs
         // ---- D5: trần số vùng hiển thị — tài liệu khuyến nghị 3-5 vùng/chart ----
         [InputParameter("Số vùng tối đa hiển thị", 29, 3, 12, 1, 0)]
         public int MaxZones { get; set; } = 5;
+        // HVN tuần: dùng lại nguyên tuần CME đã ĐÓNG (Sun mở -> T6 đóng), không phải
+        // cửa sổ trượt ZoneLookbackSessions — CORVEN chốt "neo đầu tuần, 1 lần/tuần"
+        // (CAU_HOI_CAN_THONG_NHAT.md §A1). Ranh giới tuần = khoảng trống > ngưỡng này
+        // giữa 2 nến M30 liên tiếp (cuối tuần CME nghỉ ~46h).
+        [InputParameter("Gap tách TUẦN cho HVN tuần (giờ)", 34, 20, 60, 1, 0)]
+        public int WeekGapHours { get; set; } = 30;
 
         // ---------- hiển thị ----------
         [InputParameter("Hiện bảng phiên", 30)]
@@ -245,8 +251,13 @@ namespace SessionZonesNs
                 //  KHÔNG canh lệnh — trader pro: "k quan tâm lắm"). LVN riêng vì
                 //  khác loại (chỗ tránh kỳ vọng phản ứng, không phải vùng vào lệnh).
                 var zones = FindZones(hd, blocks, tick, rowStep, nowPrice);
-                var canhLenh = zones.Where(z => z.Type != "lvn" && z.Type != "va_edge" && z.Type != "priorhl").ToList();
-                var boiCanh = zones.Where(z => z.Type == "va_edge" || z.Type == "priorhl").ToList();
+                // CORVEN chốt "CHỈ quan tâm HVN thôi. Không dùng POC/VAH/VAL của tuần"
+                // (CAU_HOI_CAN_THONG_NHAT.md §A2/§C3) → naked POC/cụm POC/băng giá trị/
+                // biên VA/đỉnh-đáy phiên đều lùi về bối cảnh, TRỪ KHI đã hợp lưu (merge)
+                // với một HVN — khi đó z.Label còn giữ chữ "HVN" sau MergeZones.
+                bool IsHvn(Zone z) => z.Label.Contains("HVN");
+                var canhLenh = zones.Where(z => z.Type != "lvn" && IsHvn(z)).ToList();
+                var boiCanh = zones.Where(z => z.Type != "lvn" && !IsHvn(z)).ToList();
                 var lvnList = zones.Where(z => z.Type == "lvn").ToList();
                 if (canhLenh.Count > 0)
                 {
@@ -419,9 +430,21 @@ namespace SessionZonesNs
             SortedDictionary<double, double> wkRows = null, dyRows = null;
             if ((ShowHvn || ShowLvn) && completed.Count > 0)
             {
-                // "tuần" = toàn bộ phiên đang xét; "ngày" = các phiên trong 24h cuối
-                wkRows = ProfileEngine.RowsOver(hd, blocks[startBlk].from,
-                                                blocks[blocks.Count - 2].to, rowStep, UseVolume);
+                // "tuần" = TUẦN CME ĐÃ ĐÓNG gần nhất (không phải ZoneLookbackSessions
+                // trượt) — xem WeekGapHours ở trên. Cần ít nhất 2 tuần trong hd mới có
+                // 1 tuần đã đóng để dùng; nếu chưa đủ thì tạm dùng tuần đang chạy.
+                var weekSpans = WeekSpans(hd, WeekGapHours);
+                if (weekSpans.Count >= 2)
+                {
+                    var pw = weekSpans[weekSpans.Count - 2];
+                    wkRows = ProfileEngine.RowsOver(hd, pw.fr, pw.to, rowStep, UseVolume);
+                }
+                else if (weekSpans.Count == 1)
+                {
+                    var pw = weekSpans[0];
+                    wkRows = ProfileEngine.RowsOver(hd, pw.fr, pw.to, rowStep, UseVolume);
+                }
+                // "ngày" = 24h cuối (xấp xỉ ngày đang phát triển)
                 var dayStart = completed[completed.Count - 1].End.AddHours(-24);
                 int dFrom = -1;
                 for (int i = startBlk; i < blocks.Count - 1; i++)
@@ -500,6 +523,23 @@ namespace SessionZonesNs
             // (đã giới hạn MaxLvn ở trên), nhưng vẫn áp lọc tầm với.
             zones.AddRange(lvnZones.Where(z => Math.Abs(z.Center - nowPrice) <= radius));
             return zones.OrderByDescending(z => z.Strength).ToList();
+        }
+
+        // Ranh giới TUẦN trong hd (M30): khoảng trống > gapHours giữa 2 nến liên tiếp
+        // (cuối tuần CME đóng T6 tối -> mở lại CN tối, ~46h). Span cuối = tuần ĐANG
+        // CHẠY; span áp chót = tuần ĐÃ ĐÓNG gần nhất, dùng làm nguồn HVN tuần.
+        private static List<(int fr, int to)> WeekSpans(HistoricalData hd, double gapHours)
+        {
+            var spans = new List<(int fr, int to)>();
+            int n = hd.Count, fr = 0; DateTime prev = DateTime.MinValue; bool have = false;
+            for (int i = 0; i < n; i++)
+            {
+                if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b) continue;
+                if (have && (b.TimeLeft - prev).TotalHours > gapHours) { spans.Add((fr, i - 1)); fr = i; }
+                prev = b.TimeLeft; have = true;
+            }
+            if (have) spans.Add((fr, n - 1));
+            return spans;
         }
 
         // Xếp theo điểm, đảm bảo tối thiểu 2 vùng mỗi phía (nếu có đủ), rồi cắt còn cap.

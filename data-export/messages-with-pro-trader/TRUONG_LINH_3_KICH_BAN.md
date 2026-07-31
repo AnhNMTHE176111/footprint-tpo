@@ -1,9 +1,16 @@
-# Khung 3 kịch bản của pro trader "Trương Linh" (Messenger, 2026-07-31)
+# Khung 3 kịch bản của CORVEN (Messenger "Trương Linh", 2026-07-31)
 
 > **Nguồn:** 3 ảnh chat Messenger người học gửi ngày 2026-07-31 (13:30 → 13:43).
-> Pro trader thứ **hai** trong repo — khác CORVEN ([TRANSCRIPT.md](TRANSCRIPT.md) / [RULES.md](RULES.md)).
-> CORVEN cho **chi tiết vi mô** (order flow từng mức giá, SL, RR). Trương Linh cho **KHUNG XƯƠNG**:
-> hệ thống chia làm mấy kịch bản và mỗi kịch bản neo vào khung thời gian nào.
+>
+> ⚠️ **"Trương Linh" = tên Messenger của CORVEN — CÙNG MỘT NGƯỜI** với pro trader trong
+> [TRANSCRIPT.md](TRANSCRIPT.md) / [RULES.md](RULES.md) (người học xác nhận 2026-07-31).
+> Repo chỉ có **MỘT** pro trader, không phải hai. Không được coi hai file này là hai nguồn độc lập
+> xác nhận lẫn nhau.
+>
+> Vai trò của file này: TRANSCRIPT/RULES cho **chi tiết vi mô** (order flow từng mức giá, SL, RR, bias
+> phiên); file này cho **KHUNG XƯƠNG** còn thiếu — hệ chia làm mấy kịch bản và mỗi kịch bản neo vào
+> khung thời gian nào. Hai file **ghép lại thành một hệ duy nhất** (xem §3b).
+>
 > Người học gọi là "chú", tự xưng "t". Ảnh gốc chưa lưu vào repo — nội dung đã trích đủ ở dưới.
 
 ---
@@ -12,7 +19,7 @@
 
 **Người học hỏi:** "Hệ thống của chú có mấy kịch bản trade thế / Chạm vùng phản ứng đánh — Phá vùng rồi hồi đánh"
 
-**Trương Linh:**
+**CORVEN:**
 > "Có 2"
 > "Một là **chạm vùng lớn có thể hold dài**"
 > "2 là **scap**"
@@ -23,7 +30,7 @@
 
 **Người học:** "Vùng phản ứng là vùng lớn hoặc vwap à chú" · "Đánh kiểu này là sẽ như nào chú, thuần bóng nổ à"
 
-**Trương Linh:** "**Vwap tuần**" · "**Có chơi đc**" · "**Vwap ngày scap**" ·
+**CORVEN:** "**Vwap tuần**" · "**Có chơi đc**" · "**Vwap ngày scap**" ·
 > "**Tpo ngày thì hơi nhỏ nên t nhìn hẳn tuần cho bao quát**"
 
 **Người học chốt lại (được xác nhận):**
@@ -33,7 +40,7 @@
 >   + chạm **vwap, tpo ngày** canh phản ứng
 >   + **follow theo footprint, ko cản tàu**"
 
-**Trương Linh:** "**Uh**" · "**Đúng r**" ✅
+**CORVEN:** "**Uh**" · "**Đúng r**" ✅
 
 ---
 
@@ -79,6 +86,34 @@ Khung này **trùng với kết quả backtest thật**, không phải trùng c�
 đánh ~1 lệnh/ngày — thiếu hẳn **KB-C (follow order flow)**, nhánh sinh ra phần lớn số lệnh đó.
 
 ---
+
+## 3b. GHÉP với RULES.md — một hệ duy nhất, giờ mới thấy đủ hình
+
+Vì cùng một người, các luật rời trong [RULES.md](RULES.md) phải **gắn vào đúng kịch bản** mới hiểu
+được. Trước đây ta đọc chúng như một danh sách phẳng nên bị lẫn: có luật thuộc KB-C lại đem áp cho
+KB-B. Ánh xạ đúng:
+
+| Kịch bản | Các luật RULES.md thuộc về nó |
+|---|---|
+| **KB-A** vùng tuần → hold dài | **Chưa có luật nào.** Cả TRANSCRIPT 36 ảnh không nói về nhánh này → đây là **vùng tối** lớn nhất trong hiểu biết hiện tại về hệ của CORVEN |
+| **KB-B** scalp phản ứng VWAP/TPO ngày | **R2** (buy-limit ở *chân* sóng thì ngon, ở đỉnh là lỏ) · **R10** (vol thấp KHÔNG phải tín hiệu đảo; chỉ fade khi có cây từ chối CÓ volume) · **R8** (chờ xác nhận M5/M1) |
+| **KB-C** scalp follow order flow | **R1** (leg phải do lệnh CHỦ ĐỘNG đẩy, không phải limit kê) · **R3** (loại leg do quét stop) · **R9** (chất lượng nến trong leg) · **W3/W5** ("đừng đánh UT sớm", "đánh break thôi chú") · **R7** (bóp SL 2-4 giá, RR 5-6) |
+| **Xuyên suốt cả 3** | **R5** (mỗi phiên một bias, khoá theo phiên) · **R6** (RR theo entry time) · **C1** (score ~70% checklist, không AND-gate cứng) · **C2** (WR 65-70%) |
+
+**Hai điều mới nhìn ra khi ghép:**
+
+1. **"Đánh break thôi chú" (W5) và "chạm vùng phản ứng" KHÔNG mâu thuẫn** — chúng thuộc **hai kịch bản
+   khác nhau**. W5 nói trong ngữ cảnh *range M1 của KB-C*: trong range thì đừng mean-revert, chờ break.
+   Còn "chạm vùng phản ứng" là KB-A/KB-B, vùng ở đây là **VWAP/TPO khung ngày-tuần**, không phải biên
+   range M1. Trong RULES.md tôi đã ghi W5 là "nhánh QUAY_DAU đi ngược lời khuyên này" — **cách đọc đó
+   quá rộng**: W5 cấm fade biên range M1, không cấm fade tại VWAP ngày.
+2. **R7 (SL 2-4 giá, RR 5-6) thuộc riêng KB-C**, không phải quy tắc chung. KB-A "hold dài" theo vùng
+   tuần thì SL 2-4 giá là vô nghĩa. Nếu đem R7 áp cho nhánh vùng tuần sẽ bị đá stop liên tục.
+
+**Hệ quả về mặt bằng chứng:** vì chỉ có **một** pro trader, sự trùng khớp ở §3 **không phải hai nguồn
+độc lập xác nhận nhau**. Nó là: một hệ thống chủ quan (CORVEN) + một phép đo khách quan (backtest
+trong repo) cho cùng kết luận. Vẫn có giá trị, nhưng yếu hơn hai nguồn độc lập, và backtest vẫn
+100% in-sample trên một cửa sổ 3 tháng.
 
 ## 4. Ánh xạ sang 3 engine đang có
 

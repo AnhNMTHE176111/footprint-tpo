@@ -1,5 +1,11 @@
 # Luật giao dịch chưng cất từ CORVEN → dạng CÓ THỂ CODE
 
+> ⚠️ **ĐỌC KÈM [TRUONG_LINH_3_KICH_BAN.md](TRUONG_LINH_3_KICH_BAN.md)** — CORVEN chạy **3 kịch bản**
+> (vùng tuần→hold dài / scalp VWAP-TPO ngày / scalp follow order flow). Bảng dưới là danh sách **phẳng**;
+> mỗi luật thực ra chỉ thuộc MỘT kịch bản. Áp luật của kịch bản này sang kịch bản khác là sai
+> (vd R7 "SL 2-4 giá" chỉ dành cho nhánh scalp, không dành cho nhánh hold dài theo vùng tuần).
+> Ánh xạ luật → kịch bản: xem §3b file đó. ("Trương Linh" trên Messenger = CORVEN, cùng một người.)
+>
 > Nguồn: [TRANSCRIPT.md](TRANSCRIPT.md). Mỗi luật ghi rõ **nguyên văn** → **cơ chế** → **feature code được**.
 > Cột "data" = có backtest offline được không với data hiện có.
 > `perlevel_m1_clean.pkl` + `sample.csv` (2026-06-01 → 07-27) CÓ bid/ask từng mức giá + `max_one_trade` → test được lớp footprint.
@@ -20,7 +26,7 @@
 | W2 | "Biên của chú **to thế** =))" (TR 15 giá) | TR chuẩn của CORVEN nhỏ hơn nhiều | Giữ `RangeMaxPts` hẹp (hiện 7.5) — **xác nhận đúng hướng** | ✅ |
 | W3 | "**đừng đánh UT sớm**"; "**Sang D chú mới đánh thì đc**" | Không đánh cú phá đầu tiên (UT/spring = Phase C = bẫy). Chỉ đánh khi đã sang Phase D (LPS/LPSY) | **`phase_c_then_d`**: bắt buộc có **1 lần phá HỤT** cạnh đối diện *trong range* trước, rồi mới nhận break + retest | ✅ |
 | W4 | "**k cần nhãn nhiếc đâu. Xác định range thôi là đc. Rồi nhìn phân tích vol trong range**" | Bỏ gán nhãn Wyckoff; chỉ cần range + phân tích volume trong range | **`range_vol_profile`**: so Σvolume nửa trên vs nửa dưới range + delta tại 2 cạnh → bias tích luỹ/phân phối | ✅ per-level |
-| W5 | "**Đánh break thôi chú**"; "SL 5 giá ổn" | Chỉ giao dịch breakout của range (không mean-revert trong range) | Nhánh CBR = đúng hướng; **nhánh QUAY_DAU (fade tại VWAP) đi ngược lời khuyên này** → cần đo lại riêng | ✅ |
+| W5 | "**Đánh break thôi chú**"; "SL 5 giá ổn" | Chỉ giao dịch breakout của range (không mean-revert trong range) | Nhánh CBR = đúng hướng. ⚠️ **SỬA 2026-07-31:** trước đây ghi "nhánh QUAY_DAU (fade tại VWAP) đi ngược lời khuyên này" — **đọc quá rộng**. W5 nói về *range M1 của kịch bản scalp follow order flow*, cấm fade **biên range M1**; nó KHÔNG cấm fade tại **VWAP/TPO khung ngày** — đó là kịch bản khác trong cùng hệ CORVEN. Xem [TRUONG_LINH_3_KICH_BAN.md](TRUONG_LINH_3_KICH_BAN.md) §3b | ✅ |
 | C1 | "**pass tầm 70% checklist thì vào**" (Benzo) — "**Hợp lý đấy chú**" (CORVEN) | Không phải AND-gate cứng; là **điểm số** | Đổi kiến trúc: **score có trọng số, ngưỡng ~70%** thay cho chuỗi AND | ✅ |
 | C2 | "WR **65–70%**", "RR theo entrytime, có khi **1:5, 1:6**", "SL dài thì **ít lệnh RR cao**" | Mục tiêu hệ: WR trung bình + đuôi phải dài | Không tối ưu WR đơn lẻ; tối ưu **tổng R** với SL chặt + RR cao | ✅ |
 | C3 | "**nhồi hay quét vl** / vào một phát to mẹ luôn" | Bỏ nhồi lệnh (pyramiding) | Không thêm nhồi lệnh vào v6 | — |

@@ -273,7 +273,12 @@ namespace EntrySignal
         }
 
         public bool IsRequirePriceLevelsCalculation => true;
-        public void VolumeAnalysisData_Loaded() { lock (_calc) { _vaLoaded = true; _lastN = -1; } Process(); }
+        public void VolumeAnalysisData_Loaded()
+        {
+            lock (_calc) { _vaLoaded = true; _lastN = -1; }
+            try { Process(); }
+            catch (Exception ex) { LogErr(ex, "VolumeAnalysisData_Loaded/Process"); }
+        }
         protected override void OnClear()
         {
             _drag.Detach();

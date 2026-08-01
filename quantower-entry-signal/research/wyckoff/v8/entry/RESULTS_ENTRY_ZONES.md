@@ -172,3 +172,26 @@ phí 2 tick, và đối chứng ngẫu nhiên không đạt ngưỡng để nói
 nhân gốc không phải "định nghĩa vùng sai" mà là **pool CORVEN quá thưa** cho state-machine hiện tại
 (chỉ 4 loại vùng, vùng ngày trung bình 0.6/ngày) — nếu muốn cứu ý tưởng này, việc cần làm trước là dựng
 lại chính state-machine PLAY1/PLAY2 cho phù hợp mật độ vùng mới, không phải chỉnh tham số gate.
+
+## 10. Thí nghiệm 2 (2026-08-01): GIỮ pool cũ + CỘNG THÊM HVN/VWAP tuần-ngày (không thay thế)
+
+Câu hỏi khác: không thay pool cũ, chỉ **cộng thêm** 4 vùng CORVEN (HVN tuần, HVN ngày, VWAP tuần,
+VWAP ngày) vào pool cũ (session POC/VAH/VAL/Đỉnh/Đáy + D-1 + VWAP phiên), giữ NGUYÊN toàn bộ config
+đang ship (MinConfluence=2, RR=1.5, KB2-climax, extend TP2...). Code: `run_union.py` +
+`harness_union.py` (đọc: `python3 harness_union.py`).
+
+| | TRƯỚC (pool cũ) | UNION (cũ + CORVEN) | Δ |
+|---|---:|---:|---|
+| n lệnh | 129 | 165 | +36 |
+| WR % | 43.4% | 41.2% | −2.2đ |
+| Tổng R | +11.0R | +5.0R | −6.0R |
+| EV/lệnh | +0.085 | +0.030 | −0.055 |
+| LONG n/WR/EV | 61/39.3%/−0.016 | 83/33.7%/−0.157 | LONG âm sâu hơn hẳn |
+| SHORT n/WR/EV | 68/47.1%/+0.176 | 82/48.8%/+0.220 | SHORT nhỉnh hơn |
+
+**Kết luận: KHÔNG tăng — n nhiều hơn (+28%) nhưng winrate và tổng R đều giảm.** Vùng CORVEN cộng
+thêm làm hợp lưu (MinConfluence>=2) dễ đạt hơn (4232 vùng tĩnh thay vì 3675 + có thêm 2 VWAP động),
+nên lọt qua nhiều lệnh LONG chất lượng thấp hơn (LONG kéo cả rổ xuống: EV −0.016 → −0.157); SHORT thì
+có lợi (EV +0.176 → +0.220) nhưng không đủ bù. Chưa chạy đối chứng ngẫu nhiên/quét phí cho nhánh này
+(không phải trọng tâm câu hỏi lần này) — nếu cần kết luận PASS/KILL chính thức phải chạy P4/P5 như
+mục 4-5. Không sửa `EntrySignal.cs` (không có cải thiện rõ để port).

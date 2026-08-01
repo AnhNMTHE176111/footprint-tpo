@@ -253,6 +253,28 @@ namespace WyckoffRunner
         [InputParameter("Warm-up sau gap (số nến)", 71, 0, 60, 1, 0)]
         public int WarmupBars { get; set; } = 20;
 
+        // ---------- SƠ ĐỒ WYCKOFF (Range + Phase A-E + sự kiện SC/AR/ST/Spring/SOS/LPS...) ----------
+        // Tu dong nhan dien Trading Range (tich luy/phan phoi) + Phase A-E + su kien chuan Wyckoff
+        // (PS/SC/AR/ST/Spring/Shakeout/Test/SOS/LPS cho tich luy; PSY/BCLX/AR/ST/UT/UTAD/SOW/LPSY cho
+        // phan phoi). CHI hien thi/giao duc — KHONG gate bat ky tin hieu CBR/QUAY DAU nao o tren.
+        // Nguon quy tac: data-export/wyckoff/THEORY.md (dinh nghia goc) + CHART_CASES.md (9 loi gan
+        // nhan hay gap tu bai chua hoc vien that, dung lam rang buoc thiet ke — vd Spring BAT BUOC la
+        // day THAP NHAT toan bo Trading Range, SOS/SOW phai pha canh TUYET DOI cua range chu khong phai
+        // dinh cuc bo, ranh gioi Phase neo theo GIA DONG). Prototype + kiem tra truc quan tren du lieu
+        // that: research/wyckoff/v8/wyckoff/wyckoff_schematic.py + render_schematic_preview.py.
+        // ⚠ Day la HEURISTIC (nguong CLIMAX_RANGE_MULT/ST_TOL_TICKS/... tu dat, tai lieu goc khong cho
+        // so) — dung de HOC/doi chieu chart, KHONG dung lam gate vao lenh (giong bai hoc W3 da bi bac bo).
+        [InputParameter("Wyckoff: hiện sơ đồ Range + Phase A-E + sự kiện", 150)]
+        public bool ShowWyckoffSchematic { get; set; } = true;
+        [InputParameter("Wyckoff: số Range gần nhất hiển thị", 151, 1, 20, 1, 0)]
+        public int WyckoffMaxRanges { get; set; } = 6;
+        [InputParameter("Wyckoff: màu Range Tích luỹ", 152)]
+        public Color WyAccColor { get; set; } = Color.FromArgb(0x4C, 0xAF, 0x50);
+        [InputParameter("Wyckoff: màu Range Phân phối", 153)]
+        public Color WyDistColor { get; set; } = Color.FromArgb(0xE5, 0x39, 0x35);
+        [InputParameter("Wyckoff: màu vạch chia Phase", 154)]
+        public Color WyPhaseColor { get; set; } = Color.FromArgb(150, 150, 220);
+
         // ---------- hiển thị ----------
         [InputParameter("Hiện tín hiệu", 80)]
         public bool ShowSignals { get; set; } = true;
@@ -483,6 +505,30 @@ namespace WyckoffRunner
             public DateTime OutTime;
         }
 
+        // ================= SƠ ĐỒ WYCKOFF — kiểu dữ liệu (xem input ShowWyckoffSchematic) =================
+        // Noi bo (dung Idx de tinh toan trong ScanWyckoff — B la ephemeral, khong luu giua cac lan Process)
+        private sealed class WyEvent { public int Idx; public string Label; public double Price; }
+        private sealed class WyPhaseSeg { public char Phase; public int StartIdx; public int EndIdx = -1; }
+        private sealed class WyRange
+        {
+            public int StartIdx; public int EndIdx = -1;   // -1 = dang chay (active)
+            public bool Acc;                                // true=Tich luy, false=Phan phoi
+            public double Low, High;
+            public string State = "A";                       // A|B|D (C la tuc thoi, khong luu rieng)
+            public bool Completed;
+            public List<WyEvent> Events = new();
+            public List<WyPhaseSeg> Phases = new();
+        }
+        // Render DTO (B[idx].Time/gia da chot san — dung duoc trong OnPaintChart du B khac lan)
+        private sealed class WyEventR { public DateTime Time; public double Price; public string Label; }
+        private sealed class WyPhaseSegR { public char Phase; public DateTime StartTime; public DateTime EndTime; }
+        private sealed class WyRangeR
+        {
+            public DateTime StartTime, EndTime; public bool Acc; public double Low, High;
+            public List<WyEventR> Events = new();
+            public List<WyPhaseSegR> Phases = new();
+        }
+
         private void Process()
         {
             lock (_calc)
@@ -515,7 +561,16 @@ namespace WyckoffRunner
                     double now = B[B.Count - 1].C;
                     var clusters = CurrentClusters(pool, B[B.Count - 1].Time, now);
 
-                    lock (_sync) _render = new RenderState { Sigs = show, Clusters = clusters, Panel = BuildPanel(show), Digits = _digits };
+                    List<WyRangeR> wyRanges = null;
+                    if (ShowWyckoffSchematic)
+                    {
+                        var wyRaw = ScanWyckoff(B);
+                        wyRaw.Sort((x, y) => x.StartIdx.CompareTo(y.StartIdx));
+                        if (wyRaw.Count > WyckoffMaxRanges) wyRaw = wyRaw.GetRange(wyRaw.Count - WyckoffMaxRanges, WyckoffMaxRanges);
+                        wyRanges = wyRaw.Select(x => WyToRender(B, x)).ToList();
+                    }
+
+                    lock (_sync) _render = new RenderState { Sigs = show, Clusters = clusters, Panel = BuildPanel(show), Digits = _digits, WyRanges = wyRanges };
                     _lastN = n;
                 }
                 catch { /* giữ indicator sống */ }
@@ -919,6 +974,277 @@ namespace WyckoffRunner
             if (!double.IsNaN(s.BlockR)) s.Why.Add($"TP vướng vùng ↧{s.BlockR:0.0}R");
         }
 
+        // ================= SƠ ĐỒ WYCKOFF — engine nhận diện (khớp research/wyckoff/v8/wyckoff/
+        // wyckoff_schematic.py — Python chạy TRƯỚC trên dxFeed GCQ26 M1 để kiểm logic bằng ảnh trước
+        // khi port; xem ảnh mẫu + kết luận trong báo cáo). CHỈ hiển thị, KHÔNG gate tín hiệu nào. =================
+        private const double WY_CLIMAX_RANGE_MULT = 1.4;
+        private const int WY_CLIMAX_LOOKBACK = 20;
+        private const int WY_AR_LOOKBACK = 40;
+        private const int WY_ST_TOL_TICKS = 10;
+        private const int WY_ST_MIN_GAP_BARS = 5;
+        private const double WY_SOS_BODY_MIN = 0.45;
+        private const int WY_LPS_WAIT_BARS = 25;
+        private const int WY_LPS_AREA_MIN_BARS = 3;
+        private const double WY_PHASE_E_MULT = 1.0;
+        private const double WY_MAX_HEIGHT_PCT = 0.035;   // guard tu dat (KHONG co trong tai lieu goc):
+        private const int WY_MAX_BARS_AB = 2500;          // TR Wyckoff that la vung CAN BANG hep, khong
+        private const int WY_MAX_BARS_D = 2000;           // phai the hien ca mot xu huong dai — bo neu vuot.
+
+        private double WyAvgRange(List<Bar> B, int i, int lookback)
+        {
+            int lo = Math.Max(0, i - lookback);
+            double sum = 0; int n = 0;
+            for (int k = lo; k < i; k++) { sum += B[k].Rng; n++; }
+            return n > 0 ? sum / n : B[i].Rng;
+        }
+
+        private void WyAddEvent(WyRange r, int i, string label, double price) => r.Events.Add(new WyEvent { Idx = i, Label = label, Price = price });
+
+        private void WySetPhase(WyRange r, int i, char phase)
+        {
+            if (r.Phases.Count > 0 && r.Phases[r.Phases.Count - 1].Phase == phase) return;
+            if (r.Phases.Count > 0) r.Phases[r.Phases.Count - 1].EndIdx = i - 1;
+            r.Phases.Add(new WyPhaseSeg { Phase = phase, StartIdx = i, EndIdx = -1 });
+        }
+
+        /// <summary>
+        /// Sau SOS/SOW: tìm nhịp hồi GIỮ biên (LPS/LPSY). ≥3 nến dao động hẹp quanh vùng → AREA (đúng
+        /// góp ý giảng viên trong CHART_CASES.md "LPS/ST vẽ điểm thay vì vùng"), 1-2 nến → POINT. Không
+        /// hồi trong WY_LPS_WAIT_BARS mà giá đã đi xa hơn WY_PHASE_E_MULT×chiều-cao-range → Phase E ngay
+        /// (Phase D KHÔNG bắt buộc phải có BU/LPS — xem CHART_CASES.md Ca #21). "Giữ biên" chỉ tính THẤT
+        /// BẠI khi đóng nến lùi hẳn qua bên trong range (không phải 1 râu nến chạm nhẹ).
+        /// Trả true nếu đã chốt Phase E (đóng range), false nếu chưa (giữ Phase B/D để thử lại).
+        /// </summary>
+        private bool WyTryLpsAndPhaseE(List<Bar> B, WyRange r, int sosI, bool acc)
+        {
+            int end = Math.Min(B.Count - 1, sosI + WY_LPS_WAIT_BARS);
+            double level = acc ? r.High : r.Low;
+            double failTol = 3.0 * WY_ST_TOL_TICKS * _tick;
+            var pullBars = new List<int>();
+            double peak = acc ? B[sosI].H : B[sosI].L;
+            double rangeHeight = Math.Max(1e-9, r.High - r.Low);
+            for (int j = sosI + 1; j <= end; j++)
+            {
+                var bj = B[j];
+                bool failed;
+                if (acc) { if (bj.H > peak) peak = bj.H; failed = bj.C < level - failTol; }
+                else { if (bj.L < peak) peak = bj.L; failed = bj.C > level + failTol; }
+                if (failed) return false;
+                if (Math.Abs(bj.C - level) <= 2.0 * WY_ST_TOL_TICKS * _tick) pullBars.Add(j);
+                double movedFar = acc ? (peak - level) : (level - peak);
+                if (movedFar >= WY_PHASE_E_MULT * rangeHeight)
+                {
+                    if (pullBars.Count > 0) WyEmitLps(B, r, pullBars, acc);
+                    WySetPhase(r, j, 'E');
+                    return true;
+                }
+            }
+            if (pullBars.Count > 0) WyEmitLps(B, r, pullBars, acc);
+            if ((end - sosI) >= WY_LPS_WAIT_BARS) { WySetPhase(r, end, 'E'); return true; }
+            return false;
+        }
+
+        private void WyEmitLps(List<Bar> B, WyRange r, List<int> pullBars, bool acc)
+        {
+            string label = acc ? "LPS" : "LPSY";
+            if (pullBars.Count >= WY_LPS_AREA_MIN_BARS)
+            {
+                int mid = pullBars[pullBars.Count / 2];
+                double loP = double.MaxValue, hiP = double.MinValue;
+                foreach (var k in pullBars) { if (B[k].L < loP) loP = B[k].L; if (B[k].H > hiP) hiP = B[k].H; }
+                WyAddEvent(r, mid, $"{label}(vùng)", (loP + hiP) / 2);
+            }
+            else
+            {
+                int k = pullBars[pullBars.Count - 1];
+                WyAddEvent(r, k, label, acc ? B[k].L : B[k].H);
+            }
+        }
+
+        private List<WyRange> ScanWyckoff(List<Bar> B)
+        {
+            var ranges = new List<WyRange>();
+            WyRange active = null;
+            int nClosed = B.Count - 1;   // bỏ nến đang hình thành, khớp Scan()
+            for (int i = WY_CLIMAX_LOOKBACK + 5; i < nClosed; i++)
+            {
+                var b = B[i];
+
+                if (active == null)
+                {
+                    double avgr = WyAvgRange(B, i, WY_CLIMAX_LOOKBACK);
+                    if (avgr <= 0) continue;
+                    bool wide = b.Rng >= WY_CLIMAX_RANGE_MULT * avgr;
+                    bool climaxVol = b.Vratio >= VsaClimax;
+                    if (!(wide && climaxVol)) continue;
+                    // CHART_CASES.md "gán SC trong Tái tích luỹ": SC/BCLX CHỈ hợp lệ nếu TRƯỚC đó là
+                    // downtrend/uptrend THẬT (dùng field Trend đã có, proxy TPO bias, không tol=0).
+                    if (b.C < b.O && b.Trend == -1)
+                    {
+                        active = new WyRange { StartIdx = i, Acc = true, Low = b.L };
+                        WyAddEvent(active, i, "SC", b.L);
+                        WySetPhase(active, i, 'A');
+                    }
+                    else if (b.C > b.O && b.Trend == 1)
+                    {
+                        active = new WyRange { StartIdx = i, Acc = false, High = b.H };
+                        WyAddEvent(active, i, "BCLX", b.H);
+                        WySetPhase(active, i, 'A');
+                    }
+                    continue;
+                }
+
+                var r = active;
+                int climaxI = r.StartIdx;
+                int lastEvtI = r.Events.Count > 0 ? r.Events[r.Events.Count - 1].Idx : climaxI;
+                bool gapOk = (i - lastEvtI) >= WY_ST_MIN_GAP_BARS;
+                double tol = WY_ST_TOL_TICKS * _tick;
+
+                double height = r.High - r.Low;
+                bool tooTall = height > WY_MAX_HEIGHT_PCT * b.C;
+                bool tooLongAB = (r.State == "A" || r.State == "B") && (i - climaxI) > WY_MAX_BARS_AB;
+                bool tooLongD = r.State == "D" && (i - climaxI) > WY_MAX_BARS_D;
+                if (tooTall || tooLongAB || tooLongD) { active = null; continue; }
+
+                if (r.State == "A")
+                {
+                    if (i - climaxI > WY_AR_LOOKBACK)
+                    {
+                        int arI = climaxI + 1;
+                        if (r.Acc)
+                        {
+                            double bestHi = double.MinValue;
+                            for (int k = climaxI + 1; k <= i; k++) if (B[k].H > bestHi) { bestHi = B[k].H; arI = k; }
+                            r.High = bestHi;
+                        }
+                        else
+                        {
+                            double bestLo = double.MaxValue;
+                            for (int k = climaxI + 1; k <= i; k++) if (B[k].L < bestLo) { bestLo = B[k].L; arI = k; }
+                            r.Low = bestLo;
+                        }
+                        WyAddEvent(r, arI, "AR", r.Acc ? r.High : r.Low);
+                        WySetPhase(r, i, 'B');
+                        r.State = "B";
+                    }
+                }
+                else if (r.State == "B")
+                {
+                    double failTolB = 3.0 * WY_ST_TOL_TICKS * _tick;
+                    bool abandonB = false;
+                    if (r.Acc)
+                    {
+                        // Spring/Shakeout: PHẢI THẬT đáy THẤP NHẤT từ trước tới giờ (CHART_CASES.md
+                        // "gọi Spring cho đáy không phá đáy cũ" — lỗi phổ biến nhất trong 2.pdf).
+                        if (b.L < r.Low - 1e-9 && b.C > r.Low && gapOk)
+                        {
+                            double depthT = (r.Low - b.L) / _tick;
+                            bool shake = depthT >= 15 || b.Vratio >= 1.5 * VsaClimax;
+                            r.Low = b.L;
+                            WyAddEvent(r, i, shake ? "Shakeout" : "Spring", b.L);
+                            WySetPhase(r, i, 'C');
+                            WySetPhase(r, Math.Min(B.Count - 1, i + 1), 'D');
+                            r.State = "D";
+                        }
+                        else if (Math.Abs(b.L - r.Low) <= tol && gapOk)
+                        {
+                            WyAddEvent(r, i, "ST", b.L);
+                            r.Low = Math.Min(r.Low, b.L);
+                        }
+                        else if (b.C < r.Low - failTolB && b.Brat >= WY_SOS_BODY_MIN)
+                        {
+                            // dong nen lui HAN qua duoi (khong dao nguoc = khong phai Spring) -> gia
+                            // thuyet Tich luy SAI (that su la breakdown) -> bo range (§9 THEORY.md
+                            // "cau truc that bai", o day pha SAI huong ngay tu Phase B, chua kip Phase C)
+                            abandonB = true;
+                        }
+                        else if (b.L < r.Low) r.Low = b.L;
+                    }
+                    else
+                    {
+                        if (b.H > r.High + 1e-9 && b.C < r.High && gapOk)
+                        {
+                            double depthT = (b.H - r.High) / _tick;
+                            bool utad = depthT >= 15 || b.Vratio >= 1.5 * VsaClimax;
+                            r.High = b.H;
+                            WyAddEvent(r, i, utad ? "UTAD" : "UT", b.H);
+                            if (utad)
+                            {
+                                WySetPhase(r, i, 'C');
+                                WySetPhase(r, Math.Min(B.Count - 1, i + 1), 'D');
+                                r.State = "D";
+                            }
+                        }
+                        else if (Math.Abs(b.H - r.High) <= tol && gapOk)
+                        {
+                            WyAddEvent(r, i, "ST", b.H);
+                            r.High = Math.Max(r.High, b.H);
+                        }
+                        else if (b.C > r.High + failTolB && b.Brat >= WY_SOS_BODY_MIN)
+                        {
+                            abandonB = true;   // pha THAT len (khong dao nguoc) -> gia thuyet Phan phoi sai
+                        }
+                        else if (b.H > r.High) r.High = b.H;
+                    }
+                    if (abandonB) { active = null; continue; }
+                }
+                else if (r.State == "D")
+                {
+                    bool fired = false, closed = false;
+                    // SOS/SOW: dòng CAM KẾT phá cạnh TUYỆT ĐỐI của range (CHART_CASES.md "SOS ở Phase D
+                    // phải ở đỉnh mới cao hơn" — không phải đỉnh/đáy cục bộ bất kỳ trong Phase B).
+                    if (r.Acc && b.C > r.High + tol && b.Brat >= WY_SOS_BODY_MIN && gapOk)
+                    {
+                        WyAddEvent(r, i, "SOS", b.C);
+                        r.High = Math.Max(r.High, b.H);
+                        fired = true;
+                        closed = WyTryLpsAndPhaseE(B, r, i, true);
+                    }
+                    else if (!r.Acc && b.C < r.Low - tol && b.Brat >= WY_SOS_BODY_MIN && gapOk)
+                    {
+                        WyAddEvent(r, i, "SOW", b.C);
+                        r.Low = Math.Min(r.Low, b.L);
+                        fired = true;
+                        closed = WyTryLpsAndPhaseE(B, r, i, false);
+                    }
+                    if (fired && !closed) r.State = "B";   // pha vo that bai -> ve lai Phase B, cho test moi
+                    else if (!fired)
+                    {
+                        if (r.Acc && b.L < r.Low) r.Low = b.L;
+                        else if (!r.Acc && b.H > r.High) r.High = b.H;
+                    }
+                }
+
+                if (r.Phases.Count > 0 && r.Phases[r.Phases.Count - 1].Phase == 'E')
+                {
+                    r.Phases[r.Phases.Count - 1].EndIdx = Math.Min(B.Count - 1, i);
+                    r.EndIdx = i;
+                    r.Completed = true;
+                    ranges.Add(r);
+                    active = null;
+                }
+            }
+            if (active != null)
+            {
+                if (active.Phases.Count > 0) active.Phases[active.Phases.Count - 1].EndIdx = B.Count - 1;
+                ranges.Add(active);
+            }
+            return ranges;
+        }
+
+        private WyRangeR WyToRender(List<Bar> B, WyRange r)
+        {
+            int endIdx = r.EndIdx >= 0 ? r.EndIdx : B.Count - 1;
+            var rr = new WyRangeR { StartTime = B[r.StartIdx].Time, EndTime = B[endIdx].Time, Acc = r.Acc, Low = r.Low, High = r.High };
+            foreach (var e in r.Events) rr.Events.Add(new WyEventR { Time = B[e.Idx].Time, Price = e.Price, Label = e.Label });
+            foreach (var p in r.Phases)
+            {
+                int pe = p.EndIdx >= 0 ? p.EndIdx : endIdx;
+                rr.Phases.Add(new WyPhaseSegR { Phase = p.Phase, StartTime = B[p.StartIdx].Time, EndTime = B[pe].Time });
+            }
+            return rr;
+        }
+
         // ================= CẦU NỐI MT5 =================
         // Process() quét LẠI TOÀN BỘ lịch sử mỗi nến mới → nếu gửi lệnh hồn nhiên ở đây sẽ bắn
         // hàng chục lệnh cũ vào tài khoản thật mỗi lần reload. 4 chốt chống trùng:
@@ -1299,6 +1625,63 @@ namespace WyckoffRunner
                         Chip(gr, fZ, clip.Left + 2, y, "⬥ HỢP LƯU " + price.ToString("0.0##"), ConflColor, false);
                     }
                 }
+                if (ShowWyckoffSchematic && rs.WyRanges != null && rs.WyRanges.Count > 0)
+                {
+                    using var fPhase = new Font("Segoe UI", 9, FontStyle.Bold);
+                    using var fEvt = new Font("Consolas", 9, FontStyle.Bold);
+                    using var brEvt = new SolidBrush(Color.FromArgb(255, 230, 150));
+                    var placedX = new List<float>();
+                    float NudgeY(float x, float y)
+                    {
+                        float yy = y; int guard = 0;
+                        while (placedX.Exists(px => Math.Abs(px - x) < 34) && guard < 6) { yy -= 16; guard++; }
+                        placedX.Add(x);
+                        return yy;
+                    }
+                    foreach (var r in rs.WyRanges)
+                    {
+                        Color col = r.Acc ? WyAccColor : WyDistColor;
+                        // duong ngang bien Range — CHI trong pham vi thoi gian CUA CHINH range nay
+                        float x0 = (float)conv.GetChartX(r.StartTime);
+                        float x1 = (float)conv.GetChartX(r.EndTime);
+                        if (x1 < clip.Left || x0 > clip.Right) continue;   // ca range ngoai man hinh
+                        float xa = Math.Max(x0, clip.Left), xb = Math.Min(x1, clip.Right);
+                        float yLow = (float)conv.GetChartY(r.Low), yHigh = (float)conv.GetChartY(r.High);
+                        using (var penR = new Pen(col, 2))
+                        {
+                            gr.DrawLine(penR, xa, yLow, xb, yLow);
+                            gr.DrawLine(penR, xa, yHigh, xb, yHigh);
+                        }
+                        gr.DrawString(r.Acc ? "Tích luỹ" : "Phân phối", fPhase, new SolidBrush(col), xb + 4, yHigh - 8);
+
+                        // vach doc chia PHASE — net dut, CHI trong pham vi GIA [Low..High] CUA range nay
+                        // (KHONG keo het chieu cao chart — dung yeu cau: "chia dọc ... đúng phạm vi của
+                        // range và phase đó thôi, ko chia dọc full màn hình").
+                        using (var penP = new Pen(WyPhaseColor, 1.6f) { DashStyle = DashStyle.Dash, DashPattern = new[] { 5f, 4f } })
+                        {
+                            foreach (var ph in r.Phases)
+                            {
+                                float xp = (float)conv.GetChartX(ph.StartTime);
+                                if (xp < clip.Left || xp > clip.Right) continue;
+                                gr.DrawLine(penP, xp, yHigh, xp, yLow);
+                                gr.DrawString($"Phase {ph.Phase}", fPhase, new SolidBrush(WyPhaseColor), xp + 3, yHigh - 22);
+                            }
+                        }
+
+                        // nhan su kien (SC/AR/ST/Spring/Shakeout/SOS/LPS/BCLX/UT/UTAD/SOW/LPSY)
+                        bool aboveDefault(string lab) => lab == "SOS" || lab == "AR" || lab == "ST" || lab == "UT" || lab == "UTAD" || lab == "BCLX";
+                        foreach (var ev in r.Events)
+                        {
+                            float xe = (float)conv.GetChartX(ev.Time);
+                            if (xe < clip.Left - 20 || xe > clip.Right + 20) continue;
+                            float ye = (float)conv.GetChartY(ev.Price);
+                            float ty = aboveDefault(ev.Label) ? ye - 24 : ye + 10;
+                            ty = NudgeY(xe, ty);
+                            gr.FillEllipse(Brushes.White, xe - 2.5f, ye - 2.5f, 5, 5);
+                            gr.DrawString(ev.Label, fEvt, brEvt, xe - 8, ty);
+                        }
+                    }
+                }
                 if (ShowSignals && rs.Sigs != null)
                 {
                     using var fLbl = new Font("Consolas", Math.Max(8, FontSize), FontStyle.Bold);
@@ -1417,6 +1800,7 @@ namespace WyckoffRunner
             public List<(double price, double strength, int side)> Clusters;
             public List<(string text, Color col)> Panel;
             public int Digits;
+            public List<WyRangeR> WyRanges;
         }
     }
 }

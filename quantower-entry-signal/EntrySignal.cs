@@ -296,7 +296,24 @@ namespace EntrySignal
             // đổi khung...) callback KHÔNG bắn → _vaLoaded mãi false → Process() và cả panel bị chặn vĩnh
             // viễn, phải xoá & cài lại indicator mới hiện. State==Finished đã đủ điều kiện đọc footprint.
             if (!_vaLoaded) lock (_calc) { _vaLoaded = true; _lastN = -1; }
-            Process();
+            // FIX BUG "biến mất khi refresh data": 1 exception không bắt trong Process() có thể khiến
+            // Quantower coi indicator lỗi và gỡ khỏi chart (phải cắm lại). Bọc lại để: (a) 1 tick lỗi
+            // chỉ bị bỏ qua thay vì crash cả indicator, (b) ghi log để tra được nguyên nhân thật lần sau.
+            try { Process(); }
+            catch (Exception ex) { LogErr(ex, "OnUpdate/Process"); }
+        }
+
+        private void LogErr(Exception ex, string where)
+        {
+            try
+            {
+                // cùng thư mục %LOCALAPPDATA%\EntrySignal với tele_log.txt (xem ConfigTele)
+                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EntrySignal");
+                Directory.CreateDirectory(dir);
+                File.AppendAllText(Path.Combine(dir, "error_log.txt"),
+                    $"{DateTime.UtcNow.AddHours(TzOffset):yyyy-MM-dd HH:mm:ss} [{Name}] {where}: {ex}\n");
+            }
+            catch { }
         }
 
         private string Fmt(double p) => double.IsNaN(p) ? "—" : Math.Round(p, _digits).ToString("0.0##");

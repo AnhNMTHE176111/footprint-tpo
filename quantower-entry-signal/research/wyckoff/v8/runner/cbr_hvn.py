@@ -252,6 +252,74 @@ def run(B, C, vf, avg_vma):
                 peak = bj['hi'] if up else bj['lo']; since = j
     return raw
 
+# ---------------------------------------------------------------- v8 PLAY2 zone-anchored
+# PLAN_KB_ABC.md P3/4.2: PLAY2 = "cbr_v6 voi edge = mep HVN thay vi mep range co hep".
+# Ham nay la BAN SAO cua run() o tren, CHI doi buoc tinh (rhi,rlo) tu window RANGE_LEN sang
+# tung zone CORVEN (HVN tuan/ngay hoac VWAP) dang hoat dong tai bar i. Toan bo phan con lai
+# (BVSA/BBODY break, WAIT/PMIN/PMAX/HOLD_TOL/RBODY resume, FLOOR/CAP/BUF risk, GATE
+# trend+vwap+liquidity o nen VAO) giu NGUYEN 1-1 de so sanh cong bang TRUOC/SAU.
+# KHONG bao gom cac toggle thu nghiem W3/R9/R3/R7-variant (PHASE_C/CLEAN/LEGQ/NOSTOP/AGGR/SL_MODE
+# khac 'pull') - TRUOC/SAU deu la "loi v5 shipped" thuan, dung de tach rieng tac dong cua doi neo vung.
+def run_zone(B, C, vf, zone_at_fn):
+    raw = []; N = len(B)
+    for i in range(E.VSA_MA + 2, N):
+        b = B[i]
+        if not _gate(b, vf):
+            continue
+        zps = zone_at_fn(i)
+        if not zps:
+            continue
+        for zp in zps:
+            rhi, rlo = zp, zp   # tol da nam trong zone_at_fn (tra ve mep tren/mep duoi rieng neu can)
+            up = b['c'] > rhi + C['BUF'] * TICK and b['vratio'] >= C['BVSA'] and b['brat'] >= C['BBODY'] and b['up']
+            dn = b['c'] < rlo - C['BUF'] * TICK and b['vratio'] >= C['BVSA'] and b['brat'] >= C['BBODY'] and b['dn']
+            if not (up or dn):
+                continue
+            side = 'LONG' if up else 'SHORT'; edge = rhi if up else rlo
+            peak = b['hi'] if up else b['lo']; since = i
+            for j in range(i + 1, min(N, i + 1 + C['WAIT'])):
+                bj = B[j]
+                if not _gate(bj, vf):
+                    break
+                if (bj['c'] < edge - C['HOLD_TOL'] * TICK) if up else (bj['c'] > edge + C['HOLD_TOL'] * TICK):
+                    break
+                pseg = B[since + 1:j + 1]
+                if pseg:
+                    pext = min(x['lo'] for x in pseg) if up else max(x['hi'] for x in pseg)
+                    leg = (peak - edge) if up else (edge - peak)
+                    depth = (peak - pext) if up else (pext - peak)
+                    retr = depth / leg if leg > 0 else 0
+                    held = (pext >= edge - C['HOLD_TOL'] * TICK) if up else (pext <= edge + C['HOLD_TOL'] * TICK)
+                    resume = ((bj['c'] > B[j - 1]['hi'] and bj['up']) if up
+                              else (bj['c'] < B[j - 1]['lo'] and bj['dn'])) and bj['brat'] >= C['RBODY']
+                    if j >= since + 2 and C['PMIN'] <= retr <= C['PMAX'] and held and resume:
+                        entry = bj['c']
+                        anchor = pext
+                        sl = anchor - C['BUF'] * TICK if up else anchor + C['BUF'] * TICK
+                        risk = (entry - sl) / TICK if up else (sl - entry) / TICK
+                        if risk < C['FLOOR']:
+                            sl = entry - C['FLOOR'] * TICK if up else entry + C['FLOOR'] * TICK
+                            risk = C['FLOOR']
+                        if risk > C['CAP']:
+                            break
+                        sd = 1 if up else -1
+                        okT = (not C['TREND']) or bj['trend'] == sd
+                        okV = (not C['VWAP']) or (bj['c'] >= bj['vwap'] if up else bj['c'] <= bj['vwap'])
+                        okL = (not C['LIQ']) or bj['liqratio'] >= C['LIQ_K']
+                        if okT and okV and okL:
+                            raw.append(dict(i=j, dt=bj['dt'], ym=bj['ym'], side=side, entry=entry, sl=sl,
+                                            risk_t=risk, retr=retr, span=0.0, brk_i=i, peak_i=since,
+                                            brk_vsa=b['vratio'], hour=bj['dt'].hour, zone_edge=zp))
+                        break
+                if (bj['hi'] > peak) if up else (bj['lo'] < peak):
+                    peak = bj['hi'] if up else bj['lo']; since = j
+    return raw
+
+
+def scan_zone(B, C, vf, zone_at_fn):
+    return evaluate(B, post(cooldown(dedup(run_zone(B, C, vf, zone_at_fn)), C['COOL']), C), C)
+
+
 def dedup(raw):
     out = []
     for s in sorted(raw, key=lambda x: x['i']):

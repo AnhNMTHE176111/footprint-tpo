@@ -164,6 +164,24 @@ namespace RunnerSignal
         [InputParameter("Quay đầu: climax tím = nâng grade (bonus)", 73)]
         public bool RevClimaxOverride { get; set; } = true;
 
+        // ---------- CORVEN: neo vùng HVN/VWAP tuần|ngày (2026-08-01, PLAN_KB_ABC.md v8/runner) ----------
+        // ⚠ MẶC ĐỊNH TẮT — bản v5 đang chạy live KHÔNG được đổi hành vi. Khi TẮT, hai nhánh CBR/QUAY_ĐẦU
+        // chạy y hệt code cũ (không đụng một dòng nào của Scan()/ScanReversal() gốc). Khi BẬT, PLAY2 (CBR)
+        // đổi cạnh neo từ range co hẹp M1 nội bộ sang mép HVN tuần/ngày, PLAY1 (QUAY ĐẦU) đổi vùng fade từ
+        // CHỈ VWAP phiên sang HVN tuần/ngày + VWAP tuần/ngày. Backtest offline (v8/runner/RESULTS_RUNNER_ZONES.md):
+        // ĐỐI CHỨNG NGẪU NHIÊN KHÔNG QUA cho hầu hết biến thể (vị trí vùng không mang thêm thông tin so với
+        // vùng dịch ngẫu nhiên) — cờ này tồn tại để A/B TỰ CHỌN, KHÔNG phải khuyến nghị bật.
+        [InputParameter("CORVEN: bật neo vùng HVN/VWAP tuần|ngày (mặc định TẮT — xem RESULTS_RUNNER_ZONES.md)", 149)]
+        public bool CorvenZoneAnchor { get; set; } = false;
+        [InputParameter("CORVEN: tầng vùng (0=Tuần/KB-A, 1=Ngày/KB-B)", 150, 0, 1, 1, 0)]
+        public int CorvenZoneTier { get; set; } = 0;
+        [InputParameter("CORVEN: dung sai chạm vùng HVN (tick)", 151, 4, 40, 1, 0)]
+        public int CorvenTolTicks { get; set; } = 12;
+        [InputParameter("CORVEN: ngưỡng HVN (× lần TB)", 152, 1.0, 3.0, 0.1, 1)]
+        public double CorvenHvnMinRatio { get; set; } = 1.5;
+        [InputParameter("CORVEN: số HVN tối đa mỗi tuần/ngày", 153, 1, 5, 1, 0)]
+        public int CorvenHvnMaxN { get; set; } = 3;
+
         // ---------- lọc / warm-up ----------
         [InputParameter("Sàn volume (chống nến mỏng)", 70, 0, 500, 1, 0)]
         public int VolFloor { get; set; } = 20;
@@ -370,6 +388,7 @@ namespace RunnerSignal
             public int HdIdx;
             public DateTime Time;
             public double O, H, L, C, Vol, Delta, Cum, Vwap, Vma, Vratio;
+            public double VwapWeek, VwapDay;   // CORVEN: VWAP neo tuần/ngày (reset rộng hơn Vwap = VWAP phiên)
             public int Bias;      // EMA30 vs EMA120 (hiển thị; KHÔNG gate — bias thật = TPO)
             public int Trend;     // close vs close TrendBars trước (proxy TPO bias — GATE)
             public double LiqRatio;  // vma / TB-vol dài (thanh khoản phiên; GATE)
@@ -387,6 +406,7 @@ namespace RunnerSignal
         {
             public double Price; public string Kind; public double Strength;
             public DateTime ReadyTime, ExpireTime;
+            public bool IsWeek;   // CORVEN: true=HVN tuần, false=HVN ngày (chỉ dùng bởi zone CORVEN)
         }
 
         private sealed class Sig
@@ -419,7 +439,8 @@ namespace RunnerSignal
                     if (B.Count < VsaPeriod + 5) { _lastN = n; return; }
 
                     var pool = BuildPool(hd, B);
-                    var sigs = Scan(hd, B, pool);
+                    var corvenZones = CorvenZoneAnchor ? BuildCorvenZones(hd) : null;
+                    var sigs = Scan(hd, B, pool, corvenZones);
                     foreach (var s in sigs) { Simulate(B, s); Enrich(pool, s); }
 
                     if (ExportCsv) ExportSignals(sigs);
@@ -454,6 +475,7 @@ namespace RunnerSignal
             }
             _vaCov = cov; _vaTot = B.Count; _vaFirst = first;
             double csPV = 0, csV = 0, cum = 0, rollSum = 0, liqSum = 0;
+            double csPvDay = 0, csVDay = 0, csPvWeek = 0, csVWeek = 0;   // CORVEN: VWAP ngày/tuần
             double ef = double.NaN, es = double.NaN, kf = 2.0 / (30 + 1), ks = 2.0 / (120 + 1);
             int liqW = Math.Max(100, LiquidityWindow);
             var q = new Queue<double>();
@@ -465,6 +487,16 @@ namespace RunnerSignal
                 if (gap) { csPV = 0; csV = 0; }
                 double tp = (b.H + b.L + b.C) / 3.0; csPV += tp * b.Vol; csV += b.Vol;
                 b.Vwap = csV > 0 ? csPV / csV : b.C;
+                // CORVEN: VWAP ngày reset tại gap>DayGapMin (khớp ProfileEngine.GroupByGap dùng cho D-1 pool),
+                // VWAP tuần reset tại gap>30h (khớp ProfileEngine.WeekSpans / zones_corven.py weekend_gap_hours=30).
+                bool gapDay = i > 0 && (b.Time - B[i - 1].Time).TotalMinutes > DayGapMin;
+                bool gapWeek = i > 0 && (b.Time - B[i - 1].Time).TotalHours > 30;
+                if (gapDay) { csPvDay = 0; csVDay = 0; }
+                if (gapWeek) { csPvWeek = 0; csVWeek = 0; }
+                csPvDay += tp * b.Vol; csVDay += b.Vol;
+                csPvWeek += tp * b.Vol; csVWeek += b.Vol;
+                b.VwapDay = csVDay > 0 ? csPvDay / csVDay : b.C;
+                b.VwapWeek = csVWeek > 0 ? csPvWeek / csVWeek : b.C;
                 cum += b.Delta; b.Cum = cum;
                 q.Enqueue(b.Vol); rollSum += b.Vol;
                 if (q.Count > VsaPeriod) rollSum -= q.Dequeue();
@@ -532,6 +564,47 @@ namespace RunnerSignal
             return pool;
         }
 
+        // ================= CORVEN: zone HVN tuần/ngày (chỉ dùng khi CorvenZoneAnchor=true) =================
+        // W_CLOSED: HVN của tuần/ngày ĐÃ ĐÓNG có hiệu lực cho TOÀN BỘ tuần/ngày kế tiếp (nhân quả tuyệt đối,
+        // khớp v8/runner/zones_corven.py::build_zone_series(causal='closed')). Dùng ProfileEngine.WeekSpans/
+        // GroupByGap/RowsOver/FindHvn nguyên bản (đã có sẵn, chỉ đọc).
+        private List<PZone> BuildCorvenZones(HistoricalData hd)
+        {
+            var zones = new List<PZone>();
+            var wSpans = ProfileEngine.WeekSpans(hd, 30.0);
+            for (int k = 1; k < wSpans.Count; k++)
+            {
+                var (fr, to) = wSpans[k - 1];
+                var rows = ProfileEngine.RowsOver(hd, fr, to, _tick, true);
+                var hvns = ProfileEngine.FindHvn(rows, _tick, minRatio: CorvenHvnMinRatio);
+                DateTime ready = GetTime(hd, wSpans[k].fr), exp = ready.AddDays(8);
+                foreach (var (price, ratio) in hvns.Take(Math.Max(1, CorvenHvnMaxN)))
+                    zones.Add(new PZone { Price = price, Kind = $"HVN Tuần ×{ratio:0.0}", Strength = 0, ReadyTime = ready, ExpireTime = exp, IsWeek = true });
+            }
+            var dBlocks = ProfileEngine.GroupByGap(hd, DayGapMin);
+            for (int k = 1; k < dBlocks.Count; k++)
+            {
+                var prev = dBlocks[k - 1];
+                var rows = ProfileEngine.RowsOver(hd, prev.from, prev.to, _tick, true);
+                var hvns = ProfileEngine.FindHvn(rows, _tick, minRatio: CorvenHvnMinRatio);
+                DateTime ready = GetTime(hd, dBlocks[k].from), exp = ready.AddDays(2);
+                foreach (var (price, ratio) in hvns.Take(Math.Max(1, CorvenHvnMaxN)))
+                    zones.Add(new PZone { Price = price, Kind = $"HVN Ngày ×{ratio:0.0}", Strength = 0, ReadyTime = ready, ExpireTime = exp, IsWeek = false });
+            }
+            return zones;
+        }
+
+        // Danh sách gia CORVEN dang hoat dong tai thoi diem t, dung tang (tuan/ngay theo CorvenZoneTier)
+        // + VWAP cua chinh tang do. Dung chung cho ca PLAY1 (cham->dao) va PLAY2 (pha->hoi->tiep).
+        private List<double> ActiveCorvenPrices(List<PZone> corvenZones, Bar b, bool wantWeek)
+        {
+            var res = new List<double>();
+            foreach (var z in corvenZones)
+                if (z.IsWeek == wantWeek && b.Time >= z.ReadyTime && b.Time <= z.ExpireTime) res.Add(z.Price);
+            res.Add(wantWeek ? b.VwapWeek : b.VwapDay);
+            return res;
+        }
+
         private static void Add(List<PZone> pool, double price, string kind, double str, DateTime ready, DateTime exp)
         {
             if (double.IsNaN(price) || price <= 0) return;
@@ -556,18 +629,74 @@ namespace RunnerSignal
             return res;
         }
 
+        // CORVEN PLAY2 tại MỘT cạnh (zp) cụ thể — BẢN SAO có chủ ý của logic phá/hồi/tiếp diễn bên dưới,
+        // (rhi,rlo) truyền vào thay vì tính từ range co hẹp RangeLen. Duplicate CÓ CHỦ Ý (không refactor
+        // dùng chung với Scan()) để KHÔNG chạm vào đường chạy mặc định khi CorvenZoneAnchor=false.
+        private void ScanCbrAtEdge(List<Bar> B, List<Sig> raw, int i, Bar b, double rhi, double rlo, double slFloorT, double slCapT)
+        {
+            int nClosed = B.Count - 1;
+            bool up = b.C > rhi + SlBuf * _tick && b.Vratio >= BreakVsa && b.Brat >= BreakBody && b.C > b.O;
+            bool dn = b.C < rlo - SlBuf * _tick && b.Vratio >= BreakVsa && b.Brat >= BreakBody && b.C < b.O;
+            if (!(up || dn)) return;
+            int side = up ? +1 : -1;
+            double edge = up ? rhi : rlo;
+            double peak = up ? b.H : b.L; int since = i;
+            int jEnd = Math.Min(nClosed, i + 1 + WaitBars);
+            for (int j = i + 1; j < jEnd; j++)
+            {
+                var bj = B[j];
+                if (!GateSoft(bj)) break;
+                if (up ? bj.C < edge - HoldTolTicks * _tick : bj.C > edge + HoldTolTicks * _tick) break;
+                if (j >= since + 1)
+                {
+                    double pullExt = up ? double.MaxValue : double.MinValue;
+                    for (int k = since + 1; k <= j; k++) { if (up) { if (B[k].L < pullExt) pullExt = B[k].L; } else { if (B[k].H > pullExt) pullExt = B[k].H; } }
+                    double leg = up ? (peak - edge) : (edge - peak);
+                    double depth = up ? (peak - pullExt) : (pullExt - peak);
+                    double retr = leg > 0 ? depth / leg : 0;
+                    bool held = up ? pullExt >= edge - HoldTolTicks * _tick : pullExt <= edge + HoldTolTicks * _tick;
+                    bool resume = (up ? (bj.C > B[j - 1].H && bj.C > bj.O) : (bj.C < B[j - 1].L && bj.C < bj.O)) && bj.Brat >= ResumeBody;
+                    if (j >= since + 2 && retr >= PullMin && retr <= PullMax && held && resume && Gate(bj))
+                    {
+                        double entry = bj.C, sl, risk;
+                        if (up) { sl = pullExt - SlBuf * _tick; risk = (entry - sl) / _tick; }
+                        else { sl = pullExt + SlBuf * _tick; risk = (sl - entry) / _tick; }
+                        if (risk < slFloorT) { sl = up ? entry - slFloorT * _tick : entry + slFloorT * _tick; risk = slFloorT; }
+                        if (risk > slCapT) return;
+                        if (TrendOk(bj, side) && VwapOk(bj, side) && LiqOk(bj))
+                            AddSig(raw, j, side, entry, sl, risk, RR, b.Vratio, "CBR phá→hồi→tiếp diễn (CORVEN)",
+                                new List<string> { $"mép {edge.ToString("0.0##")}", $"hồi {retr * 100:0}%", $"leg {leg:0.0}giá", $"VSA {b.Vratio:0.0}x{(b.Vratio >= VsaClimax ? " tím" : "")}" });
+                        return;
+                    }
+                }
+                if (up ? bj.H > peak : bj.L < peak) { peak = up ? bj.H : bj.L; since = j; }
+            }
+        }
+
         // ================= CBR: phá vùng co → hồi giữ leg → tiếp diễn (KHỚP entry_cbr.run_cbr) =================
-        private List<Sig> Scan(HistoricalData hd, List<Bar> B, List<PZone> pool)
+        // CorvenZoneAnchor=true: THAY nguồn cạnh neo (PLAY2) — mỗi bar i, lặp qua TỪNG zone CORVEN đang
+        // hoạt động (HVN tuần|ngày + VWAP tuần|ngày theo CorvenZoneTier) làm (rhi=rlo=zp) thay vì tính
+        // range co hẹp RangeLen nến. Phần phá/hồi/tiếp diễn/GATE bên dưới giữ NGUYÊN 1-1 (khớp
+        // v8/runner/cbr_hvn.py::run_zone). Khi TẮT (mặc định), nhánh else chạy ĐÚNG code gốc, không đổi.
+        private List<Sig> Scan(HistoricalData hd, List<Bar> B, List<PZone> pool, List<PZone> corvenZones)
         {
             var raw = new List<Sig>();
             int nClosed = B.Count - 1;                          // BỎ nến đang hình thành → không repaint
             double rangeMinT = RangeMinPts / _tick, rangeMaxT = RangeMaxPts / _tick;
             double slFloorT = SlFloorPts / _tick, slCapT = SlCapPts / _tick;
+            bool corvenWeek = CorvenZoneTier == 0;
 
             for (int i = VsaPeriod + 2; i < nClosed; i++)
             {
                 var b = B[i];
                 if (!Gate(b)) continue;
+                if (CorvenZoneAnchor)
+                {
+                    if (corvenZones == null) continue;
+                    foreach (double zp in ActiveCorvenPrices(corvenZones, b, corvenWeek))
+                        ScanCbrAtEdge(B, raw, i, b, zp, zp, slFloorT, slCapT);
+                    continue;
+                }
                 if (i < RangeLen) continue;
                 double rhi = double.MinValue, rlo = double.MaxValue;
                 for (int k = i - RangeLen; k < i; k++) { if (B[k].H > rhi) rhi = B[k].H; if (B[k].L < rlo) rlo = B[k].L; }
@@ -616,7 +745,7 @@ namespace RunnerSignal
                     if (up ? bj.H > peak : bj.L < peak) { peak = up ? bj.H : bj.L; since = j; }
                 }
             }
-            if (EnableReversal) raw.AddRange(ScanReversal(hd, B, pool));
+            if (EnableReversal) raw.AddRange(ScanReversal(hd, B, pool, corvenZones));
             // Lọc phiên chết TRƯỚC dedup/cooldown. CHỈ cắt CBR — reversal MIỄN (verify 148 lệnh THẬT:
             // reversal trong khung chết 4/4 THẮNG +6R; cắt cả 2 nhánh +51R, chỉ cắt CBR +57R). Idx = nến vào.
             if (SkipDeadSession && DeadStartHour != DeadEndHour)
@@ -647,16 +776,55 @@ namespace RunnerSignal
         // VWAP + rút râu + đóng mạnh phía đảo + VSA≥RevVsaConf + đến-từ-đúng-phía + THUẬN trend.
         // TP = RevRR (1.5R — đảo chiều trần MFE ~1.3R, KHÁC runner 3R). SL ngoài cực trị/VWAP.
         // Absorption per-level (footprint LIVE) = BONUS nâng grade, KHÔNG bắt buộc (offline bác delta).
-        private List<Sig> ScanReversal(HistoricalData hd, List<Bar> B, List<PZone> pool)
+        private List<Sig> ScanReversal(HistoricalData hd, List<Bar> B, List<PZone> pool, List<PZone> corvenZones)
         {
             var raw = new List<Sig>();
             int nClosed = B.Count - 1;
             double slFloorT = SlFloorPts / _tick, slCapT = SlCapPts / _tick, tol = VwapTolTicks * _tick;
+            double corvenTol = CorvenTolTicks * _tick;
+            bool corvenWeek = CorvenZoneTier == 0;
             for (int i = VsaPeriod + 2; i < nClosed; i++)
             {
                 var b = B[i];
                 if (!Gate(b)) continue;
                 double rng = b.Rng; if (rng <= 0) continue;
+                // CorvenZoneAnchor=true: THAY vung fade tu CHI VWAP phien sang HVN tuan|ngay + VWAP
+                // tuan|ngay (PLAY1, khop v8/runner/zone_engine.py::play1_raw, confirm_on=False - ban
+                // True cat n qua manh ma khong tang EV, xem RESULTS_RUNNER_ZONES.md). Them gate R2:
+                // vung cham phai o cuc tri 25% cua "range gan" (50 nen truoc). Khi TAT, code goc ben
+                // duoi chay KHONG DOI.
+                if (CorvenZoneAnchor)
+                {
+                    if (corvenZones == null) continue;
+                    var zps = ActiveCorvenPrices(corvenZones, b, corvenWeek);
+                    int loK = Math.Max(0, i - 50);
+                    if (i - loK < 10) continue;
+                    double locLo = double.MaxValue, locHi = double.MinValue;
+                    for (int k = loK; k < i; k++) { if (B[k].L < locLo) locLo = B[k].L; if (B[k].H > locHi) locHi = B[k].H; }
+                    double spanR2 = locHi - locLo;
+                    if (spanR2 <= 0) continue;
+                    foreach (double zp in zps)
+                    {
+                        bool touchUp2 = b.H >= zp - corvenTol;
+                        bool touchDn2 = b.L <= zp + corvenTol;
+                        bool rejShort2 = b.UW >= WickFrac * rng && b.Cpos <= 0.45 && b.C < zp && b.Brat >= 0.30 && b.Vratio >= RevVsaConf;
+                        bool rejLong2 = b.LW >= WickFrac * rng && b.Cpos >= 0.55 && b.C > zp && b.Brat >= 0.30 && b.Vratio >= RevVsaConf;
+                        bool approUp2 = false, approDn2 = false;
+                        for (int k = Math.Max(0, i - RevApproachBars); k < i; k++)
+                        { if (B[k].C < zp) approUp2 = true; if (B[k].C > zp) approDn2 = true; }
+                        int side2 = 0; double anchor2 = 0;
+                        if (touchUp2 && rejShort2 && approUp2) { side2 = -1; anchor2 = Math.Max(b.H, zp + corvenTol); }
+                        else if (touchDn2 && rejLong2 && approDn2) { side2 = +1; anchor2 = Math.Min(b.L, zp - corvenTol); }
+                        if (side2 == 0) continue;
+                        double pos = (zp - locLo) / spanR2;
+                        if (side2 > 0 && pos > 0.25) continue;    // R2: LONG phai gan DAY range gan
+                        if (side2 < 0 && pos < 0.75) continue;    // R2: SHORT phai gan DINH range gan
+                        if (!TrendOk(b, side2)) continue;
+                        bool wall2 = Absorption(HdBar(hd, b.HdIdx), side2 > 0 ? b.L : b.H, side2) || (RevClimaxOverride && b.Vratio >= VsaClimax);
+                        EmitRev(raw, i, side2, b.C, anchor2, zp, b.Vratio, slFloorT, slCapT, wall2);
+                    }
+                    continue;
+                }
                 double vw = b.Vwap;
                 // SHORT: VWAP là KHÁNG CỰ — giá đẩy lên chạm VWAP rồi bị từ chối
                 bool touchUp = b.H >= vw - tol;

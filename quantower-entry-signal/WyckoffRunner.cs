@@ -130,6 +130,21 @@ namespace WyckoffRunner
         public int HoldTolTicks { get; set; } = 2;
         [InputParameter("Nến tiếp diễn: thân ≥ (body/range)", 59, 0.2, 1.0, 0.05, 2)]
         public double ResumeBody { get; set; } = 0.35;
+        // ⚠ LỖI GỐC (người học phát hiện trên chart 2026-08-02): nến PHÁ bắt buộc VSA≥BreakVsa(2.0),
+        // nhưng nến VÀO LỆNH (nến tiếp diễn) TRƯỚC ĐÂY KHÔNG có một điều kiện VSA nào — chỉ cần thân
+        // ≥0.35 và vol≥VolFloor. Đo trên dxFeed 5-7/2026 (research/wyckoff/cbr_entry_vsa.py):
+        //   VSA nến vào: trung vị 1.04x, p10 0.38x → 56% số lệnh vào nến DƯỚI ngưỡng "high" 1.2x.
+        //   Nhóm nến vào VSA<0.8 là nhóm tệ nhất: WR 35% (toàn bộ n=55 là 47%).
+        // Gate này CHO PHÉP BỎ QUA nến hồi yếu và CHỜ nến hồi khác trong cùng cửa sổ WaitBars
+        // (KHÔNG huỷ leg) — đó là lý do nó không mất tổng R: n 55→42, WR 47.3→54.8%, +49R→+50R,
+        // EV +0.891→+1.190. Đối chứng bỏ NGẪU NHIÊN đúng 13 lệnh: trung vị EV +0.905, p95 +1.095
+        // ⇒ p=0.037 — gate CHỌN chứ không chỉ làm mỏng. Đối chứng thứ 2: siết ResumeBody để cắt
+        // cùng lượng lệnh thì TỆ đi (0.55→EV +0.600) ⇒ thông tin nằm ở VSA, không ở thân nến.
+        // Vì sao 0.8 chứ không phải 1.2 ("high")? Vì 1.2 cắt quá tay: +30R (so với +50R) mà EV
+        // không hơn (+1.000 vs +1.190). Cái giết lệnh là nến hồi CHẾT, không phải nến hồi thường.
+        // Đặt 0 = tắt (về đúng hành vi cũ để A/B).
+        [InputParameter("Nến VÀO LỆNH: VSA ≥ (0 = tắt) — nến hồi yếu thì CHỜ nến khác", 61, 0, 4.0, 0.05, 2)]
+        public double ResumeVsa { get; set; } = 0.80;
 
         // ---------- risk / TP ----------
         [InputParameter("SL sàn (giá)", 60, 0.5, 8, 0.1, 1)]
@@ -246,6 +261,20 @@ namespace WyckoffRunner
         public double AbsDom { get; set; } = 0.60;
         [InputParameter("Quay đầu: climax tím = bonus hiển thị 'hấp thụ ✓' (KHÔNG nâng grade)", 73)]
         public bool RevClimaxOverride { get; set; } = true;
+        // Port luật "NẾN VÀO LỆNH PHẢI THUẬN MÀU" từ EntrySignal (2026-08-02). Nhánh CBR ĐÃ có sẵn luật
+        // này (`bj.C > bj.O` / `bj.C < bj.O` trong `resume`); nhánh QUAY ĐẦU thì KHÔNG kiểm thân nến, nên
+        // nến TRẮNG vẫn bắn SHORT và nến ĐỎ vẫn bắn LONG.
+        // ĐO (research/rev_bodydir_ab*.py, dxFeed 5-7/2026, n=27):
+        //   · MFE trung vị: nến thuận màu 3.78R vs nến ngược màu 1.13R  (chênh rất lớn, đo trực tiếp)
+        //   · EV thuận màu > ngược màu ở MỌI RR thử (1.0/1.5/2.0/3.0)
+        //   · NHƯNG kiểm định hoán vị: p=0.288 ở RR1.5 (RevRR đang ship) — KHÔNG có ý nghĩa;
+        //     chỉ p≈0.07 ở RR2-3, vẫn không qua ngưỡng. Ở RR1.5 luật này còn LÀM GIẢM tổng R
+        //     (+10.5R → +8.5R) vì cắt mất nửa số lệnh.
+        //   · tách theo phía thì mỗi ô chỉ còn n=6-8: SHORT ngược màu lại DƯƠNG (+0.667) ⇒ nhiễu.
+        // ⇒ MẶC ĐỊNH TẮT. Không đủ bằng chứng, và AUDIT_V7.md §13 đã phán cả nhánh QUAY ĐẦU là FAIL.
+        // (Đối chiếu: gate ResumeVsa của CBR qua được đối chứng ngẫu nhiên p=0.037 nên mới bật mặc định.)
+        [InputParameter("Quay đầu: nến vào lệnh phải THUẬN màu — CHƯA qua đối chứng, mặc định TẮT", 77)]
+        public bool RevRequireBodyDir { get; set; } = false;
 
         // ---------- lọc / warm-up ----------
         [InputParameter("Sàn volume (chống nến mỏng)", 70, 0, 500, 1, 0)]
@@ -771,7 +800,10 @@ namespace WyckoffRunner
                         double depth = up ? (peak - pullExt) : (pullExt - peak);
                         double retr = leg > 0 ? depth / leg : 0;
                         bool held = up ? pullExt >= edge - HoldTolTicks * _tick : pullExt <= edge + HoldTolTicks * _tick;
-                        bool resume = (up ? (bj.C > B[j - 1].H && bj.C > bj.O) : (bj.C < B[j - 1].L && bj.C < bj.O)) && bj.Brat >= ResumeBody;
+                        // ResumeVsa: gộp THẲNG vào `resume` (không `break`) ⇒ nến hồi yếu bị bỏ qua nhưng
+                        // vòng lặp VẪN chạy tiếp → tìm được nến hồi khoẻ hơn trong cùng cửa sổ WaitBars.
+                        bool resume = (up ? (bj.C > B[j - 1].H && bj.C > bj.O) : (bj.C < B[j - 1].L && bj.C < bj.O))
+                                      && bj.Brat >= ResumeBody && bj.Vratio >= ResumeVsa;
                         if (j >= since + 2 && retr >= PullMin && retr <= PullMax && held && resume && Gate(bj))
                         {
                             double entry = bj.C, sl, risk;
@@ -780,9 +812,15 @@ namespace WyckoffRunner
                             if (risk < slFloorT) { sl = up ? entry - slFloorT * _tick : entry + slFloorT * _tick; risk = slFloorT; }
                             if (risk > slCapT) break;
                             // GATE (thuận trend + đúng phía VWAP + thanh khoản) — 1 setup/range, filter-then-break khớp Python
+                            // ⚠ SỬA 2026-08-02: TRƯỚC ĐÂY truyền `b.Vratio` (VSA của nến PHÁ) cho tín hiệu
+                            // nằm ở nến j (nến VÀO). Hệ quả: cột VSA + cờ "tím" trong panel/CSV/Telegram
+                            // mô tả NẾN PHÁ chứ không phải nến vào lệnh — nên log toàn 2.2-5.6x "tím" trong
+                            // khi nến vào trên chart lại nhỏ (trung vị thật 1.04x). Nay báo VSA của NẾN VÀO,
+                            // VSA nến phá chuyển xuống dòng lý do.
                             if (TrendOk(bj, side) && VwapOk(bj, side) && LiqOk(bj))
-                                AddSig(raw, j, side, entry, sl, risk, RR, b.Vratio, "CBR phá→hồi→tiếp diễn",
-                                    new List<string> { $"phá {edge.ToString("0.0##")}", $"hồi {retr * 100:0}%", $"leg {leg:0.0}giá", $"VSA {b.Vratio:0.0}x{(b.Vratio >= VsaClimax ? " tím" : "")}" });
+                                AddSig(raw, j, side, entry, sl, risk, RR, bj.Vratio, "CBR phá→hồi→tiếp diễn",
+                                    new List<string> { $"phá {edge.ToString("0.0##")}", $"hồi {retr * 100:0}%", $"leg {leg:0.0}giá",
+                                                       $"VSA vào {bj.Vratio:0.0}x{(bj.Vratio >= VsaClimax ? " tím" : "")}", $"VSA phá {b.Vratio:0.0}x" });
                             break;
                         }
                     }
@@ -850,6 +888,7 @@ namespace WyckoffRunner
                 if (touchUp && rejShort && approUp) { side = -1; anchor = Math.Max(b.H, vw); }
                 else if (touchDn && rejLong && approDn) { side = +1; anchor = Math.Min(b.L, vw); }
                 if (side == 0) continue;
+                if (RevRequireBodyDir && (side > 0 ? b.C <= b.O : b.C >= b.O)) continue;   // nến vào phải THUẬN màu
                 if (!TrendOk(b, side)) continue;   // THUẬN trend (mua nhịp giảm trong uptrend / bán nhịp tăng trong downtrend)
 
                 bool wall = Absorption(HdBar(hd, b.HdIdx), side > 0 ? b.L : b.H, side) || (RevClimaxOverride && b.Vratio >= VsaClimax);
@@ -1288,7 +1327,7 @@ namespace WyckoffRunner
                     if (age > Mt5MaxAgeSec || age < -Mt5MaxAgeSec)
                     {
                         _sentIds.Add(id);
-                        _bridgeStatus = $"BỎ {s.Time:dd/MM HH:mm} — lệch đồng hồ {age:0}s (>{Mt5MaxAgeSec}s)";
+                        _bridgeStatus = $"BỎ {s.Time.AddHours(TzOffset):dd/MM HH:mm} — lệch đồng hồ {age:0}s (>{Mt5MaxAgeSec}s)";
                         continue;
                     }
                     WriteCmd(s, id, rev, closeUtc);
@@ -1318,7 +1357,11 @@ namespace WyckoffRunner
             var sb = new StringBuilder();
             sb.Append('{')
               .Append("\"id\":\"").Append(id).Append("\",")
+              // ts_utc: GIỮ UTC — EA bên MT5 so với TimeGMT() để tính tuổi tín hiệu, đổi sẽ sai.
+              // ts_local: mốc UTC+7 để người đọc/log dùng.
               .Append("\"ts_utc\":\"").Append(closeUtc.ToString("yyyy-MM-dd HH:mm:ss", ci)).Append("\",")
+              .Append("\"ts_local\":\"").Append(closeUtc.AddHours(TzOffset).ToString("yyyy-MM-dd HH:mm:ss", ci)).Append("\",")
+              .Append("\"tz\":").Append(TzOffset.ToString(ci)).Append(',')
               .Append("\"src\":\"").Append(Symbol?.Name ?? "?").Append("\",")
               .Append("\"branch\":\"").Append(rev ? "REV" : "CBR").Append("\",")
               .Append("\"side\":\"").Append(s.Side > 0 ? "BUY" : "SELL").Append("\",")
@@ -1338,7 +1381,7 @@ namespace WyckoffRunner
                 w.Write(sb.ToString());
 
             _bridgeSent++;
-            _bridgeStatus = $"gửi {_bridgeSent} · {s.Time:dd/MM HH:mm} {(s.Side > 0 ? "BUY" : "SELL")} "
+            _bridgeStatus = $"gửi {_bridgeSent} · {s.Time.AddHours(TzOffset):dd/MM HH:mm} {(s.Side > 0 ? "BUY" : "SELL")} "
                           + $"{(rev ? "QUAY ĐẦU" : "CBR")} SL {slDist:0.0}đ {rr:0.#}R{(Mt5DryRun ? " [DRY]" : "")}";
         }
 
@@ -1485,7 +1528,9 @@ namespace WyckoffRunner
             foreach (char c in Path.GetInvalidFileNameChars()) s = s.Replace(c, '_');
             return s;
         }
-        private static string DailyCsvName() => $"{SafeFileName("WYCKOFF RUNNER CBR+VWAP v6 (M1)")}_{DateTime.Now:yyyy-MM-dd}.csv";
+        // MỌI mốc thời gian ghi ra file đều là UTC+TzOffset (mặc định UTC+7, giờ VN) —
+        // KHÔNG dùng DateTime.Now (giờ máy) và KHÔNG ghi giờ UTC thô.
+        private string DailyCsvName() => $"{SafeFileName("WYCKOFF RUNNER CBR+VWAP v6 (M1)")}_{DateTime.UtcNow.AddHours(TzOffset):yyyy-MM-dd}.csv";
 
         private void ExportSignals(List<Sig> sigs)
         {
@@ -1499,6 +1544,7 @@ namespace WyckoffRunner
 
                 var ci = CultureInfo.InvariantCulture;
                 var sb = new StringBuilder();
+                // ngay_gio & ket_thuc_luc: giờ UTC+7 (VN)
                 sb.Append("ngay_gio,nhanh,huong,entry,SL,risk_gia,TP,RR,VSA,climax,co_vung,grade,tp_vuong_vung,KQ,ket_thuc_luc,chi_tiet\n");
                 foreach (var s in sigs.OrderBy(x => x.Idx))
                 {
@@ -1507,7 +1553,7 @@ namespace WyckoffRunner
                     string block = double.IsNaN(s.BlockR) ? "-" : s.BlockR.ToString("0.0", ci) + "R";
                     string kq = s.Outcome == "TP" ? "WIN" : s.Outcome == "SL" ? "LOSS" : "open";
                     string ct = "\"" + string.Join(" · ", s.Why ?? new List<string>()).Replace("\"", "'") + "\"";
-                    sb.Append(s.Time.ToString("yyyy-MM-dd HH:mm")).Append(',')
+                    sb.Append(s.Time.AddHours(TzOffset).ToString("yyyy-MM-dd HH:mm")).Append(',')
                       .Append(nhanh).Append(',').Append(huong).Append(',')
                       .Append(s.Entry.ToString("0.0##", ci)).Append(',')
                       .Append(s.Sl.ToString("0.0##", ci)).Append(',')
@@ -1520,7 +1566,7 @@ namespace WyckoffRunner
                       .Append(s.Grade).Append(',')
                       .Append(block).Append(',')
                       .Append(kq).Append(',')
-                      .Append(s.OutTime.ToString("yyyy-MM-dd HH:mm")).Append(',')
+                      .Append(s.OutTime.AddHours(TzOffset).ToString("yyyy-MM-dd HH:mm")).Append(',')
                       .Append(ct).Append('\n');
                 }
                 File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));

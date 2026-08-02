@@ -948,7 +948,7 @@ namespace EntrySignal
                     if (age > Mt5MaxAgeSec || age < -Mt5MaxAgeSec)
                     {
                         _mt5Sent.Add(id);
-                        _mt5Status = $"BỎ {s.Time:dd/MM HH:mm} — lệch đồng hồ {age:0}s (>{Mt5MaxAgeSec}s)";
+                        _mt5Status = $"BỎ {s.Time.AddHours(TzOffset):dd/MM HH:mm} — lệch đồng hồ {age:0}s (>{Mt5MaxAgeSec}s)";
                         continue;
                     }
                     WriteCmd(s, id, closeUtc);
@@ -971,7 +971,11 @@ namespace EntrySignal
             var sb = new StringBuilder();
             sb.Append('{')
               .Append("\"id\":\"").Append(id).Append("\",")
+              // ts_utc: GIỮ UTC — EA bên MT5 so với TimeGMT() để tính tuổi tín hiệu, đổi sẽ sai.
+              // ts_local: mốc UTC+7 để người đọc/log dùng.
               .Append("\"ts_utc\":\"").Append(closeUtc.ToString("yyyy-MM-dd HH:mm:ss", ci)).Append("\",")
+              .Append("\"ts_local\":\"").Append(closeUtc.AddHours(TzOffset).ToString("yyyy-MM-dd HH:mm:ss", ci)).Append("\",")
+              .Append("\"tz\":").Append(TzOffset.ToString(ci)).Append(',')
               .Append("\"src\":\"").Append(Symbol?.Name ?? "?").Append("\",")
               .Append("\"branch\":\"").Append(IsBreak(s) ? "SCALP_BR" : "SCALP_REV").Append("\",")
               .Append("\"side\":\"").Append(s.Side > 0 ? "BUY" : "SELL").Append("\",")
@@ -992,7 +996,7 @@ namespace EntrySignal
                 w.Write(sb.ToString());
 
             _mt5Count++;
-            _mt5Status = $"gửi {_mt5Count} · {s.Time:dd/MM HH:mm} {(s.Side > 0 ? "BUY" : "SELL")} "
+            _mt5Status = $"gửi {_mt5Count} · {s.Time.AddHours(TzOffset):dd/MM HH:mm} {(s.Side > 0 ? "BUY" : "SELL")} "
                        + $"{(IsBreak(s) ? "phá&hồi" : "chạm&đảo")} SL {slDist:0.0}giá {RR:0.#}R{(Mt5DryRun ? " [DRY]" : "")}";
         }
 
@@ -1131,7 +1135,9 @@ namespace EntrySignal
             foreach (char c in Path.GetInvalidFileNameChars()) s = s.Replace(c, '_');
             return s;
         }
-        private static string DailyCsvName() => $"{SafeFileName("ENTRY SIGNAL (M1)")}_{DateTime.Now:yyyy-MM-dd}.csv";
+        // MỌI mốc thời gian ghi ra file đều là UTC+TzOffset (mặc định UTC+7, giờ VN) —
+        // KHÔNG dùng DateTime.Now (giờ máy) và KHÔNG ghi giờ UTC thô.
+        private string DailyCsvName() => $"{SafeFileName("ENTRY SIGNAL (M1)")}_{DateTime.UtcNow.AddHours(TzOffset):yyyy-MM-dd}.csv";
 
         private void ExportSignals(List<Sig> sigs)
         {
@@ -1145,6 +1151,7 @@ namespace EntrySignal
 
                 var ci = CultureInfo.InvariantCulture;
                 var sb = new StringBuilder();
+                // ngay_gio & ket_thuc_luc: giờ UTC+7 (VN)
                 sb.Append("ngay_gio,kich_ban,huong,entry,SL,risk_gia,TP1,TP2,RR,VSA,climax,hop_luu,grade,KQ,ket_thuc_luc,chi_tiet\n");
                 foreach (var s in sigs.OrderBy(x => x.Idx))
                 {
@@ -1152,7 +1159,7 @@ namespace EntrySignal
                     string huong = s.Side > 0 ? "LONG" : "SHORT";
                     string kq = s.Outcome == "TP" ? "WIN" : s.Outcome == "SL" ? "LOSS" : "open";
                     string ct = "\"" + string.Join(" · ", s.Why ?? new List<string>()).Replace("\"", "'") + "\"";
-                    sb.Append(s.Time.ToString("yyyy-MM-dd HH:mm")).Append(',')
+                    sb.Append(s.Time.AddHours(TzOffset).ToString("yyyy-MM-dd HH:mm")).Append(',')
                       .Append(kb).Append(',').Append(huong).Append(',')
                       .Append(s.Entry.ToString("0.0##", ci)).Append(',')
                       .Append(s.Sl.ToString("0.0##", ci)).Append(',')
@@ -1165,7 +1172,7 @@ namespace EntrySignal
                       .Append(s.Cluster.ToString(ci)).Append(',')
                       .Append(s.Grade).Append(',')
                       .Append(kq).Append(',')
-                      .Append(s.OutTime.ToString("yyyy-MM-dd HH:mm")).Append(',')
+                      .Append(s.OutTime.AddHours(TzOffset).ToString("yyyy-MM-dd HH:mm")).Append(',')
                       .Append(ct).Append('\n');
                 }
                 File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));

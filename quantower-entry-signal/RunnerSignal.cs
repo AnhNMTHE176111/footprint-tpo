@@ -97,6 +97,21 @@ namespace RunnerSignal
         public int HoldTolTicks { get; set; } = 2;
         [InputParameter("Nến tiếp diễn: thân ≥ (body/range)", 59, 0.2, 1.0, 0.05, 2)]
         public double ResumeBody { get; set; } = 0.35;
+        // ⚠ LỖI GỐC (người học phát hiện trên chart 2026-08-02): nến PHÁ bắt buộc VSA≥BreakVsa(2.0),
+        // nhưng nến VÀO LỆNH (nến tiếp diễn) TRƯỚC ĐÂY KHÔNG có một điều kiện VSA nào — chỉ cần thân
+        // ≥0.35 và vol≥VolFloor. Đo trên dxFeed 5-7/2026 (research/wyckoff/cbr_entry_vsa.py):
+        //   VSA nến vào: trung vị 1.04x, p10 0.38x → 56% số lệnh vào nến DƯỚI ngưỡng "high" 1.2x.
+        //   Nhóm nến vào VSA<0.8 là nhóm tệ nhất: WR 35% (toàn bộ n=55 là 47%).
+        // Gate này CHO PHÉP BỎ QUA nến hồi yếu và CHỜ nến hồi khác trong cùng cửa sổ WaitBars
+        // (KHÔNG huỷ leg) — đó là lý do nó không mất tổng R: n 55→42, WR 47.3→54.8%, +49R→+50R,
+        // EV +0.891→+1.190. Đối chứng bỏ NGẪU NHIÊN đúng 13 lệnh: trung vị EV +0.905, p95 +1.095
+        // ⇒ p=0.037 — gate CHỌN chứ không chỉ làm mỏng. Đối chứng thứ 2: siết ResumeBody để cắt
+        // cùng lượng lệnh thì TỆ đi (0.55→EV +0.600) ⇒ thông tin nằm ở VSA, không ở thân nến.
+        // Vì sao 0.8 chứ không phải 1.2 ("high")? Vì 1.2 cắt quá tay: +30R (so với +50R) mà EV
+        // không hơn (+1.000 vs +1.190). Cái giết lệnh là nến hồi CHẾT, không phải nến hồi thường.
+        // Đặt 0 = tắt (về đúng hành vi cũ để A/B).
+        [InputParameter("Nến VÀO LỆNH: VSA ≥ (0 = tắt) — nến hồi yếu thì CHỜ nến khác", 61, 0, 4.0, 0.05, 2)]
+        public double ResumeVsa { get; set; } = 0.80;
 
         // ---------- risk / TP ----------
         [InputParameter("SL sàn (giá)", 60, 0.5, 8, 0.1, 1)]
@@ -745,7 +760,10 @@ namespace RunnerSignal
                         double depth = up ? (peak - pullExt) : (pullExt - peak);
                         double retr = leg > 0 ? depth / leg : 0;
                         bool held = up ? pullExt >= edge - HoldTolTicks * _tick : pullExt <= edge + HoldTolTicks * _tick;
-                        bool resume = (up ? (bj.C > B[j - 1].H && bj.C > bj.O) : (bj.C < B[j - 1].L && bj.C < bj.O)) && bj.Brat >= ResumeBody;
+                        // ResumeVsa: gộp THẲNG vào `resume` (không `break`) ⇒ nến hồi yếu bị bỏ qua nhưng
+                        // vòng lặp VẪN chạy tiếp → tìm được nến hồi khoẻ hơn trong cùng cửa sổ WaitBars.
+                        bool resume = (up ? (bj.C > B[j - 1].H && bj.C > bj.O) : (bj.C < B[j - 1].L && bj.C < bj.O))
+                                      && bj.Brat >= ResumeBody && bj.Vratio >= ResumeVsa;
                         if (j >= since + 2 && retr >= PullMin && retr <= PullMax && held && resume && Gate(bj))
                         {
                             double entry = bj.C, sl, risk;
@@ -1044,7 +1062,7 @@ namespace RunnerSignal
                     if (age > Mt5MaxAgeSec || age < -Mt5MaxAgeSec)
                     {
                         _sentIds.Add(id);
-                        _bridgeStatus = $"BỎ {s.Time:dd/MM HH:mm} — lệch đồng hồ {age:0}s (>{Mt5MaxAgeSec}s)";
+                        _bridgeStatus = $"BỎ {s.Time.AddHours(TzOffset):dd/MM HH:mm} — lệch đồng hồ {age:0}s (>{Mt5MaxAgeSec}s)";
                         continue;
                     }
                     WriteCmd(s, id, rev, closeUtc);
@@ -1074,7 +1092,11 @@ namespace RunnerSignal
             var sb = new StringBuilder();
             sb.Append('{')
               .Append("\"id\":\"").Append(id).Append("\",")
+              // ts_utc: GIỮ UTC — EA bên MT5 so với TimeGMT() để tính tuổi tín hiệu, đổi sẽ sai.
+              // ts_local: mốc UTC+7 để người đọc/log dùng.
               .Append("\"ts_utc\":\"").Append(closeUtc.ToString("yyyy-MM-dd HH:mm:ss", ci)).Append("\",")
+              .Append("\"ts_local\":\"").Append(closeUtc.AddHours(TzOffset).ToString("yyyy-MM-dd HH:mm:ss", ci)).Append("\",")
+              .Append("\"tz\":").Append(TzOffset.ToString(ci)).Append(',')
               .Append("\"src\":\"").Append(Symbol?.Name ?? "?").Append("\",")
               .Append("\"branch\":\"").Append(rev ? "REV" : "CBR").Append("\",")
               .Append("\"side\":\"").Append(s.Side > 0 ? "BUY" : "SELL").Append("\",")
@@ -1094,7 +1116,7 @@ namespace RunnerSignal
                 w.Write(sb.ToString());
 
             _bridgeSent++;
-            _bridgeStatus = $"gửi {_bridgeSent} · {s.Time:dd/MM HH:mm} {(s.Side > 0 ? "BUY" : "SELL")} "
+            _bridgeStatus = $"gửi {_bridgeSent} · {s.Time.AddHours(TzOffset):dd/MM HH:mm} {(s.Side > 0 ? "BUY" : "SELL")} "
                           + $"{(rev ? "QUAY ĐẦU" : "CBR")} SL {slDist:0.0}đ {rr:0.#}R{(Mt5DryRun ? " [DRY]" : "")}";
         }
 
@@ -1241,7 +1263,9 @@ namespace RunnerSignal
             foreach (char c in Path.GetInvalidFileNameChars()) s = s.Replace(c, '_');
             return s;
         }
-        private static string DailyCsvName() => $"{SafeFileName("RUNNER CBR+VWAP (M1)")}_{DateTime.Now:yyyy-MM-dd}.csv";
+        // MỌI mốc thời gian ghi ra file đều là UTC+TzOffset (mặc định UTC+7, giờ VN) —
+        // KHÔNG dùng DateTime.Now (giờ máy) và KHÔNG ghi giờ UTC thô.
+        private string DailyCsvName() => $"{SafeFileName("RUNNER CBR+VWAP (M1)")}_{DateTime.UtcNow.AddHours(TzOffset):yyyy-MM-dd}.csv";
 
         private void ExportSignals(List<Sig> sigs)
         {
@@ -1255,6 +1279,7 @@ namespace RunnerSignal
 
                 var ci = CultureInfo.InvariantCulture;
                 var sb = new StringBuilder();
+                // ngay_gio & ket_thuc_luc: giờ UTC+7 (VN)
                 sb.Append("ngay_gio,nhanh,huong,entry,SL,risk_gia,TP,RR,VSA,climax,co_vung,grade,tp_vuong_vung,KQ,ket_thuc_luc,chi_tiet\n");
                 foreach (var s in sigs.OrderBy(x => x.Idx))
                 {
@@ -1263,7 +1288,7 @@ namespace RunnerSignal
                     string block = double.IsNaN(s.BlockR) ? "-" : s.BlockR.ToString("0.0", ci) + "R";
                     string kq = s.Outcome == "TP" ? "WIN" : s.Outcome == "SL" ? "LOSS" : "open";
                     string ct = "\"" + string.Join(" · ", s.Why ?? new List<string>()).Replace("\"", "'") + "\"";
-                    sb.Append(s.Time.ToString("yyyy-MM-dd HH:mm")).Append(',')
+                    sb.Append(s.Time.AddHours(TzOffset).ToString("yyyy-MM-dd HH:mm")).Append(',')
                       .Append(nhanh).Append(',').Append(huong).Append(',')
                       .Append(s.Entry.ToString("0.0##", ci)).Append(',')
                       .Append(s.Sl.ToString("0.0##", ci)).Append(',')
@@ -1276,7 +1301,7 @@ namespace RunnerSignal
                       .Append(s.Grade).Append(',')
                       .Append(block).Append(',')
                       .Append(kq).Append(',')
-                      .Append(s.OutTime.ToString("yyyy-MM-dd HH:mm")).Append(',')
+                      .Append(s.OutTime.AddHours(TzOffset).ToString("yyyy-MM-dd HH:mm")).Append(',')
                       .Append(ct).Append('\n');
                 }
                 File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));

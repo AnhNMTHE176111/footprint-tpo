@@ -480,7 +480,8 @@ namespace FootprintExport
                 string dir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "FootprintExport");
                 Directory.CreateDirectory(dir);
-                string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\t{cfg.Symbol}\t{cfg.Period}"
+                // mốc log theo UTC+Tz (mặc định UTC+7) — trùng múi giờ với cột datetime trong CSV
+                string line = $"{DateTime.UtcNow.AddHours(cfg.Tz):yyyy-MM-dd HH:mm:ss}\t{cfg.Symbol}\t{cfg.Period}"
                             + $"\ttick={cfg.Tick.ToString(CultureInfo.InvariantCulture)}\tdigits={digits}"
                             + $"\ttpr={cfg.TicksPerRow}\ttz={cfg.Tz}\t{msg}\n";
                 File.AppendAllText(Path.Combine(dir, "export_log.txt"), line, new UTF8Encoding(false));

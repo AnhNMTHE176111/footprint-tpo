@@ -43,6 +43,7 @@ input string          InpCmdFile         = "runner_cmd.jsonl"; // File lenh (Qua
 input string          InpAckFile         = "runner_ack.csv";   // File ack (EA ghi)
 input string          InpDoneFile        = "runner_done.txt";  // File id da xu ly
 input bool            InpUseCommonFolder = true;               // Dung thu muc Common\Files (khop mac dinh Quantower)
+input int             InpTzOffset        = 7;                  // Mui gio ghi ra file ack (gio VN = UTC+7)
 
 input group "=== KHOI LUONG / RUI RO ==="
 input ENUM_RISK_MODE  InpRiskMode        = RISK_MIN_LOT;       // Cach tinh lot
@@ -226,7 +227,7 @@ void HandleCmd(const string line, const string id)
    double refPrice = isBuy ? ask : bid;
    double sl  = NormalizeDouble(isBuy ? refPrice - slDist       : refPrice + slDist,       _Digits);
    double tp  = NormalizeDouble(isBuy ? refPrice + rr*slDist    : refPrice - rr*slDist,    _Digits);
-   string cmt = "RB " + branch + " " + TimeToString(TimeCurrent(), TIME_MINUTES);
+   string cmt = "RB " + branch + " " + TimeToString(TimeGMT() + (datetime)(InpTzOffset * 3600), TIME_MINUTES);
 
    bool ok = isBuy ? trade.Buy(lot, _Symbol, 0.0, sl, tp, cmt)
                    : trade.Sell(lot, _Symbol, 0.0, sl, tp, cmt);
@@ -340,6 +341,15 @@ void Reject(const string id, const string line, const string why)
   }
 
 //+------------------------------------------------------------------+
+//| Moc thoi gian ghi ra file = UTC + InpTzOffset (mac dinh UTC+7).    |
+//| KHONG dung TimeCurrent() (gio may chu broker) hay TimeLocal().     |
+//+------------------------------------------------------------------+
+string NowLocalStr()
+  {
+   return TimeToString(TimeGMT() + (datetime)(InpTzOffset * 3600), TIME_DATE|TIME_SECONDS);
+  }
+
+//+------------------------------------------------------------------+
 void Ack(const string id, const string branch, const string side, const string action,
          const double lot, const double reqPrice, const double fill, const double spread,
          const double sl, const double tp, const double riskMoney, const string reason,
@@ -354,7 +364,7 @@ void Ack(const string id, const string branch, const string side, const string a
    if(sz == 0)
       FileWriteString(h, "thoi_diem,id,src,nhanh,huong,hanh_dong,lot,sl_dist,rr,gia_yeu_cau,gia_khop,truot,spread,SL,TP,rui_ro,equity,ly_do\n");
    FileWriteString(h, StringFormat("%s,%s,%s,%s,%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s\n",
-                    TimeToString(TimeCurrent(), TIME_DATE|TIME_SECONDS), id, src, branch, side, action,
+                    NowLocalStr(), id, src, branch, side, action,
                     lot, slDist, rr, reqPrice, fill, (fill > 0 && reqPrice > 0) ? MathAbs(fill-reqPrice) : 0.0,
                     spread, sl, tp, riskMoney, AccountInfoDouble(ACCOUNT_EQUITY), reason));
    FileClose(h);

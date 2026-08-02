@@ -262,10 +262,86 @@ namespace FootprintExport
         }
 
         /// <summary>
+        /// Rút gọn tên khung thời gian của platform về dạng ngắn quen mắt: "1 minute" → "M1",
+        /// "30 minutes" → "M30", "1 hour" → "H1", "Daily" → "D1", "1000 ticks" → "T1000".
+        /// Không nhận dạng được thì giữ nguyên (đã lọc ký tự cấm).
+        /// </summary>
+        public static string ShortPeriod(string period)
+        {
+            if (string.IsNullOrWhiteSpace(period)) return "period";
+            string s = period.Trim().ToLowerInvariant();
+
+            // Lấy số đầu tiên xuất hiện trong tên (nếu có).
+            int i = 0;
+            while (i < s.Length && !char.IsDigit(s[i])) i++;
+            int j = i;
+            while (j < s.Length && char.IsDigit(s[j])) j++;
+            string num = s.Substring(i, j - i);
+
+            string letter =
+                  s.Contains("month") ? "MN"
+                : s.Contains("week") ? "W"
+                : s.Contains("day") || s.Contains("daily") ? "D"
+                : s.Contains("hour") ? "H"
+                : s.Contains("min") ? "M"
+                : s.Contains("second") ? "S"
+                : s.Contains("tick") ? "T"
+                : s.Contains("volume") ? "V"
+                : s.Contains("range") ? "R"
+                : null;
+            if (letter == null) return SafeName(period);
+            return letter + (num.Length > 0 ? num : "1");
+        }
+
+        /// <summary>
+        /// Nhãn ĐỘ DÀI dữ liệu, đọc là hiểu ngay xuất bao nhiêu: "23d", "6h45m", "40m".
+        /// Chỉ hiện đơn vị lớn nhất + đơn vị kế tiếp (nếu còn dư) để tên file không phình.
+        /// </summary>
+        public static string SpanTag(DateTime first, DateTime last)
+        {
+            var d = last - first;
+            if (d < TimeSpan.Zero) d = TimeSpan.Zero;
+            if (d.TotalDays >= 1)
+            {
+                int days = (int)d.TotalDays, hours = d.Hours;
+                return hours > 0 ? $"{days}d{hours}h" : $"{days}d";
+            }
+            if (d.TotalHours >= 1)
+            {
+                int hours = (int)d.TotalHours, mins = d.Minutes;
+                return mins > 0 ? $"{hours}h{mins}m" : $"{hours}h";
+            }
+            if (d.TotalMinutes >= 1) return $"{(int)d.TotalMinutes}m";
+            return $"{(int)d.TotalSeconds}s";
+        }
+
+        /// <summary>
+        /// Phần giữa của tên file: mã + khung thời gian + KHOẢNG DỮ LIỆU THẬT + độ dài.
+        ///   nhiều ngày : MGCQ26_M1_20260701-20260731_30d
+        ///   trong 1 ngày: MGCQ26_M1_20260731_0930-1615_6h45m
+        /// first/last là thời gian nến ĐẦU và CUỐI thực sự được xuất (đã trừ lọc ngày).
+        /// </summary>
+        public static string RangeStem(string symbol, string period, DateTime? first, DateTime? last)
+        {
+            // Cắt mã dài (vd "_GCQ26XCEC dxFeed Continuous") để phần khoảng dữ liệu KHÔNG bị
+            // trần 60 ký tự của SafeName cắt mất — đó là phần mang nhiều thông tin nhất.
+            string sym = SafeName(symbol);
+            if (sym.Length > 24) sym = sym.Substring(0, 24).TrimEnd('_', '.');
+            string head = $"{sym}_{ShortPeriod(period)}";
+            if (!first.HasValue || !last.HasValue) return head;
+            DateTime a = first.Value, b = last.Value;
+            string body = a.Date == b.Date
+                ? a.ToString("yyyyMMdd_HHmm", Inv) + "-" + b.ToString("HHmm", Inv)
+                : a.ToString("yyyyMMdd", Inv) + "-" + b.ToString("yyyyMMdd", Inv);
+            return $"{head}_{body}_{SpanTag(a, b)}";
+        }
+
+        /// <summary>
         /// Quyết định 2 đường dẫn xuất.
         ///   userPath rỗng            → defaultDir + tên tự sinh
         ///   userPath là .csv         → dùng luôn; file nến = "&lt;tên&gt;_bars.csv"
         ///   ngược lại (thư mục)      → thư mục đó + tên tự sinh
+        /// stamp = phần đuôi phân biệt (thường là giờ xuất, hoặc "" nếu không cần).
         /// </summary>
         public static void MakeNames(string userPath, string defaultDir, string symbol, string period,
                                      string stamp, out string levelsPath, out string barsPath)
@@ -286,6 +362,25 @@ namespace FootprintExport
             string stem = $"fp_{SafeName(symbol)}_{SafeName(period)}_{SafeName(stamp)}";
             levelsPath = Path.Combine(outDir, stem + ".csv");
             barsPath = Path.Combine(outDir, stem + "_bars.csv");
+        }
+
+        /// <summary>
+        /// Như MakeNames nhưng tên tự sinh do bên gọi dựng sẵn (đã gồm mã/khung/khoảng dữ liệu).
+        /// userPath là .csv thì vẫn ưu tiên tên người dùng chỉ định.
+        /// </summary>
+        public static void MakeNamesStem(string userPath, string defaultDir, string stem,
+                                         out string levelsPath, out string barsPath)
+        {
+            string p = (userPath ?? "").Trim().Trim('"');
+            if (p.Length > 0 && p.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+            {
+                MakeNames(userPath, defaultDir, "x", "x", "x", out levelsPath, out barsPath);
+                return;
+            }
+            string outDir = p.Length > 0 ? p : defaultDir;
+            string safe = SafeName(stem);
+            levelsPath = Path.Combine(outDir, safe + ".csv");
+            barsPath = Path.Combine(outDir, safe + "_bars.csv");
         }
     }
 }

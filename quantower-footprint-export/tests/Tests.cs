@@ -265,6 +265,37 @@ namespace FootprintExport
             Eq(lp, Path.Combine("/def", "abc.csv"), "gõ TRƠ tên file -> về thư mục mặc định, không rơi vào CWD Quantower");
             Eq(bp, Path.Combine("/def", "abc_bars.csv"), "file nến cũng vào thư mục mặc định");
 
+            // ------------------------------------------- tên file mô tả (mã/khung/khoảng)
+            Section("ShortPeriod / SpanTag / RangeStem");
+            Eq(FpCore.ShortPeriod("1 minute"), "M1", "1 minute -> M1");
+            Eq(FpCore.ShortPeriod("30 minutes"), "M30", "30 minutes -> M30");
+            Eq(FpCore.ShortPeriod("Minute (1)"), "M1", "dạng 'Minute (1)'");
+            Eq(FpCore.ShortPeriod("1 hour"), "H1", "hour -> H");
+            Eq(FpCore.ShortPeriod("Daily"), "D1", "Daily -> D1 (không có số)");
+            Eq(FpCore.ShortPeriod("1000 ticks"), "T1000", "tick chart");
+            Eq(FpCore.ShortPeriod("Renko 4"), "Renko_4", "không nhận dạng -> giữ nguyên đã lọc ký tự");
+
+            Eq(FpCore.SpanTag(new DateTime(2026, 7, 1), new DateTime(2026, 7, 31)), "30d", "tròn ngày");
+            Eq(FpCore.SpanTag(new DateTime(2026, 7, 1), new DateTime(2026, 7, 3, 5, 0, 0)), "2d5h", "ngày + giờ");
+            Eq(FpCore.SpanTag(new DateTime(2026, 7, 1, 9, 30, 0), new DateTime(2026, 7, 1, 16, 15, 0)), "6h45m", "trong ngày");
+            Eq(FpCore.SpanTag(new DateTime(2026, 7, 1, 9, 30, 0), new DateTime(2026, 7, 1, 10, 0, 0)), "30m", "dưới 1 giờ");
+            Eq(FpCore.SpanTag(new DateTime(2026, 7, 2), new DateTime(2026, 7, 1)), "0s", "đảo thứ tự -> không âm");
+
+            Eq(FpCore.RangeStem("MGCQ26", "1 minute", new DateTime(2026, 7, 1), new DateTime(2026, 7, 31)),
+               "MGCQ26_M1_20260701-20260731_30d", "nhiều ngày");
+            Eq(FpCore.RangeStem("MGCQ26", "1 minute",
+                                new DateTime(2026, 7, 31, 9, 30, 0), new DateTime(2026, 7, 31, 16, 15, 0)),
+               "MGCQ26_M1_20260731_0930-1615_6h45m", "gói trong 1 ngày -> có giờ");
+            Eq(FpCore.RangeStem("MGCQ26", "1 minute", null, null), "MGCQ26_M1", "không biết khoảng -> chỉ mã+khung");
+            Ok(FpCore.RangeStem(new string('X', 80), "1 minute", new DateTime(2026, 7, 1), new DateTime(2026, 7, 31))
+                     .EndsWith("_M1_20260701-20260731_30d"), "mã quá dài bị cắt, KHÔNG mất khoảng dữ liệu");
+
+            FpCore.MakeNamesStem("", "/def", "fp_MGCQ26_M1_20260701-20260731_30d", out lp, out bp);
+            Eq(lp, Path.Combine("/def", "fp_MGCQ26_M1_20260701-20260731_30d.csv"), "stem -> thư mục mặc định");
+            Eq(bp, Path.Combine("/def", "fp_MGCQ26_M1_20260701-20260731_30d_bars.csv"), "stem -> file nến");
+            FpCore.MakeNamesStem("/tmp/my.csv", "/def", "fp_x", out lp, out bp);
+            Eq(lp, "/tmp/my.csv", "người dùng chỉ định .csv thì vẫn thắng");
+
             // =============================================================
             //  END-TO-END: sinh CSV giả lập rồi ĐỌC LẠI và đối chiếu
             // =============================================================

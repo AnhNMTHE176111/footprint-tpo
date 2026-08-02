@@ -46,7 +46,16 @@ Mặc định file nằm ở `Documents\FootprintExport\`. Log mỗi lần xuấ
 
 ## 2 file ra
 
-**`fp_<symbol>_<period>_<stamp>.csv`** — 1 dòng / (nến × mức giá):
+Tên tự sinh gồm **mã · khung thời gian · khoảng dữ liệu thật · độ dài** — nhìn tên là biết file chứa gì:
+
+```
+fp_MGCQ26_M1_20260701-20260731_30d.csv         ← nhiều ngày
+fp_MGCQ26_M1_20260731_0930-1615_6h45m.csv      ← dữ liệu gói trong 1 ngày (có luôn giờ)
+```
+Khoảng thời gian lấy từ nến **đầu/cuối thực sự được xuất** (đã trừ lọc "Từ ngày/Đến ngày"), theo múi giờ đã đặt ở "Lệch giờ".
+Xuất lại đúng khoảng đó → tự thêm `_2`, `_3`… **không ghi đè**. Nếu tự gõ đường dẫn `.csv` thì tên của bạn được tôn trọng như trước.
+
+**`fp_<mã>_<khung>_<khoảng>_<độ dài>.csv`** — 1 dòng / (nến × mức giá):
 
 | cột | nghĩa |
 |---|---|

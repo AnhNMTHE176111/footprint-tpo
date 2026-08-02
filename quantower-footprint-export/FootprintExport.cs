@@ -15,8 +15,11 @@
 //      Trạng thái hiện góc trên-trái chart. Xong thì tắt lại công tắc đó.
 //
 //  ---- 2 FILE RA ---------------------------------------------------------------
-//   fp_<symbol>_<period>_<stamp>.csv       ← 1 dòng / (nến × mức giá)  [footprint]
-//   fp_..._bars.csv                        ← 1 dòng / nến (OHLC + tổng VA + POC)
+//   Tên tự sinh = mã + khung thời gian + KHOẢNG DỮ LIỆU THẬT + độ dài:
+//     fp_MGCQ26_M1_20260701-20260731_30d.csv        ← 1 dòng / (nến × mức giá)
+//     fp_MGCQ26_M1_20260701-20260731_30d_bars.csv   ← 1 dòng / nến (OHLC + tổng VA + POC)
+//   Dữ liệu gói trong 1 ngày thì có luôn giờ: fp_MGCQ26_M1_20260731_0930-1615_6h45m.csv
+//   Trùng tên (xuất lại cùng khoảng) → tự thêm _2, _3… KHÔNG ghi đè.
 //   Ghép 2 file bằng cột bar_idx (KHÔNG dùng datetime: chart theo tick/volume có
 //   thể trùng TimeLeft).
 //
@@ -240,10 +243,16 @@ namespace FootprintExport
 
                 string defDir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "FootprintExport");
-                string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
-                FpCore.MakeNames(cfg.Path, defDir, cfg.Symbol, cfg.Period, stamp, out levelsPath, out barsPath);
+                // Khoảng dữ liệu THẬT (sau lọc ngày) — quét trước để đưa vào TÊN FILE.
+                ScanRange(bars, cfg, from, to, out var firstT, out var lastT);
+                string stem = "fp_" + FpCore.RangeStem(cfg.Symbol, cfg.Period, firstT, lastT);
+                FpCore.MakeNamesStem(cfg.Path, defDir, stem, out levelsPath, out barsPath);
                 string dir = Path.GetDirectoryName(levelsPath);
                 if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                // Xuất lại đúng khoảng đó → KHÔNG ghi đè âm thầm, thêm _2, _3…
+                // (người dùng tự chỉ định file .csv thì tôn trọng: ghi đè như trước)
+                if (!cfg.Path.Trim().Trim('"').EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+                    Uniquify(ref levelsPath, ref barsPath);
 
                 long rows = 0, barsOut = 0, skippedNoVa = 0, skippedRange = 0, skippedUnstable = 0;
                 bool capped = false;
@@ -408,6 +417,41 @@ namespace FootprintExport
             }
             catch (InvalidOperationException) { raw.Clear(); return false; }   // collection modified
             catch (NullReferenceException) { raw.Clear(); return false; }      // bar bị thay giữa lúc đọc
+        }
+
+        /// <summary>Thời gian nến ĐẦU / CUỐI thực sự sẽ được xuất (đã áp lọc ngày, bỏ nến null).</summary>
+        private static void ScanRange(HistoryItemBar[] bars, Cfg cfg, DateTime? from, DateTime? to,
+                                      out DateTime? first, out DateTime? last)
+        {
+            first = null; last = null;
+            foreach (var b in bars)
+            {
+                if (b == null) continue;
+                DateTime t = b.TimeLeft.AddHours(cfg.Tz);
+                if (!FpCore.InRange(t, from, to)) continue;
+                if (!first.HasValue || t < first.Value) first = t;
+                if (!last.HasValue || t > last.Value) last = t;
+            }
+        }
+
+        /// <summary>Tên đã tồn tại → thêm _2, _3… (giữ cặp levels/bars cùng số).</summary>
+        private static void Uniquify(ref string levelsPath, ref string barsPath)
+        {
+            try
+            {
+                if (!File.Exists(levelsPath) && !File.Exists(barsPath)) return;
+                string dir = Path.GetDirectoryName(levelsPath);
+                string stem = Path.GetFileNameWithoutExtension(levelsPath);
+                for (int n = 2; n <= 999; n++)
+                {
+                    string l = Path.Combine(dir, $"{stem}_{n}.csv");
+                    string b = Path.Combine(dir, $"{stem}_{n}_bars.csv");
+                    if (File.Exists(l) || File.Exists(b)) continue;
+                    levelsPath = l; barsPath = b;
+                    return;
+                }
+            }
+            catch { }        // không kiểm tra được thì cứ ghi như cũ
         }
 
         private static double SafeMb(string path)

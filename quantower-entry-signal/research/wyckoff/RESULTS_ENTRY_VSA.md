@@ -151,3 +151,49 @@ Bằng chứng BÁC BỎ (nặng hơn):
 - Đổi cột VSA sang nến vào làm **cờ "tím"/climax trong CSV và Telegram đổi nghĩa**. Các file review cũ
   (`WyckoffRunner-lenh-dinh-SL.md`, `RunnerSignal-lenh-SL-review.md`) ghi VSA nến **phá** — không so
   trực tiếp với log mới được.
+
+---
+
+## 8. Nhồi lệnh ở runner — gate theo VSA nến vào, KHÔNG theo hợp lưu
+
+Thêm 2026-08-02 theo yêu cầu của người học ("thêm cấu hình nhồi lệnh cho cả 2 signal còn lại").
+
+**Vì sao không copy nguyên cơ chế của EntrySignal?** Bên đó nhồi theo `Cluster` (hợp lưu) vì hợp lưu ≥2
+là gate lõi đã backtest. Ở runner, hợp lưu **chỉ là thông tin hiển thị**, không lọc lệnh nào — và với
+nhánh QUAY ĐẦU nó được đo là **ngược dấu**: 0 vùng → WR 33%, 1 → 16%, 2 → 17%, 3 → **0%**
+(xem đầu file [`../reversal_vwap.py`](../reversal_vwap.py)). Nhồi theo hợp lưu ở runner sẽ nhân lot to
+nhất đúng vào nhóm lệnh tệ nhất.
+
+Thay vào đó gate theo **VSA nến vào lệnh** — tiêu chí vừa chứng minh được ở §1–§4. Kết quả trong cấu hình
+đang ship (đã bật `ResumeVsa=0.8`):
+
+| VSA nến vào | RunnerSignal RR3 (n=42) | WyckoffRunner RR4+sạch (n=21) |
+|---|---|---|
+| [0.8, 1.2) | n=14 · WR 57% · EV +1.286 | n=6 · WR 50% · EV +1.500 |
+| [1.2, 1.8) | n=16 · WR 38% · EV +0.500 | n=8 · WR 50% · EV +1.500 |
+| [1.8, 2.2) | n=3 · WR 67% · EV +1.667 | n=2 · WR 50% · EV +1.500 |
+| **[2.2, ∞)** | **n=9 · WR 78% · EV +2.111** | **n=5 · WR 80% · EV +3.000** |
+
+Nhồi ×5 theo từng ngưỡng (RunnerSignal RR3) — cột cuối là tổng R chia cho sụt vốn tối đa:
+
+| Ngưỡng | Tổng R | Sụt vốn tối đa | Số lệnh được nhồi | R/sụt vốn |
+|---|---:|---:|---:|---:|
+| không nhồi | +50R | 6.0R | 0/42 | 8.3 |
+| ≥ 1.5 | +182R | 14.0R | 19/42 | 13.0 |
+| ≥ 1.8 | +146R | 8.0R | 12/42 | 18.3 |
+| **≥ 2.2** | **+126R** | **6.0R** | 9/42 | **21.0** |
+| ≥ 2.5 | +118R | 6.0R | 7/42 | 19.7 |
+
+Chọn **2.2** vì cho tỷ số R/sụt vốn tốt nhất, **không làm tăng sụt vốn** so với không nhồi, và trùng
+đúng hằng số `VsaClimax` đã có sẵn trong code (nến "tím") — không đẻ thêm một tham số tinh chỉnh mới.
+Ngưỡng 1.5 cho tổng R cao nhất nhưng nhồi gần nửa số lệnh, tức gần như nhồi phẳng, và đẩy sụt vốn lên
+hơn gấp đôi.
+
+**⚠ Giới hạn nặng:** nhóm được nhồi chỉ có **n=9** (RunnerSignal) và **n=5** (WyckoffRunner) trong 3
+tháng. Đây là mẫu quá nhỏ để tin, và nó lại chính là mẫu đã dùng để chọn ngưỡng. Coi 2.2 là mặc định
+hợp lý, không phải kết luận đã chứng minh. Mặc định `NhoiMult=1.0` (**TẮT**) — phải tự bật.
+
+**Phát hiện kèm theo:** EA `RunnerBridge.mq5` **chưa bao giờ đọc** trường `size_mult`. EntrySignal đã
+ghi trường này ra JSONL từ lâu nhưng EA bỏ qua ⇒ "nhồi ×5" của EntrySignal lâu nay **chỉ là con số trên
+panel**, lot thật chưa từng được nhân. Đã sửa EA cùng lúc (`InpUseSizeMult`, `InpMaxSizeMult`), và
+trần cứng `InpMaxRiskPct` nay **hạ lot về vừa trần** thay vì bỏ lệnh khi phần nhồi vượt trần.

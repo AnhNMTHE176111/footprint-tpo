@@ -51,6 +51,8 @@ input double          InpRiskPercent     = 1.0;                // % equity moi l
 input double          InpFixedLot        = 0.01;               // Lot co dinh (che do RISK_FIXED)
 input double          InpRiskMoney       = 50.0;               // So TIEN rui ro moi lenh (che do RISK_MONEY, don vi tk)
 input double          InpMaxRiskPct      = 3.0;                // TRAN CUNG: bo lenh neu rui ro > % equity nay
+input bool            InpUseSizeMult     = true;               // NHOI: nhan lot theo "size_mult" cua tin hieu
+input double          InpMaxSizeMult     = 5.0;                // NHOI: tran he so nhan (chan tin hieu bao so vo ly)
 
 input group "=== BO LOC AN TOAN ==="
 input double          InpMaxSpread       = 0.50;               // Spread toi da (USD/oz), 0 = bo qua
@@ -143,6 +145,9 @@ void HandleCmd(const string line, const string id)
    string  ts      = JStr(line, "ts_utc");
    double  slDist  = JNum(line, "sl_dist", 0.0);
    double  rr      = JNum(line, "rr", 0.0);
+   double  szMult  = JNum(line, "size_mult", 1.0);   // he so nhoi lenh do indicator quyet dinh
+   if(!InpUseSizeMult || szMult < 1.0) szMult = 1.0;
+   if(szMult > InpMaxSizeMult)         szMult = InpMaxSizeMult;
    bool    dry     = JBool(line, "dry");
    bool    isBuy   = (side == "BUY");
 
@@ -218,7 +223,7 @@ void HandleCmd(const string line, const string id)
    // --- tinh lot ---
    double riskMoney = 0.0, lot = 0.0;
    string lotErr = "";
-   if(!CalcLot(slDist, lot, riskMoney, lotErr))
+   if(!CalcLot(slDist, szMult, lot, riskMoney, lotErr))
      { Reject(id, line, lotErr); return; }
 
    // --- vao lenh MARKET, SL/TP dat ngay theo gia hien tai roi hieu chinh theo fill ---
@@ -281,7 +286,7 @@ double RiskPerLot(const double slDist)
 //+------------------------------------------------------------------+
 //| Tinh lot tu khoang cach SL                                        |
 //+------------------------------------------------------------------+
-bool CalcLot(const double slDist, double &lot, double &riskMoney, string &err)
+bool CalcLot(const double slDist, const double szMult, double &lot, double &riskMoney, string &err)
   {
    double minLot   = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    double maxLot   = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
@@ -299,6 +304,8 @@ bool CalcLot(const double slDist, double &lot, double &riskMoney, string &err)
    else if(InpRiskMode == RISK_MONEY)    lot = InpRiskMoney/riskPerLot;
    else                                  lot = (equity*InpRiskPercent/100.0)/riskPerLot;
 
+   lot *= szMult;                                      // NHOI: nhan lot co so len (szMult=1 khi tat)
+
    lot = MathFloor(lot/step + 1e-8)*step;              // lam tron XUONG theo step -> khong bao gio vuot rui ro dat ra
    if(lot < minLot) lot = minLot;                      // khong ha duoi lot min -> tran cung ben duoi se kiem
    if(lot > maxLot) lot = maxLot;
@@ -307,13 +314,30 @@ bool CalcLot(const double slDist, double &lot, double &riskMoney, string &err)
 
    riskMoney = lot*riskPerLot;
 
-   // TRAN CUNG — chot an toan quan trong nhat voi tai khoan nho:
-   // neu ngay ca lot NHO NHAT cung lam rui ro vuot tran thi BO lenh, khong giao dich.
-   if(InpMaxRiskPct > 0.0 && equity > 0.0 && riskMoney > equity*InpMaxRiskPct/100.0)
+   // TRAN CUNG — chot an toan quan trong nhat voi tai khoan nho.
+   // Thu tu XU LY CO CHU DICH:
+   //   1) neu NHOI lam vuot tran -> HA lot ve vua tran (khong bo lenh: lenh goc van hop le,
+   //      chi la phan nhoi khong du cho). Ghi ro trong ack de con doi chieu.
+   //   2) neu ngay ca lot khong-nhoi/ lot NHO NHAT van vuot tran -> BO lenh, khong giao dich.
+   if(InpMaxRiskPct > 0.0 && equity > 0.0)
      {
-      err = StringFormat("rui ro %.2f (lot %.2f) = %.1f%% equity > tran %.1f%% -> BO lenh",
-                         riskMoney, lot, 100.0*riskMoney/equity, InpMaxRiskPct);
-      return(false);
+      double capMoney = equity*InpMaxRiskPct/100.0;
+      if(riskMoney > capMoney && szMult > 1.0)
+        {
+         double fit = MathFloor((capMoney/riskPerLot)/step + 1e-8)*step;
+         if(fit >= minLot)
+           {
+            lot = NormalizeDouble(fit, vd);
+            riskMoney = lot*riskPerLot;
+            Print(StringFormat("RunnerBridge: NHOI x%.1f vuot tran %.1f%% -> ha lot ve %.2f", szMult, InpMaxRiskPct, lot));
+           }
+        }
+      if(riskMoney > capMoney)
+        {
+         err = StringFormat("rui ro %.2f (lot %.2f) = %.1f%% equity > tran %.1f%% -> BO lenh",
+                            riskMoney, lot, 100.0*riskMoney/equity, InpMaxRiskPct);
+         return(false);
+        }
      }
    double margin = 0.0;
    double price  = SymbolInfoDouble(_Symbol, SYMBOL_ASK);

@@ -305,6 +305,32 @@ namespace RunnerSignal
         public bool Mt5SendRev { get; set; } = true;
         [InputParameter("MT5: chỉ gửi grade A (hợp lưu)", 136)]
         public bool Mt5OnlyGradeA { get; set; } = false;
+        // ---------- NHỒI LỆNH (nhân lot cho tín hiệu mạnh) ----------
+        // Mặc định TẮT (NhoiMult=1). Bridge EA nhân lot cơ sở với "size_mult" trong JSONL.
+        //
+        // ⚠ KHÁC EntrySignal: bên đó nhồi theo HỢP LƯU (`Cluster`) vì hợp lưu ≥2 là gate lõi đã backtest.
+        // Ở runner thì hợp lưu CHỈ LÀ THÔNG TIN HIỂN THỊ, không lọc lệnh nào — và với nhánh QUAY ĐẦU nó
+        // còn được đo là NGƯỢC DẤU (0 vùng → WR 33%, 1 → 16%, 2 → 17%, 3 → 0%; xem đầu file
+        // research/reversal_vwap.py). Nhồi theo hợp lưu ở runner sẽ nhồi to nhất đúng vào nhóm tệ nhất.
+        //
+        // Thay vào đó gate theo VSA NẾN VÀO LỆNH — thứ vừa chứng minh được ở RESULTS_ENTRY_VSA.md.
+        // Đo trên cấu hình đang ship (đã bật ResumeVsa=0.8), dxFeed 05-07/2026:
+        //   RunnerSignal RR3 (n=42): VSA vào [0.8,1.2) EV +1.286 · [1.2,1.8) +0.500 · [2.2,∞) +2.111 (WR 78%)
+        //   WyckoffRunner RR4 (n=21): [0.8,1.2) +1.500 · [1.2,1.8) +1.500 · [2.2,∞) +3.000 (WR 80%)
+        // Nhồi ×5 theo từng ngưỡng (tổng R / sụt vốn tối đa / tỷ số R trên sụt vốn), RunnerSignal:
+        //   không nhồi   +50R  MDD  6.0R   8.3
+        //   ≥1.5        +182R  MDD 14.0R  13.0
+        //   ≥1.8        +146R  MDD  8.0R  18.3
+        //   ≥2.2        +126R  MDD  6.0R  21.0  ← tốt nhất, và KHÔNG làm tăng sụt vốn so với không nhồi
+        //   ≥2.5        +118R  MDD  6.0R  19.7
+        // Chọn 2.2 vì đó cũng đúng là `VsaClimax` đã có sẵn trong code (nến "tím") — không đẻ thêm
+        // một hằng số tinh chỉnh mới.
+        // ⚠ TRUNG THỰC: nhóm được nhồi chỉ có n=9 (RunnerSignal) và n=5 (WyckoffRunner) trong 3 tháng.
+        // Đây là mẫu quá nhỏ để tin con số; hãy coi ngưỡng 2.2 là mặc định hợp lý, không phải kết luận.
+        [InputParameter("MT5: nhồi khi VSA nến vào ≥ (0 = nhồi mọi lệnh)", 137, 0, 5, 0.1, 1)]
+        public double NhoiVsaGate { get; set; } = 2.2;
+        [InputParameter("MT5: hệ số nhồi (×lot; 1 = tắt)", 138, 1, 10, 0.5, 1)]
+        public double NhoiMult { get; set; } = 1.0;
 
         // ---------- BÁO TELEGRAM (mở lệnh + đóng bởi SL/TP) ----------
         // Bắn 1 tin GỌN khi có tín hiệu MỚI ở nến vừa đóng, và 1 tin khi lệnh đó chạm SL/TP.
@@ -1102,6 +1128,10 @@ namespace RunnerSignal
                                 "MetaQuotes", "Terminal", "Common", "Files");
         }
 
+        // Hệ số nhân lot cho 1 tín hiệu. s.Vsa = VSA của NẾN VÀO LỆNH (đã sửa 2026-08-02 — trước đó
+        // là VSA nến PHÁ, gate nhồi bằng số cũ sẽ vô nghĩa vì nến phá gần như luôn ≥2.0).
+        private double NhoiSize(Sig s) => (NhoiMult > 1.0 && s.Vsa >= NhoiVsaGate) ? NhoiMult : 1.0;
+
         private void WriteCmd(Sig s, string id, bool rev, DateTime closeUtc)
         {
             var ci = CultureInfo.InvariantCulture;
@@ -1111,6 +1141,7 @@ namespace RunnerSignal
 
             double slDist = s.RiskT * _tick;
             double rr = s.TargetRr > 0 ? s.TargetRr : RR;
+            double sizeMult = NhoiSize(s);
             var sb = new StringBuilder();
             sb.Append('{')
               .Append("\"id\":\"").Append(id).Append("\",")
@@ -1127,6 +1158,7 @@ namespace RunnerSignal
               .Append("\"grade\":\"").Append(s.Grade).Append("\",")
               .Append("\"vsa\":").Append(s.Vsa.ToString("0.00", ci)).Append(',')
               .Append("\"cluster\":").Append(s.Cluster.ToString(ci)).Append(',')
+              .Append("\"size_mult\":").Append(sizeMult.ToString("0.##", ci)).Append(',')
               .Append("\"src_entry\":").Append(s.Entry.ToString("0.0##", ci)).Append(',')
               .Append("\"src_sl\":").Append(s.Sl.ToString("0.0##", ci)).Append(',')
               .Append("\"src_tp\":").Append(s.Tp1.ToString("0.0##", ci)).Append(',')
@@ -1240,7 +1272,9 @@ namespace RunnerSignal
                                  : "phá vùng co → hồi giữ gốc → vào nến tiếp diễn";
             var sb = new StringBuilder();
             sb.Append("🔔 LỆNH MỚI\n");
-            sb.Append(dirVN).Append(" · Runner ").Append(branch).Append(" · hạng ").Append(s.Grade).Append('\n');
+            sb.Append(dirVN).Append(" · Runner ").Append(branch).Append(" · hạng ").Append(s.Grade);
+            if (NhoiSize(s) > 1) sb.Append("  ⚡NHỒI ×").Append(NhoiMult.ToString("0.#"));
+            sb.Append('\n');
             sb.Append("Vào (Entry): ").Append(Fmt(s.Entry)).Append('\n');
             sb.Append("SL: ").Append(Fmt(s.Sl)).Append("  (").Append(slPts.ToString("0.0")).Append(" giá)\n");
             sb.Append("TP: ").Append(Fmt(s.Tp1)).Append("  (").Append(tpPts.ToString("0.0")).Append(" giá · ").Append(rr.ToString("0.#")).Append("R)\n");
@@ -1366,15 +1400,19 @@ namespace RunnerSignal
                 else deadTag = $" · ⛔VN{DeadStartHour:00}-{DeadEndHour:00}h";
             }
             p.Add(($"RUNNER CBR+VWAP (M1)   ▶{sigs.Count - nRev} ↩{nRev} · ✓{tp} ✗{sl} •{running}{wr}{deadTag}  [CBR {RR:0.#}R · quay đầu {RevRR:0.#}R]", Color.White));
-            // Thống kê R lời/lỗ (TP=+RR nhánh đó, SL=−1R)
-            double totalR = 0;
+            // Thống kê R lời/lỗ (TP=+RR nhánh đó, SL=−1R); + R khi nhồi nếu bật
+            double totalR = 0, nhoiR = 0; int nNhoi = 0;
             foreach (var s in sigs)
             {
                 double tr = (s.Scen != null && s.Scen.StartsWith("quay")) ? RevRR : RR;
-                if (s.Outcome == "TP") totalR += tr; else if (s.Outcome == "SL") totalR -= 1;
+                double dr = s.Outcome == "TP" ? tr : s.Outcome == "SL" ? -1 : 0;
+                double m = NhoiSize(s);
+                if (m > 1 && s.Outcome != "running") nNhoi++;
+                totalR += dr; nhoiR += dr * m;
             }
             string rLine = closed > 0
-                ? $"Lời/lỗ: {totalR:+0.0;-0.0}R · TB {totalR / closed:+0.00}R/lệnh ({closed} lệnh đóng)"
+                ? $"Lời/lỗ: {totalR:+0.0;-0.0}R (1 lot) · TB {totalR / closed:+0.00}R/lệnh ({closed} lệnh đóng)"
+                  + (NhoiMult > 1 ? $" · nhồi ×{NhoiMult:0.#} khi VSA≥{NhoiVsaGate:0.#}: {nhoiR:+0.0;-0.0}R ({nNhoi} lệnh)" : "")
                 : "Lời/lỗ: — (chưa có lệnh đóng)";
             p.Add((rLine, closed > 0 && totalR < 0 ? Color.FromArgb(240, 140, 140) : Color.FromArgb(120, 230, 150)));
             if (_vaTot > 0 && _vaCov < (int)(_vaTot * 0.98) && _vaFirst != DateTime.MinValue)

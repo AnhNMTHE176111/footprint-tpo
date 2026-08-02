@@ -43,6 +43,30 @@ hồn nhiên, mỗi lần reload indicator sẽ bắn hàng chục lệnh cũ. B
 3. **EA**: trần cứng `InpMaxRiskPct` (3%) — **bỏ lệnh** nếu ngay cả lot nhỏ nhất cũng vượt trần;
    cộng thêm chặn spread rộng, số vị thế, lỗ ngày, tín hiệu cũ, thiếu margin.
 
+## Nhồi lệnh (`size_mult`) — thêm 2026-08-02
+
+> ⚠ **Trước ngày này EA KHÔNG đọc `size_mult`.** EntrySignal đã ghi trường đó ra JSONL từ lâu, nhưng EA
+> bỏ qua — nên "nhồi ×5" chỉ là **con số thống kê trên panel**, lot thật chưa bao giờ được nhân. Nay đã sửa.
+
+Indicator quyết định hệ số, EA nhân lot cơ sở với nó:
+
+| Bên | Input | Mặc định | Ý nghĩa |
+|---|---|---|---|
+| EntrySignal | `NhoiConflGate` / `NhoiMult` | 3 / 1.0 (tắt) | nhồi khi **hợp lưu** ≥ N |
+| RunnerSignal · WyckoffRunner | `NhoiVsaGate` / `NhoiMult` | 2.2 / 1.0 (tắt) | nhồi khi **VSA nến vào lệnh** ≥ ngưỡng |
+| EA | `InpUseSizeMult` | true | đọc `size_mult`; đặt false = bỏ qua, luôn dùng lot cơ sở |
+| EA | `InpMaxSizeMult` | 5.0 | trần hệ số — chặn trường hợp indicator báo số vô lý |
+
+Runner gate theo **VSA nến vào** chứ không theo hợp lưu như EntrySignal, vì ở runner hợp lưu chỉ là thông
+tin hiển thị và với nhánh QUAY ĐẦU nó còn **ngược dấu** (0 vùng → WR 33%, 3 vùng → WR 0%). Chi tiết:
+[`RESULTS_ENTRY_VSA.md`](../quantower-entry-signal/research/wyckoff/RESULTS_ENTRY_VSA.md) §8.
+
+**Trần cứng vẫn thắng, nhưng cách xử lý được tách làm hai:** nếu phần nhồi làm rủi ro vượt
+`InpMaxRiskPct` thì EA **hạ lot về vừa trần** (ghi vào Experts log) chứ không bỏ lệnh — vì lệnh gốc vẫn
+hợp lệ, chỉ là phần nhồi không đủ chỗ. Chỉ khi lot **nhỏ nhất** vẫn vượt trần thì mới bỏ lệnh như cũ.
+Nghĩa là bật nhồi **không thể** đẩy rủi ro mỗi lệnh vượt quá `InpMaxRiskPct` — hãy đặt input đó cho đúng
+trước, rồi mới bật nhồi.
+
 ## Cài đặt
 
 **1. Chép EA vào MT5**

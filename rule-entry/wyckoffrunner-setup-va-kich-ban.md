@@ -38,7 +38,19 @@ giá (không phải zone profile HVN/VWAP). Trình tự đúng như code chạy:
    cạnh range tới đỉnh/đáy đã đạt) phải nằm trong **[PullMin=60% .. PullMax=100%]** — hồi sâu mới coi
    là runner thật; hồi nông (đuổi đà kiệt) bị loại.
 5. **TIẾP DIỄN (resume)** — nến đóng vượt cực trị của nhịp hồi (thuận hướng phá ban đầu) + thân ≥
-   `ResumeBody=35%` → **VÀO LỆNH tại giá đóng nến đó**.
+   `ResumeBody=35%` + **VSA ≥ `ResumeVsa=0.80×`** (thêm 2026-08-02) → **VÀO LỆNH tại giá đóng nến đó**.
+   Nến hồi không đủ VSA thì **bỏ qua nến đó và chờ tiếp** trong cửa sổ 12 nến, KHÔNG huỷ cả leg.
+
+   > **Sửa 2026-08-02 — người học phát hiện trên chart.** Trước đó nến vào lệnh **không có điều kiện VSA
+   > nào** (chỉ nến PHÁ mới đòi VSA ≥ 2.0). Đo thật: VSA nến vào trung vị chỉ **1.04×**, 56% số lệnh vào
+   > nến dưới ngưỡng "high" 1.2×, nhóm VSA < 0.8 có WR 35% (toàn bộ 47%). Với cấu hình WyckoffRunner
+   > (RR4 + break sạch): n 29→21, WR 48.3%→**57.1%**, EV +1.414→**+1.857**.
+   >
+   > **Kèm một lỗi HIỂN THỊ đã sửa cùng lúc:** cột `VSA` và cờ "tím" trong panel/CSV/Telegram trước đây
+   > lấy từ **nến PHÁ** (trung vị 2.86×, gần như luôn "tím") chứ không phải nến vào lệnh — nên log trông
+   > đẹp trong khi nến vào trên chart lại nhỏ. Nay báo VSA **nến VÀO**; VSA nến phá xuống dòng lý do.
+   > ⚠ File `WyckoffRunner-lenh-dinh-SL.md` ghi VSA nến phá nên **không so trực tiếp** với log mới.
+   > Chi tiết + đối chứng: [`RESULTS_ENTRY_VSA.md`](../quantower-entry-signal/research/wyckoff/RESULTS_ENTRY_VSA.md).
 6. **3 gate lọc tại đúng nến VÀO** (không phải nến phá — sửa lỗi parity 2026-07-29):
    - **Lọc THUẬN xu hướng** (`TrendFilter=BẬT`): xu hướng chậm = so giá đóng hiện tại với giá đóng
      `TrendBars=480` nến trước (~8 tiếng), ngưỡng đổi hướng `TrendTolPts=1.0` giá. Lệnh chỉ vào khi
@@ -113,6 +125,7 @@ Cơ chế (nếu bật lại — chỉ nên dùng để **thu log**, không cấ
 | CBR — vùng co | `RangeLen` / `RangeMinPts` / `RangeMaxPts` | 8 nến / 3.0 / 7.5 giá | (cấu trúc, luôn áp) |
 | CBR — phá | `BreakVsa` / `BreakBody` | 2.0× / 50% | (cấu trúc, luôn áp) |
 | CBR — hồi + tiếp diễn | `WaitBars` / `PullMin` / `PullMax` / `HoldTolTicks` / `ResumeBody` | 12 / 60% / 100% / 2 tick / 35% | (cấu trúc, luôn áp) |
+| **CBR — VSA nến VÀO LỆNH** | `ResumeVsa` | **0.80×** | ✅ **BẬT** (mới 2026-08-02; đặt 0 = tắt) |
 | **Break sạch** | `CleanBreak` (+`CleanLook`/`CleanWin`/`CleanClosePos`) | 20 nến / 5 nến / đóng ≥50% | ✅ **BẬT** |
 | **Lọc thuận trend** | `TrendFilter` (+`TrendBars`/`TrendTolPts`) | 480 nến / 1.0 giá | ✅ **BẬT** |
 | **Đúng phía VWAP** | `VwapAlign` | — | ✅ **BẬT** (đo được: NO-OP trên cửa sổ test) |
@@ -122,6 +135,7 @@ Cơ chế (nếu bật lại — chỉ nên dùng để **thu log**, không cấ
 | Dedup / Cooldown | `DedupBars` / `Cooldown` | 6 nến / 15 nến | (luôn áp) |
 | **Nhánh QUAY ĐẦU VWAP** | `EnableReversal` | — | ❌ **TẮT** (FAIL theo AUDIT_V7 — không cấp vốn) |
 | Risk/TP QUAY ĐẦU (nếu bật) | `RevRR` / `VwapTolTicks` / `RevApproachBars`* / `WickFrac` / `RevVsaConf` | 1.5 / 12 tick / 6 (*tautology*) / 50% / 1.8 | (chỉ áp khi bật) |
+| QUAY ĐẦU — nến vào thuận màu | `RevRequireBodyDir` | — | ❌ **TẮT** (hoán vị p=0.288 ở RR1.5 — chưa qua đối chứng) |
 | Volume / warm-up | `VolFloor` / `WarmupBars` | 20 / 20 nến | (luôn áp, chống nến mỏng/gap) |
 | Xuất CSV đối chiếu | `ExportCsv` | — | ❌ TẮT mặc định |
 | Cầu nối MT5 (Exness) | `Mt5Bridge` (+`Mt5DryRun`) | — | ❌ TẮT (nếu bật: mặc định **dry-run**, chưa vào lệnh thật) |

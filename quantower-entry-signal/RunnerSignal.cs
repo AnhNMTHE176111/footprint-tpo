@@ -178,6 +178,20 @@ namespace RunnerSignal
         public double AbsDom { get; set; } = 0.60;
         [InputParameter("Quay đầu: climax tím = nâng grade (bonus)", 73)]
         public bool RevClimaxOverride { get; set; } = true;
+        // Port luật "NẾN VÀO LỆNH PHẢI THUẬN MÀU" từ EntrySignal (2026-08-02). Nhánh CBR ĐÃ có sẵn luật
+        // này (`bj.C > bj.O` / `bj.C < bj.O` trong `resume`); nhánh QUAY ĐẦU thì KHÔNG kiểm thân nến, nên
+        // nến TRẮNG vẫn bắn SHORT và nến ĐỎ vẫn bắn LONG.
+        // ĐO (research/rev_bodydir_ab*.py, dxFeed 5-7/2026, n=27):
+        //   · MFE trung vị: nến thuận màu 3.78R vs nến ngược màu 1.13R  (chênh rất lớn, đo trực tiếp)
+        //   · EV thuận màu > ngược màu ở MỌI RR thử (1.0/1.5/2.0/3.0)
+        //   · NHƯNG kiểm định hoán vị: p=0.288 ở RR1.5 (RevRR đang ship) — KHÔNG có ý nghĩa;
+        //     chỉ p≈0.07 ở RR2-3, vẫn không qua ngưỡng. Ở RR1.5 luật này còn LÀM GIẢM tổng R
+        //     (+10.5R → +8.5R) vì cắt mất nửa số lệnh.
+        //   · tách theo phía thì mỗi ô chỉ còn n=6-8: SHORT ngược màu lại DƯƠNG (+0.667) ⇒ nhiễu.
+        // ⇒ MẶC ĐỊNH TẮT. Không đủ bằng chứng, và AUDIT_V7.md §13 đã phán cả nhánh QUAY ĐẦU là FAIL.
+        // (Đối chiếu: gate ResumeVsa của CBR qua được đối chứng ngẫu nhiên p=0.037 nên mới bật mặc định.)
+        [InputParameter("Quay đầu: nến vào lệnh phải THUẬN màu — CHƯA qua đối chứng, mặc định TẮT", 77)]
+        public bool RevRequireBodyDir { get; set; } = false;
 
         // ---------- CORVEN: neo vùng HVN/VWAP tuần|ngày (2026-08-01, PLAN_KB_ABC.md v8/runner) ----------
         // ⚠ MẶC ĐỊNH TẮT — bản v5 đang chạy live KHÔNG được đổi hành vi. Khi TẮT, hai nhánh CBR/QUAY_ĐẦU
@@ -680,7 +694,9 @@ namespace RunnerSignal
                     double depth = up ? (peak - pullExt) : (pullExt - peak);
                     double retr = leg > 0 ? depth / leg : 0;
                     bool held = up ? pullExt >= edge - HoldTolTicks * _tick : pullExt <= edge + HoldTolTicks * _tick;
-                    bool resume = (up ? (bj.C > B[j - 1].H && bj.C > bj.O) : (bj.C < B[j - 1].L && bj.C < bj.O)) && bj.Brat >= ResumeBody;
+                    // ResumeVsa: xem chú thích ở nhánh CBR chuẩn — nến hồi yếu thì CHỜ nến khác, không huỷ leg.
+                    bool resume = (up ? (bj.C > B[j - 1].H && bj.C > bj.O) : (bj.C < B[j - 1].L && bj.C < bj.O))
+                                  && bj.Brat >= ResumeBody && bj.Vratio >= ResumeVsa;
                     if (j >= since + 2 && retr >= PullMin && retr <= PullMax && held && resume && Gate(bj))
                     {
                         double entry = bj.C, sl, risk;
@@ -689,8 +705,9 @@ namespace RunnerSignal
                         if (risk < slFloorT) { sl = up ? entry - slFloorT * _tick : entry + slFloorT * _tick; risk = slFloorT; }
                         if (risk > slCapT) return;
                         if (TrendOk(bj, side) && VwapOk(bj, side) && LiqOk(bj))
-                            AddSig(raw, j, side, entry, sl, risk, RR, b.Vratio, "CBR phá→hồi→tiếp diễn (CORVEN)",
-                                new List<string> { $"mép {edge.ToString("0.0##")}", $"hồi {retr * 100:0}%", $"leg {leg:0.0}giá", $"VSA {b.Vratio:0.0}x{(b.Vratio >= VsaClimax ? " tím" : "")}" });
+                            AddSig(raw, j, side, entry, sl, risk, RR, bj.Vratio, "CBR phá→hồi→tiếp diễn (CORVEN)",
+                                new List<string> { $"mép {edge.ToString("0.0##")}", $"hồi {retr * 100:0}%", $"leg {leg:0.0}giá",
+                                                   $"VSA vào {bj.Vratio:0.0}x{(bj.Vratio >= VsaClimax ? " tím" : "")}", $"VSA phá {b.Vratio:0.0}x" });
                         return;
                     }
                 }
@@ -773,8 +790,12 @@ namespace RunnerSignal
                             if (risk > slCapT) break;
                             // GATE (thuận trend + đúng phía VWAP + thanh khoản) — 1 setup/range, filter-then-break khớp Python
                             if (TrendOk(bj, side) && VwapOk(bj, side) && LiqOk(bj))
-                                AddSig(raw, j, side, entry, sl, risk, RR, b.Vratio, "CBR phá→hồi→tiếp diễn",
-                                    new List<string> { $"phá {edge.ToString("0.0##")}", $"hồi {retr * 100:0}%", $"leg {leg:0.0}giá", $"VSA {b.Vratio:0.0}x{(b.Vratio >= VsaClimax ? " tím" : "")}" });
+                                // ⚠ SỬA 2026-08-02: trước đây truyền `b.Vratio` (VSA nến PHÁ) cho tín hiệu nằm
+                                // ở nến j (nến VÀO) ⇒ cột VSA + cờ "tím" trong panel/CSV/Telegram mô tả nến
+                                // PHÁ, không phải nến vào lệnh. Nay báo VSA của NẾN VÀO; VSA phá xuống lý do.
+                                AddSig(raw, j, side, entry, sl, risk, RR, bj.Vratio, "CBR phá→hồi→tiếp diễn",
+                                    new List<string> { $"phá {edge.ToString("0.0##")}", $"hồi {retr * 100:0}%", $"leg {leg:0.0}giá",
+                                                       $"VSA vào {bj.Vratio:0.0}x{(bj.Vratio >= VsaClimax ? " tím" : "")}", $"VSA phá {b.Vratio:0.0}x" });
                             break;
                         }
                     }
@@ -895,6 +916,7 @@ namespace RunnerSignal
                 if (touchUp && rejShort && approUp) { side = -1; anchor = Math.Max(b.H, vw); }
                 else if (touchDn && rejLong && approDn) { side = +1; anchor = Math.Min(b.L, vw); }
                 if (side == 0) continue;
+                if (RevRequireBodyDir && (side > 0 ? b.C <= b.O : b.C >= b.O)) continue;   // nến vào phải THUẬN màu
                 if (!TrendOk(b, side)) continue;   // THUẬN trend (mua nhịp giảm trong uptrend / bán nhịp tăng trong downtrend)
 
                 bool wall = Absorption(HdBar(hd, b.HdIdx), side > 0 ? b.L : b.H, side) || (RevClimaxOverride && b.Vratio >= VsaClimax);

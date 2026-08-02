@@ -28,7 +28,19 @@ Cơ chế 4 bước, đúng thứ tự:
 3. **HỒI + GIỮ** — trong `WaitBars`=**12** nến sau break, giá được phép hồi lại nhưng:
    - Hồi sâu phải nằm trong `[PullMin, PullMax]` = **[60% , 90%]** độ dài nhịp phá (leg) — hồi nông quá (<60%) coi là đuổi giá kiệt đà, hồi sâu quá (>90%) coi là thất bại.
    - Không được đóng lùi hẳn vào trong vùng cũ quá `HoldTolTicks`=**2 tick** (giữ được cạnh vùng).
-4. **TIẾP DIỄN (vào lệnh)** — 1 nến đóng vượt lại đỉnh/đáy của nhịp hồi, thân ≥ `ResumeBody`=**35%**. Vào tại giá đóng nến đó.
+4. **TIẾP DIỄN (vào lệnh)** — 1 nến đóng vượt lại đỉnh/đáy của nhịp hồi, thân ≥ `ResumeBody`=**35%**, **VSA ≥ `ResumeVsa`=0.80×** (thêm 2026-08-02). Vào tại giá đóng nến đó. Nến hồi không đủ VSA thì **bỏ qua nến đó và chờ tiếp** trong cửa sổ 12 nến, KHÔNG huỷ cả leg.
+
+> **Sửa 2026-08-02 — người học phát hiện trên chart.** Trước đó nến vào lệnh **không có điều kiện VSA nào**
+> (chỉ nến PHÁ mới đòi VSA ≥ 2.0). Đo thật: VSA nến vào trung vị chỉ **1.04×**, 56% số lệnh vào nến dưới
+> ngưỡng "high" 1.2×, và nhóm VSA < 0.8 là nhóm tệ nhất (WR 35% so với 47% toàn bộ). Thêm gate 0.80:
+> n 55→42, WR 47.3%→**54.8%**, tổng R +49→+50, EV +0.891→**+1.190**. Chi tiết + đối chứng:
+> [`RESULTS_ENTRY_VSA.md`](../quantower-entry-signal/research/wyckoff/RESULTS_ENTRY_VSA.md).
+>
+> **Kèm theo là một lỗi HIỂN THỊ đã sửa cùng lúc:** cột `VSA` và cờ "tím" trong panel/CSV/Telegram trước
+> đây lấy từ **nến PHÁ** (trung vị 2.86×, gần như luôn "tím") chứ không phải nến vào lệnh. Vì vậy log
+> trông rất đẹp trong khi nến vào trên chart lại nhỏ — hai bên đang nói về hai cây nến khác nhau. Nay cột
+> VSA báo **nến VÀO LỆNH**; VSA nến phá chuyển xuống dòng lý do (`VSA phá …`). ⚠ Các file review cũ ghi
+> VSA nến phá nên **không so trực tiếp** với log mới.
 
 **SL/TP:**
 - SL = cực trị nhịp hồi ± đệm `SlBuf`=2 tick, ép trong khoảng sàn/trần `SlFloorPts`/`SlCapPts` = **[3.0 , 7.0] giá** (dưới sàn thì kéo lên sàn; vượt trần thì HUỶ tín hiệu).
@@ -50,6 +62,7 @@ Cơ chế: giá **tiếp cận** VWAP phiên từ 1 phía trong `RevApproachBars
 - **SHORT**: giá đẩy lên chạm/vượt VWAP (trong dung sai `VwapTolTicks`=12 tick), nến có râu trên ≥ `WickFrac`=50% biên độ, đóng cửa dưới nửa dưới thân nến (cpos ≤ 0.45), đóng cửa dưới VWAP, thân ≥ 30%, VSA ≥ `RevVsaConf`=1.8×.
 - **LONG**: đối xứng, giá đạp xuống chạm VWAP rồi bật lên.
 - Phải **đến từ đúng phía** (trong 6 nến trước có giá đóng ở phía đối diện VWAP) — tránh bắt dao khi giá đã nằm sẵn 1 bên.
+- ⚠ **Nhánh này KHÔNG kiểm màu thân nến** ⇒ nến TRẮNG vẫn bắn SHORT, nến ĐỎ vẫn bắn LONG (đúng loại lỗi đã sửa ở EntrySignal). Đã thêm input `RevRequireBodyDir` để bật luật thuận màu, nhưng **mặc định TẮT**: MFE trung vị của nến thuận màu là 3.78R so với 1.13R của nến ngược màu, song kiểm định hoán vị cho **p=0.288** ở RR 1.5 đang ship (không có ý nghĩa) và bật lên còn làm **giảm** tổng R (+10.5R → +8.5R). Xem [`RESULTS_ENTRY_VSA.md`](../quantower-entry-signal/research/wyckoff/RESULTS_ENTRY_VSA.md) §6.
 - **Thuận xu hướng** (`TrendOk`, dùng chung field trend với CBR) — bắt buộc, không có cờ tắt riêng.
 
 Không áp thêm `VwapOk`/`LiquidityFilter` cho nhánh này (VWAP đã là trung tâm của chính setup).
@@ -124,7 +137,8 @@ Tham số dùng chung cho cả 2 cờ:
 | BreakVsa / BreakBody | 2.0× / 50% | VwapTolTicks | 12 tick |
 | WaitBars | 12 nến | RevApproachBars | 6 nến |
 | PullMin / PullMax | 60% / 90% | WickFrac | 50% |
-| ResumeBody | 35% | | |
+| ResumeBody | 35% | RevRequireBodyDir | **TẮT** |
+| **ResumeVsa** (nến vào) | **0.80×** | | |
 | SlFloorPts / SlCapPts | 3.0 / 7.0 giá | | |
 | RR | 3.0 | | |
 

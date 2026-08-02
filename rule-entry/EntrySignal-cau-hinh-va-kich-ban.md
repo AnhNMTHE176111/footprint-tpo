@@ -54,6 +54,22 @@ Lưu ý 2 số dễ nhầm trong code/JSON xuất ra:
      ghi chú "climax-abs").
 → Vào lệnh NGƯỢC hướng tiếp cận (đảo chiều tại vùng).
 
+### 3b. NẾN VÀO LỆNH PHẢI THUẬN MÀU (thêm 2026-08-02 theo review chart của người học)
+
+Áp cho **cả KB1 lẫn KB2**, mặc định **BẬT** (`RequireEntryBodyDir=true`).
+
+- Nến kích hoạt **thuận màu** (`C>O` cho LONG, `C<O` cho SHORT) → vào lệnh ngay như trước.
+- Nến kích hoạt **ngược màu hoặc doji** → **KHÔNG vào**, chuyển sang trạng thái chờ (ARM). Trong tối đa
+  `ConfirmWindow=3` nến, nến nào **thuận màu** + `VSA ≥ ConfirmVsa=1.2` + delta thuận chiều
+  (`ConfirmNeedDelta=true`) thì **nến đó** mới là nến vào lệnh. SL neo theo cực trị gộp của cả nến ARM
+  lẫn nến xác nhận; nếu lúc đó rủi ro vượt `SlCap` thì **bỏ lệnh** (không đuổi giá).
+- `ConfirmWindow=0` ⇒ bỏ hẳn lệnh ngược màu. `RequireEntryBodyDir=false` ⇒ về đúng hành vi cũ (dùng để A/B).
+- Hai cờ `ConfirmKillOnZoneCross` / `ConfirmKillOnAnchorBreak` mặc định **TẮT**: bật lên thì hầu như
+  không ca nào tìm được nến xác nhận (đã đo), cơ chế coi như vô hiệu.
+
+**Vì sao:** nhánh "rút râu" của `LongSignal`/`ShortSignal` không kiểm thân nến ⇒ nến ĐỎ vẫn bắn LONG,
+nến TRẮNG vẫn bắn SHORT. 4/5 lệnh dính SL trong log 17–31/07 rơi đúng vào lỗi này.
+
 ## 4. Hai kịch bản PHỤ — mặc định TẮT
 
 | Kịch bản | Cờ bật/tắt | Trạng thái | Vì sao tắt |

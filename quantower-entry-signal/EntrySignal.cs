@@ -112,6 +112,29 @@ namespace EntrySignal
         public bool EnableS4ArmConfirm { get; set; } = false;   // rút râu = ARM (không cần vol); nến tăng/giảm mạnh vol≥High trong N cây = CONFIRM. Gate cụm≥2 tự lọc. Edge +0.15R@1.5R.
         [InputParameter("KB4: cửa sổ chờ xác nhận (số nến)", 66, 2, 20, 1, 0)]
         public int ArmConfirmWindow { get; set; } = 6;   // rút râu và nến xác nhận cách nhau ≤ N cây
+
+        // ---------- NẾN ENTRY PHẢI THUẬN MÀU (fix 2026-08-02 theo review chart của người học) ----------
+        // Nhánh "rút râu" của LongSignal/ShortSignal KHÔNG kiểm thân nến ⇒ nến ĐỎ vẫn bắn LONG, nến
+        // TRẮNG vẫn bắn SHORT. 4/5 lệnh dính SL trong log 17-31/07 rơi đúng vào lỗi này.
+        // Luật đúng (người học): nến rút râu = ARM. Nến VÀO LỆNH phải thuận chiều. Nếu nến kích hoạt
+        // ngược màu → chờ tối đa ConfirmWindow nến, nến nào thuận màu + VSA≥ConfirmVsa + delta thuận
+        // thì nến ĐÓ mới là nến entry (Emit tự bỏ nếu risk vượt SlCap ⇒ không đuổi giá).
+        // Đo trên replay 03-31/07 (khớp live 11/11): thuận màu +2.00R/lệnh vs ngược màu +0.33R;
+        // bật cờ này với ConfirmWindow=3 ⇒ +2.20R/lệnh, tổng +11R (hiện tại +10R). n=11, mẫu NHỎ.
+        [InputParameter("Nến vào lệnh phải THUẬN màu (thân cùng chiều)", 68)]
+        public bool RequireEntryBodyDir { get; set; } = true;
+        [InputParameter("Ngược màu → chờ N nến xác nhận (0 = bỏ lệnh)", 69, 0, 20, 1, 0)]
+        public int ConfirmWindow { get; set; } = 3;
+        [InputParameter("Nến xác nhận: VSA ≥", 70, 0.8, 4.0, 0.1, 1)]
+        public double ConfirmVsa { get; set; } = 1.2;
+        [InputParameter("Nến xác nhận: cần delta thuận chiều", 71)]
+        public bool ConfirmNeedDelta { get; set; } = true;
+        // ⚠ Hai cờ huỷ dưới đây mặc định TẮT: bật lên thì 0/7 ca ngược màu tìm được nến xác nhận
+        // (cơ chế coi như không chạy) — đã đo trên replay 03-31/07.
+        [InputParameter("Huỷ chờ khi đóng nến xuyên vùng ngược hướng", 72)]
+        public bool ConfirmKillOnZoneCross { get; set; } = false;
+        [InputParameter("Huỷ chờ khi cực trị thủng neo SL", 73)]
+        public bool ConfirmKillOnAnchorBreak { get; set; } = false;
         // ABSORPTION FILTER (research 6 tháng feed footprint, 4 phân tích hội tụ): delta NGƯỢC phía lệnh
         // (bán bị hấp thụ ở đáy / mua bị hấp thụ ở đỉnh) → WR 52% vs 36% cùng-phía. Bật → WR 45→52%,
         // +15.5→+25.5R, cứu tháng lỗ. MẶC ĐỊNH TẮT (live giữ nguyên): khi BẬT, KB2 bỏ yêu cầu delta
@@ -354,6 +377,10 @@ namespace EntrySignal
             public DateTime ReadyTime, ExpireTime; public bool IsVwap;
             public string State; public int BrkBar; public int Cool; public string PrevRel;
             public int ArmLBar = -999, ArmSBar = -999; public double ArmLLow, ArmSHigh;   // KB4 arm→confirm
+            // chờ nến THUẬN màu xác nhận (RequireEntryBodyDir). PendZonePrice phải CHỐT lúc arm vì
+            // vùng VWAP là vùng ĐỘNG (giá đổi mỗi nến) — đọc z.Price lúc confirm sẽ sai vùng.
+            public int PendBar = -999, PendSide; public double PendAnchor, PendZonePrice;
+            public string PendScen; public char PendGrade; public List<string> PendWhy;
         }
 
         private sealed class Sig
@@ -539,7 +566,7 @@ namespace EntrySignal
             var raw = new List<Sig>();
             int nClosed = B.Count - 1;                 // BỎ nến đang hình thành → không repaint
             int buf = SlBuf;
-            foreach (var z in pool) { z.State = "idle"; z.BrkBar = -999; z.Cool = -999; z.PrevRel = null; z.ArmLBar = -999; z.ArmSBar = -999; }
+            foreach (var z in pool) { z.State = "idle"; z.BrkBar = -999; z.Cool = -999; z.PrevRel = null; z.ArmLBar = -999; z.ArmSBar = -999; z.PendBar = -999; }
             var vwapZone = pool.FirstOrDefault(z => z.IsVwap);
 
             for (int i = VsaPeriod + 2; i < nClosed; i++)
@@ -564,6 +591,12 @@ namespace EntrySignal
                     if (b.Time < z.ReadyTime || b.Time > z.ExpireTime) continue;
                     double zp = z.Price; if (double.IsNaN(zp) || zp <= 0) continue;
                     string rel = b.C > zp + buf * _tick ? "above" : b.C < zp - buf * _tick ? "below" : "in";
+
+                    // ---- ĐANG CHỜ NẾN THUẬN MÀU XÁC NHẬN (đặt TRƯỚC mọi cổng khác: cổng khoảng cách
+                    //      ArmDistTicks tính theo z.State="idle" sẽ cắt oan ca giá đã rời vùng) ----
+                    if (z.PendBar >= 0 && ConfirmPending(raw, B, pool, z, i, b))
+                    { z.Cool = i; z.State = "idle"; z.PrevRel = rel; continue; }
+
                     double dist = Math.Abs(px - zp) / _tick;
                     if ((dist > ArmDistTicks && z.State == "idle") || i - z.Cool < Cooldown) { z.PrevRel = rel; continue; }
 
@@ -580,14 +613,14 @@ namespace EntrySignal
                     {
                         if (b.C < zp - buf * _tick) z.State = "idle";
                         else if (b.L <= zp + RetestTol * _tick && b.L >= zp - RetestHoldBuf * _tick && LongSignal(b, out var w) && (!AbsorptionFilter || DeltaOk(B, i, +1)))
-                            em = Emit(raw, B, pool, i, +1, "KB1 phá&hồi", Math.Min(b.L, zp), w, 'A', zp);   // b.L≥vùng-buf: hồi GIỮ vùng (không bắt dao rơi)
+                            em = EmitOrArm(raw, B, pool, z, i, +1, "KB1 phá&hồi", Math.Min(b.L, zp), w, 'A', zp);   // b.L≥vùng-buf: hồi GIỮ vùng (không bắt dao rơi)
                         if (em) { z.Cool = i; z.State = "idle"; }
                     }
                     else if (z.State == "broke_dn" && i - z.BrkBar > 0 && i - z.BrkBar <= RetestBars)
                     {
                         if (b.C > zp + buf * _tick) z.State = "idle";
                         else if (b.H >= zp - RetestTol * _tick && b.H <= zp + RetestHoldBuf * _tick && ShortSignal(b, out var w) && (!AbsorptionFilter || DeltaOk(B, i, -1)))
-                            em = Emit(raw, B, pool, i, -1, "KB1 phá&hồi", Math.Max(b.H, zp), w, 'A', zp);   // b.H≤vùng+buf: hồi GIỮ vùng (không bắt dao rơi)
+                            em = EmitOrArm(raw, B, pool, z, i, -1, "KB1 phá&hồi", Math.Max(b.H, zp), w, 'A', zp);   // b.H≤vùng+buf: hồi GIỮ vùng (không bắt dao rơi)
                         if (em) { z.Cool = i; z.State = "idle"; }
                     }
                     if (!em && EnableS2 && (z.State == "idle" || z.State == "broke_up" || z.State == "broke_dn"))
@@ -596,13 +629,13 @@ namespace EntrySignal
                         {
                             bool wall = !RequireWallForS2 || Absorption(HdBar(hd, b.HdIdx), b.H, -1) || (S2ClimaxOverride && b.Vratio >= VsaClimax);
                             if (wall)
-                                if (Emit(raw, B, pool, i, -1, "KB2 chạm&đảo", Math.Max(b.H, zp), Append(w, b.Vratio >= VsaClimax ? "climax" : "hấp thụ"), 'B', zp)) { z.Cool = i; z.State = "idle"; }
+                                if (EmitOrArm(raw, B, pool, z, i, -1, "KB2 chạm&đảo", Math.Max(b.H, zp), Append(w, b.Vratio >= VsaClimax ? "climax" : "hấp thụ"), 'B', zp)) { z.Cool = i; z.State = "idle"; }
                         }
                         else if (dn && tagged && b.C > zlo && LongSignal(b, out var w2) && (AbsorptionFilter ? DeltaOk(B, i, +1) : b.Delta > 0))
                         {
                             bool wall = !RequireWallForS2 || Absorption(HdBar(hd, b.HdIdx), b.L, +1) || (S2ClimaxOverride && b.Vratio >= VsaClimax);
                             if (wall)
-                                if (Emit(raw, B, pool, i, +1, "KB2 chạm&đảo", Math.Min(b.L, zp), Append(w2, b.Vratio >= VsaClimax ? "climax" : "hấp thụ"), 'B', zp)) { z.Cool = i; z.State = "idle"; em = true; }
+                                if (EmitOrArm(raw, B, pool, z, i, +1, "KB2 chạm&đảo", Math.Min(b.L, zp), Append(w2, b.Vratio >= VsaClimax ? "climax" : "hấp thụ"), 'B', zp)) { z.Cool = i; z.State = "idle"; em = true; }
                         }
                     }
 
@@ -754,6 +787,42 @@ namespace EntrySignal
             return res;
         }
 
+        // Hướng THÂN nến: +1 tăng (C>O), -1 giảm (C<O), 0 doji. Doji KHÔNG khớp hướng nào → phải chờ xác nhận.
+        private static int BodyDir(Bar b) => b.C > b.O ? +1 : b.C < b.O ? -1 : 0;
+
+        // Nến kích hoạt THUẬN màu → vào luôn (hành vi cũ). NGƯỢC màu/doji → ARM, chờ nến xác nhận.
+        // ConfirmWindow = 0 ⇒ bỏ hẳn lệnh ngược màu (biến thể A1). RequireEntryBodyDir = false ⇒ về
+        // đúng hành vi trước fix (dùng để A/B).
+        private bool EmitOrArm(List<Sig> raw, List<Bar> B, List<PZone> pool, PZone z, int i, int side,
+                               string scen, double anchor, List<string> why, char grade, double zonePrice)
+        {
+            if (!RequireEntryBodyDir || BodyDir(B[i]) == side)
+                return Emit(raw, B, pool, i, side, scen, anchor, why, grade, zonePrice);
+            if (ConfirmWindow <= 0) return false;
+            z.PendBar = i; z.PendSide = side; z.PendAnchor = anchor; z.PendZonePrice = zonePrice;
+            z.PendScen = scen; z.PendGrade = grade; z.PendWhy = why;
+            return false;                          // CHƯA vào lệnh → KB1/KB2 coi như không bắn ở nến này
+        }
+
+        // Trả về true khi ĐÃ vào lệnh ở nến xác nhận. Xoá pending khi hết cửa sổ hoặc bị vô hiệu.
+        private bool ConfirmPending(List<Sig> raw, List<Bar> B, List<PZone> pool, PZone z, int i, Bar b)
+        {
+            int side = z.PendSide; double zp = z.PendZonePrice;   // giá vùng CHỐT lúc arm (VWAP là vùng động)
+            if (i - z.PendBar > ConfirmWindow) { z.PendBar = -999; return false; }
+            if (ConfirmKillOnZoneCross &&
+                (side > 0 ? b.C < zp - SlBuf * _tick : b.C > zp + SlBuf * _tick)) { z.PendBar = -999; return false; }
+            if (ConfirmKillOnAnchorBreak &&
+                (side > 0 ? b.L < z.PendAnchor : b.H > z.PendAnchor)) { z.PendBar = -999; return false; }
+            if (BodyDir(b) != side) return false;
+            if (b.Vratio < ConfirmVsa) return false;
+            if (ConfirmNeedDelta && (side > 0 ? b.Delta <= 0 : b.Delta >= 0)) return false;
+            double anchor = side > 0 ? Math.Min(z.PendAnchor, b.L) : Math.Max(z.PendAnchor, b.H);
+            var why = Append(z.PendWhy, $"xác nhận sau {i - z.PendBar} nến");
+            z.PendBar = -999;
+            // Emit tự loại nếu risk > SlCap ⇒ giá đã chạy quá xa thì BỎ, không đuổi.
+            return Emit(raw, B, pool, i, side, z.PendScen + " (xác nhận)", anchor, why, z.PendGrade, zp);
+        }
+
         private bool Emit(List<Sig> raw, List<Bar> B, List<PZone> pool, int i, int side, string scen, double anchor, List<string> why, char grade, double zonePrice)
         {
             var b = B[i]; double entry = b.C; double sl, risk;
@@ -833,7 +902,10 @@ namespace EntrySignal
         //   2) _armed: lần quét đầu sau attach/reload chỉ NẠP id, không bắn
         //   3) tuổi tín hiệu ≤ MaxAgeSec so với đồng hồ (bar.Time = mốc MỞ nến, UTC)
         //   4) id tất định (symbol|phút|hướng|kịch bản) → không lặp; EA lưu id đã xử lý ra file
-        private static bool IsBreak(Sig s) => s.Scen != null && s.Scen.StartsWith("1");   // "1 pha&hoi" vs "2 cham&dao"
+        // BUG cũ: so "1" (nhãn của bản Python "1 pha&hoi") trong khi Scen ở đây là "KB1 phá&hồi"
+        // → LUÔN false ⇒ cột kich_ban trong CSV luôn ghi CHAM_DAO, Telegram luôn nói "chạm&đảo",
+        //   id MT5 luôn mang cờ D. Phát hiện 2026-08-02 khi replay cho thấy 3/11 lệnh là KB1.
+        private static bool IsBreak(Sig s) => s.Scen != null && s.Scen.StartsWith("KB1");
         private string SigId(Sig s) =>
             $"{Symbol?.Name ?? "X"}|{s.Time:yyyyMMddHHmm}|{(s.Side > 0 ? "B" : "S")}|{(IsBreak(s) ? "P" : "D")}";
         private static string ReasonVN(Sig s) =>
@@ -1271,18 +1343,11 @@ namespace EntrySignal
                 }
                 if (ShowPanel && rs.Panel != null && rs.Panel.Count > 0)
                 {
+                    // PanelDrag.Draw lo trọn nền/viền/chữ + NÚT THU GỌN góc trên-phải (bấm ▾/▸ để
+                    // gập còn mỗi dòng tiêu đề). Trước đây EntrySignal tự vẽ tay nên thiếu nút này,
+                    // dù PanelDrag đã hỗ trợ sẵn — nay dùng chung đường vẽ với TPO suite.
                     using var f = new Font("Consolas", FontSize, FontStyle.Regular);
-                    float pad = 6, lineH = f.Height + 2, w = 0;
-                    foreach (var (t, _) in rs.Panel) w = Math.Max(w, gr.MeasureString(t, f).Width);
-                    float bw = w + 2 * pad, bh = rs.Panel.Count * lineH + 2 * pad;
-                    float defX = (PanelCorner == 1 || PanelCorner == 3) ? clip.Right - bw - 8 : clip.Left + 8;
-                    float defY = (PanelCorner >= 2) ? clip.Bottom - bh - 8 : clip.Top + 8;
-                    var (x, y) = _drag.Origin(defX, defY, bw, bh, clip);
-                    using (var bg = new SolidBrush(Color.FromArgb(Math.Clamp(PanelOpacity, 100, 255), 18, 18, 22))) gr.FillRectangle(bg, x, y, bw, bh);
-                    using (var bd = new Pen(Color.FromArgb(90, 255, 255, 255))) gr.DrawRectangle(bd, x, y, bw, bh);
-                    float ty = y + pad;
-                    foreach (var (t, col) in rs.Panel) { using var br = new SolidBrush(col); gr.DrawString(t, f, br, x + pad, ty); ty += lineH; }
-                    _drag.SetBounds(x, y, bw, bh);
+                    _drag.Draw(gr, f, rs.Panel, Math.Clamp(PanelOpacity, 100, 255), PanelCorner, clip);
                 }
             }
             catch { /* nuốt lỗi vẽ, giữ chuỗi paint sống */ }

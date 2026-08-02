@@ -35,6 +35,22 @@ VOL_FLOOR = 20; WARMUP_BARS = 20; COOLDOWN = 15; TREND_LOOKBACK = 480
 ABS_DOM = 0.60; REQUIRE_WALL_S2 = True; S2_CLIMAX_OVERRIDE = True
 ENABLE_S2 = True
 
+# ---- FIX A: nen entry phai THUAN mau; nguoc mau -> ARM, cho nen xac nhan ----
+REQUIRE_ENTRY_BODY_DIR = True
+CONFIRM_WINDOW = 3          # 0 = bo han lenh nguoc mau (bien the A1)
+CONFIRM_VSA = 1.2
+CONFIRM_NEED_DELTA = True
+CONFIRM_KILL_ZONE_CROSS = False   # bat len => 0/7 ca tim duoc nen xac nhan (da do)
+CONFIRM_KILL_ANCHOR = False
+
+# ---- FIX B: vung "range cuc bo M1" (moi, mac dinh TAT de giu nguyen hanh vi cu) ----
+ENABLE_LOCAL_RANGE = False
+RANGE_BARS = 30          # do dai cua so xet range
+RANGE_MAX_H = 5.0        # chieu cao toi da cua range (gia)
+RANGE_EXPIRE_BARS = 120  # vung song bao nhieu nen
+RANGE_DEDUP_T = 7        # khong them vung range moi neu cach vung cu <= N tick
+RANGE_STRENGTH = 55
+
 # ================== NAP DU LIEU ==================
 def load_bars():
     B = []
@@ -152,8 +168,33 @@ def build_pool(B, lv):
         for p, k, s in [(vah, "D-1 VAH", 66), (val, "D-1 VAL", 66), (poc, "D-1 POC", 72),
                         (hi, "D-1 Dinh", 60), (lo, "D-1 Day", 60)]:
             add(p, k, s, ready, exp)
+    if ENABLE_LOCAL_RANGE: pool.extend(build_local_ranges(B))
     vw = dict(price=0.0, kind="VWAP", strength=64, ready=datetime.min, expire=datetime.max, is_vwap=True)
     pool.append(vw); return pool, vw
+
+def build_local_ranges(B):
+    """VUNG MOI: bien tren/duoi cua RANGE CUC BO tren M1.
+
+    Cua so RANGE_BARS nen lien tiep ma (max High - min Low) <= RANGE_MAX_H => la mot vung tich luy
+    => sinh 2 vung: bien tren (max High) va bien duoi (min Low).
+    Dedup: khong them neu da co vung range CON SONG cach <= RANGE_DEDUP_T tick.
+    Ly do can: 3 ca bo sot cua nguoi hoc deu nam o bien mot range M1 vua hinh thanh, khong phai
+    muc POC/VAH/VAL phien -> hop luu tai do chi 0-1 nen bi gate MinConfluence=2 chan.
+    """
+    out = []
+    for i in range(RANGE_BARS, len(B)):
+        # bo cua so bac qua khe du lieu (cuoi tuan / nghi bao tri)
+        if B[i]["since_gap"] < RANGE_BARS: continue
+        w = B[i-RANGE_BARS+1:i+1]
+        hi = max(x["h"] for x in w); lo = min(x["l"] for x in w)
+        if hi - lo > RANGE_MAX_H: continue
+        ready = B[i]["time"]
+        exp = B[min(i+RANGE_EXPIRE_BARS, len(B)-1)]["time"]
+        for p, k in ((hi, "Bien tren range"), (lo, "Bien duoi range")):
+            if any(z["ready"] <= ready <= z["expire"] and abs(z["price"]-p)/TICK <= RANGE_DEDUP_T for z in out):
+                continue
+            out.append(dict(price=p, kind=k, strength=RANGE_STRENGTH, ready=ready, expire=exp, is_vwap=False))
+    return out
 
 # ================== TIN HIEU NEN ==================
 def long_sig(b):
@@ -222,9 +263,35 @@ def emit(raw, B, pool, i, side, scen, anchor, why, grade, zp):
                     cluster=cluster_count(pool, b["time"], zp), zone=f"{'VWAP' if zp==0 else ''}{zp:.1f}"))
     return True
 
+def body_dir(b): return 1 if b["c"] > b["o"] else (-1 if b["c"] < b["o"] else 0)
+
+def emit_or_arm(raw, B, pool, z, i, side, scen, anchor, why, grade, zp):
+    """nen kich hoat THUAN mau -> vao luon; NGUOC mau/doji -> ARM cho nen xac nhan."""
+    if not REQUIRE_ENTRY_BODY_DIR or body_dir(B[i]) == side:
+        return emit(raw, B, pool, i, side, scen, anchor, why, grade, zp)
+    if CONFIRM_WINDOW <= 0: return False
+    z.update(pend_bar=i, pend_side=side, pend_anchor=anchor, pend_zp=zp,
+             pend_scen=scen, pend_grade=grade, pend_why=why)
+    return False
+
+def confirm_pending(raw, B, pool, z, i, b):
+    side = z["pend_side"]; zp = z["pend_zp"]      # gia vung CHOT luc arm (VWAP la vung dong)
+    if i - z["pend_bar"] > CONFIRM_WINDOW: z["pend_bar"] = -999; return False
+    if CONFIRM_KILL_ZONE_CROSS and (b["c"] < zp - SL_BUF*TICK if side > 0 else b["c"] > zp + SL_BUF*TICK):
+        z["pend_bar"] = -999; return False
+    if CONFIRM_KILL_ANCHOR and (b["l"] < z["pend_anchor"] if side > 0 else b["h"] > z["pend_anchor"]):
+        z["pend_bar"] = -999; return False
+    if body_dir(b) != side: return False
+    if b["vratio"] < CONFIRM_VSA: return False
+    if CONFIRM_NEED_DELTA and (b["delta"] <= 0 if side > 0 else b["delta"] >= 0): return False
+    anchor = min(z["pend_anchor"], b["l"]) if side > 0 else max(z["pend_anchor"], b["h"])
+    why = z["pend_why"] + [f"xac nhan sau {i - z['pend_bar']} nen"]
+    z["pend_bar"] = -999
+    return emit(raw, B, pool, i, side, z["pend_scen"] + " (xac nhan)", anchor, why, z["pend_grade"], zp)
+
 def scan(B, pool, lv, vwapz):
     raw = []; n_closed = len(B) - 1
-    for z in pool: z.update(state="idle", brk=-999, cool=-999, prev=None)
+    for z in pool: z.update(state="idle", brk=-999, cool=-999, prev=None, pend_bar=-999)
     for i in range(VSA_PERIOD+2, n_closed):
         b = B[i]; px = b["c"]; vwapz["price"] = b["vwap"]
         gated = b["vol"] >= VOL_FLOOR and b["since_gap"] >= WARMUP_BARS and b["vma"] >= VOL_FLOOR*0.6
@@ -239,6 +306,9 @@ def scan(B, pool, lv, vwapz):
             zp = z["price"]
             if zp <= 0: continue
             rel = "above" if b["c"] > zp+SL_BUF*TICK else "below" if b["c"] < zp-SL_BUF*TICK else "in"
+            # dang cho nen xac nhan -> xu ly TRUOC cong khoang cach/cooldown
+            if z["pend_bar"] >= 0 and confirm_pending(raw, B, pool, z, i, b):
+                z["cool"] = i; z["state"] = "idle"; z["prev"] = rel; continue
             dist = abs(px-zp)/TICK
             if (dist > ARM_DIST_T and z["state"] == "idle") or i - z["cool"] < COOLDOWN:
                 z["prev"] = rel; continue
@@ -254,27 +324,27 @@ def scan(B, pool, lv, vwapz):
                 if b["c"] < zp - SL_BUF*TICK: z["state"] = "idle"
                 elif b["l"] <= zp + RETEST_TOL*TICK and b["l"] >= zp - RETEST_HOLD_BUF*TICK:
                     ok, w = long_sig(b)
-                    if ok: em = emit(raw, B, pool, i, +1, "KB1 pha&hoi", min(b["l"], zp), w, "A", zp)
+                    if ok: em = emit_or_arm(raw, B, pool, z, i, +1, "KB1 pha&hoi", min(b["l"], zp), w, "A", zp)
                 if em: z["cool"] = i; z["state"] = "idle"
             elif z["state"] == "broke_dn" and 0 < i - z["brk"] <= RETEST_BARS:
                 if b["c"] > zp + SL_BUF*TICK: z["state"] = "idle"
                 elif b["h"] >= zp - RETEST_TOL*TICK and b["h"] <= zp + RETEST_HOLD_BUF*TICK:
                     ok, w = short_sig(b)
-                    if ok: em = emit(raw, B, pool, i, -1, "KB1 pha&hoi", max(b["h"], zp), w, "A", zp)
+                    if ok: em = emit_or_arm(raw, B, pool, z, i, -1, "KB1 pha&hoi", max(b["h"], zp), w, "A", zp)
                 if em: z["cool"] = i; z["state"] = "idle"
             if not em and ENABLE_S2 and z["state"] in ("idle", "broke_up", "broke_dn"):
                 if up and tagged and b["c"] < zhi:
                     ok, w = short_sig(b)
                     if ok and b["delta"] < 0:
                         wall = (not REQUIRE_WALL_S2) or absorption(lv, b, b["h"], -1) or (S2_CLIMAX_OVERRIDE and b["vratio"] >= VSA_CLIMAX)
-                        if wall and emit(raw, B, pool, i, -1, "KB2 cham&dao", max(b["h"], zp),
+                        if wall and emit_or_arm(raw, B, pool, z, i, -1, "KB2 cham&dao", max(b["h"], zp),
                                          w + ["climax" if b["vratio"] >= VSA_CLIMAX else "hap thu"], "B", zp):
                             z["cool"] = i; z["state"] = "idle"
                 elif dn and tagged and b["c"] > zlo:
                     ok, w = long_sig(b)
                     if ok and b["delta"] > 0:
                         wall = (not REQUIRE_WALL_S2) or absorption(lv, b, b["l"], +1) or (S2_CLIMAX_OVERRIDE and b["vratio"] >= VSA_CLIMAX)
-                        if wall and emit(raw, B, pool, i, +1, "KB2 cham&dao", min(b["l"], zp),
+                        if wall and emit_or_arm(raw, B, pool, z, i, +1, "KB2 cham&dao", min(b["l"], zp),
                                          w + ["climax" if b["vratio"] >= VSA_CLIMAX else "hap thu"], "B", zp):
                             z["cool"] = i; z["state"] = "idle"
             z["prev"] = rel

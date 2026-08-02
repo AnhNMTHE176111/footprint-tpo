@@ -1,6 +1,17 @@
 # PLAN — Sửa EntrySignal (M1) v2 theo review chart của người học
 
-Lập 2026-08-02 · **Bản 2** (viết lại sau khi có dữ liệu footprint M1 thật) · Trạng thái: **CHƯA implement**
+Lập 2026-08-02 · **Bản 3** · Trạng thái: **ĐÃ IMPLEMENT phần có bằng chứng** (commit `9160a85`)
+
+## ⏱ Trạng thái triển khai (cập nhật 2026-08-02)
+
+| Việc | Trạng thái |
+|---|---|
+| Bug `IsBreak` (mục 3.1) | ✅ **Đã sửa** → `StartsWith("KB1")` |
+| Fix A — nến entry phải thuận màu (ARM→CONFIRM) | ✅ **Đã cài, mặc định BẬT** (`ConfirmWindow=3`) |
+| Nút thu gọn panel | ✅ **Đã thêm** (dùng `PanelDrag.Draw` chung với TPO suite) |
+| Build DLL | ✅ 0 lỗi / 0 cảnh báo |
+| Fix B — vùng range cục bộ M1 | ⛔ **T1 THẤT BẠI → KHÔNG ship.** Xem mục 6.2 bên dưới |
+| Fix C/D/E/F | ⏸ Chưa làm — chờ có thêm dữ liệu |
 
 Nguồn đầu vào:
 - Lệnh live: [ENTRY SIGNAL (M1)_2026-08-02.csv](../data-export/signals/ENTRY%20SIGNAL%20(M1)_2026-08-02.csv) — 11 lệnh, 17/07→31/07.
@@ -229,6 +240,32 @@ Khoá theo **giá vùng làm tròn `ConfluenceTol`** để 4106.2 và 4106.7 tí
 
 ---
 
+## 5b. ⭐ KẾT QUẢ A/B CUỐI CÙNG (chạy sau khi implement, trên data 02→07/2026)
+
+Script: [entry_ab_fixA.py](../quantower-entry-signal/research/entry_ab_fixA.py). Cấu hình live (`RR=3`, `SlFloor=3.5`, `SlCap=6.0`).
+
+| Biến thể | cum≥2: n | xong | WR | Tổng R | exp | cum≥1: n | xong | WR | Tổng R | exp |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| V0 hiện tại | 11 | 10 | 50.0% | +10.0R | +1.00R | 36 | 33 | 27.3% | +3.0R | +0.09R |
+| A1 bỏ hẳn lệnh ngược màu | 4 | 4 | 75.0% | +8.0R | +2.00R | 20 | 18 | 27.8% | +2.0R | +0.11R |
+| A2 chờ xác nhận W=2 | 4 | 4 | 75.0% | +8.0R | +2.00R | 21 | 19 | 26.3% | +1.0R | +0.05R |
+| **A2 chờ xác nhận W=3** ⭐ | **7** | **6** | **83.3%** | **+14.0R** | **+2.33R** | **26** | **23** | **30.4%** | **+5.0R** | **+0.22R** |
+| A2 chờ xác nhận W=6 | 8 | 7 | 71.4% | +13.0R | +1.86R | 27 | 24 | 29.2% | +4.0R | +0.17R |
+
+**W=3 tốt nhất ở MỌI chỉ số, ở CẢ hai mức gate** → chọn làm mặc định (`ConfirmWindow = 3`).
+
+### ⚠️ Ba cảnh báo phải nhớ
+1. **Đỉnh nằm đúng ở W=3 giữa một dãy quét 4 điểm.** W=2 tìm được 0 nến xác nhận, W=3 tìm được 3,
+   W=6 tìm được 4 nhưng lại kém hơn. Toàn bộ phần "thắng" nằm ở **3 nến xác nhận**. Đây là kiểu
+   đỉnh rất dễ là ngẫu nhiên, không phải tối ưu đã chứng minh.
+2. **Mẫu KHÔNG lớn thêm được từ bộ dữ liệu này.** Dù file trải Feb→Jul, số nến có `vol ≥ VolFloor(20)`
+   theo tháng là: 02:12 · 03:91 · 04:37 · 05:250 · 06:291 · **07:4.264**. Hợp đồng GCQ26 chỉ thanh khoản
+   trong tháng 7 ⇒ thực chất vẫn là mẫu **1 tháng**. Muốn mẫu thật phải xuất footprint M1 của
+   **hợp đồng front-month / continuous**, không phải GCQ26.
+3. Theo tiêu chí PASS/FAIL ở mục 6.3 (`n ≥ 30 lệnh đã xong`) thì **chưa fix nào đạt**. Vẫn bật mặc định
+   vì (a) thắng V0 ở cả hai mức gate, (b) đúng luật người học review, (c) người học yêu cầu triển khai.
+   Cần theo dõi live và sẵn sàng tắt bằng `RequireEntryBodyDir = false`.
+
 ## 5. Số đo đã chạy — đọc kỹ, KHÔNG cái nào đủ mẫu để kết luận
 
 Tất cả trên replay 03–31/07, cấu hình live (`RR=3`, `SlFloor=3.5`, `SlCap=6.0`).
@@ -290,13 +327,35 @@ Tránh được 3/4 lệnh SL, giữ 1/2 lệnh thắng, mất 1 lệnh thắng 
 | Bước | Việc | Đầu ra |
 |---|---|---|
 | T0 ✅ | Replay tái hiện live | **XONG — 11/11** ([entry_replay_july.py](../quantower-entry-signal/research/entry_replay_july.py)) |
-| T1 | Bật `EnableLocalRange`, kiểm hợp lưu tại 4125.1 / 4104.2 / 4098.4 | ≥2 hay không. **Nếu không → dừng, hỏi lại người học** |
+| T1 ⛔ | Bật `EnableLocalRange`, kiểm hợp lưu tại 4125.1 / 4104.2 / 4098.4 | **THẤT BẠI — xem 6.2** |
 | T2 | A/B Fix A (A1 vs A2, quét `ConfirmWindow`) trong Python | bảng n/WR/R/exp theo từng gate |
 | T3 | A/B Fix C (`RetestBars`, `RetestKillBuf`, `BreakBrat`) | nt |
 | T4 | Đo Fix E (stacked imbalance) trên dữ liệu per-level: lệnh **có** vs **không có** stacked imbalance | nt |
 | T5 | Gộp, chốt bộ mặc định | bảng tổng |
 | T6 | Port C#, sửa bug `IsBreak`, build sạch, đối chiếu Python↔C# | replay khớp 100% |
 | T7 | Deploy Quantower 1 tuần, xuất CSV, đối chiếu mắt trên chart | — |
+
+### 6.2 ⛔ T1 THẤT BẠI — vùng "range cục bộ M1" KHÔNG ship
+
+Đã cài `build_local_ranges()` trong replay (mặc định TẮT) và quét 5 cấu hình. Hợp lưu tại giá vào của 3 ca bỏ sót:
+
+| `RangeBars` / `RangeMaxHeight` | số vùng thêm | ca1 4125.1 | ca2 4104.2 | ca3 4098.4 |
+|---|---:|:---:|:---:|:---:|
+| 30 / 5.0 | 154 | 0 | 0 | 0 |
+| 30 / 8.0 | **643** | **2** ✔ | 0 | 0 |
+| 45 / 8.0 | 299 | 0 | 0 | 0 |
+| 60 / 10.0 | 309 | 0 | 0 | 0 |
+| 20 / 4.0 | 218 | 0 | 0 | 0 |
+
+Chỉ **một** cấu hình bắt được **một** ca, và nó làm được vậy bằng cách **đổ thêm 643 vùng** vào pool —
+tức là làm loãng chính cái gate hợp lưu đang tạo ra edge. Ca 2 và ca 3 **không cấu hình nào** chạm tới.
+
+Theo đúng tiêu chí đã chốt trước ("nếu không đạt ⇒ dừng, hỏi lại, đừng tự bịa thêm nguồn vùng cho khớp
+3 ca"), **không ship Fix B**. Cờ `ENABLE_LOCAL_RANGE` để lại trong Python, mặc định TẮT.
+
+**❓ Câu cần hỏi người học:** ba mức 4125.1 / 4104.2 / 4098.4 (đặc biệt **4098.6** — đường ngang đen trong
+ảnh `image copy 2.png`) được vẽ từ đâu? HVN tuần? mức tự vẽ tay? khung thời gian khác? Không có câu trả
+lời này thì không dựng đúng nguồn vùng được.
 
 ### 6.3 Tiêu chí PASS/FAIL — chốt TRƯỚC, không đổi sau khi thấy số
 - Bật mặc định một fix chỉ khi: **n ≥ 30 lệnh đã xong** và exp R/lệnh **cao hơn V0** và **không tháng nào lật từ dương sang âm**.

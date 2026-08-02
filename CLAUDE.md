@@ -79,5 +79,36 @@ Ebook bổ trợ: thành phần thị trường (chủ động/thụ động), F
 - **Absorption = Hấp thụ**; **Unfinished Business = Phiên đấu giá chưa hoàn tất** ← "Công việc chưa hoàn thành"
 - **Nến/thanh (bar)** ← đôi chỗ ghi "quán bar"
 
+## 📊 DỮ LIỆU ĐỂ TEST — TỰ ĐI TÌM, ĐỪNG HỎI (chốt 2026-08-02)
+Mọi dữ liệu xuất từ Quantower/Optimus Flow đều nằm trong **`data-export/`**. Khi cần backtest / kiểm tra
+signal: **tự tìm file phù hợp rồi chạy luôn**, chỉ hỏi người học khi THẬT SỰ không có file cần thiết
+(vd cần symbol/khung chưa từng xuất) — không hỏi "anh cho em đường dẫn file" nữa.
+
+Cách tìm (chạy lệnh, đừng đoán theo trí nhớ — file mới được thêm liên tục):
+```bash
+ls -la data-export/ data-export/*/                      # xem có gì
+head -1 <file>                                          # phân loại bằng HEADER
+```
+Phân loại theo header:
+| Header bắt đầu bằng | Loại | Dùng cho |
+|---|---|---|
+| `bar_idx,datetime,price,bid_vol,ask_vol,…` | **footprint TỪNG MỨC GIÁ** (từ indicator Footprint Export) | test entry M1, imbalance, absorption, POC |
+| `bar_idx,datetime,open,high,low,close,…` (`*_bars.csv`) | tổng hợp **THEO NẾN** + delta/POC | backtest runner/bias, khớp bằng `bar_idx` với file trên |
+| `DateTime,UTC,Open,High,…,VSA…` | export cũ của chart (BOM UTF-8, ngày kiểu M/D/YYYY) | script Python cũ trong `research/` đang đọc dạng này |
+| `TPO-chart-*.csv`, `tpo-data/` | TPO daily / M30 | bias đa phiên |
+| `signals/*.csv` | log signal do indicator live ghi ra | reconcile Python ↔ C# |
+
+Tên file **mới** do Footprint Export sinh đã tự mô tả: `fp_<mã>_<khung>_<khoảng>_<độ dài>.csv`
+(vd `fp_MGCQ26_M1_20260701-20260731_30d.csv`) → chọn file bằng tên là đủ. File **cũ** tên không mô tả
+(`Data_Footprint_Export.csv`, `sample.csv`, `30-7-2026.csv`) thì xác định khoảng bằng:
+```bash
+awk -F, 'NR==2{print $2}' <file>; tail -1 <file> | cut -d, -f2
+```
+Các file lớn hiện có (per-level M1, tính đến 2026-08-02): `data-export/Data_Footprint_Export.csv`
+(2026-02-03 → 07-31, ~183k dòng, đủ dài để backtest nhiều tháng), `27-7/sample.csv` (01-29 → 07-28,
+761k dòng), `data-footprint/Data_Footprint_Export.csv` (1 tháng), `28-7/30-7-2026.csv` (2 ngày).
+⚠️ Giá trong các file khác nhau có thể là symbol khác nhau (5086 vs 4041) → **kiểm giá/symbol trước khi
+gộp**, đừng nối 2 file thành một chuỗi liên tục nếu chưa đối chiếu.
+
 ## ✅ Trạng thái hiện tại
 Xem `00-syllabus.md`. Khi bắt đầu phiên mới: đọc syllabus + progress để biết đang ở đâu, rồi tiếp tục.

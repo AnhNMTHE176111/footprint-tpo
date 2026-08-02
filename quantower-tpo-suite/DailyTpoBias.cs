@@ -70,7 +70,7 @@ namespace DailyTpoBias
         [InputParameter("Màu mức hôm qua", 34)]
         public Color PriorColor { get; set; } = Color.FromArgb(0x90, 0x90, 0x90);
 
-        // ---------- Telegram (tổng hợp đầu ngày + trước phiên Mỹ) ----------
+        // ---------- Telegram (tổng hợp: đầu ngày + buổi chiều + trước phiên Mỹ) ----------
         [InputParameter("Gửi Telegram", 50)]
         public bool TeleEnabled { get; set; } = false;
         [InputParameter("TG · Bot token", 51)]
@@ -85,15 +85,17 @@ namespace DailyTpoBias
         public int TelePreUsMin { get; set; } = 30;
         [InputParameter("TG · Cửa sổ báo sáng sau IB (nến)", 56, 1, 20, 1, 0)]
         public int TeleMorningGrace { get; set; } = 6;
-        [InputParameter("TG · Thư mục chung (trống=mặc định)", 57)]
+        [InputParameter("TG · Báo chiều (phút/ngày; 14:00=840; 0=tắt)", 57, 0, 1439, 5, 0)]
+        public int TeleAfternoonMin { get; set; } = 840;
+        [InputParameter("TG · Thư mục chung (trống=mặc định)", 58)]
         public string TeleShareDir { get; set; } = "";
-        [InputParameter("TG · Gửi thử ngay (bật rồi tắt)", 58)]
+        [InputParameter("TG · Gửi thử ngay (bật rồi tắt)", 59)]
         public bool TeleTestNow { get; set; } = false;
         // Xem SessionZones.cs: nếu add cả 2 indicator (bias + zone) trên cùng chart,
         // cả hai cùng ghi vào 1 tin Telegram gộp — nhưng chỉ 1 trong số các instance
         // đang chạy (bias/zone, nhiều tab) nên là nơi thực sự BẤM GỬI. Khuyên: bật true
         // ở CÙNG tab với SessionZones đã bật TeleIsSender, hoặc chỉ bật ở 1 trong 2.
-        [InputParameter("TG · Tab này ĐƯỢC gửi (chỉ bật 1 tab/chart)", 59)]
+        [InputParameter("TG · Tab này ĐƯỢC gửi (chỉ bật 1 tab/chart)", 60)]
         public bool TeleIsSender { get; set; } = false;
 
         private bool _vaLoaded;
@@ -216,6 +218,7 @@ namespace DailyTpoBias
             _tele.UsStartMin = TeleUsStartMin;
             _tele.PreUsMin = TelePreUsMin;
             _tele.MorningGraceBars = TeleMorningGrace;
+            _tele.AfternoonMin = TeleAfternoonMin;
             _tele.IbBars = IbBars;
             _tele.GapMinutes = GapMinutes;
         }

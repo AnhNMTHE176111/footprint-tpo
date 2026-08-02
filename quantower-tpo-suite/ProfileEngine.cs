@@ -501,9 +501,10 @@ namespace TpoSuite
 
     // ---- Gửi "tổng hợp" lên Telegram (dùng chung cho DailyTpoBias + M30SessionZones) --------
     //  Mỗi indicator GHI phần của mình ra file chung (sec_<symbol>_<kind>.txt). Indicator nào
-    //  có bot token + chat id sẽ GỘP các phần (bias + zone) thành 1 tin và bắn tại 2 mốc/ngày:
-    //    • MORNING : ngày phát triển vừa đủ nến qua IB (đủ bias) — cửa sổ vài nến sau IB.
-    //    • PREUS   : trước giờ phiên Mỹ mở PreUsMin phút.
+    //  có bot token + chat id sẽ GỘP các phần (bias + zone) thành 1 tin và bắn tại 3 mốc/ngày:
+    //    • MORNING   : ngày phát triển vừa đủ nến qua IB (đủ bias) — cửa sổ vài nến sau IB.
+    //    • AFTERNOON : mốc giờ cố định buổi chiều (mặc định 14:00 VN — quanh giờ Âu vào).
+    //    • PREUS     : trước giờ phiên Mỹ mở PreUsMin phút.
     //  Chống gửi trùng bằng FILE KHOÁ tạo NGUYÊN TỬ (FileMode.CreateNew) theo ngày+mốc → dù
     //  cả 2 indicator (hoặc 2 chart) cùng cầm token cũng chỉ 1 tin/mốc/ngày. Chỉ chạy khi dữ
     //  liệu LIVE (nến cuối gần giờ thực → chart lịch sử không bắn nhầm). HTTP chạy nền (Task).
@@ -521,6 +522,7 @@ namespace TpoSuite
         public int TzOffset = 7;
         public int UsStartMin = 1160;      // 19:20 VN (COMEX vàng mở pit)
         public int PreUsMin = 30;
+        public int AfternoonMin = 840;     // 14:00 VN — tổng hợp giữa ngày (0 = tắt)
         public int MorningGraceBars = 6;   // sau IB còn được bắn "báo sáng" trong bao nhiêu nến
         public int IbBars = 2;
         public int GapMinutes = 75;
@@ -639,6 +641,10 @@ namespace TpoSuite
             // MORNING — IB xong, còn trong cửa sổ vài nến sau IB (mở chart giữa ngày sẽ KHÔNG bắn)
             if (devBars >= IbBars && devBars <= IbBars + MorningGraceBars)
                 TrySend(symbol, dayKey, "MORNING", "☀️ TỔNG HỢP ĐẦU NGÀY");
+
+            // AFTERNOON — mốc giờ cố định buổi chiều, cửa sổ 20' (0 = tắt)
+            if (AfternoonMin > 0 && nowMin >= AfternoonMin && nowMin <= AfternoonMin + 20)
+                TrySend(symbol, dayKey, "AFTERNOON", "🌤 TỔNG HỢP BUỔI CHIỀU");
 
             // PREUS — trong 20' kể từ mốc (giờ phiên Mỹ − PreUsMin)
             int trig = UsStartMin - PreUsMin;

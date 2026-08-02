@@ -90,7 +90,7 @@ namespace SessionZonesNs
         [InputParameter("Màu HVN", 43)]
         public Color HvnColor { get; set; } = Color.FromArgb(0xFF, 0x8F, 0x00);
 
-        // ---------- Telegram (tổng hợp đầu ngày + trước phiên Mỹ) ----------
+        // ---------- Telegram (tổng hợp: đầu ngày + buổi chiều + trước phiên Mỹ) ----------
         [InputParameter("Gửi Telegram", 50)]
         public bool TeleEnabled { get; set; } = false;
         [InputParameter("TG · Bot token", 51)]
@@ -103,16 +103,18 @@ namespace SessionZonesNs
         public int TelePreUsMin { get; set; } = 30;
         [InputParameter("TG · Cửa sổ báo sáng sau IB (nến)", 56, 1, 20, 1, 0)]
         public int TeleMorningGrace { get; set; } = 6;
-        [InputParameter("TG · Thư mục chung (trống=mặc định)", 57)]
+        [InputParameter("TG · Báo chiều (phút/ngày; 14:00=840; 0=tắt)", 57, 0, 1439, 5, 0)]
+        public int TeleAfternoonMin { get; set; } = 840;
+        [InputParameter("TG · Thư mục chung (trống=mặc định)", 58)]
         public string TeleShareDir { get; set; } = "";
-        [InputParameter("TG · Gửi thử ngay (bật rồi tắt)", 58)]
+        [InputParameter("TG · Gửi thử ngay (bật rồi tắt)", 59)]
         public bool TeleTestNow { get; set; } = false;
         // Bạn add indicator này trên NHIỀU tab/chart cùng symbol (M30 + 2 tab M1) →
         // nếu bật ở cả 3, mỗi tab tự kiểm mốc + có thể bắn Telegram riêng, dễ ra 3 tin
         // cùng lúc (nhất là khi 3 tab lệch "Lệch giờ" nhau). CHỈ bật "true" ở ĐÚNG 1 tab
         // (khuyên: tab M1 tôi trade) — các tab còn lại để false, chart vẫn hiện panel
         // bình thường, chỉ không tự gửi tin.
-        [InputParameter("TG · Tab này ĐƯỢC gửi (chỉ bật 1 tab/chart)", 59)]
+        [InputParameter("TG · Tab này ĐƯỢC gửi (chỉ bật 1 tab/chart)", 60)]
         public bool TeleIsSender { get; set; } = false;
 
         private bool _vaLoaded;
@@ -337,6 +339,7 @@ namespace SessionZonesNs
             _tele.UsStartMin = TeleUsStartMin;
             _tele.PreUsMin = TelePreUsMin;
             _tele.MorningGraceBars = TeleMorningGrace;
+            _tele.AfternoonMin = TeleAfternoonMin;
             _tele.IbBars = 2;                   // M30 không có input IB → coi IB = 2 nến (1h)
             _tele.GapMinutes = GapMinutes;
         }

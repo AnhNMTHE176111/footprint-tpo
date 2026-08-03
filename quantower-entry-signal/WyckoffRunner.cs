@@ -68,8 +68,11 @@ namespace WyckoffRunner
     using System.Globalization;
     using System.IO;
     using System.Linq;
+    using System.Reflection;
     using System.Text;
     using TradingPlatform.BusinessLayer;
+    using TradingPlatform.BusinessLayer.Chart;
+    using TradingPlatform.BusinessLayer.Native;
     using TpoSuite;   // ProfileEngine + PanelDrag (concat)
 
     public class WyckoffRunner : Indicator, IVolumeAnalysisIndicator
@@ -295,8 +298,12 @@ namespace WyckoffRunner
         // so) — dung de HOC/doi chieu chart, KHONG dung lam gate vao lenh (giong bai hoc W3 da bi bac bo).
         [InputParameter("Wyckoff: hiện sơ đồ Range + Phase A-E + sự kiện", 150)]
         public bool ShowWyckoffSchematic { get; set; } = true;
-        [InputParameter("Wyckoff: số Range gần nhất hiển thị", 151, 1, 20, 1, 0)]
-        public int WyckoffMaxRanges { get; set; } = 6;
+        // 2026-08-03: TRƯỚC ĐÂY mặc định 6 → người dùng "chỉ thấy range mới nhất", không soi lại được
+        // các range quá khứ để tự chấm. Nay mặc định 40 (trần 300) + có DANH SÁCH RANGE bấm để nhảy chart.
+        [InputParameter("Wyckoff: số Range gần nhất hiển thị", 151, 1, 300, 1, 0)]
+        public int WyckoffMaxRanges { get; set; } = 40;
+        [InputParameter("Wyckoff: mở KÍNH LÚP khi nháy đúp range (xem tách khỏi chart)", 155)]
+        public bool WyInspector { get; set; } = true;
         [InputParameter("Wyckoff: màu Range Tích luỹ", 152)]
         public Color WyAccColor { get; set; } = Color.FromArgb(0x4C, 0xAF, 0x50);
         [InputParameter("Wyckoff: màu Range Phân phối", 153)]
@@ -315,8 +322,16 @@ namespace WyckoffRunner
         public bool ShowAllHistory { get; set; } = true;
         [InputParameter("(nếu tắt) số nến hiển thị gần nhất", 87, 50, 20000, 50, 0)]
         public int DisplayBars { get; set; } = 600;
-        [InputParameter("Số dòng tối đa trong bảng", 88, 2, 20, 1, 0)]
+        [InputParameter("Bảng: số dòng THẤY của danh sách LỆNH (cuộn được)", 88, 2, 30, 1, 0)]
         public int PanelRows { get; set; } = 4;
+        [InputParameter("Bảng: số dòng THẤY của danh sách WYCKOFF RANGE (cuộn được)", 89, 2, 30, 1, 0)]
+        public int RangeListRows { get; set; } = 5;
+        [InputParameter("Bảng: bề ngang (px)", 86, 360, 1400, 10, 0)]
+        public int PanelWidth { get; set; } = 700;
+        [InputParameter("Bảng: bấm vào dòng → nhảy chart tới vị trí đó", 97)]
+        public bool ClickToNavigate { get; set; } = true;
+        [InputParameter("Bảng: nhảy chart kèm chỉnh zoom cho vừa range", 98)]
+        public bool NavZoomFit { get; set; } = true;
         [InputParameter("Góc bảng (0=TL 1=TR 2=BL 3=BR)", 84, 0, 3, 1, 0)]
         public int PanelCorner { get; set; } = 0;
         [InputParameter("Cỡ chữ", 85, 7, 20, 1, 0)]
@@ -455,7 +470,12 @@ namespace WyckoffRunner
         private int _lastN = -1;
         private int _vaCov, _vaTot;
         private DateTime _vaFirst = DateTime.MinValue;
-        private readonly PanelDrag _drag = new();
+        private readonly UiPanel _ui = new();
+        // --- yêu cầu nhảy chart đang chạy (vòng lặp kín qua nhiều khung hình, xem ChartNav) ---
+        private DateTime _navTime = DateTime.MinValue;
+        private int _navIters, _navLastOff; private float _navLastX = float.NaN;
+        private string _inspectKey;                 // range đang mở kính lúp (null = đóng)
+        private bool _apiDumped;
 
         public WyckoffRunner() : base()
         {
@@ -473,7 +493,8 @@ namespace WyckoffRunner
         }
         protected override void OnClear()
         {
-            _drag.Detach();
+            _ui.Detach();
+            _navTime = DateTime.MinValue; _inspectKey = null;
             lock (_calc)
             {
                 _vaLoaded = false; _lastN = -1;
@@ -550,6 +571,7 @@ namespace WyckoffRunner
         private sealed class Sig
         {
             public int Idx; public DateTime Time; public int Side;
+            public int HdIdx = -1;       // chi so trong HistoricalData (de bang bam-nhay-chart dinh vi)
             public string Scen; public char Grade; public double Entry, Sl, Tp1, Tp2, RiskT, Rr2, TargetRr;
             public int Cluster;          // số vùng chồng quanh giá vào (info, KHÔNG gate)
             public double BlockR;        // TP-vướng-vùng mạnh: cách entry bao nhiêu R (NaN = không vướng)
@@ -578,12 +600,17 @@ namespace WyckoffRunner
             public List<WyPhaseSeg> Phases = new();
             public WyPendingShock Pending;                    // != null chi khi State=="C_pending"
         }
-        // Render DTO (B[idx].Time/gia da chot san — dung duoc trong OnPaintChart du B khac lan)
-        private sealed class WyEventR { public DateTime Time; public double Price; public string Label; public WyShockStatus Status; }
-        private sealed class WyPhaseSegR { public char Phase; public DateTime StartTime; public DateTime EndTime; }
+        // Render DTO (B[idx].Time/gia da chot san — dung duoc trong OnPaintChart du B khac lan).
+        // v3 (2026-08-03): moi phan tu mang THEM chi so HistoricalData (HdIdx) — can cho (a) bang danh
+        // sach bam-de-nhay-chart, (b) KINH LUP tu ve lai range bang chi so nen (khong qua CoordinatesConverter).
+        private sealed class WyEventR { public DateTime Time; public int HdIdx; public double Price; public string Label; public WyShockStatus Status; }
+        private sealed class WyPhaseSegR { public char Phase; public DateTime StartTime; public DateTime EndTime; public int StartHd, EndHd; }
         private sealed class WyRangeR
         {
             public DateTime StartTime, EndTime; public bool Acc; public double Low, High;
+            public int StartHd, EndHd;
+            public bool Completed;
+            public string Key = "";
             public List<WyEventR> Events = new();
             public List<WyPhaseSegR> Phases = new();
         }
@@ -608,7 +635,7 @@ namespace WyckoffRunner
 
                     var pool = BuildPool(hd, B);
                     var sigs = Scan(hd, B, pool);
-                    foreach (var s in sigs) { Simulate(B, s); Enrich(pool, s); }
+                    foreach (var s in sigs) { Simulate(B, s); Enrich(pool, s); s.HdIdx = B[s.Idx].HdIdx; }
 
                     if (ExportCsv) ExportSignals(sigs);
                     if (Mt5Bridge) EmitLive(sigs, B);
@@ -629,7 +656,11 @@ namespace WyckoffRunner
                         wyRanges = wyRaw.Select(x => WyToRender(B, x)).ToList();
                     }
 
-                    lock (_sync) _render = new RenderState { Sigs = show, Clusters = clusters, Panel = BuildPanel(show), Digits = _digits, WyRanges = wyRanges };
+                    lock (_sync) _render = new RenderState
+                    {
+                        Sigs = show, Clusters = clusters, Panel = BuildPanel(show), Digits = _digits, WyRanges = wyRanges,
+                        EntryRows = BuildEntryRows(show), RangeRows = BuildRangeRows(wyRanges), TotalBars = n,
+                    };
                     _lastN = n;
                 }
                 catch { /* giữ indicator sống */ }
@@ -1493,12 +1524,17 @@ namespace WyckoffRunner
         private WyRangeR WyToRender(List<Bar> B, WyRange r)
         {
             int endIdx = r.EndIdx >= 0 ? r.EndIdx : B.Count - 1;
-            var rr = new WyRangeR { StartTime = B[r.StartIdx].Time, EndTime = B[endIdx].Time, Acc = r.Acc, Low = r.Low, High = r.High };
-            foreach (var e in r.Events) rr.Events.Add(new WyEventR { Time = B[e.Idx].Time, Price = e.Price, Label = e.Label, Status = e.Status });
+            var rr = new WyRangeR
+            {
+                StartTime = B[r.StartIdx].Time, EndTime = B[endIdx].Time, Acc = r.Acc, Low = r.Low, High = r.High,
+                StartHd = B[r.StartIdx].HdIdx, EndHd = B[endIdx].HdIdx, Completed = r.Completed,
+                Key = (r.Acc ? "A" : "D") + B[r.StartIdx].HdIdx,
+            };
+            foreach (var e in r.Events) rr.Events.Add(new WyEventR { Time = B[e.Idx].Time, HdIdx = B[e.Idx].HdIdx, Price = e.Price, Label = e.Label, Status = e.Status });
             foreach (var p in r.Phases)
             {
                 int pe = p.EndIdx >= 0 ? p.EndIdx : endIdx;
-                rr.Phases.Add(new WyPhaseSegR { Phase = p.Phase, StartTime = B[p.StartIdx].Time, EndTime = B[pe].Time });
+                rr.Phases.Add(new WyPhaseSegR { Phase = p.Phase, StartTime = B[p.StartIdx].Time, EndTime = B[pe].Time, StartHd = B[p.StartIdx].HdIdx, EndHd = B[pe].HdIdx });
             }
             return rr;
         }
@@ -1816,6 +1852,415 @@ namespace WyckoffRunner
             return res;
         }
 
+        // ================================================================================================
+        //  BẢNG TƯƠNG TÁC (v3, 2026-08-03) — thay PanelDrag cho riêng indicator này
+        //  Gồm: khối header (thống kê) + 2 DANH SÁCH cuộn được: LỆNH và WYCKOFF RANGE.
+        //  Mỗi danh sách có chiều cao cố định (số dòng do input quyết định), thanh cuộn kéo được,
+        //  lăn chuột để cuộn, hover đổi nền, bấm 1 dòng = chọn + nhảy chart, nháy đúp dòng Range = kính lúp.
+        //  Chỉ UI thread đụng tới lớp này; vẫn khoá _lk vì Quantower gọi chuột và vẽ ở 2 điểm vào khác nhau.
+        // ================================================================================================
+        private sealed class UiRow
+        {
+            public string Key = "", L1 = "", L2;
+            public Color C1 = Color.White, C2 = Color.Silver;
+            public int NavIdx = -1;          // chỉ số HistoricalData để nhảy tới (-1 = không nhảy được)
+            public int NavSpan;              // độ rộng (nến) của đối tượng — để zoom vừa khung
+            public double NavPrice = double.NaN;
+        }
+
+        private sealed class UiSection
+        {
+            public string Title = "", Hint = "";
+            public List<UiRow> Rows = new();
+            public int Vis = 6;          // số dòng người dùng đặt trong input
+            public int VisEff = 6;       // số dòng THỰC vẽ (bị bóp lại nếu bảng cao quá chart)
+            public int Scroll;
+            public bool Collapsed;
+            public string SelKey = "";
+            public RectangleF TitleBox, View, Track, Thumb;
+            public float RowH = 30;
+            public int MaxScroll => Math.Max(0, Rows.Count - VisEff);
+        }
+
+        private sealed class UiPanel
+        {
+            public const float Toggle = 15f;
+            private readonly object _lk = new object();
+            private IChart _chart;
+            private bool _drag; private float _gx, _gy;
+            private float? _px, _py;
+            private bool _collapsed;
+            private RectangleF _pan, _head, _toggle;
+            private readonly UiSection[] _sec = { new UiSection(), new UiSection() };
+            private int _hovSec = -1, _hovRow = -1;
+            private int _thSec = -1; private float _thGrab;
+
+            public RectangleF CloseBox;                    // nút ✕ của kính lúp (Empty = không có)
+            public Action OnClose;
+            public Action<int, UiRow, bool> OnActivate;    // (mục, dòng, nháy-đúp)
+
+            public UiSection Sec(int i) => _sec[i];
+            public string SelKeyOf(int i) { lock (_lk) return _sec[i].SelKey; }
+
+            public void Attach(IChart chart)
+            {
+                if (chart == null || ReferenceEquals(_chart, chart)) return;
+                Detach();
+                _chart = chart;
+                _chart.MouseDown += OnDown; _chart.MouseMove += OnMove;
+                _chart.MouseUp += OnUp; _chart.MouseWheel += OnWheel;
+            }
+            public void Detach()
+            {
+                if (_chart == null) return;
+                try { _chart.MouseDown -= OnDown; _chart.MouseMove -= OnMove; _chart.MouseUp -= OnUp; _chart.MouseWheel -= OnWheel; } catch { }
+                _chart = null; _drag = false; _thSec = -1;
+            }
+
+            // Bảng đang TẮT (hoặc chưa có dữ liệu) → xoá hình học, nếu không chuột vẫn bị bảng vô hình nuốt.
+            public void Hide()
+            {
+                lock (_lk)
+                {
+                    _pan = _head = _toggle = RectangleF.Empty;
+                    foreach (var s in _sec) { s.TitleBox = s.View = s.Track = s.Thumb = RectangleF.Empty; }
+                    _hovSec = _hovRow = -1; _drag = false; _thSec = -1;
+                }
+            }
+
+            private static string Fit(Graphics gr, Font f, string t, float maxW)
+            {
+                if (string.IsNullOrEmpty(t) || maxW <= 8) return t;
+                if (gr.MeasureString(t, f).Width <= maxW) return t;
+                int lo = 0, hi = t.Length;
+                while (lo < hi)
+                {
+                    int mid = (lo + hi + 1) / 2;
+                    if (gr.MeasureString(t.Substring(0, mid) + "…", f).Width <= maxW) lo = mid; else hi = mid - 1;
+                }
+                return t.Substring(0, Math.Max(0, lo)) + "…";
+            }
+
+            public void Draw(Graphics gr, Font f, Font fb, IReadOnlyList<(string text, Color col)> header,
+                             int bgAlpha, int corner, Rectangle clip, float width)
+            {
+                lock (_lk)
+                {
+                    float pad = 6f, lineH = f.Height + 2f, rowH = 2f * lineH + 3f, titleH = lineH + 6f;
+                    float bw = Math.Max(300f, Math.Min(width, clip.Width - 16f));
+                    int nHead = header == null ? 0 : (_collapsed ? Math.Min(1, header.Count) : header.Count);
+                    float headH = pad + nHead * lineH;
+                    float bh = headH;
+                    foreach (var s in _sec) { s.RowH = rowH; s.VisEff = Math.Max(1, Math.Min(s.Vis, s.Rows.Count == 0 ? 1 : s.Rows.Count)); }
+                    if (!_collapsed)
+                    {
+                        // Bóp số dòng lại nếu bảng cao hơn khung chart — thà cuộn nhiều hơn là tràn ra ngoài.
+                        for (int guard = 0; guard < 60; guard++)
+                        {
+                            float h = headH + pad;
+                            foreach (var s in _sec) h += titleH + (s.Collapsed ? 0 : s.VisEff * rowH + 4f);
+                            if (h <= clip.Height - 16 || _sec.All(z => z.Collapsed || z.VisEff <= 2)) { bh = h; break; }
+                            var big = _sec.Where(z => !z.Collapsed && z.VisEff > 2).OrderByDescending(z => z.VisEff).First();
+                            big.VisEff--;
+                            bh = h;
+                        }
+                        float fin = headH + pad;
+                        foreach (var s in _sec) fin += titleH + (s.Collapsed ? 0 : s.VisEff * rowH + 4f);
+                        bh = fin;
+                    }
+                    else bh = headH + pad;
+
+                    float defX = (corner == 1 || corner == 3) ? clip.Right - bw - 8f : clip.Left + 8f;
+                    float defY = (corner >= 2) ? clip.Bottom - bh - 8f : clip.Top + 8f;
+                    float x = _px ?? defX, y = _py ?? defY;
+                    x = Math.Max(clip.Left, Math.Min(x, clip.Right - bw));
+                    y = Math.Max(clip.Top, Math.Min(y, clip.Bottom - Math.Min(bh, clip.Height)));
+                    _pan = new RectangleF(x, y, bw, bh);
+                    _head = new RectangleF(x, y, bw, headH);
+
+                    using (var bg = new SolidBrush(Color.FromArgb(bgAlpha, 18, 18, 22))) gr.FillRectangle(bg, _pan);
+                    using (var bd = new Pen(Color.FromArgb(110, 255, 255, 255))) gr.DrawRectangle(bd, x, y, bw, bh);
+
+                    float ty = y + pad;
+                    for (int k = 0; k < nHead; k++)
+                    {
+                        using var br = new SolidBrush(header[k].col);
+                        gr.DrawString(Fit(gr, f, header[k].text, bw - 2 * pad - Toggle - 4), f, br, x + pad, ty);
+                        ty += lineH;
+                    }
+                    _toggle = new RectangleF(x + bw - Toggle - 3f, y + 3f, Toggle, Toggle);
+                    DrawToggle(gr, _toggle, _collapsed);
+                    // Thu gọn → XOÁ hình học 2 mục, nếu không chuột vẫn bấm trúng dòng vô hình của khung trước.
+                    if (_collapsed)
+                    {
+                        foreach (var s0 in _sec) { s0.TitleBox = RectangleF.Empty; s0.View = RectangleF.Empty; s0.Track = RectangleF.Empty; s0.Thumb = RectangleF.Empty; }
+                        return;
+                    }
+
+                    for (int si = 0; si < _sec.Length; si++)
+                    {
+                        var s = _sec[si];
+                        s.TitleBox = new RectangleF(x + 1, ty, bw - 2, titleH);
+                        using (var tb = new SolidBrush(Color.FromArgb(46, 255, 255, 255))) gr.FillRectangle(tb, s.TitleBox);
+                        using (var ln = new Pen(Color.FromArgb(70, 255, 255, 255))) gr.DrawLine(ln, x + 1, ty, x + bw - 1, ty);
+                        string t = (s.Collapsed ? "▸ " : "▾ ") + s.Title + $"  ({s.Rows.Count})" +
+                                   (s.Rows.Count > s.VisEff ? $"   cuộn {s.Scroll + 1}-{Math.Min(s.Rows.Count, s.Scroll + s.VisEff)}" : "");
+                        using (var br = new SolidBrush(Color.FromArgb(235, 235, 245)))
+                            gr.DrawString(Fit(gr, fb, t, bw * 0.62f), fb, br, x + 6, ty + 2);
+                        if (!string.IsNullOrEmpty(s.Hint))
+                            using (var br2 = new SolidBrush(Color.FromArgb(140, 150, 165)))
+                                gr.DrawString(Fit(gr, f, s.Hint, bw * 0.36f - 10), f, br2, x + bw * 0.64f, ty + 2);
+                        ty += titleH;
+                        if (s.Collapsed) { s.View = RectangleF.Empty; s.Track = RectangleF.Empty; s.Thumb = RectangleF.Empty; continue; }
+
+                        int vis = s.VisEff;
+                        s.Scroll = Math.Max(0, Math.Min(s.Scroll, s.MaxScroll));
+                        s.View = new RectangleF(x + 2, ty, bw - 4, vis * rowH);
+                        bool bar = s.Rows.Count > vis;
+                        float listW = s.View.Width - (bar ? 11f : 4f);
+
+                        gr.SetClip(s.View);
+                        if (s.Rows.Count == 0)
+                            using (var br = new SolidBrush(Color.Gray))
+                                gr.DrawString(si == 0 ? "(chưa có lệnh nào)" : "(chưa nhận diện được range nào)", f, br, s.View.X + 8, s.View.Y + 4);
+                        for (int k = 0; k < vis; k++)
+                        {
+                            int ri = s.Scroll + k; if (ri >= s.Rows.Count) break;
+                            var r = s.Rows[ri];
+                            var rr = new RectangleF(s.View.X, ty + k * rowH, listW, rowH);
+                            bool hov = _hovSec == si && _hovRow == ri;
+                            bool sel = !string.IsNullOrEmpty(s.SelKey) && s.SelKey == r.Key;
+                            if (sel)
+                            {
+                                using (var b = new SolidBrush(Color.FromArgb(70, r.C1))) gr.FillRectangle(b, rr);
+                                using (var b = new SolidBrush(r.C1)) gr.FillRectangle(b, rr.X, rr.Y, 3f, rr.Height);
+                            }
+                            else if (hov)
+                                using (var b = new SolidBrush(Color.FromArgb(52, 255, 255, 255))) gr.FillRectangle(b, rr);
+                            if (hov && !sel)
+                                using (var b = new SolidBrush(Color.FromArgb(150, r.C1))) gr.FillRectangle(b, rr.X, rr.Y, 3f, rr.Height);
+                            using (var b1 = new SolidBrush(r.C1))
+                                gr.DrawString(Fit(gr, f, r.L1, rr.Width - 14), f, b1, rr.X + 8, rr.Y + 2);
+                            if (r.L2 != null)
+                                using (var b2 = new SolidBrush(hov || sel ? Color.FromArgb(220, 220, 220) : r.C2))
+                                    gr.DrawString(Fit(gr, f, r.L2, rr.Width - 14), f, b2, rr.X + 8, rr.Y + 2 + lineH);
+                            using (var ln = new Pen(Color.FromArgb(28, 255, 255, 255)))
+                                gr.DrawLine(ln, rr.X + 4, rr.Bottom - 1, rr.Right - 4, rr.Bottom - 1);
+                        }
+                        gr.SetClip(clip);
+
+                        if (bar)
+                        {
+                            s.Track = new RectangleF(s.View.Right - 9f, s.View.Y + 1, 7f, s.View.Height - 2);
+                            float th = Math.Max(20f, s.Track.Height * vis / s.Rows.Count);
+                            float pos = s.MaxScroll > 0 ? (float)s.Scroll / s.MaxScroll : 0f;
+                            s.Thumb = new RectangleF(s.Track.X, s.Track.Y + (s.Track.Height - th) * pos, s.Track.Width, th);
+                            using (var b = new SolidBrush(Color.FromArgb(40, 255, 255, 255))) gr.FillRectangle(b, s.Track);
+                            using (var b = new SolidBrush(Color.FromArgb(_thSec == si ? 220 : 150, 200, 210, 230))) gr.FillRectangle(b, s.Thumb);
+                        }
+                        else { s.Track = RectangleF.Empty; s.Thumb = RectangleF.Empty; }
+                        ty += vis * rowH + 4f;
+                    }
+                }
+            }
+
+            private static void DrawToggle(Graphics gr, RectangleF r, bool collapsed)
+            {
+                using (var b = new SolidBrush(Color.FromArgb(55, 255, 255, 255))) gr.FillRectangle(b, r);
+                using (var bd = new Pen(Color.FromArgb(120, 255, 255, 255), 1f)) gr.DrawRectangle(bd, r.X, r.Y, r.Width, r.Height);
+                float cx = r.X + r.Width / 2f, cy = r.Y + r.Height / 2f;
+                using var pen = new Pen(Color.FromArgb(220, 255, 255, 255), 1.6f);
+                if (collapsed) gr.DrawLines(pen, new[] { new PointF(cx - 2.5f, cy - 4f), new PointF(cx + 3f, cy), new PointF(cx - 2.5f, cy + 4f) });
+                else gr.DrawLines(pen, new[] { new PointF(cx - 4f, cy - 2.5f), new PointF(cx, cy + 3f), new PointF(cx + 4f, cy - 2.5f) });
+            }
+
+            private int RowAt(UiSection s, float mx, float my)
+            {
+                if (s.View.Width <= 0 || !s.View.Contains(mx, my)) return -1;
+                int k = (int)((my - s.View.Y) / Math.Max(1f, s.RowH));
+                int ri = s.Scroll + k;
+                return (ri >= 0 && ri < s.Rows.Count) ? ri : -1;
+            }
+
+            private void OnDown(object sender, ChartMouseNativeEventArgs e)
+            {
+                if (e.Button != NativeMouseButtons.Left) return;
+                Action after = null; bool redraw = false;
+                lock (_lk)
+                {
+                    if (CloseBox.Width > 0 && CloseBox.Contains(e.X, e.Y))
+                    { var cb = OnClose; after = () => cb?.Invoke(); redraw = true; goto done; }
+                    if (!_pan.Contains(e.X, e.Y)) return;
+                    if (_toggle.Contains(e.X, e.Y)) { _collapsed = !_collapsed; redraw = true; goto done; }
+                    for (int si = 0; si < _sec.Length; si++)
+                    {
+                        var s = _sec[si];
+                        if (s.TitleBox.Width > 0 && s.TitleBox.Contains(e.X, e.Y)) { s.Collapsed = !s.Collapsed; redraw = true; goto done; }
+                        if (s.Thumb.Width > 0 && s.Thumb.Contains(e.X, e.Y)) { _thSec = si; _thGrab = e.Y - s.Thumb.Y; redraw = true; goto done; }
+                        if (s.Track.Width > 0 && s.Track.Contains(e.X, e.Y))
+                        { s.Scroll = Math.Max(0, Math.Min(s.MaxScroll, s.Scroll + (e.Y < s.Thumb.Y ? -s.VisEff : s.VisEff))); redraw = true; goto done; }
+                        int ri = RowAt(s, e.X, e.Y);
+                        if (ri >= 0)
+                        {
+                            var row = s.Rows[ri];
+                            s.SelKey = row.Key;
+                            bool dbl = e.Clicks >= 2;
+                            var cb = OnActivate; int sic = si;
+                            after = () => cb?.Invoke(sic, row, dbl);
+                            redraw = true; goto done;
+                        }
+                    }
+                    if (_head.Contains(e.X, e.Y) || _pan.Contains(e.X, e.Y))
+                    { _drag = true; _gx = e.X - _pan.X; _gy = e.Y - _pan.Y; e.Handled = true; e.NeedMouseCapture = true; return; }
+                    done: ;
+                }
+                e.Handled = true;
+                if (redraw) e.NeedRedraw = true;
+                after?.Invoke();
+            }
+
+            private void OnMove(object sender, ChartMouseNativeEventArgs e)
+            {
+                bool redraw = false, handled = false;
+                lock (_lk)
+                {
+                    if (_drag)
+                    {
+                        _px = e.X - _gx; _py = e.Y - _gy; redraw = true; handled = true;
+                    }
+                    else if (_thSec >= 0)
+                    {
+                        var s = _sec[_thSec];
+                        float span = Math.Max(1f, s.Track.Height - s.Thumb.Height);
+                        float pos = Math.Max(0f, Math.Min(1f, (e.Y - _thGrab - s.Track.Y) / span));
+                        s.Scroll = (int)Math.Round(pos * s.MaxScroll);
+                        redraw = true; handled = true;
+                    }
+                    else
+                    {
+                        int hs = -1, hr = -1;
+                        for (int si = 0; si < _sec.Length && hr < 0; si++) { int ri = RowAt(_sec[si], e.X, e.Y); if (ri >= 0) { hs = si; hr = ri; } }
+                        if (hs != _hovSec || hr != _hovRow) { _hovSec = hs; _hovRow = hr; redraw = true; }
+                        handled = _pan.Contains(e.X, e.Y);
+                    }
+                }
+                if (handled) e.Handled = true;
+                if (redraw) e.NeedRedraw = true;
+            }
+
+            private void OnUp(object sender, ChartMouseNativeEventArgs e)
+            {
+                lock (_lk) { if (!_drag && _thSec < 0) return; _drag = false; _thSec = -1; }
+                e.Handled = true; e.NeedRedraw = true;
+            }
+
+            private void OnWheel(object sender, ChartMouseNativeEventArgs e)
+            {
+                bool hit = false;
+                lock (_lk)
+                {
+                    foreach (var s in _sec)
+                    {
+                        if (s.View.Width <= 0 || !s.View.Contains(e.X, e.Y)) continue;
+                        s.Scroll = Math.Max(0, Math.Min(s.MaxScroll, s.Scroll - Math.Sign(e.Delta) * 3));
+                        hit = true; break;
+                    }
+                }
+                if (hit) { e.Handled = true; e.NeedRedraw = true; }
+            }
+        }
+
+        // ================================================================================================
+        //  ĐIỀU HƯỚNG CHART (nhảy tới 1 mốc thời gian)
+        //  Quantower KHÔNG công bố API cuộn chart: IChart chỉ cho ĐỌC RightOffset/BarsWidth. Nên ở đây
+        //  dò bằng reflection trên đối tượng chart THẬT (lớp cài đặt nằm trong assembly giao diện) xem có
+        //  thành viên int ghi được tên RightOffset/BarsWidth không. KHÔNG gọi bừa phương thức lạ.
+        //  Vì không chắc đơn vị của RightOffset, việc canh vị trí chạy theo VÒNG LẶP KÍN qua nhiều khung
+        //  hình: mỗi lần vẽ đo lại x của mốc đích rồi hiệu chỉnh (tự ước lượng px trên 1 đơn vị offset).
+        //  Không dò được → bảng báo "KHÔNG hỗ trợ" và tự mở KÍNH LÚP thay thế.
+        // ================================================================================================
+        private static class ChartNav
+        {
+            private static readonly object _lk = new object();
+            private static Type _t;
+            private static MemberInfo _off, _bw;
+            private static string _status = "nhảy chart: chưa dò";
+            public static string Status { get { lock (_lk) return _status; } }
+            public static bool CanScroll { get { lock (_lk) return _off != null; } }
+            public static bool CanZoom { get { lock (_lk) return _bw != null; } }
+
+            private const BindingFlags BF = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy;
+
+            private static MemberInfo Find(Type t, string[] names)
+            {
+                foreach (var n in names)
+                {
+                    try { var p = t.GetProperty(n, BF); if (p != null && p.CanRead && p.CanWrite && p.PropertyType == typeof(int)) return p; } catch { }
+                }
+                foreach (var n in names)
+                {
+                    try { var fi = t.GetField(n, BF); if (fi != null && fi.FieldType == typeof(int)) return fi; } catch { }
+                }
+                return null;
+            }
+            private static int GetI(object o, MemberInfo m) => m is PropertyInfo p ? (int)p.GetValue(o) : (int)((FieldInfo)m).GetValue(o);
+            private static void SetI(object o, MemberInfo m, int v) { if (m is PropertyInfo p) p.SetValue(o, v); else ((FieldInfo)m).SetValue(o, v); }
+
+            public static void Discover(IChart chart, Action<string> dump)
+            {
+                if (chart == null) return;
+                lock (_lk)
+                {
+                    var t = chart.GetType();
+                    if (_t == t) return;
+                    _t = t;
+                    _off = Find(t, new[] { "RightOffset", "rightOffset", "_rightOffset" });
+                    _bw = Find(t, new[] { "BarsWidth", "barsWidth", "_barsWidth" });
+                    _status = "nhảy chart: " + (_off != null ? "OK (" + _off.Name + ")" : "KHÔNG hỗ trợ → dùng kính lúp");
+                    try { dump?.Invoke(DumpMembers(t)); } catch { }
+                }
+            }
+
+            public static int Offset(IChart c) { lock (_lk) { try { return _off == null ? 0 : GetI(c, _off); } catch { return 0; } } }
+            public static bool SetOffset(IChart c, int v)
+            {
+                lock (_lk)
+                {
+                    if (_off == null) return false;
+                    try { SetI(c, _off, v); return true; }
+                    catch { _status = "nhảy chart: lỗi ghi " + _off.Name; _off = null; return false; }
+                }
+            }
+            public static bool SetBarsWidth(IChart c, int v)
+            {
+                lock (_lk)
+                {
+                    if (_bw == null) return false;
+                    try { SetI(c, _bw, Math.Max(1, Math.Min(64, v))); return true; }
+                    catch { _bw = null; return false; }
+                }
+            }
+
+            // Liệt kê thành viên khả nghi (chỉ ĐỌC tên, không gọi) để còn cải tiến nếu bản này chưa nhảy được.
+            private static string DumpMembers(Type t)
+            {
+                var sb = new StringBuilder();
+                sb.Append("Chart type: ").Append(t.FullName).Append('\n');
+                string[] keys = { "offset", "scroll", "zoom", "barswidth", "visible", "first", "last", "navigate", "goto", "moveto" };
+                try
+                {
+                    foreach (var m in t.GetMembers(BF))
+                    {
+                        string n = m.Name.ToLowerInvariant();
+                        if (!keys.Any(k => n.Contains(k))) continue;
+                        sb.Append("  ").Append(m.MemberType).Append(' ').Append(m).Append('\n');
+                    }
+                }
+                catch { }
+                return sb.ToString();
+            }
+        }
+
         private List<(string, Color)> BuildPanel(List<Sig> sigs)
         {
             var p = new List<(string, Color)>();
@@ -1859,19 +2304,60 @@ namespace WyckoffRunner
                        Mt5DryRun ? Color.FromArgb(150, 200, 240) : Color.FromArgb(255, 170, 90)));
             if (TeleAlerts)
                 p.Add((("📨 Tele: " + (_teleStatus ?? "chờ tín hiệu…")), Color.FromArgb(150, 210, 255)));
-            var recent = sigs.OrderByDescending(s => s.Idx).Take(Math.Max(2, PanelRows)).ToList();
-            if (recent.Count == 0) { p.Add(("(chưa có setup CBR)", Color.Gray)); return p; }
-            foreach (var s in recent)
+            if (ClickToNavigate)
+                p.Add(("🧭 Bấm 1 dòng = nhảy chart tới đó · nháy đúp dòng Range = kính lúp · " + ChartNav.Status,
+                       Color.FromArgb(170, 195, 225)));
+            return p;
+        }
+
+        // ---- danh sách LỆNH (mỗi lệnh = 1 dòng chính + 1 dòng phụ "vì sao") ----
+        private List<UiRow> BuildEntryRows(List<Sig> sigs)
+        {
+            var rows = new List<UiRow>();
+            if (sigs == null) return rows;
+            foreach (var s in sigs.OrderByDescending(s => s.Idx))
             {
                 Color col = s.Side > 0 ? LongColor : ShortColor;
                 string dir = s.Side > 0 ? "LONG" : "SHORT";
                 string oc = s.Outcome == "TP" ? "✓" : s.Outcome == "SL" ? "✗" : "•";
                 string tag = s.Scen != null && s.Scen.StartsWith("quay") ? "↩" : "▶";
                 double rr = s.TargetRr > 0 ? s.TargetRr : RR;
-                p.Add(($"{oc} {tag} {dir} {s.Grade} | E {Fmt(s.Entry)} SL {Fmt(s.Sl)} ({s.RiskT * _tick:0.0}giá) TP {Fmt(s.Tp1)} ({rr:0.#}R)", col));
-                p.Add(($"    {string.Join(" · ", s.Why)}", Color.Silver));
+                rows.Add(new UiRow
+                {
+                    Key = "S" + s.HdIdx + (s.Side > 0 ? "L" : "S"),
+                    L1 = $"{oc} {tag} {s.Time.AddHours(TzOffset):dd/MM HH:mm} {dir} {s.Grade} · E {Fmt(s.Entry)} SL {Fmt(s.Sl)} ({s.RiskT * _tick:0.0}giá) TP {Fmt(s.Tp1)} ({rr:0.#}R)",
+                    L2 = "     " + string.Join(" · ", s.Why),
+                    C1 = col, C2 = Color.Silver,
+                    NavIdx = s.HdIdx, NavPrice = s.Entry,
+                });
             }
-            return p;
+            return rows;
+        }
+
+        // ---- danh sách WYCKOFF RANGE (để soi lại quá khứ, tự chấm bản vẽ) ----
+        private List<UiRow> BuildRangeRows(List<WyRangeR> ranges)
+        {
+            var rows = new List<UiRow>();
+            if (ranges == null) return rows;
+            for (int k = ranges.Count - 1; k >= 0; k--)   // mới nhất lên đầu
+            {
+                var r = ranges[k];
+                Color col = r.Acc ? WyAccColor : WyDistColor;
+                string kind = r.Acc ? "▲ TÍCH LUỸ" : "▼ PHÂN PHỐI";
+                string phases = r.Phases.Count > 0 ? string.Join("→", r.Phases.Select(x => x.Phase.ToString()).Distinct()) : "—";
+                var evs = r.Events.Select(e => e.Label).ToList();
+                string evTxt = string.Join(" ", evs.Take(8)) + (evs.Count > 8 ? " …" : "");
+                int bars = Math.Max(1, r.EndHd - r.StartHd + 1);
+                rows.Add(new UiRow
+                {
+                    Key = r.Key,
+                    L1 = $"{kind} · {r.StartTime.AddHours(TzOffset):dd/MM HH:mm} → {r.EndTime.AddHours(TzOffset):dd/MM HH:mm} ({bars} nến){(r.Completed ? "" : "  (đang chạy)")}",
+                    L2 = $"     {Fmt(r.Low)}–{Fmt(r.High)} ({(r.High - r.Low):0.0} giá) · Phase {phases} · {evs.Count} mốc: {evTxt}",
+                    C1 = col, C2 = Color.FromArgb(190, 190, 190),
+                    NavIdx = r.StartHd, NavSpan = bars, NavPrice = (r.Low + r.High) / 2,
+                });
+            }
+            return rows;
         }
 
         // ================= RENDER (tái dùng từ EntrySignal) =================
@@ -1879,7 +2365,13 @@ namespace WyckoffRunner
         {
             base.OnPaintChart(args);
             if (CurrentChart == null) return;   // KHÔNG chặn theo _vaLoaded: _render==null bên dưới đã đủ (xem fix mất panel ở OnUpdate)
-            _drag.Attach(CurrentChart);
+            if (_ui.OnActivate == null)
+            {
+                _ui.OnActivate = OnRowActivate;
+                _ui.OnClose = () => { _inspectKey = null; CurrentChart?.RedrawBuffer(); };
+            }
+            _ui.Attach(CurrentChart);
+            ChartNav.Discover(CurrentChart, DumpChartApi);
             var win = CurrentChart.Windows[args.WindowIndex];
             if (!win.IsMainWindow) return;
             RenderState rs; lock (_sync) rs = _render;
@@ -1905,138 +2397,16 @@ namespace WyckoffRunner
                 {
                     using var fPhase = new Font("Segoe UI", 9, FontStyle.Bold);
                     using var fEvt = new Font("Consolas", 9, FontStyle.Bold);
-                    var placedBoxes = new List<RectangleF>();
-                    // UI/UX: nhãn LUÔN vẽ trong hộp bo góc nền tối (không chữ trần đè lên nến), né chồng
-                    // lấp theo CẢ x lẫn y (không chỉ đẩy dọc như bản cũ) — "show chữ rõ ràng" (2026-08-02).
-                    void WyLabelBox(float x, float y, string text, Color color, Font f, bool anchorLeft)
-                    {
-                        var sz = gr.MeasureString(text, f);
-                        float pad = 3, w = sz.Width + 2 * pad, h = sz.Height + 2;
-                        float bx = anchorLeft ? x : x - w;
-                        float by = y;
-                        int guard = 0;
-                        while (guard < 40 && placedBoxes.Exists(bb => bb.IntersectsWith(new RectangleF(bx, by, w, h))))
-                        { by -= h + 2; guard++; }
-                        placedBoxes.Add(new RectangleF(bx, by, w, h));
-                        using (var path = Round(bx, by, w, h, 4))
-                        {
-                            using (var bgb = new SolidBrush(Color.FromArgb(230, 20, 20, 24))) gr.FillPath(bgb, path);
-                            using (var bd = new Pen(color, 1f)) gr.DrawPath(bd, path);
-                        }
-                        using var tb = new SolidBrush(color);
-                        gr.DrawString(text, f, tb, bx + pad, by + 1);
-                    }
-                    // Mỗi HỌ sự kiện 1 màu riêng để đọc nhanh trên chart bận nến — khớp bảng màu bên
-                    // Python (render_schematic_preview.py) dùng để kiểm bằng mắt trước khi port.
-                    // v2: thêm UA/DA (test cạnh "kia" không quyết định, CR-H) và tách LPS[C] (còn chờ xác
-                    // nhận, Phase C) khỏi LPS[D] (đã xác nhận, Phase D — CR-M), màu khác hẳn (không chỉ
-                    // đậm/nhạt cùng tông) để không bị nhầm bằng mắt — giảng viên-agent chấm phát hiện màu
-                    // cũ (tím nhạt/đậm) khó phân biệt.
-                    string WyCat(string label)
-                    {
-                        string b = label.Length > 0 && label[label.Length - 1] == ')' ? label.Substring(0, label.IndexOf('(')).TrimEnd() : label;
-                        switch (b)
-                        {
-                            case "SC": case "BCLX": return "climax";
-                            case "AR": return "ar";
-                            case "ST": case "UA": case "DA": return "st";
-                            case "Spring": case "Shakeout": case "UT": case "UTAD": return "shake";
-                            case "SOS": case "SOW": return "break";
-                            case "LPS[C]": case "LPSY[C]": return "lpsc";
-                            case "LPS[D]": case "LPSY[D]": return "lpsd";
-                            default: return "st";
-                        }
-                    }
-                    Color WyCatColor(string cat)
-                    {
-                        switch (cat)
-                        {
-                            case "climax": return Color.FromArgb(255, 82, 82);
-                            case "ar": return Color.FromArgb(129, 199, 132);
-                            case "st": return Color.FromArgb(176, 190, 197);
-                            case "shake": return Color.FromArgb(255, 202, 40);
-                            case "break": return Color.FromArgb(66, 165, 245);
-                            case "lpsc": return Color.FromArgb(38, 198, 168);
-                            case "lpsd": return Color.FromArgb(186, 104, 200);
-                            default: return Color.FromArgb(255, 230, 150);
-                        }
-                    }
-                    // chú giải màu — góc trên-phải clip, vẽ 1 lần mỗi khung hình, nền đục (bị nến đè lên
-                    // khi không có nền — giảng viên-agent chấm phát hiện ở bản trước)
-                    {
-                        var legend = new (string cat, string desc)[] {
-                            ("climax", "SC / BCLX — Climax"), ("ar", "AR — phản ứng"), ("st", "ST/UA/DA — test"),
-                            ("shake", "Spring/Shakeout/UT/UTAD"), ("break", "SOS/SOW — phá vỡ"),
-                            ("lpsc", "LPS[C] — test chờ xác nhận"), ("lpsd", "LPS[D] — vào lại sau phá"),
-                        };
-                        float ly = clip.Top + 4;
-                        float legendH = 17 * legend.Length + 6;
-                        using (var bgL = new SolidBrush(Color.FromArgb(235, 16, 16, 19)))
-                            gr.FillRectangle(bgL, clip.Right - 264, ly - 4, 264, legendH);
-                        foreach (var (cat, desc) in legend)
-                        {
-                            var c = WyCatColor(cat);
-                            using (var b = new SolidBrush(c)) gr.FillEllipse(b, clip.Right - 258, ly + 3, 8, 8);
-                            gr.DrawString(desc, fPhase, new SolidBrush(Color.FromArgb(220, 220, 220)), clip.Right - 246, ly);
-                            ly += 17;
-                        }
-                    }
-                    foreach (var r in rs.WyRanges)
-                    {
-                        Color col = r.Acc ? WyAccColor : WyDistColor;
-                        // duong ngang bien Range — CHI trong pham vi thoi gian CUA CHINH range nay
-                        float x0 = (float)conv.GetChartX(r.StartTime);
-                        float x1 = (float)conv.GetChartX(r.EndTime);
-                        if (x1 < clip.Left || x0 > clip.Right) continue;   // ca range ngoai man hinh
-                        float xa = Math.Max(x0, clip.Left), xb = Math.Min(x1, clip.Right);
-                        float yLow = (float)conv.GetChartY(r.Low), yHigh = (float)conv.GetChartY(r.High);
-                        using (var penR = new Pen(col, 2))
-                        {
-                            gr.DrawLine(penR, xa, yLow, xb, yLow);
-                            gr.DrawLine(penR, xa, yHigh, xb, yHigh);
-                        }
-                        gr.DrawString(r.Acc ? "Tích luỹ" : "Phân phối", fPhase, new SolidBrush(col), xb + 4, yHigh - 8);
-
-                        // vach doc chia PHASE — net dut, CHI trong pham vi GIA [Low..High] CUA range nay
-                        // (KHONG keo het chieu cao chart — dung yeu cau: "chia dọc ... đúng phạm vi của
-                        // range và phase đó thôi, ko chia dọc full màn hình").
-                        using (var penP = new Pen(WyPhaseColor, 1.6f) { DashStyle = DashStyle.Dash, DashPattern = new[] { 5f, 4f } })
-                        {
-                            foreach (var ph in r.Phases)
-                            {
-                                float xp = (float)conv.GetChartX(ph.StartTime);
-                                if (xp < clip.Left || xp > clip.Right) continue;
-                                gr.DrawLine(penP, xp, yHigh, xp, yLow);
-                                WyLabelBox(xp + 3, yHigh - 24, $"Phase {ph.Phase}", WyPhaseColor, fPhase, true);
-                            }
-                        }
-
-                        // nhan su kien (SC/AR/ST/UA/DA/Spring/Shakeout/SOS/BCLX/UT/UTAD/SOW/LPS[C]/LPS[D])
-                        foreach (var ev in r.Events.OrderBy(e => e.Time))
-                        {
-                            float xe = (float)conv.GetChartX(ev.Time);
-                            if (xe < clip.Left - 20 || xe > clip.Right + 20) continue;
-                            float ye = (float)conv.GetChartY(ev.Price);
-                            string cat = WyCat(ev.Label);
-                            bool above = cat == "ar" || cat == "st" || cat == "break";
-                            float ty = above ? ye - 22 : ye + 8;
-                            var cc = WyCatColor(cat);
-                            // marker theo trang thai shock (Confirmed/Pending/Failed — chi Spring/Shakeout/
-                            // UT/UTAD co): dac/vien day = Confirmed, vien dut = Pending, xam = Failed.
-                            var mcolor = ev.Status == WyShockStatus.Failed ? Color.FromArgb(140, 140, 140) : cc;
-                            gr.FillEllipse(new SolidBrush(mcolor), xe - 3f, ye - 3f, 6, 6);
-                            using (var pw = new Pen(Color.White, ev.Status == WyShockStatus.Confirmed ? 2f : 1f)
-                                   { DashStyle = ev.Status == WyShockStatus.Pending ? DashStyle.Dash : DashStyle.Solid })
-                                gr.DrawEllipse(pw, xe - 3f, ye - 3f, 6, 6);
-                            WyLabelBox(xe - 9, ty, ev.Label, mcolor, fEvt, true);
-                        }
-                    }
+                    DrawWyckoff(gr, rs.WyRanges, (t, hd) => (float)conv.GetChartX(t), pp => (float)conv.GetChartY(pp),
+                                new RectangleF(clip.X, clip.Y, clip.Width, clip.Height), fPhase, fEvt, _ui.SelKeyOf(1), true);
                 }
+
                 if (ShowSignals && rs.Sigs != null)
                 {
                     using var fLbl = new Font("Consolas", Math.Max(8, FontSize), FontStyle.Bold);
                     using var fChip = new Font("Consolas", Math.Max(8, FontSize), FontStyle.Bold);
                     var dash = DashedSlTp ? DashStyle.Dash : DashStyle.Solid;
+                    string selSig = _ui.SelKeyOf(0);
                     foreach (var s in rs.Sigs)
                     {
                         bool active = s.Outcome == "running";
@@ -2072,6 +2442,14 @@ namespace WyckoffRunner
                             using (var bd = new SolidBrush(active ? dir : Color.FromArgb(210, dir))) gr.FillEllipse(bd, xE - 4.5f, yE - 4.5f, 9, 9);
                             using (var pw = new Pen(Color.FromArgb(active ? 255 : 190, Color.White), 1.4f)) gr.DrawEllipse(pw, xE - 4.5f, yE - 4.5f, 9, 9);
                         }
+                        // lệnh ĐANG CHỌN trong bảng: vạch dọc + vòng tròn to để tìm thấy ngay sau khi nhảy chart
+                        if (selSig != null && selSig == "S" + s.HdIdx + (s.Side > 0 ? "L" : "S"))
+                        {
+                            using (var pSel = new Pen(Color.FromArgb(220, 255, 235, 130), 1.4f) { DashStyle = DashStyle.Dot })
+                                gr.DrawLine(pSel, xE, clip.Top, xE, clip.Bottom);
+                            using (var pSel2 = new Pen(Color.FromArgb(235, 255, 235, 130), 2f))
+                                gr.DrawEllipse(pSel2, xE - 10f, yE - 10f, 20, 20);
+                        }
                         if (ShowArrows) DrawArrow(gr, xE, yE, s.Side, active ? dir : Color.FromArgb(180, dir), Math.Max(4, active ? ArrowSize : ArrowSize - 2));
                         if (ShowLabels)
                         {
@@ -2093,14 +2471,349 @@ namespace WyckoffRunner
                         }
                     }
                 }
-                if (ShowPanel && rs.Panel != null && rs.Panel.Count > 0)
+                // KÍNH LÚP vẽ TRƯỚC bảng để bảng luôn nằm trên cùng (bảng là thứ đang thao tác).
+                _ui.CloseBox = RectangleF.Empty;
+                if (_inspectKey != null && rs.WyRanges != null)
+                {
+                    var rIns = rs.WyRanges.FirstOrDefault(z => z.Key == _inspectKey);
+                    if (rIns == null) _inspectKey = null; else DrawInspector(gr, rIns, clip);
+                }
+                if (ShowPanel && rs.Panel != null)
                 {
                     using var f = new Font("Consolas", FontSize, FontStyle.Regular);
-                    _drag.Draw(gr, f, rs.Panel, Math.Clamp(PanelOpacity, 100, 255), PanelCorner, clip);
+                    using var fb = new Font("Consolas", FontSize, FontStyle.Bold);
+                    var se = _ui.Sec(0); se.Title = "LỆNH"; se.Vis = Math.Max(2, PanelRows);
+                    se.Hint = ClickToNavigate ? "bấm = nhảy chart" : "";
+                    se.Rows = rs.EntryRows ?? new List<UiRow>();
+                    var sr = _ui.Sec(1); sr.Title = "WYCKOFF RANGE"; sr.Vis = Math.Max(2, RangeListRows);
+                    sr.Hint = WyInspector ? "bấm = nhảy · nháy đúp = kính lúp" : (ClickToNavigate ? "bấm = nhảy chart" : "");
+                    sr.Rows = rs.RangeRows ?? new List<UiRow>();
+                    _ui.Draw(gr, f, fb, rs.Panel, Math.Clamp(PanelOpacity, 100, 255), PanelCorner, clip, PanelWidth);
                 }
+                else _ui.Hide();
+                RunNavStep(conv, clip);   // vòng lặp kín canh vị trí sau khi bấm 1 dòng
             }
             catch { /* nuốt lỗi vẽ */ }
             finally { gr.SetClip(prevClip); }
+        }
+
+        // ================= BẤM 1 DÒNG → NHẢY CHART =================
+        // Gọi từ UiPanel (UI thread). Chỉ ĐẶT yêu cầu; việc canh chính xác do RunNavStep làm dần qua các
+        // khung hình vẽ (xem ChartNav: không biết chắc đơn vị RightOffset nên phải đo–hiệu chỉnh).
+        private void OnRowActivate(int section, UiRow row, bool dbl)
+        {
+            try
+            {
+                if (row == null) return;
+                if (section == 1 && dbl && WyInspector)
+                {
+                    _inspectKey = _inspectKey == row.Key ? null : row.Key;
+                    CurrentChart?.RedrawBuffer();
+                    return;
+                }
+                if (!ClickToNavigate || row.NavIdx < 0) return;
+                var hd = HistoricalData; var chart = CurrentChart;
+                if (hd == null || chart == null) return;
+                ChartNav.Discover(chart, DumpChartApi);
+                if (!ChartNav.CanScroll)
+                {
+                    // Không cuộn được chart → mở luôn kính lúp để vẫn soi được range quá khứ.
+                    if (section == 1 && WyInspector) _inspectKey = row.Key;
+                    chart.RedrawBuffer();
+                    return;
+                }
+                if (NavZoomFit && row.NavSpan > 5 && ChartNav.CanZoom)
+                {
+                    int wpx = Math.Max(200, chart.MainWindow.ClientRectangle.Width);
+                    ChartNav.SetBarsWidth(chart, (int)Math.Floor(wpx / (row.NavSpan * 1.35)));
+                }
+                int center = row.NavIdx + row.NavSpan / 2;
+                center = Math.Max(0, Math.Min(hd.Count - 1, center));
+                if (hd[center, SeekOriginHistory.Begin] is not HistoryItemBar hb) return;
+                _navTime = hb.TimeLeft; _navIters = 0; _navLastX = float.NaN; _navLastOff = ChartNav.Offset(chart);
+                chart.RedrawBuffer();
+            }
+            catch (Exception ex) { LogErr(ex, "OnRowActivate"); }
+        }
+
+        // Một bước hiệu chỉnh vị trí: đo x hiện tại của mốc đích, ước lượng "bao nhiêu px cho 1 đơn vị
+        // offset" từ chính bước trước (nên không cần biết RightOffset tính bằng nến hay px), rồi sửa.
+        private bool _inNav;
+        private void RunNavStep(IChartWindowCoordinatesConverter conv, Rectangle clip)
+        {
+            if (_navTime == DateTime.MinValue || _inNav) return;   // _inNav: chống đệ quy nếu RedrawBuffer vẽ ngay
+            _inNav = true;
+            try
+            {
+                var chart = CurrentChart;
+                if (chart == null || _navIters++ > 10) { _navTime = DateTime.MinValue; return; }
+                float cur = (float)conv.GetChartX(_navTime);
+                float want = clip.Left + clip.Width * 0.5f;
+                float err = cur - want;
+                if (Math.Abs(err) <= 8f) { _navTime = DateTime.MinValue; return; }
+                int off = ChartNav.Offset(chart);
+                float k = Math.Max(1, chart.BarsWidth);              // ước lượng mặc định: 1 đơn vị = 1 nến
+                if (!float.IsNaN(_navLastX) && off != _navLastOff)
+                {
+                    float measured = Math.Abs((cur - _navLastX) / (off - _navLastOff));
+                    if (measured > 0.05f && measured < 500f) k = measured;
+                }
+                int step = (int)Math.Round(err / k);
+                if (step == 0) step = err > 0 ? 1 : -1;
+                _navLastX = cur; _navLastOff = off;
+                if (!ChartNav.SetOffset(chart, Math.Max(0, off + step))) { _navTime = DateTime.MinValue; return; }
+                chart.RedrawBuffer();
+            }
+            catch (Exception ex) { _navTime = DateTime.MinValue; LogErr(ex, "RunNavStep"); }
+            finally { _inNav = false; }
+        }
+
+        private void DumpChartApi(string text)
+        {
+            if (_apiDumped || string.IsNullOrEmpty(text)) return;
+            _apiDumped = true;
+            try
+            {
+                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WyckoffRunner");
+                Directory.CreateDirectory(dir);
+                File.WriteAllText(Path.Combine(dir, "chart_api.txt"), text);
+            }
+            catch { }
+        }
+
+        // ================================================================================================
+        //  VẼ SƠ ĐỒ WYCKOFF — dùng chung cho CHART CHÍNH và KÍNH LÚP
+        //  Toạ độ đi qua 2 hàm ánh xạ: X(thời gian, chỉ số nến) và Y(giá). Chart chính dùng thời gian
+        //  (CoordinatesConverter), kính lúp dùng chỉ số nến (tự chia đều trong khung) → cùng MỘT mã vẽ,
+        //  không sợ 2 nơi vẽ lệch nhau.
+        // ================================================================================================
+        private void DrawWyckoff(Graphics gr, List<WyRangeR> ranges, Func<DateTime, int, float> X, Func<double, float> Y,
+                                 RectangleF area, Font fPhase, Font fEvt, string selKey, bool legend)
+        {
+            var placedBoxes = new List<RectangleF>();
+            // UI/UX: nhãn LUÔN vẽ trong hộp bo góc nền tối (không chữ trần đè lên nến), né chồng lấp theo
+            // CẢ x lẫn y — "show chữ rõ ràng" (2026-08-02).
+            void WyLabelBox(float x, float y, string text, Color color, Font f, bool anchorLeft)
+            {
+                var sz = gr.MeasureString(text, f);
+                float pad = 3, w = sz.Width + 2 * pad, h = sz.Height + 2;
+                float bx = anchorLeft ? x : x - w, by = y;
+                int guard = 0;
+                while (guard < 40 && placedBoxes.Exists(bb => bb.IntersectsWith(new RectangleF(bx, by, w, h)))) { by -= h + 2; guard++; }
+                placedBoxes.Add(new RectangleF(bx, by, w, h));
+                using (var path = Round(bx, by, w, h, 4))
+                {
+                    using (var bgb = new SolidBrush(Color.FromArgb(230, 20, 20, 24))) gr.FillPath(bgb, path);
+                    using (var bd = new Pen(color, 1f)) gr.DrawPath(bd, path);
+                }
+                using var tb = new SolidBrush(color);
+                gr.DrawString(text, f, tb, bx + pad, by + 1);
+            }
+            // Mỗi HỌ sự kiện 1 màu riêng để đọc nhanh trên chart bận nến — khớp bảng màu bên Python
+            // (render_schematic_preview.py) dùng để kiểm bằng mắt trước khi port.
+            string WyCat(string label)
+            {
+                string b = label.Length > 0 && label[label.Length - 1] == ')' ? label.Substring(0, label.IndexOf('(')).TrimEnd() : label;
+                switch (b)
+                {
+                    case "SC": case "BCLX": return "climax";
+                    case "AR": return "ar";
+                    case "ST": case "UA": case "DA": return "st";
+                    case "Spring": case "Shakeout": case "UT": case "UTAD": return "shake";
+                    case "SOS": case "SOW": return "break";
+                    case "LPS[C]": case "LPSY[C]": return "lpsc";
+                    case "LPS[D]": case "LPSY[D]": return "lpsd";
+                    default: return "st";
+                }
+            }
+            Color WyCatColor(string cat)
+            {
+                switch (cat)
+                {
+                    case "climax": return Color.FromArgb(255, 82, 82);
+                    case "ar": return Color.FromArgb(129, 199, 132);
+                    case "st": return Color.FromArgb(176, 190, 197);
+                    case "shake": return Color.FromArgb(255, 202, 40);
+                    case "break": return Color.FromArgb(66, 165, 245);
+                    case "lpsc": return Color.FromArgb(38, 198, 168);
+                    case "lpsd": return Color.FromArgb(186, 104, 200);
+                    default: return Color.FromArgb(255, 230, 150);
+                }
+            }
+            if (legend)
+            {
+                var items = new (string cat, string desc)[] {
+                    ("climax", "SC / BCLX — Climax"), ("ar", "AR — phản ứng"), ("st", "ST/UA/DA — test"),
+                    ("shake", "Spring/Shakeout/UT/UTAD"), ("break", "SOS/SOW — phá vỡ"),
+                    ("lpsc", "LPS[C] — test chờ xác nhận"), ("lpsd", "LPS[D] — vào lại sau phá"),
+                };
+                float ly = area.Top + 4, lh = 17 * items.Length + 6;
+                using (var bgL = new SolidBrush(Color.FromArgb(235, 16, 16, 19)))
+                    gr.FillRectangle(bgL, area.Right - 264, ly - 4, 264, lh);
+                using var brL = new SolidBrush(Color.FromArgb(220, 220, 220));
+                foreach (var (cat, desc) in items)
+                {
+                    using (var b = new SolidBrush(WyCatColor(cat))) gr.FillEllipse(b, area.Right - 258, ly + 3, 8, 8);
+                    gr.DrawString(desc, fPhase, brL, area.Right - 246, ly);
+                    ly += 17;
+                }
+                placedBoxes.Add(new RectangleF(area.Right - 264, area.Top, 264, lh));
+            }
+
+            foreach (var r in ranges)
+            {
+                Color col = r.Acc ? WyAccColor : WyDistColor;
+                bool sel = !string.IsNullOrEmpty(selKey) && selKey == r.Key;
+                float x0 = X(r.StartTime, r.StartHd), x1 = X(r.EndTime, r.EndHd);
+                if (x1 < area.Left || x0 > area.Right) continue;   // cả range ngoài khung
+                float xa = Math.Max(x0, area.Left), xb = Math.Min(x1, area.Right);
+                float yLow = Y(r.Low), yHigh = Y(r.High);
+                // range ĐANG CHỌN trong bảng: tô nền mờ + viền dày để tìm thấy ngay bằng mắt
+                if (sel)
+                    using (var bsel = new SolidBrush(Color.FromArgb(34, col)))
+                        gr.FillRectangle(bsel, xa, Math.Min(yHigh, yLow), Math.Max(1, xb - xa), Math.Abs(yLow - yHigh));
+                using (var penR = new Pen(col, sel ? 3.2f : 2f))
+                {
+                    gr.DrawLine(penR, xa, yLow, xb, yLow);
+                    gr.DrawLine(penR, xa, yHigh, xb, yHigh);
+                }
+                using (var bk = new SolidBrush(col))
+                    gr.DrawString(r.Acc ? "Tích luỹ" : "Phân phối", fPhase, bk, xb + 4, yHigh - 8);
+
+                // vạch dọc chia PHASE — nét đứt, CHỈ trong phạm vi giá [Low..High] CỦA range này
+                // (KHÔNG kéo hết chiều cao chart — đúng yêu cầu cũ của người học).
+                using (var penP = new Pen(WyPhaseColor, 1.6f) { DashStyle = DashStyle.Dash, DashPattern = new[] { 5f, 4f } })
+                {
+                    foreach (var ph in r.Phases)
+                    {
+                        float xp = X(ph.StartTime, ph.StartHd);
+                        if (xp < area.Left || xp > area.Right) continue;
+                        gr.DrawLine(penP, xp, yHigh, xp, yLow);
+                        WyLabelBox(xp + 3, yHigh - 24, $"Phase {ph.Phase}", WyPhaseColor, fPhase, true);
+                    }
+                }
+
+                // nhãn sự kiện (SC/AR/ST/UA/DA/Spring/Shakeout/SOS/BCLX/UT/UTAD/SOW/LPS[C]/LPS[D])
+                foreach (var ev in r.Events.OrderBy(e => e.Time))
+                {
+                    float xe = X(ev.Time, ev.HdIdx);
+                    if (xe < area.Left - 20 || xe > area.Right + 20) continue;
+                    float ye = Y(ev.Price);
+                    string cat = WyCat(ev.Label);
+                    bool above = cat == "ar" || cat == "st" || cat == "break";
+                    float ty = above ? ye - 22 : ye + 8;
+                    var cc = WyCatColor(cat);
+                    // marker theo trạng thái shock: đặc/viền dày = Confirmed, viền đứt = Pending, xám = Failed.
+                    var mcolor = ev.Status == WyShockStatus.Failed ? Color.FromArgb(140, 140, 140) : cc;
+                    using (var bm = new SolidBrush(mcolor)) gr.FillEllipse(bm, xe - 3f, ye - 3f, 6, 6);
+                    using (var pw = new Pen(Color.White, ev.Status == WyShockStatus.Confirmed ? 2f : 1f)
+                           { DashStyle = ev.Status == WyShockStatus.Pending ? DashStyle.Dash : DashStyle.Solid })
+                        gr.DrawEllipse(pw, xe - 3f, ye - 3f, 6, 6);
+                    WyLabelBox(xe - 9, ty, ev.Label, mcolor, fEvt, true);
+                }
+            }
+        }
+
+        // ================================================================================================
+        //  KÍNH LÚP — tự vẽ lại range đã chọn (nến + sơ đồ) trong 1 cửa sổ trên chart.
+        //  Lý do tồn tại: Quantower không công bố API cuộn chart; nếu ChartNav không dò được thành viên
+        //  ghi được thì đây là cách DUY NHẤT chắc chắn xem lại được range quá khứ mà không phải kéo tay.
+        // ================================================================================================
+        private string _insKey; private int _insFrom = -1, _insTo = -1;
+        private double[] _insO, _insH, _insL, _insC;
+        private DateTime[] _insT;
+
+        private void DrawInspector(Graphics gr, WyRangeR r, Rectangle clip)
+        {
+            var hd = HistoricalData;
+            if (hd == null || hd.Count < 2) return;
+            int span = Math.Max(1, r.EndHd - r.StartHd + 1);
+            int padB = Math.Max(5, span / 10);
+            int from = Math.Max(0, r.StartHd - padB), to = Math.Min(hd.Count - 1, r.EndHd + padB);
+            if (to - from < 2) return;
+            if (_insKey != r.Key || _insFrom != from || _insTo != to)
+            {
+                int n = to - from + 1;
+                var o = new double[n]; var h = new double[n]; var l = new double[n]; var c = new double[n]; var t = new DateTime[n];
+                for (int i = 0; i < n; i++)
+                {
+                    if (hd[from + i, SeekOriginHistory.Begin] is not HistoryItemBar b) { h[i] = double.NaN; continue; }
+                    o[i] = b.Open; h[i] = b.High; l[i] = b.Low; c[i] = b.Close; t[i] = b.TimeLeft;
+                }
+                _insO = o; _insH = h; _insL = l; _insC = c; _insT = t; _insKey = r.Key; _insFrom = from; _insTo = to;
+            }
+            int cnt = _insH.Length;
+            double lo = r.Low, hi = r.High;
+            for (int i = 0; i < cnt; i++) { if (double.IsNaN(_insH[i])) continue; if (_insH[i] > hi) hi = _insH[i]; if (_insL[i] < lo) lo = _insL[i]; }
+            if (hi <= lo) return;
+            double padP = (hi - lo) * 0.06; lo -= padP; hi += padP;
+
+            var box = new RectangleF(clip.Left + 28, clip.Top + 26, Math.Max(460, clip.Width - 56), Math.Max(260, clip.Height - 96));
+            if (box.Bottom > clip.Bottom - 12) box.Height = Math.Max(200, clip.Bottom - 12 - box.Y);
+            if (box.Right > clip.Right - 12) box.Width = Math.Max(400, clip.Right - 12 - box.X);
+            var plot = new RectangleF(box.X + 10, box.Y + 30, box.Width - 82, box.Height - 54);
+            Color col = r.Acc ? WyAccColor : WyDistColor;
+
+            using (var bg = new SolidBrush(Color.FromArgb(246, 14, 14, 17))) gr.FillRectangle(bg, box);
+            using (var bd = new Pen(col, 2f)) gr.DrawRectangle(bd, box.X, box.Y, box.Width, box.Height);
+            using (var hb = new SolidBrush(Color.FromArgb(60, col))) gr.FillRectangle(hb, box.X + 1, box.Y + 1, box.Width - 2, 26);
+
+            using var fTitle = new Font("Segoe UI", 10, FontStyle.Bold);
+            using var fSmall = new Font("Segoe UI", 8, FontStyle.Regular);
+            using var fPhase = new Font("Segoe UI", 9, FontStyle.Bold);
+            using var fEvt = new Font("Consolas", 9, FontStyle.Bold);
+            string title = $"🔍 {(r.Acc ? "TÍCH LUỸ" : "PHÂN PHỐI")} · {r.StartTime.AddHours(TzOffset):dd/MM HH:mm} → {r.EndTime.AddHours(TzOffset):dd/MM HH:mm}" +
+                           $" · {Fmt(r.Low)}–{Fmt(r.High)} · {r.Events.Count} mốc · {span} nến";
+            using (var tb = new SolidBrush(Color.White)) gr.DrawString(title, fTitle, tb, box.X + 8, box.Y + 4);
+            var cb = new RectangleF(box.Right - 24, box.Y + 4, 18, 18);
+            using (var b = new SolidBrush(Color.FromArgb(70, 255, 255, 255))) gr.FillRectangle(b, cb);
+            using (var p = new Pen(Color.White, 1.6f))
+            { gr.DrawLine(p, cb.X + 5, cb.Y + 5, cb.Right - 5, cb.Bottom - 5); gr.DrawLine(p, cb.Right - 5, cb.Y + 5, cb.X + 5, cb.Bottom - 5); }
+            _ui.CloseBox = cb;
+
+            float XI(DateTime tt, int hdIdx) => plot.X + (hdIdx - from + 0.5f) * plot.Width / cnt;
+            float YI(double p) => plot.Bottom - (float)((p - lo) / (hi - lo)) * plot.Height;
+
+            gr.SetClip(new RectangleF(box.X + 1, box.Y + 27, box.Width - 2, box.Height - 28));
+            // lưới giá + nhãn trục phải
+            using (var gp = new Pen(Color.FromArgb(38, 255, 255, 255)))
+            using (var gb = new SolidBrush(Color.FromArgb(170, 180, 190)))
+                for (int k = 0; k <= 4; k++)
+                {
+                    double pr = lo + (hi - lo) * k / 4.0; float yy = YI(pr);
+                    gr.DrawLine(gp, plot.X, yy, plot.Right, yy);
+                    gr.DrawString(Fmt(pr), fSmall, gb, plot.Right + 4, yy - 7);
+                }
+            // nến (gộp theo cột khi quá dày để không vẽ chồng thành mảng đặc)
+            float bw = plot.Width / cnt;
+            int stepBars = bw >= 1.2f ? 1 : (int)Math.Ceiling(1.2f / Math.Max(0.01f, bw));
+            using (var pUp = new Pen(Color.FromArgb(200, 90, 200, 130), 1f))
+            using (var pDn = new Pen(Color.FromArgb(200, 220, 100, 100), 1f))
+            using (var bUp = new SolidBrush(Color.FromArgb(190, 90, 200, 130)))
+            using (var bDn = new SolidBrush(Color.FromArgb(190, 220, 100, 100)))
+                for (int i = 0; i < cnt; i += stepBars)
+                {
+                    int j2 = Math.Min(cnt - 1, i + stepBars - 1);
+                    double oo = _insO[i], cc2 = _insC[j2], hh = double.MinValue, ll = double.MaxValue;
+                    for (int k = i; k <= j2; k++) { if (double.IsNaN(_insH[k])) continue; if (_insH[k] > hh) hh = _insH[k]; if (_insL[k] < ll) ll = _insL[k]; }
+                    if (hh == double.MinValue) continue;
+                    float xx = plot.X + (i + stepBars * 0.5f) * bw;
+                    bool up = cc2 >= oo;
+                    gr.DrawLine(up ? pUp : pDn, xx, YI(hh), xx, YI(ll));
+                    float bodyW = Math.Max(1f, bw * stepBars * 0.7f);
+                    float yA = YI(Math.Max(oo, cc2)), yB = YI(Math.Min(oo, cc2));
+                    gr.FillRectangle(up ? bUp : bDn, xx - bodyW / 2, yA, bodyW, Math.Max(1f, yB - yA));
+                }
+            // sơ đồ Wyckoff — CÙNG mã vẽ với chart chính
+            DrawWyckoff(gr, new List<WyRangeR> { r }, XI, YI, plot, fPhase, fEvt, r.Key, false);
+            gr.SetClip(clip);
+            // trục thời gian
+            using (var tb2 = new SolidBrush(Color.FromArgb(160, 170, 185)))
+            {
+                gr.DrawString(_insT[0].AddHours(TzOffset).ToString("dd/MM HH:mm"), fSmall, tb2, plot.X, box.Bottom - 18);
+                gr.DrawString(_insT[cnt - 1].AddHours(TzOffset).ToString("dd/MM HH:mm"), fSmall, tb2, plot.Right - 78, box.Bottom - 18);
+                gr.DrawString("nháy đúp lại dòng trong bảng (hoặc ✕) để đóng", fSmall, tb2, plot.X + plot.Width * 0.36f, box.Bottom - 18);
+            }
         }
 
         private static GraphicsPath Round(float x, float y, float w, float h, float r)
@@ -2151,6 +2864,8 @@ namespace WyckoffRunner
             public List<(string text, Color col)> Panel;
             public int Digits;
             public List<WyRangeR> WyRanges;
+            public List<UiRow> EntryRows, RangeRows;
+            public int TotalBars;
         }
     }
 }

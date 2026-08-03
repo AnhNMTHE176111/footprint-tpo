@@ -125,3 +125,58 @@ tiếp). Sau khi sửa, render lại xác nhận cả 2 lỗi Phase A/B đã h�
    Chưa có parity harness so C# vs Python cho riêng phần schematic này (khác với CBR/QUAY_ĐẦU đã có
    `research/wyckoff/parity/`) — nếu cần độ tin cậy cao hơn trước khi dùng dạy học diện rộng, nên
    viết thêm bước đối chiếu số (range count/timestamps) giữa 2 bên trên cùng 1 bộ dữ liệu.
+
+---
+
+## v3 (2026-08-03) — xem lại RANGE QUÁ KHỨ + bảng tương tác
+
+Người học báo 2 vấn đề: (1) **chỉ thấy range mới nhất**, không soi lại được range quá khứ để tự chấm
+bản vẽ; (2) bảng cũ đổ hết mọi thứ ra một danh sách dài, không cuộn, không bấm được.
+
+### 1. Thấy được range quá khứ
+
+* Mặc định `Wyckoff: số Range gần nhất hiển thị` **6 → 40** (trần 300). Thuật toán vẫn quét toàn bộ
+  lịch sử như cũ — trước đây chỉ giữ lại 6 range cuối rồi vứt phần còn lại, nên "mất" range cũ.
+* Thêm **danh sách WYCKOFF RANGE** trong bảng: mỗi dòng ghi loại (Tích luỹ/Phân phối), khoảng thời
+  gian, biên giá, chuỗi Phase và các mốc đã đánh dấu. Bấm 1 dòng là nhảy tới đó.
+* **Kính lúp** (nháy đúp 1 dòng Range): tự vẽ lại range đó trong một cửa sổ riêng trên chart — nến
+  + biên Range + vạch Phase + toàn bộ nhãn sự kiện, dùng **cùng một hàm vẽ** `DrawWyckoff` với chart
+  chính (2 hàm ánh xạ toạ độ khác nhau) nên không thể lệch nhau.
+
+### 2. Bảng tương tác mới (`UiPanel`, thay `PanelDrag` cho riêng indicator này)
+
+Header thống kê (như cũ) + **2 danh sách con**: `LỆNH` và `WYCKOFF RANGE`. Mỗi danh sách có chiều
+cao cố định theo input (mặc định 4 và 5 dòng), cuộn bằng lăn chuột hoặc kéo thanh cuộn, bấm tiêu đề
+để thu gọn riêng từng mục. Hover đổi nền + vạch màu bên trái; dòng đang chọn tô đậm hơn và **đối
+tượng tương ứng trên chart cũng được làm nổi** (range: tô nền mờ + viền dày; lệnh: vòng tròn vàng +
+vạch dọc). Bảng tự bóp số dòng lại nếu cao quá khung chart. Kéo thả và nút thu gọn giữ như cũ.
+
+### 3. Nhảy chart khi bấm — và lý do phải làm vòng lặp kín
+
+Quantower **không công bố API cuộn chart**: `IChart` chỉ cho ĐỌC `RightOffset`/`BarsWidth` (đã dump
+toàn bộ `TradingPlatform.BusinessLayer.dll` để kiểm — không có `Scroll*`/`GoTo*`/`Navigate*` nào,
+`Core.Instance` cũng không). Nên `ChartNav` dò bằng reflection trên **đối tượng chart thật** (lớp
+cài đặt nằm trong assembly giao diện) xem có thành viên `int` ghi được tên `RightOffset`/`BarsWidth`
+không — **không gọi bừa phương thức lạ**, chỉ ghi đúng 2 tên đã biết.
+
+Vì không chắc `RightOffset` tính bằng nến hay px, việc canh vị trí chạy theo **vòng lặp kín qua
+nhiều khung hình**: mỗi lần vẽ đo lại `GetChartX(mốc đích)`, tự ước lượng "bao nhiêu px cho 1 đơn vị
+offset" từ chính bước trước rồi hiệu chỉnh, dừng khi sai số ≤ 8px hoặc quá 10 bước.
+
+⚠ **Chưa xác nhận được là nhảy chart chạy thật** (không có Quantower trên máy này). Nếu reflection
+không dò được thành viên nào, bảng sẽ ghi rõ `nhảy chart: KHÔNG hỗ trợ → dùng kính lúp` và mỗi lần
+bấm sẽ **tự mở kính lúp** thay thế — nên tính năng "soi lại range quá khứ" vẫn dùng được trong mọi
+trường hợp. Lần đầu attach, indicator ghi
+`%LOCALAPPDATA%\WyckoffRunner\chart_api.txt` liệt kê các thành viên khả nghi của lớp chart để còn
+chỉnh lại nếu tên không khớp.
+
+### Đã test thế nào (v3)
+
+* Build DLL sạch (0 lỗi/cảnh báo) sau mỗi lượt sửa.
+* Dựng ảnh mô phỏng bảng bằng Pillow theo **đúng công thức layout trong C#**
+  (`research/wyckoff/v8/wyckoff/render_panel_preview.py`) để soi UI/UX trước khi deploy — máy Linux
+  không chạy được `System.Drawing`.
+* **Chưa chạy thật trên Quantower**: phần chuột (hover/cuộn/bấm/kéo thanh cuộn) và phần nhảy chart
+  đều cần kiểm trên máy Windows.
+
+![Bảng v3](wyckoff-schematic-examples/panel-v3-preview.png)

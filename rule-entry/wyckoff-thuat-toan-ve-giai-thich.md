@@ -26,9 +26,15 @@ lúc đó range mới coi là hoàn tất.
 | **Biên độ nến** | `High − Low` | nhận diện nến climax bất thường |
 | **VSA** | khối lượng nến ÷ TB khối lượng **20 nến** gần nhất | 2.2x = climax, 3.3x = climax cực mạnh |
 | **Tỉ lệ thân** | `\|Close − Open\| ÷ biên độ` | phân biệt phá vỡ dứt khoát (thân to) vs râu lừa (thân nhỏ) |
-| **Xu hướng nền** | Close hiện tại vs Close **480 nến trước** (≈8 giờ) | bộ lọc bối cảnh, thay cho TPO bias |
+| **MOVE trước nến** | độ dài chân→đỉnh (hoặc đỉnh→chân), số nến, và **hiệu suất hướng** | điều kiện **CẦN** để mở range (mục 3) |
 
-Xu hướng nền trả về `+1` (tăng), `−1` (giảm) hoặc `0` (đi ngang, chênh ≤ 1 giá).
+**Hiệu suất hướng** = độ dài move ÷ tổng quãng đường giá đi (cộng dồn `|close − close trước|`).
+Giá đi thẳng một mạch → gần **1.0**. Giá loanh quanh đi ngang → khoảng **0.05**. Đây là thước đo
+phân biệt "một move xu hướng thật" với "giá lắc trong vùng".
+
+> ⚠️ Trước bản v3 (03/08/2026) chỗ này dùng **xu hướng nền** = close hiện tại so close 480 nến trước
+> với dung sai 1.0 giá. Quá yếu — giá đi ngang cả 8 tiếng chỉ cần lệch 1 giá là đã tính "có xu hướng".
+> Đã **bỏ hẳn**, thay bằng phép đo MOVE ở trên.
 
 Dung sai tính bằng **tick**. Với vàng: **1 giá = 10 tick**.
 
@@ -64,34 +70,73 @@ nhiều Spring thất bại rồi mới có Spring thật.
 
 ## 3. Chế độ rỗi — điều kiện mở một range mới
 
-Chỉ tìm **một cú climax**, phải thoả **cả ba**:
+Nguyên tắc: **climax chỉ là điều kiện ĐỦ, một MOVE xu hướng rõ ràng mới là điều kiện CẦN.**
+Phải có một đợt tăng/giảm mạnh trước, rồi cây climax xuất hiện để **chặn đợt đó lại**.
+Giá đang đi ngang mà nổ một cây VSA lớn thì **không** được mở range.
 
-1. Biên độ nến ≥ **1.4 lần** biên độ trung bình 20 nến trước.
-2. VSA ≥ **2.2x**.
-3. Màu nến khớp với xu hướng nền:
-   - nến **đỏ** + xu hướng nền **giảm** → mở **range TÍCH LUỸ**, đánh dấu **SC** (Selling Climax) tại **đáy** nến.
-   - nến **xanh** + xu hướng nền **tăng** → mở **range PHÂN PHỐI**, đánh dấu **BCLX** tại **đỉnh** nến.
+Một nến mở được range khi thoả **cả ba nhóm**:
 
-> **Vì sao bắt buộc điều kiện 3:** một cú bán tháo giữa xu hướng tăng **không phải** Selling Climax,
-> nó chỉ là nhịp chỉnh. Bỏ điều kiện này là lỗi hay gặp nhất khi gán SC/BCLX trong tái tích luỹ.
+**(1) Cây nến đủ tính chất climax**
+- Biên độ nến ≥ **1.4 lần** biên độ trung bình 20 nến trước.
+- VSA ≥ **2.2x**.
+
+**(2) Trước nó có MOVE thật** (nhìn lại tối đa **240 nến**)
+- Nến climax phải là **cực trị của cả cửa sổ** — đáy thấp nhất (tích luỹ) hoặc đỉnh cao nhất (phân phối).
+  Nó đang chặn move, không nằm giữa move.
+- Chân move (đỉnh xa nhất phía đối diện) cách climax ≥ **20 nến**.
+- Độ dài move ≥ **8 lần** biên độ trung bình 20 nến.
+- **Hiệu suất hướng ≥ 0.35** — đây là điều kiện loại đi ngang. Giá lắc trong vùng có hiệu suất
+  khoảng 0.05, không bao giờ chạm 0.35.
+
+**(3) Màu nến khớp hướng move**
+- nến **đỏ** chặn một **move giảm** → mở **range TÍCH LUỸ**, đánh dấu **SC** tại **đáy** nến.
+- nến **xanh** chặn một **move tăng** → mở **range PHÂN PHỐI**, đánh dấu **BCLX** tại **đỉnh** nến.
 
 Range mới bắt đầu ở **Phase A**, mới chỉ có **một biên** (đáy climax cho tích luỹ / đỉnh climax cho phân phối).
 
 ---
 
-## 4. Phase A — tìm cú bật ngược AR để có biên thứ hai
+## 4. Phase A — CHoCH, phải đủ ĐÚNG 3 LẦN ĐỔI HƯỚNG
 
-Chờ đúng **40 nến** sau climax. Trong cửa sổ đó:
+Phase A không phải chỉ có climax + AR. Nó là một **CHoCH** — chỉ khi giá đổi hướng **ba lần**
+thì mới hình thành được vùng đi ngang:
 
-- Range tích luỹ → tìm **đỉnh cao nhất** = **AR** (Automatic Rally) → thành **biên trên**.
-- Range phân phối → tìm **đáy thấp nhất** = **AR** (Automatic Reaction) → thành **biên dưới**.
+| Lần | Sự kiện | Tạo ra |
+|---|---|---|
+| 1 | Move theo xu hướng bị **climax** chặn lại | biên thứ nhất |
+| 2 | Giá đi ngược lại tới **AR** rồi quay đầu | biên còn lại |
+| 3 | Giá quay về phía climax rồi **bị chặn nhẹ lần nữa** = **ST[A]** | chốt Phase A |
 
-Song song, biên **cùng phía climax** vẫn được nới thụ động mỗi nến (giá còn xuống thấp hơn thì đáy hạ theo).
+**Phase A kết thúc ĐÚNG tại ST[A]**, không phải tại AR. Phase B bắt đầu ngay sau ST[A].
 
-**Nhãn "AR (yếu)":** nếu AR rơi vào 1–2 nến ngay sát climax → nhiều khả năng chỉ là một cây râu
-nhiễu chứ không phải cú bật thật. Đây **chỉ là cảnh báo hiển thị**, không đổi logic.
+### 4.1 Bước tìm AR
 
-Xong: range có đủ 2 biên → chuyển **Phase B**, mốc bắt đầu là **nến ngay sau AR** (không phải cuối cửa sổ 40 nến).
+Chờ **40 nến** sau climax, lấy cực trị phía đối diện (đỉnh cao nhất cho tích luỹ / đáy thấp nhất
+cho phân phối) làm **AR**. Song song, biên cùng phía climax vẫn nới thụ động mỗi nến.
+
+AR phải là cú bật ngược **thật**: khoảng cách climax↔AR phải ≥ **30% độ dài move**. Chưa đủ thì
+tiếp tục chờ; quá **300 nến** vẫn không đủ → **bỏ ứng viên**.
+
+**Nhãn "AR (yếu)":** AR rơi vào 1–2 nến ngay sát climax → nhiều khả năng chỉ là râu nhiễu.
+Chỉ là cảnh báo hiển thị, không đổi logic.
+
+### 4.2 Bước tìm ST[A]
+
+Sau AR, theo dõi giá quay lại phía climax:
+- Phải hồi lại ít nhất **40% chiều cao** (khoảng cách climax↔AR).
+- Rồi phải **thật sự đổi hướng**: **5 nến liên tiếp** không tạo cực trị mới.
+
+Đủ hai điều đó → đánh dấu **ST[A]** tại điểm cực trị, đóng Phase A, mở Phase B.
+Quá **400 nến** kể từ AR mà không có ST[A] → **bỏ ứng viên** (chưa thành vùng đi ngang).
+
+Nếu trong lúc chờ mà giá phá xa hơn AR về phía đối diện, AR được dời tới cực trị mới và
+đồng hồ chờ ST[A] tính lại từ đó.
+
+### 4.3 Hai loại biên khi vẽ
+
+- **Biên chính — nét liền:** mức **climax** và mức **AR**. Đây là hai biên quan trọng nhất.
+- **Biên nới rộng — nét đứt:** khi ST[A] (hoặc Spring/UT về sau) vượt ra **ngoài** mức climax,
+  biên làm việc rộng ra; phần rộng thêm đó vẽ nét đứt để phân biệt với biên chính.
 
 ---
 
@@ -193,14 +238,17 @@ Nến **đang hình thành** (nến cuối chưa đóng) luôn bị bỏ qua, gi
 ## 10. Phần vẽ trên chart
 
 - **Khung range**: chữ nhật kéo từ nến climax tới nến kết thúc. **Xanh = tích luỹ, đỏ = phân phối**.
+  Hai biên chính (**mức climax** và **mức AR**) vẽ **nét liền**; biên đã bị nới rộng ra ngoài mức
+  climax (do ST[A]/Spring/UT) vẽ **nét đứt**.
 - **Dải Phase**: các đoạn **A / B / C / D / E** theo trục thời gian, nằm dưới khung.
 - **Sự kiện**: một chấm + nhãn tại **đúng giá** của nó, màu theo nhóm (climax / bật ngược / test /
   rũ / phá vỡ / hồi test). Chú giải 7 màu vẽ sẵn trên chart.
 - **Viền chấm = trạng thái**: trắng đậm = **đã xác nhận**, nét đứt = **đang chờ**, xám = **thất bại**.
 
-> **Một điểm quan trọng để chấm cho đúng:** biên range hiển thị là **biên CUỐI CÙNG**, tức đã gồm
-> mọi lần Spring/UT nới rộng ra. Nên một cú Spring nhìn trên chart sẽ **nằm ngay trên mép dưới**
-> chứ không thò hẳn ra ngoài — vì chính nó đã đẩy mép xuống. **Đây là hành vi cố ý, không phải lỗi vẽ.**
+> **Một điểm quan trọng để chấm cho đúng:** biên **nét đứt** là biên CUỐI CÙNG, tức đã gồm mọi lần
+> Spring/UT nới rộng ra. Nên một cú Spring nhìn trên chart sẽ **nằm ngay trên nét đứt dưới** chứ
+> không thò hẳn ra ngoài — vì chính nó đã đẩy nét đứt xuống. **Cố ý, không phải lỗi vẽ.**
+> Muốn xem cú Spring đó phá sâu bao nhiêu thì đo với **nét liền** (mức climax), không phải nét đứt.
 
 ---
 
@@ -210,6 +258,14 @@ Nến **đang hình thành** (nến cuối chưa đóng) luôn bị bỏ qua, gi
 |---|---|---|
 | Biên độ climax | ≥ **1.4×** TB 20 nến | mở range |
 | VSA climax | ≥ **2.2x** | mở range |
+| MOVE: cửa sổ nhìn lại | **240 nến** | mở range |
+| MOVE: dài tối thiểu | **20 nến** và ≥ **8×** TB biên độ | mở range |
+| MOVE: hiệu suất hướng | ≥ **0.35** | mở range (loại đi ngang) |
+| AR phải hồi ≥ | **30%** độ dài move | Phase A |
+| AR: chờ tối đa | **300 nến** | Phase A |
+| ST[A] phải hồi ≥ | **40%** chiều cao climax↔AR | Phase A |
+| ST[A]: xác nhận đổi hướng | **5 nến** không cực trị mới | Phase A |
+| ST[A]: chờ tối đa | **400 nến** từ AR | Phase A |
 | VSA climax cực mạnh | ≥ **3.3x** (1.5 × 2.2) | phân biệt Spring↔Shakeout, UT↔UTAD |
 | Cửa sổ tìm AR | **40 nến** | Phase A |
 | Sai số chạm biên (ST) | **10 tick** | Phase B |
@@ -234,11 +290,13 @@ Nến **đang hình thành** (nến cuối chưa đóng) luôn bị bỏ qua, gi
 1. **Ngưỡng 1.4× biên độ + 2.2x VSA** — có thể quá lỏng ở phiên Á (thanh khoản thấp, VSA dễ vọt),
    khiến mở range rác. Xem có range nào mở giữa đêm không.
 2. **Cửa sổ AR cố định 40 nến** — nếu AR thật xảy ra ở nến thứ 45 thì máy bắt nhầm.
-3. **Xu hướng nền 480 nến** — proxy TPO thô, chỉ so hai điểm đầu-cuối, không nhìn hình dạng ở giữa.
+3. **Bốn ngưỡng của phép đo MOVE** (240 / 20 nến / 8× ATR / hiệu suất 0.35) — mới thêm ở v3,
+   chưa quét tham số, chỉ mới kiểm bằng mắt trên tháng 7.
 4. **Ba guard huỷ range** (3.5%, 2500, 2000 nến) — hoàn toàn tự đặt, chưa hiệu chỉnh bằng số liệu.
 5. **Ngưỡng 15 tick phân biệt Spring↔Shakeout** — con số cứng, không co giãn theo biến động thị trường.
 6. **Không dùng dữ liệu order flow** — toàn bộ phần Wyckoff này chỉ đọc OHLC + khối lượng, **chưa**
    dùng delta / bid-ask từng mức giá, dù indicator có sẵn dữ liệu đó.
+7. **Vẫn chỉ theo dõi ĐÚNG MỘT range một lúc** — chưa sửa. Xem mục 13.3.
 
 ---
 
@@ -253,27 +311,35 @@ dxFeed chỉ xuất tới 27/7; file footprint export có tới 31/7 nhưng là 
 
 ![toàn cảnh tháng 7](wyckoff-schematic-examples/html-thang7-toan-canh.png)
 
-### 13.1 Con số
+### 13.1 Con số — trước và sau khi vá lỗi MOVE + ST[A]
 
-| | Toàn lịch sử (11/2025 → 27/7/2026, 103.857 nến) | Riêng tháng 7 (25.493 nến) |
+Toàn lịch sử 11/2025 → 27/7/2026 (103.857 nến M1):
+
+| | Trước v3 (dùng xu hướng nền) | Sau v3 (MOVE + ST[A] + AR≥30%) |
 |---|---|---|
-| Nến thoả **biên độ ≥1.4×** | 21.683 | — |
-| Nến thoả **VSA ≥2.2x** | 8.738 | — |
-| Thoả **cả hai + đúng xu hướng nền** | 3.491 | 816 |
-| Range thực sự **được mở** | **120** | ~13 |
-| Range **được vẽ** | **3** | **1** |
-| Range **bị bỏ giữa chừng** | **117** | **12** |
+| Range **được mở** | 120 | **41** |
+| Range **được vẽ** | 3 | **1** |
+| Range **bị bỏ giữa chừng** | 117 | **40** |
 
-Lý do bỏ (toàn lịch sử): **61** vì "Phase B đóng cửa phá sai hướng → bỏ giả thuyết",
-**56** vì guard quá cao/quá dài. Chỉ **2** range đi hết tới Phase E — và cả hai đều ở **tháng 1–2**.
+Phép đo MOVE loại được **2/3 số ứng viên rác** ngay từ cửa vào — đúng như dự đoán:
+phần lớn range cũ mở ra giữa lúc giá đi ngang.
 
-### 13.2 Tháng 7 chỉ có ĐÚNG 1 range được vẽ
+Lý do bỏ (sau v3, toàn lịch sử): **16** Phase B đóng cửa phá sai hướng · **11** range quá cao ·
+**8** quá dài · **5** không có AR thật.
 
-`ACC 23/07 22:42 → 27/07 15:56 · 4024.0–4119.3 · Phase A→B→C→B→D→B→D→B · 46 mốc · đang chạy`
+### 13.2 Tháng 7 vẫn chỉ có ĐÚNG 1 range được vẽ
 
-Nghĩa là: lời phàn nàn "chỉ thấy range mới nhất" **không phải lỗi hiển thị** — cả tháng 7
-thật sự chỉ có **một** range, và nó là cái cuối cùng, vẫn đang chạy. Việc nâng trần hiển thị
-từ 6 lên 40 range ở bản v3 **không giải quyết được gì**, vì có tới 40 range đâu mà hiện.
+`DIST 16/07 11:46 → 16/07 13:05 · 4013.2–4048.7 · Phase A→B→D→E · BCLX · AR · ST[A] · SOW · LPSY[D]`
+
+Lần này range hoàn tất tới Phase E chứ không còn là cái "đang chạy" ở cuối tháng. Nhưng
+con số vẫn là **1**: lời phàn nàn "chỉ thấy range mới nhất" **không phải lỗi hiển thị**.
+Việc nâng trần hiển thị từ 6 lên 40 range ở bản trước **không giải quyết được gì**.
+
+![range tháng 7 sau khi vá Phase A](wyckoff-schematic-examples/html-thang7-phaseA-v3.png)
+
+Đọc trên ảnh: **BCLX** chặn một move tăng → **AR** ở đáy (nét liền dưới) → **ST[A]** hồi 62%
+trở lại phía BCLX rồi bị chặn → Phase A đóng đúng tại đó, Phase B mở ngay sau. Hai nét đứt
+ngoài cùng là biên làm việc sau khi Phase B/D nới rộng.
 
 ### 13.3 Cơ chế thoái hoá — đây mới là vấn đề thật
 

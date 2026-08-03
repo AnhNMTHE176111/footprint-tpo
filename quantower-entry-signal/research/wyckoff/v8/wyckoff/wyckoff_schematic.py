@@ -71,6 +71,64 @@ MAX_RANGE_HEIGHT_PCT = 0.035   # bien do toi da ~3.5% gia hien tai — vuot nguo
 MAX_BARS_PHASE_AB = 2500       # qua ngan nay ma chua chot duoc Phase D (SOS/SOW that) -> bo, tim climax moi
 MAX_BARS_PHASE_D = 2000        # qua ngan nay o Phase D ma khong chot duoc E -> bo
 
+# ============================================================================
+# v3 — nguoi hoc review 2026-08-03 (sua 2 loi NEN TANG)
+# ============================================================================
+# LOI 1: climax MOT MINH khong du de mo range. Phai co MOT MOVE XU HUONG RO RANG ngay
+#   truoc do bi cay climax chan lai. Truoc day chi dung b['trend'] (close vs close 480 nen,
+#   tol 1.0 gia) — qua yeu, gia dang di ngang van thoa -> ve range tum lum.
+#   Nay do MOVE THAT: do dai chan->climax, so nen, va HIEU SUAT HUONG (loai di ngang).
+MOVE_LOOKBACK = 240        # so nen toi da nhin lai de tim CHAN cua move
+MOVE_MIN_BARS = 20         # move phai keo dai it nhat bao nhieu nen (loai cu nhay 2-3 nen)
+MOVE_MIN_ATR = 8.0         # do dai move >= x lan bien do TB 20 nen
+MOVE_MIN_EFF = 0.35        # hieu suat huong = |net| / tong quang duong close-to-close.
+                            # di thang -> ~1.0; di ngang loanh quanh -> ~0.05. 0.35 loai di ngang.
+
+# LOI 2: Phase A thieu ST[A]. Phase A la mot CHoCH = DUNG 3 lan doi huong:
+#   (1) move bi climax chan  -> bien thu nhat
+#   (2) hoi nguoc len/xuong AR -> bien thu hai
+#   (3) quay lai phia climax roi bi chan lan nua = ST[A] -> LUC NAY Phase A moi xong.
+#   Khong co ST[A] thi chua thanh vung di ngang -> BO ung vien.
+# He qua cua LOI 2, TU PHAT HIEN khi soi lai chart sau khi vá (KHONG co trong review cua nguoi hoc,
+# co the go bo neu khong dong y): neu AR chi la mot cai ngo nguay vai gia sau mot move 35 gia thi
+# "doi huong lan 2" khong co that, va nguong retrace 40% cua ST[A] tro nen vo nghia (40% cua mot
+# khoang ti hon). Buoc AR phai hoi lai it nhat 30% do dai MOVE thi moi tinh la Automatic Rally.
+AR_MIN_RETRACE_OF_MOVE = 0.30
+AR_MAX_WAIT = 300          # cho toi ngan nay ma AR van chua du 30% move -> bo ung vien
+
+STA_MAX_WAIT = 400         # khong tim thay ST[A] trong ngan nay (tinh tu AR) -> bo ung vien
+STA_MIN_RETRACE = 0.40     # phai hoi >= 40% chieu cao (climax<->AR) ve phia climax
+STA_CONFIRM_BARS = 5       # so nen khong tao cuc tri moi de coi la DA doi huong lan 3
+
+
+def _find_move(B, i, acc):
+    """Truoc nen climax i co mot MOVE xu huong that khong?
+    acc=True  -> can move GIAM (climax SC chan day)
+    acc=False -> can move TANG (climax BCLX chan dinh)
+    Tra (ok, chan_i, do_dai, hieu_suat)."""
+    lo_i = max(0, i - MOVE_LOOKBACK)
+    if i - lo_i < MOVE_MIN_BARS:
+        return (False, None, 0.0, 0.0)
+    # climax phai la CUC TRI cua ca cua so — no dang CHAN move, khong phai nam giua move
+    if acc:
+        if B[i]['lo'] > min(B[k]['lo'] for k in range(lo_i, i)):
+            return (False, None, 0.0, 0.0)
+        pk = max(range(lo_i, i), key=lambda k: B[k]['hi'])   # chan move = dinh cao nhat
+        length = B[pk]['hi'] - B[i]['lo']
+    else:
+        if B[i]['hi'] < max(B[k]['hi'] for k in range(lo_i, i)):
+            return (False, None, 0.0, 0.0)
+        pk = min(range(lo_i, i), key=lambda k: B[k]['lo'])   # chan move = day thap nhat
+        length = B[i]['hi'] - B[pk]['lo']
+    if i - pk < MOVE_MIN_BARS:
+        return (False, pk, length, 0.0)
+    avgr = _avg_range(B, i, CLIMAX_RANGE_LOOKBACK)
+    if avgr <= 0 or length < MOVE_MIN_ATR * avgr:
+        return (False, pk, length, 0.0)
+    path = sum(abs(B[k]['c'] - B[k - 1]['c']) for k in range(pk + 1, i + 1))
+    eff = length / path if path > 1e-9 else 0.0
+    return (eff >= MOVE_MIN_EFF, pk, length, eff)
+
 
 # Ung vien range da MO nhung bi BO giua chung (khong bao gio duoc ve). Chi de CHAN DOAN/review —
 # detect() xoa sach moi lan chay, khong anh huong ket qua tra ve. Moi phan tu: (WyRange, ly_do, bar_bo).
@@ -87,14 +145,26 @@ def _avg_range(B, i, lookback):
 
 class WyRange:
     __slots__ = ('start_i', 'end_i', 'kind', 'low', 'high', 'events', 'phases', 'status', 'state',
-                 'pending_shock')
+                 'pending_shock', 'climax_price', 'ar_i', 'ar_price', 'sta_i', 'sta_price',
+                 'move_i', 'move_len', 'move_eff', 'st_ext', 'st_ext_i')
 
     def __init__(self, start_i, kind):
         self.start_i = start_i
         self.end_i = None
         self.kind = kind          # 'ACC' | 'DIST'
-        self.low = None
+        self.low = None           # bien LAM VIEC (co the noi rong dan) — dung cho moi logic
         self.high = None
+        # --- v3: cac MUC CO DINH de VE (bien quan trong nhat, net lien) ---
+        self.climax_price = None  # day SC (ACC) / dinh BCLX (DIST)
+        self.ar_i = None
+        self.ar_price = None      # bien doi dien, tao boi AR
+        self.sta_i = None
+        self.sta_price = None     # ST[A] — lan doi huong thu 3, ket thuc Phase A
+        self.move_i = None        # chan cua move truoc climax
+        self.move_len = 0.0
+        self.move_eff = 0.0
+        self.st_ext = None        # cuc tri tam trong luc cho ST[A]
+        self.st_ext_i = None
         self.events = []          # list of dict(i, label, price, phase, status)
         self.phases = []          # list of [phase_char, start_i, end_i(None=dang mo)]
         self.status = 'active'    # active | completed
@@ -132,17 +202,27 @@ def detect(B):
             is_climax_vol = b['vratio'] >= VSA_CLIMAX
             if not (is_wide and is_climax_vol):
                 continue
-            # Loi#3 (CHART_CASES.md, spec §1.8): SC/BCLX chi hop le neu TRUOC do la downtrend/uptrend
-            # THAT. Dung field 'trend' (BASE TREND_LB, proxy TPO/close-vs-close) da co san trong B.
-            if b['dn'] and b['trend'] == -1:
+            # v3: dieu kien CAN la mot MOVE XU HUONG THAT bi cay climax nay chan lai.
+            # (Thay hoan toan cho b['trend'] cu — xem chu thich _find_move.)
+            if b['dn']:
+                ok, pk, ln, eff = _find_move(B, i, acc=True)
+                if not ok:
+                    continue
                 r = WyRange(i, 'ACC')
                 r.low = b['lo']
+                r.climax_price = b['lo']
+                r.move_i, r.move_len, r.move_eff = pk, ln, eff
                 r.add_event(i, 'SC', b['lo'], 'A')
                 r.set_phase(i, 'A')
                 active = r
-            elif b['up'] and b['trend'] == 1:
+            elif b['up']:
+                ok, pk, ln, eff = _find_move(B, i, acc=False)
+                if not ok:
+                    continue
                 r = WyRange(i, 'DIST')
                 r.high = b['hi']
+                r.climax_price = b['hi']
+                r.move_i, r.move_len, r.move_eff = pk, ln, eff
                 r.add_event(i, 'BCLX', b['hi'], 'A')
                 r.set_phase(i, 'A')
                 active = r
@@ -157,7 +237,7 @@ def detect(B):
         # ---------------------------------------------------------------- guard: bo range thoai hoa
         height = (r.high - r.low) if (r.high is not None and r.low is not None) else 0.0
         too_tall = height > MAX_RANGE_HEIGHT_PCT * b['c']
-        too_long_ab = r.state in ('A', 'B', 'C_pending') and (i - climax_i) > MAX_BARS_PHASE_AB
+        too_long_ab = r.state in ('A', 'A_st', 'B', 'C_pending') and (i - climax_i) > MAX_BARS_PHASE_AB
         too_long_d = r.state == 'D' and (i - climax_i) > MAX_BARS_PHASE_D
         if too_tall or too_long_ab or too_long_d:
             DISCARDED.append((r, 'qua cao (>3.5% gia)' if too_tall else 'qua dai (>2500/2000 nen)', i))
@@ -188,17 +268,68 @@ def detect(B):
                     ar_i = min(range(climax_i + 1, i + 1), key=lambda k: B[k]['lo'])
                     r.low = B[ar_i]['lo']
                     ar_price = r.low
+                # AR phai la mot cu bat nguoc THAT (>=30% do dai move), khong phai cai ngo nguay
+                if abs(ar_price - r.climax_price) < AR_MIN_RETRACE_OF_MOVE * max(1e-9, r.move_len):
+                    if (i - climax_i) > AR_MAX_WAIT:
+                        DISCARDED.append((r, 'Phase A: khong co AR that (bat nguoc <30% move)', i))
+                        active = None
+                    continue
                 # CR-U (uu tien THAP, chi hien thi): AR qua sat climax (<=2 nen) -> co the chi la 1 cay
                 # bac nhieu, khong giong 1 cu Automatic Rally that. KHONG doi nguong/luong xu ly.
                 ar_label = 'AR (yếu)' if (ar_i - climax_i) <= 2 else 'AR'
                 r.add_event(ar_i, ar_label, ar_price, 'A')
+                r.ar_i, r.ar_price = ar_i, ar_price
                 # BUG tim thay qua vong cham (giang vien-agent, khong co trong spec): truoc day dung
                 # `i` (luon la climax_i+AR_LOOKBACK+1 CO DINH) lam moc bat dau Phase B, trong khi AR
                 # (ar_i) thuong xay ra SOM HON nhieu trong cua so 40 nen — khien Phase A hien thi VE
                 # DAI TOI TAN cuoi cua so co dinh thay vi dung ket thuc tai AR (§1.3: "Phase A = tu
                 # climax den AR, bao gom ca 2 moc"). Danh gia tren 6 anh mau: xay ra CA 6/6 anh.
-                r.set_phase(ar_i + 1, 'B')
+                # v3: CHUA duoc sang Phase B. Phase A chi xong khi co ST[A] (lan doi huong thu 3).
+                r.state = 'A_st'
+                r.st_ext = B[i]['lo'] if r.kind == 'ACC' else B[i]['hi']
+                r.st_ext_i = i
+            continue
+
+        # ------------------------------------------------- state A_st: cho ST[A] = lan doi huong thu 3
+        # Sau AR, gia phai quay lai phia climax du sau (>=40% chieu cao) roi BI CHAN lan nua. Khi da
+        # doi huong (STA_CONFIRM_BARS nen khong tao cuc tri moi) thi Phase A ket thuc DUNG tai do.
+        # Khong co ST[A] -> chua thanh vung di ngang -> bo ung vien (dung ly thuyet CHoCH 3 lan doi dau).
+        if r.state == 'A_st':
+            span = abs(r.ar_price - r.climax_price)
+            if span < 1e-9:
+                DISCARDED.append((r, 'Phase A: climax va AR trung nhau', i))
+                active = None
+                continue
+            if r.kind == 'ACC':
+                if b['hi'] > r.high:      # AR duoc day cao hon -> cap nhat bien doi dien
+                    r.high = b['hi']
+                    r.ar_i, r.ar_price = i, b['hi']
+                    r.st_ext, r.st_ext_i = b['lo'], i
+                if b['lo'] < r.st_ext:
+                    r.st_ext, r.st_ext_i = b['lo'], i
+                retrace = (r.ar_price - r.st_ext) / max(1e-9, r.ar_price - r.climax_price)
+            else:
+                if b['lo'] < r.low:
+                    r.low = b['lo']
+                    r.ar_i, r.ar_price = i, b['lo']
+                    r.st_ext, r.st_ext_i = b['hi'], i
+                if b['hi'] > r.st_ext:
+                    r.st_ext, r.st_ext_i = b['hi'], i
+                retrace = (r.st_ext - r.ar_price) / max(1e-9, r.climax_price - r.ar_price)
+
+            if retrace >= STA_MIN_RETRACE and (i - r.st_ext_i) >= STA_CONFIRM_BARS:
+                r.sta_i, r.sta_price = r.st_ext_i, r.st_ext
+                r.add_event(r.sta_i, 'ST[A]', r.sta_price, 'A')
+                # ST[A] vuot QUA climax -> bien lam viec noi rong (se ve them net dut ben ngoai)
+                if r.kind == 'ACC':
+                    r.low = min(r.low, r.sta_price)
+                else:
+                    r.high = max(r.high, r.sta_price)
+                r.set_phase(r.sta_i + 1, 'B')
                 r.state = 'B'
+            elif (i - r.ar_i) > STA_MAX_WAIT:
+                DISCARDED.append((r, 'Phase A: khong co ST[A] (chua du 3 lan doi huong)', i))
+                active = None
             continue
 
         abandon_b = False

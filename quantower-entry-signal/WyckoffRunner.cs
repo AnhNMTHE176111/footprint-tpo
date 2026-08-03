@@ -592,12 +592,19 @@ namespace WyckoffRunner
         {
             public int StartIdx; public int EndIdx = -1;   // -1 = dang chay (active)
             public bool Acc;                                // true=Tich luy, false=Phan phoi
-            public double Low, High;
-            public string State = "A";                       // A|B|C_pending|D
+            public double Low, High;                         // bien LAM VIEC (noi rong dan theo thoi gian)
+            public string State = "A";                       // A|A_st|B|C_pending|D
             public bool Completed;
             public List<WyEvent> Events = new();
             public List<WyPhaseSeg> Phases = new();
             public WyPendingShock Pending;                    // != null chi khi State=="C_pending"
+            // v3 (review nguoi hoc 2026-08-03): cac MUC CO DINH de VE — bien chinh la muc climax va
+            // muc AR (net lien); bien lam viec rong hon ve net dut.
+            public double ClimaxPrice;
+            public int ArIdx = -1; public double ArPrice;
+            public int StaIdx = -1; public double StaPrice;   // ST[A] = lan doi huong thu 3
+            public int MoveIdx = -1; public double MoveLen, MoveEff;
+            public double StExt; public int StExtIdx = -1;    // cuc tri tam trong luc cho ST[A]
         }
         // Render DTO (B[idx].Time/gia da chot san — dung duoc trong OnPaintChart du B khac lan).
         // v3 (2026-08-03): moi phan tu mang THEM chi so HistoricalData (HdIdx) — can cho (a) bang danh
@@ -607,6 +614,7 @@ namespace WyckoffRunner
         private sealed class WyRangeR
         {
             public DateTime StartTime, EndTime; public bool Acc; public double Low, High;
+            public double SolidLow, SolidHigh;                // v3: bien chinh (climax + AR) — ve net lien
             public int StartHd, EndHd;
             public bool Completed;
             public string Key = "";
@@ -1119,6 +1127,62 @@ namespace WyckoffRunner
         private const int WY_MAX_BARS_AB = 2500;          // TR Wyckoff that la vung CAN BANG hep, khong
         private const int WY_MAX_BARS_D = 2000;           // phai the hien ca mot xu huong dai — bo neu vuot.
 
+        // ============================================================================================
+        // v3 — nguoi hoc review 2026-08-03, vá 2 lỗi NỀN TẢNG (khớp wyckoff_schematic.py cùng ngày)
+        // ============================================================================================
+        // LỖI 1 — climax MỘT MÌNH không đủ để mở range. Phải có một MOVE XU HƯỚNG RÕ RÀNG ngay trước
+        //   đó bị cây climax chặn lại. Trước đây chỉ dùng b.Trend (close vs close 480 nến, tol 1.0 giá)
+        //   — quá yếu, giá đang đi ngang vẫn thoả -> vẽ range tùm lum. Nay đo MOVE thật: độ dài
+        //   chân->climax, số nến, và HIỆU SUẤT HƯỚNG (đi thẳng ~1.0, đi ngang ~0.05) để loại đi ngang.
+        private const int WY_MOVE_LOOKBACK = 240;
+        private const int WY_MOVE_MIN_BARS = 20;
+        private const double WY_MOVE_MIN_ATR = 8.0;
+        private const double WY_MOVE_MIN_EFF = 0.35;
+        // Hệ quả tự phát hiện khi soi lại chart sau khi vá (KHÔNG có trong review): AR chỉ ngọ nguậy
+        //   vài giá sau một move 35 giá thì "đổi hướng lần 2" không có thật, và ngưỡng 40% của ST[A]
+        //   thành vô nghĩa. Buộc AR phải hồi ≥30% độ dài MOVE.
+        private const double WY_AR_MIN_RETRACE_OF_MOVE = 0.30;
+        private const int WY_AR_MAX_WAIT = 300;
+        // LỖI 2 — Phase A thiếu ST[A]. Phase A là một CHoCH = ĐÚNG 3 lần đổi hướng: (1) move bị climax
+        //   chặn, (2) hồi ngược tới AR, (3) quay lại phía climax rồi bị chặn lần nữa = ST[A]. Lúc đó
+        //   Phase A mới xong. Không có ST[A] thì chưa thành vùng đi ngang -> BỎ ứng viên.
+        private const int WY_STA_MAX_WAIT = 400;
+        private const double WY_STA_MIN_RETRACE = 0.40;
+        private const int WY_STA_CONFIRM_BARS = 5;
+
+        /// <summary>
+        /// Trước nến climax i có một MOVE xu hướng thật không? acc=true cần move GIẢM (SC chặn đáy),
+        /// acc=false cần move TĂNG (BCLX chặn đỉnh). Trả về false nếu không đạt.
+        /// </summary>
+        private bool WyFindMove(List<Bar> B, int i, bool acc, out int footIdx, out double len, out double eff)
+        {
+            footIdx = -1; len = 0; eff = 0;
+            int lo = Math.Max(0, i - WY_MOVE_LOOKBACK);
+            if (i - lo < WY_MOVE_MIN_BARS) return false;
+            // climax phải là CỰC TRỊ của cả cửa sổ — nó đang CHẶN move, không nằm giữa move
+            if (acc)
+            {
+                for (int k = lo; k < i; k++) if (B[k].L < B[i].L) return false;
+                double best = double.MinValue;
+                for (int k = lo; k < i; k++) if (B[k].H > best) { best = B[k].H; footIdx = k; }
+                len = best - B[i].L;
+            }
+            else
+            {
+                for (int k = lo; k < i; k++) if (B[k].H > B[i].H) return false;
+                double best = double.MaxValue;
+                for (int k = lo; k < i; k++) if (B[k].L < best) { best = B[k].L; footIdx = k; }
+                len = B[i].H - best;
+            }
+            if (footIdx < 0 || i - footIdx < WY_MOVE_MIN_BARS) return false;
+            double avgr = WyAvgRange(B, i, WY_CLIMAX_LOOKBACK);
+            if (avgr <= 0 || len < WY_MOVE_MIN_ATR * avgr) return false;
+            double path = 0;
+            for (int k = footIdx + 1; k <= i; k++) path += Math.Abs(B[k].C - B[k - 1].C);
+            eff = path > 1e-9 ? len / path : 0;
+            return eff >= WY_MOVE_MIN_EFF;
+        }
+
         private double WyAvgRange(List<Bar> B, int i, int lookback)
         {
             int lo = Math.Max(0, i - lookback);
@@ -1220,17 +1284,27 @@ namespace WyckoffRunner
                     bool wide = b.Rng >= WY_CLIMAX_RANGE_MULT * avgr;
                     bool climaxVol = b.Vratio >= VsaClimax;
                     if (!(wide && climaxVol)) continue;
-                    // CHART_CASES.md "gán SC trong Tái tích luỹ": SC/BCLX CHỈ hợp lệ nếu TRƯỚC đó là
-                    // downtrend/uptrend THẬT (dùng field Trend đã có, proxy TPO bias, không tol=0).
-                    if (b.C < b.O && b.Trend == -1)
+                    // v3: điều kiện CẦN là một MOVE XU HƯỚNG THẬT bị cây climax này chặn lại
+                    // (thay hoàn toàn cho b.Trend cũ — xem chú thích WyFindMove).
+                    if (b.C < b.O)
                     {
-                        active = new WyRange { StartIdx = i, Acc = true, Low = b.L };
+                        if (!WyFindMove(B, i, true, out int fi, out double ln, out double ef)) continue;
+                        active = new WyRange
+                        {
+                            StartIdx = i, Acc = true, Low = b.L, ClimaxPrice = b.L,
+                            MoveIdx = fi, MoveLen = ln, MoveEff = ef,
+                        };
                         WyAddEvent(active, i, "SC", b.L);
                         WySetPhase(active, i, 'A');
                     }
-                    else if (b.C > b.O && b.Trend == 1)
+                    else if (b.C > b.O)
                     {
-                        active = new WyRange { StartIdx = i, Acc = false, High = b.H };
+                        if (!WyFindMove(B, i, false, out int fi, out double ln, out double ef)) continue;
+                        active = new WyRange
+                        {
+                            StartIdx = i, Acc = false, High = b.H, ClimaxPrice = b.H,
+                            MoveIdx = fi, MoveLen = ln, MoveEff = ef,
+                        };
                         WyAddEvent(active, i, "BCLX", b.H);
                         WySetPhase(active, i, 'A');
                     }
@@ -1245,7 +1319,7 @@ namespace WyckoffRunner
 
                 double height = r.High - r.Low;
                 bool tooTall = height > WY_MAX_HEIGHT_PCT * b.C;
-                bool tooLongAB = (r.State == "A" || r.State == "B" || r.State == "C_pending") && (i - climaxI) > WY_MAX_BARS_AB;
+                bool tooLongAB = (r.State == "A" || r.State == "A_st" || r.State == "B" || r.State == "C_pending") && (i - climaxI) > WY_MAX_BARS_AB;
                 bool tooLongD = r.State == "D" && (i - climaxI) > WY_MAX_BARS_D;
                 if (tooTall || tooLongAB || tooLongD) { active = null; continue; }
 
@@ -1273,16 +1347,55 @@ namespace WyckoffRunner
                             for (int k = climaxI + 1; k <= i; k++) if (B[k].L < bestLo) { bestLo = B[k].L; arI = k; }
                             r.Low = bestLo; arPrice = r.Low;
                         }
+                        // v3: AR phải là cú bật ngược THẬT (≥30% độ dài move), không phải cái ngọ nguậy
+                        if (Math.Abs(arPrice - r.ClimaxPrice) < WY_AR_MIN_RETRACE_OF_MOVE * Math.Max(1e-9, r.MoveLen))
+                        {
+                            if ((i - climaxI) > WY_AR_MAX_WAIT) active = null;
+                            continue;
+                        }
                         // CR-U (ưu tiên THẤP, chỉ hiển thị): AR quá sát climax -> co the chi la 1 cay
                         // bấc nhiễu, không giống 1 cú Automatic Rally thật. KHÔNG đổi ngưỡng/luồng xử lý.
                         string arLabel = (arI - climaxI) <= 2 ? "AR (yếu)" : "AR";
                         WyAddEvent(r, arI, arLabel, arPrice);
-                        // Tu phat hien: truoc day dung `i` (co dinh climaxI+WY_AR_LOOKBACK+1) lam moc bat
-                        // dau Phase B, trong khi AR that (arI) thuong xay ra som hon nhieu -> Phase A hien
-                        // thi ve dai toi cuoi cua so co dinh thay vi dung ket thuc tai AR.
-                        WySetPhase(r, arI + 1, 'B');
+                        r.ArIdx = arI; r.ArPrice = arPrice;
+                        // v3: CHƯA được sang Phase B. Phase A chỉ xong khi có ST[A] (lần đổi hướng thứ 3).
+                        r.State = "A_st";
+                        r.StExt = r.Acc ? B[i].L : B[i].H;
+                        r.StExtIdx = i;
+                    }
+                    continue;
+                }
+
+                // ===== state A_st: chờ ST[A] = lần đổi hướng thứ 3, mốc KẾT THÚC Phase A =====
+                // Sau AR, giá phải quay lại phía climax đủ sâu (≥40% chiều cao) rồi BỊ CHẶN lần nữa.
+                // Không có ST[A] -> chưa thành vùng đi ngang -> bỏ ứng viên (đúng lý thuyết CHoCH).
+                if (r.State == "A_st")
+                {
+                    double retrace;
+                    if (r.Acc)
+                    {
+                        if (b.H > r.High) { r.High = b.H; r.ArIdx = i; r.ArPrice = b.H; r.StExt = b.L; r.StExtIdx = i; }
+                        if (b.L < r.StExt) { r.StExt = b.L; r.StExtIdx = i; }
+                        retrace = (r.ArPrice - r.StExt) / Math.Max(1e-9, r.ArPrice - r.ClimaxPrice);
+                    }
+                    else
+                    {
+                        if (b.L < r.Low) { r.Low = b.L; r.ArIdx = i; r.ArPrice = b.L; r.StExt = b.H; r.StExtIdx = i; }
+                        if (b.H > r.StExt) { r.StExt = b.H; r.StExtIdx = i; }
+                        retrace = (r.StExt - r.ArPrice) / Math.Max(1e-9, r.ClimaxPrice - r.ArPrice);
+                    }
+
+                    if (retrace >= WY_STA_MIN_RETRACE && (i - r.StExtIdx) >= WY_STA_CONFIRM_BARS)
+                    {
+                        r.StaIdx = r.StExtIdx; r.StaPrice = r.StExt;
+                        WyAddEvent(r, r.StaIdx, "ST[A]", r.StaPrice);
+                        // ST[A] vượt QUA climax -> biên làm việc nới rộng (vẽ thêm nét đứt bên ngoài)
+                        if (r.Acc) r.Low = Math.Min(r.Low, r.StaPrice);
+                        else r.High = Math.Max(r.High, r.StaPrice);
+                        WySetPhase(r, r.StaIdx + 1, 'B');
                         r.State = "B";
                     }
+                    else if ((i - r.ArIdx) > WY_STA_MAX_WAIT) active = null;
                     continue;
                 }
 
@@ -1528,6 +1641,9 @@ namespace WyckoffRunner
                 StartTime = B[r.StartIdx].Time, EndTime = B[endIdx].Time, Acc = r.Acc, Low = r.Low, High = r.High,
                 StartHd = B[r.StartIdx].HdIdx, EndHd = B[endIdx].HdIdx, Completed = r.Completed,
                 Key = (r.Acc ? "A" : "D") + B[r.StartIdx].HdIdx,
+                // v3: biên CHÍNH = mức climax + mức AR (nét liền). Chưa có AR thì tạm dùng biên làm việc.
+                SolidLow = r.ArIdx >= 0 ? Math.Min(r.ClimaxPrice, r.ArPrice) : r.Low,
+                SolidHigh = r.ArIdx >= 0 ? Math.Max(r.ClimaxPrice, r.ArPrice) : r.High,
             };
             foreach (var e in r.Events) rr.Events.Add(new WyEventR { Time = B[e.Idx].Time, HdIdx = B[e.Idx].HdIdx, Price = e.Price, Label = e.Label, Status = e.Status });
             foreach (var p in r.Phases)
@@ -2179,6 +2295,7 @@ namespace WyckoffRunner
                 {
                     case "SC": case "BCLX": return "climax";
                     case "AR": return "ar";
+                    case "ST[A]": return "ar";      // v3: ST[A] thuộc Phase A, đọc chung màu với AR
                     case "ST": case "UA": case "DA": return "st";
                     case "Spring": case "Shakeout": case "UT": case "UTAD": return "shake";
                     case "SOS": case "SOW": return "break";
@@ -2233,10 +2350,18 @@ namespace WyckoffRunner
                 if (sel)
                     using (var bsel = new SolidBrush(Color.FromArgb(34, col)))
                         gr.FillRectangle(bsel, xa, Math.Min(yHigh, yLow), Math.Max(1, xb - xa), Math.Abs(yLow - yHigh));
+                // v3: BIÊN CHÍNH (nét liền) = mức climax và mức AR — biên quan trọng nhất.
+                // BIÊN NỚI RỘNG (nét đứt) = biên làm việc khi ST[A]/Spring/UT đã đẩy ra ngoài mức climax.
+                float ySolidLo = Y(r.SolidLow), ySolidHi = Y(r.SolidHigh);
                 using (var penR = new Pen(col, sel ? 3.2f : 2f))
                 {
-                    gr.DrawLine(penR, xa, yLow, xb, yLow);
-                    gr.DrawLine(penR, xa, yHigh, xb, yHigh);
+                    gr.DrawLine(penR, xa, ySolidLo, xb, ySolidLo);
+                    gr.DrawLine(penR, xa, ySolidHi, xb, ySolidHi);
+                }
+                using (var penO = new Pen(col, sel ? 2f : 1.4f) { DashStyle = DashStyle.Dash })
+                {
+                    if (r.Low < r.SolidLow - _tick / 2) gr.DrawLine(penO, xa, yLow, xb, yLow);
+                    if (r.High > r.SolidHigh + _tick / 2) gr.DrawLine(penO, xa, yHigh, xb, yHigh);
                 }
                 using (var bk = new SolidBrush(col))
                     gr.DrawString(r.Acc ? "Tích luỹ" : "Phân phối", fPhase, bk, xb + 4, yHigh - 8);

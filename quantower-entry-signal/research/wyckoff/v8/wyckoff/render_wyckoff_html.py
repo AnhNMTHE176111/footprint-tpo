@@ -118,6 +118,9 @@ def main():
             'hi': q(r.high) if r.high is not None else q(B[r.start_i]['hi']),
             'done': r.status == 'completed',
             'ph': phases, 'ev': evs,
+            # v3: biên CHÍNH (nét liền) = mức climax + mức AR; biên làm việc rộng hơn vẽ nét đứt
+            'cx': q(r.climax_price) if r.climax_price is not None else None,
+            'ar': q(r.ar_price) if r.ar_price is not None else None,
         }
         if why:
             d['why'] = why
@@ -270,14 +273,14 @@ const CAT = {
   climax:'#FF5252', ar:'#81C784', st:'#B0BEC5', shake:'#FFCA28',
   break:'#42A5F5', lpsc:'#26C6A8', lpsd:'#BA68C8'
 };
-const CAT_VN = [['climax','SC / BCLX — cao trào'],['ar','AR — bật ngược'],
+const CAT_VN = [['climax','SC / BCLX — cao trào'],['ar','AR / ST[A] — bật ngược, chốt Phase A'],
   ['st','ST / UA / DA — test biên'],['shake','Spring / Shakeout / UT / UTAD — cú rũ'],
   ['break','SOS / SOW — phá vỡ'],['lpsc','LPS[C] / LPSY[C] — test khi chờ xác nhận'],
   ['lpsd','LPS[D] / LPSY[D] — hồi sau phá vỡ']];
 function catOf(lbl){
   let b = lbl.endsWith(')') ? lbl.slice(0, lbl.indexOf('(')).trim() : lbl;
   if (b==='SC'||b==='BCLX') return 'climax';
-  if (b==='AR') return 'ar';
+  if (b==='AR' || b==='ST[A]') return 'ar';   // ST[A] thuộc Phase A, đọc chung màu với AR
   if (b==='ST'||b==='UA'||b==='DA') return 'st';
   if (b==='Spring'||b==='Shakeout'||b==='UT'||b==='UTAD') return 'shake';
   if (b==='SOS'||b==='SOW') return 'break';
@@ -462,10 +465,19 @@ function drawWyckoff(pl, ph, X, Y, a, b){
     const xa = Math.max(x0, pl.x), xb = Math.min(x1, pl.x+pl.w);
     const yL = Y(r.lo), yH = Y(r.hi);
     if (isSel){ ctx.fillStyle = hexA(col, .07); ctx.fillRect(xa, yH, Math.max(1,xb-xa), yL-yH); }
+    // BIÊN CHÍNH (nét liền, quan trọng nhất) = mức climax và mức AR.
+    // BIÊN NỚI RỘNG (nét đứt) = biên làm việc khi ST[A]/Spring/UT đã đẩy ra ngoài mức climax.
+    const sLo = (r.cx==null||r.ar==null) ? r.lo : Math.min(r.cx, r.ar);
+    const sHi = (r.cx==null||r.ar==null) ? r.hi : Math.max(r.cx, r.ar);
     ctx.strokeStyle = col; ctx.lineWidth = isSel ? 3 : 2;
     ctx.beginPath();
-    ctx.moveTo(xa, yL); ctx.lineTo(xb, yL);
-    ctx.moveTo(xa, yH); ctx.lineTo(xb, yH);
+    ctx.moveTo(xa, Y(sLo)); ctx.lineTo(xb, Y(sLo));
+    ctx.moveTo(xa, Y(sHi)); ctx.lineTo(xb, Y(sHi));
+    ctx.stroke();
+    ctx.lineWidth = isSel ? 2 : 1.4; ctx.setLineDash([6,4]);
+    ctx.beginPath();
+    if (r.lo < sLo - 0.5){ ctx.moveTo(xa, yL); ctx.lineTo(xb, yL); }
+    if (r.hi > sHi + 0.5){ ctx.moveTo(xa, yH); ctx.lineTo(xb, yH); }
     ctx.stroke();
     // mép trái/phải mờ để thấy range bắt đầu/kết thúc ở đâu
     ctx.lineWidth = 1; ctx.setLineDash([3,3]); ctx.strokeStyle = hexA(col,.55);

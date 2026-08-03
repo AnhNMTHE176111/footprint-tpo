@@ -1,0 +1,2308 @@
+[
+ {
+  "idx": 1,
+  "kind": "ACC",
+  "kind_vn": "Tích lũy",
+  "start": "2025-12-29 15:22:00",
+  "end": "2026-01-05 14:17:00",
+  "bars": 173,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_01.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_01.md",
+  "phases": [
+   [
+    "A",
+    1389,
+    1461
+   ],
+   [
+    "B",
+    1462,
+    1479
+   ],
+   [
+    "C",
+    1480,
+    1481
+   ],
+   [
+    "B",
+    1482,
+    1482
+   ],
+   [
+    "C",
+    1483,
+    1536
+   ],
+   [
+    "D",
+    1537,
+    1562
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Spring (thất bại)",
+   "Spring",
+   "SOS"
+  ]
+ },
+ {
+  "idx": 2,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-03-31 01:19:00",
+  "end": "2026-03-31 11:12:00",
+  "bars": 357,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_02.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_02.md",
+  "phases": [
+   [
+    "A",
+    11861,
+    12082
+   ],
+   [
+    "B",
+    12083,
+    12112
+   ],
+   [
+    "C",
+    12113,
+    12134
+   ],
+   [
+    "B",
+    12135,
+    12137
+   ],
+   [
+    "C",
+    12138,
+    12192
+   ],
+   [
+    "D",
+    12193,
+    12218
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "UT",
+   "UTAD (thất bại)",
+   "LPSY[C]",
+   "UTAD",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 3,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-04-02 01:04:00",
+  "end": "2026-04-02 03:07:00",
+  "bars": 115,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_03.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_03.md",
+  "phases": [
+   [
+    "A",
+    13641,
+    13684
+   ],
+   [
+    "B",
+    13685,
+    13711
+   ],
+   [
+    "C",
+    13712,
+    13730
+   ],
+   [
+    "D",
+    13731,
+    13756
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 4,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-04-02 14:35:00",
+  "end": "2026-04-05 22:50:00",
+  "bars": 265,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_04.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_04.md",
+  "phases": [
+   [
+    "A",
+    14264,
+    14370
+   ],
+   [
+    "B",
+    14371,
+    14450
+   ],
+   [
+    "C",
+    14451,
+    14503
+   ],
+   [
+    "D",
+    14504,
+    14529
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "DA",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 5,
+  "kind": "RE-ACC",
+  "kind_vn": "Tái tích lũy",
+  "start": "2026-04-13 16:47:00",
+  "end": "2026-04-14 00:40:00",
+  "bars": 145,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_05.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_05.md",
+  "phases": [
+   [
+    "A",
+    18684,
+    18727
+   ],
+   [
+    "B",
+    18728,
+    18788
+   ],
+   [
+    "C",
+    18789,
+    18808
+   ],
+   [
+    "D",
+    18809,
+    18828
+   ],
+   [
+    "E",
+    18829,
+    18829
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "DA",
+   "LPS[C]",
+   "SOS"
+  ]
+ },
+ {
+  "idx": 6,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-04-17 13:10:00",
+  "end": "2026-04-21 17:19:00",
+  "bars": 1631,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_06.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_06.md",
+  "phases": [
+   [
+    "A",
+    21071,
+    21469
+   ],
+   [
+    "B",
+    21470,
+    22616
+   ],
+   [
+    "C",
+    22617,
+    22676
+   ],
+   [
+    "D",
+    22677,
+    22702
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "DA",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 7,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-04-23 12:00:00",
+  "end": "2026-04-24 05:19:00",
+  "bars": 541,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_07.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_07.md",
+  "phases": [
+   [
+    "A",
+    24020,
+    24287
+   ],
+   [
+    "B",
+    24288,
+    24476
+   ],
+   [
+    "C",
+    24477,
+    24535
+   ],
+   [
+    "D",
+    24536,
+    24561
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 8,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-04-28 02:00:00",
+  "end": "2026-04-28 05:39:00",
+  "bars": 83,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_08.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_08.md",
+  "phases": [
+   [
+    "A",
+    25731,
+    25779
+   ],
+   [
+    "B",
+    25780,
+    25805
+   ],
+   [
+    "C",
+    25806,
+    25812
+   ],
+   [
+    "D",
+    25813,
+    25813
+   ],
+   [
+    "E",
+    25814,
+    25814
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 9,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-05-01 06:19:00",
+  "end": "2026-05-04 08:36:00",
+  "bars": 690,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_09.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_09.md",
+  "phases": [
+   [
+    "A",
+    28047,
+    28311
+   ],
+   [
+    "B",
+    28312,
+    28573
+   ],
+   [
+    "C",
+    28574,
+    28600
+   ],
+   [
+    "B",
+    28601,
+    28601
+   ],
+   [
+    "C",
+    28602,
+    28661
+   ],
+   [
+    "B",
+    28662,
+    28663
+   ],
+   [
+    "C",
+    28664,
+    28669
+   ],
+   [
+    "B",
+    28670,
+    28711
+   ],
+   [
+    "D",
+    28712,
+    28737
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Spring (thất bại)",
+   "LPS[C]",
+   "Spring (thất bại)",
+   "LPS[C]",
+   "Spring (thất bại)",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 10,
+  "kind": "ACC",
+  "kind_vn": "Tích lũy",
+  "start": "2026-05-04 15:21:00",
+  "end": "2026-05-05 08:45:00",
+  "bars": 421,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_10.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_10.md",
+  "phases": [
+   [
+    "A",
+    29001,
+    29045
+   ],
+   [
+    "B",
+    29046,
+    29050
+   ],
+   [
+    "C",
+    29051,
+    29171
+   ],
+   [
+    "B",
+    29172,
+    29194
+   ],
+   [
+    "C",
+    29195,
+    29315
+   ],
+   [
+    "B",
+    29316,
+    29396
+   ],
+   [
+    "D",
+    29397,
+    29422
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Spring (thất bại)",
+   "LPS[C]",
+   "Shakeout (thất bại)",
+   "UA",
+   "SOS"
+  ]
+ },
+ {
+  "idx": 11,
+  "kind": "ACC",
+  "kind_vn": "Tích lũy",
+  "start": "2026-05-07 16:18:00",
+  "end": "2026-05-08 13:58:00",
+  "bars": 623,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_11.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_11.md",
+  "phases": [
+   [
+    "A",
+    31240,
+    31531
+   ],
+   [
+    "B",
+    31532,
+    31639
+   ],
+   [
+    "C",
+    31640,
+    31641
+   ],
+   [
+    "B",
+    31642,
+    31642
+   ],
+   [
+    "C",
+    31643,
+    31763
+   ],
+   [
+    "B",
+    31764,
+    31777
+   ],
+   [
+    "C",
+    31778,
+    31837
+   ],
+   [
+    "D",
+    31838,
+    31862
+   ],
+   [
+    "E",
+    31863,
+    31863
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "UA",
+   "Spring (thất bại)",
+   "Shakeout (thất bại)",
+   "Spring",
+   "LPS[C]",
+   "SOS"
+  ]
+ },
+ {
+  "idx": 12,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-05-12 13:15:00",
+  "end": "2026-05-12 18:47:00",
+  "bars": 265,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_12.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_12.md",
+  "phases": [
+   [
+    "A",
+    33487,
+    33532
+   ],
+   [
+    "B",
+    33533,
+    33563
+   ],
+   [
+    "C",
+    33564,
+    33684
+   ],
+   [
+    "B",
+    33685,
+    33726
+   ],
+   [
+    "D",
+    33727,
+    33752
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Spring (thất bại)",
+   "LPS[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 13,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-05-14 04:32:00",
+  "end": "2026-05-14 14:07:00",
+  "bars": 361,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_13.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_13.md",
+  "phases": [
+   [
+    "A",
+    34712,
+    34782
+   ],
+   [
+    "B",
+    34783,
+    34815
+   ],
+   [
+    "C",
+    34816,
+    34936
+   ],
+   [
+    "B",
+    34937,
+    35047
+   ],
+   [
+    "D",
+    35048,
+    35073
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "UTAD (thất bại)",
+   "DA",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 14,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-05-20 01:30:00",
+  "end": "2026-05-20 04:23:00",
+  "bars": 120,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_14.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_14.md",
+  "phases": [
+   [
+    "A",
+    38452,
+    38500
+   ],
+   [
+    "B",
+    38501,
+    38524
+   ],
+   [
+    "C",
+    38525,
+    38546
+   ],
+   [
+    "D",
+    38547,
+    38572
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 15,
+  "kind": "ACC",
+  "kind_vn": "Tích lũy",
+  "start": "2026-05-26 08:29:00",
+  "end": "2026-05-26 10:28:00",
+  "bars": 118,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_15.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_15.md",
+  "phases": [
+   [
+    "A",
+    43273,
+    43319
+   ],
+   [
+    "B",
+    43320,
+    43346
+   ],
+   [
+    "C",
+    43347,
+    43374
+   ],
+   [
+    "D",
+    43375,
+    43390
+   ],
+   [
+    "E",
+    43391,
+    43391
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Shakeout",
+   "SOS",
+   "LPS[D]"
+  ]
+ },
+ {
+  "idx": 16,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-05-26 11:35:00",
+  "end": "2026-05-26 18:35:00",
+  "bars": 420,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_16.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_16.md",
+  "phases": [
+   [
+    "A",
+    43457,
+    43555
+   ],
+   [
+    "B",
+    43556,
+    43679
+   ],
+   [
+    "C",
+    43680,
+    43692
+   ],
+   [
+    "B",
+    43693,
+    43698
+   ],
+   [
+    "C",
+    43699,
+    43736
+   ],
+   [
+    "B",
+    43737,
+    43738
+   ],
+   [
+    "C",
+    43739,
+    43817
+   ],
+   [
+    "B",
+    43818,
+    43851
+   ],
+   [
+    "D",
+    43852,
+    43876
+   ],
+   [
+    "E",
+    43877,
+    43877
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "UA",
+   "Spring (thất bại)",
+   "LPS[C]",
+   "Shakeout (thất bại)",
+   "LPS[C]",
+   "Shakeout (thất bại)",
+   "LPS[C]",
+   "SOW",
+   "LPSY[D]"
+  ]
+ },
+ {
+  "idx": 17,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-05-27 05:33:00",
+  "end": "2026-05-27 07:33:00",
+  "bars": 120,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_17.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_17.md",
+  "phases": [
+   [
+    "A",
+    44474,
+    44522
+   ],
+   [
+    "B",
+    44523,
+    44548
+   ],
+   [
+    "C",
+    44549,
+    44568
+   ],
+   [
+    "D",
+    44569,
+    44594
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 18,
+  "kind": "ACC",
+  "kind_vn": "Tích lũy",
+  "start": "2026-06-02 01:01:00",
+  "end": "2026-06-02 04:24:00",
+  "bars": 203,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_18.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_18.md",
+  "phases": [
+   [
+    "A",
+    49715,
+    49766
+   ],
+   [
+    "B",
+    49767,
+    49832
+   ],
+   [
+    "C",
+    49833,
+    49892
+   ],
+   [
+    "D",
+    49893,
+    49917
+   ],
+   [
+    "E",
+    49918,
+    49918
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "LPS[C]",
+   "SOS"
+  ]
+ },
+ {
+  "idx": 19,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-06-03 05:30:00",
+  "end": "2026-06-03 09:28:00",
+  "bars": 238,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_19.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_19.md",
+  "phases": [
+   [
+    "A",
+    51363,
+    51417
+   ],
+   [
+    "B",
+    51418,
+    51426
+   ],
+   [
+    "C",
+    51427,
+    51547
+   ],
+   [
+    "B",
+    51548,
+    51589
+   ],
+   [
+    "D",
+    51590,
+    51600
+   ],
+   [
+    "E",
+    51601,
+    51601
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Spring (thất bại)",
+   "LPS[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 20,
+  "kind": "ACC",
+  "kind_vn": "Tích lũy",
+  "start": "2026-06-04 14:51:00",
+  "end": "2026-06-04 17:13:00",
+  "bars": 142,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_20.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_20.md",
+  "phases": [
+   [
+    "A",
+    53303,
+    53357
+   ],
+   [
+    "B",
+    53358,
+    53403
+   ],
+   [
+    "C",
+    53404,
+    53419
+   ],
+   [
+    "D",
+    53420,
+    53445
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "UA",
+   "LPS[C]",
+   "SOS",
+   "LPS[D]"
+  ]
+ },
+ {
+  "idx": 21,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-06-08 01:30:00",
+  "end": "2026-06-08 06:01:00",
+  "bars": 271,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_21.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_21.md",
+  "phases": [
+   [
+    "A",
+    55262,
+    55312
+   ],
+   [
+    "B",
+    55313,
+    55475
+   ],
+   [
+    "C",
+    55476,
+    55507
+   ],
+   [
+    "D",
+    55508,
+    55533
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 22,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-06-10 06:00:00",
+  "end": "2026-06-10 07:55:00",
+  "bars": 115,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_22.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_22.md",
+  "phases": [
+   [
+    "A",
+    58287,
+    58363
+   ],
+   [
+    "B",
+    58364,
+    58382
+   ],
+   [
+    "C",
+    58383,
+    58400
+   ],
+   [
+    "D",
+    58401,
+    58401
+   ],
+   [
+    "E",
+    58402,
+    58402
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 23,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-06-12 08:18:00",
+  "end": "2026-06-12 13:31:00",
+  "bars": 313,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_23.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_23.md",
+  "phases": [
+   [
+    "A",
+    61185,
+    61319
+   ],
+   [
+    "B",
+    61320,
+    61421
+   ],
+   [
+    "C",
+    61422,
+    61472
+   ],
+   [
+    "D",
+    61473,
+    61498
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "DA",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 24,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-06-12 15:21:00",
+  "end": "2026-06-12 19:59:00",
+  "bars": 278,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_24.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_24.md",
+  "phases": [
+   [
+    "A",
+    61608,
+    61663
+   ],
+   [
+    "B",
+    61664,
+    61668
+   ],
+   [
+    "C",
+    61669,
+    61789
+   ],
+   [
+    "B",
+    61790,
+    61790
+   ],
+   [
+    "C",
+    61791,
+    61860
+   ],
+   [
+    "D",
+    61861,
+    61886
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "UTAD (thất bại)",
+   "LPSY[C]",
+   "UTAD",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 25,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-06-15 12:17:00",
+  "end": "2026-06-15 20:52:00",
+  "bars": 515,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_25.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_25.md",
+  "phases": [
+   [
+    "A",
+    62804,
+    62969
+   ],
+   [
+    "B",
+    62970,
+    63123
+   ],
+   [
+    "C",
+    63124,
+    63147
+   ],
+   [
+    "B",
+    63148,
+    63148
+   ],
+   [
+    "C",
+    63149,
+    63269
+   ],
+   [
+    "B",
+    63270,
+    63293
+   ],
+   [
+    "D",
+    63294,
+    63319
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Spring (thất bại)",
+   "LPS[C]",
+   "Shakeout (thất bại)",
+   "LPS[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 26,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-06-16 13:22:00",
+  "end": "2026-06-16 14:29:00",
+  "bars": 67,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_26.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_26.md",
+  "phases": [
+   [
+    "A",
+    64247,
+    64288
+   ],
+   [
+    "B",
+    64289,
+    64300
+   ],
+   [
+    "C",
+    64301,
+    64312
+   ],
+   [
+    "D",
+    64313,
+    64313
+   ],
+   [
+    "E",
+    64314,
+    64314
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 27,
+  "kind": "RE-ACC",
+  "kind_vn": "Tái tích lũy",
+  "start": "2026-06-21 23:04:00",
+  "end": "2026-06-22 00:51:00",
+  "bars": 107,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_27.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_27.md",
+  "phases": [
+   [
+    "A",
+    68663,
+    68720
+   ],
+   [
+    "B",
+    68721,
+    68738
+   ],
+   [
+    "C",
+    68739,
+    68749
+   ],
+   [
+    "D",
+    68750,
+    68769
+   ],
+   [
+    "E",
+    68770,
+    68770
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "LPS[C]",
+   "SOS",
+   "LPS[D]"
+  ]
+ },
+ {
+  "idx": 28,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-06-23 00:22:00",
+  "end": "2026-06-23 02:15:00",
+  "bars": 113,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_28.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_28.md",
+  "phases": [
+   [
+    "A",
+    70115,
+    70159
+   ],
+   [
+    "B",
+    70160,
+    70173
+   ],
+   [
+    "C",
+    70174,
+    70186
+   ],
+   [
+    "B",
+    70187,
+    70202
+   ],
+   [
+    "D",
+    70203,
+    70227
+   ],
+   [
+    "E",
+    70228,
+    70228
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Shakeout (thất bại)",
+   "LPS[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 29,
+  "kind": "RE-ACC",
+  "kind_vn": "Tái tích lũy",
+  "start": "2026-06-25 12:30:00",
+  "end": "2026-06-25 16:30:00",
+  "bars": 240,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_29.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_29.md",
+  "phases": [
+   [
+    "A",
+    73601,
+    73644
+   ],
+   [
+    "B",
+    73645,
+    73652
+   ],
+   [
+    "C",
+    73653,
+    73773
+   ],
+   [
+    "B",
+    73774,
+    73815
+   ],
+   [
+    "D",
+    73816,
+    73841
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "UTAD (thất bại)",
+   "SOS",
+   "LPS[D]"
+  ]
+ },
+ {
+  "idx": 30,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-06-30 00:06:00",
+  "end": "2026-06-30 01:08:00",
+  "bars": 62,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_30.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_30.md",
+  "phases": [
+   [
+    "A",
+    76992,
+    77042
+   ],
+   [
+    "B",
+    77043,
+    77049
+   ],
+   [
+    "C",
+    77050,
+    77052
+   ],
+   [
+    "D",
+    77053,
+    77053
+   ],
+   [
+    "E",
+    77054,
+    77054
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 31,
+  "kind": "ACC",
+  "kind_vn": "Tích lũy",
+  "start": "2026-06-30 12:56:00",
+  "end": "2026-06-30 14:23:00",
+  "bars": 87,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_31.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_31.md",
+  "phases": [
+   [
+    "A",
+    77762,
+    77803
+   ],
+   [
+    "B",
+    77804,
+    77825
+   ],
+   [
+    "C",
+    77826,
+    77841
+   ],
+   [
+    "D",
+    77842,
+    77848
+   ],
+   [
+    "E",
+    77849,
+    77849
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "LPS[C]",
+   "SOS"
+  ]
+ },
+ {
+  "idx": 32,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-07-02 12:30:00",
+  "end": "2026-07-02 16:59:00",
+  "bars": 269,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_32.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_32.md",
+  "phases": [
+   [
+    "A",
+    80493,
+    80537
+   ],
+   [
+    "B",
+    80538,
+    80572
+   ],
+   [
+    "C",
+    80573,
+    80693
+   ],
+   [
+    "B",
+    80694,
+    80702
+   ],
+   [
+    "C",
+    80703,
+    80736
+   ],
+   [
+    "D",
+    80737,
+    80762
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR (yếu)",
+   "ST[A]",
+   "UTAD (thất bại)",
+   "UTAD",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 33,
+  "kind": "ACC",
+  "kind_vn": "Tích lũy",
+  "start": "2026-07-06 12:41:00",
+  "end": "2026-07-06 18:23:00",
+  "bars": 342,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_33.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_33.md",
+  "phases": [
+   [
+    "A",
+    83019,
+    83084
+   ],
+   [
+    "B",
+    83085,
+    83141
+   ],
+   [
+    "C",
+    83142,
+    83262
+   ],
+   [
+    "B",
+    83263,
+    83335
+   ],
+   [
+    "D",
+    83336,
+    83361
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Spring (thất bại)",
+   "UA",
+   "SOS",
+   "LPS[D]"
+  ]
+ },
+ {
+  "idx": 34,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-07-07 12:09:00",
+  "end": "2026-07-07 16:18:00",
+  "bars": 249,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_34.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_34.md",
+  "phases": [
+   [
+    "A",
+    84353,
+    84482
+   ],
+   [
+    "B",
+    84483,
+    84531
+   ],
+   [
+    "C",
+    84532,
+    84576
+   ],
+   [
+    "D",
+    84577,
+    84602
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "DA",
+   "LPSY[C]",
+   "SOW",
+   "LPSY[D]"
+  ]
+ },
+ {
+  "idx": 35,
+  "kind": "ACC",
+  "kind_vn": "Tích lũy",
+  "start": "2026-07-07 19:15:00",
+  "end": "2026-07-08 04:06:00",
+  "bars": 470,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_35.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_35.md",
+  "phases": [
+   [
+    "A",
+    84779,
+    84847
+   ],
+   [
+    "B",
+    84848,
+    84884
+   ],
+   [
+    "C",
+    84885,
+    85005
+   ],
+   [
+    "B",
+    85006,
+    85223
+   ],
+   [
+    "D",
+    85224,
+    85249
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Spring (thất bại)",
+   "UA",
+   "SOS"
+  ]
+ },
+ {
+  "idx": 36,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-07-08 07:05:00",
+  "end": "2026-07-08 08:37:00",
+  "bars": 92,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_36.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_36.md",
+  "phases": [
+   [
+    "A",
+    85428,
+    85484
+   ],
+   [
+    "B",
+    85485,
+    85502
+   ],
+   [
+    "C",
+    85503,
+    85518
+   ],
+   [
+    "D",
+    85519,
+    85519
+   ],
+   [
+    "E",
+    85520,
+    85520
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 37,
+  "kind": "ACC",
+  "kind_vn": "Tích lũy",
+  "start": "2026-07-09 00:54:00",
+  "end": "2026-07-09 02:43:00",
+  "bars": 109,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_37.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_37.md",
+  "phases": [
+   [
+    "A",
+    86435,
+    86482
+   ],
+   [
+    "B",
+    86483,
+    86494
+   ],
+   [
+    "C",
+    86495,
+    86518
+   ],
+   [
+    "D",
+    86519,
+    86544
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Spring",
+   "SOS"
+  ]
+ },
+ {
+  "idx": 38,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-07-10 01:00:00",
+  "end": "2026-07-10 08:49:00",
+  "bars": 469,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_38.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_38.md",
+  "phases": [
+   [
+    "A",
+    87812,
+    87869
+   ],
+   [
+    "B",
+    87870,
+    87931
+   ],
+   [
+    "C",
+    87932,
+    87938
+   ],
+   [
+    "B",
+    87939,
+    87939
+   ],
+   [
+    "C",
+    87940,
+    88060
+   ],
+   [
+    "B",
+    88061,
+    88255
+   ],
+   [
+    "D",
+    88256,
+    88280
+   ],
+   [
+    "E",
+    88281,
+    88281
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "UTAD (thất bại)",
+   "LPSY[C]",
+   "UTAD (thất bại)",
+   "DA",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 39,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-07-12 22:40:00",
+  "end": "2026-07-13 03:42:00",
+  "bars": 301,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_39.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_39.md",
+  "phases": [
+   [
+    "A",
+    89052,
+    89149
+   ],
+   [
+    "B",
+    89150,
+    89164
+   ],
+   [
+    "C",
+    89165,
+    89285
+   ],
+   [
+    "B",
+    89286,
+    89327
+   ],
+   [
+    "D",
+    89328,
+    89353
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Shakeout (thất bại)",
+   "SOW",
+   "LPSY[D]"
+  ]
+ },
+ {
+  "idx": 40,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-07-14 12:30:00",
+  "end": "2026-07-14 16:32:00",
+  "bars": 242,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_40.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_40.md",
+  "phases": [
+   [
+    "A",
+    91255,
+    91452
+   ],
+   [
+    "B",
+    91453,
+    91462
+   ],
+   [
+    "C",
+    91463,
+    91471
+   ],
+   [
+    "D",
+    91472,
+    91497
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "DA",
+   "LPSY[C]",
+   "SOW",
+   "LPSY[D]"
+  ]
+ },
+ {
+  "idx": 41,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-07-15 18:29:00",
+  "end": "2026-07-16 01:56:00",
+  "bars": 387,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_41.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_41.md",
+  "phases": [
+   [
+    "A",
+    92994,
+    93111
+   ],
+   [
+    "B",
+    93112,
+    93299
+   ],
+   [
+    "C",
+    93300,
+    93355
+   ],
+   [
+    "D",
+    93356,
+    93381
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 42,
+  "kind": "DIST",
+  "kind_vn": "Phân phối",
+  "start": "2026-07-16 11:46:00",
+  "end": "2026-07-16 13:04:00",
+  "bars": 78,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_42.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_42.md",
+  "phases": [
+   [
+    "A",
+    93970,
+    94014
+   ],
+   [
+    "B",
+    94015,
+    94030
+   ],
+   [
+    "C",
+    94031,
+    94046
+   ],
+   [
+    "D",
+    94047,
+    94047
+   ],
+   [
+    "E",
+    94048,
+    94048
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 43,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-07-16 13:04:00",
+  "end": "2026-07-17 13:48:00",
+  "bars": 1423,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_43.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_43.md",
+  "phases": [
+   [
+    "A",
+    94048,
+    94089
+   ],
+   [
+    "B",
+    94090,
+    94441
+   ],
+   [
+    "C",
+    94442,
+    94562
+   ],
+   [
+    "B",
+    94563,
+    94567
+   ],
+   [
+    "C",
+    94568,
+    94688
+   ],
+   [
+    "B",
+    94689,
+    94800
+   ],
+   [
+    "C",
+    94801,
+    94921
+   ],
+   [
+    "B",
+    94922,
+    95445
+   ],
+   [
+    "D",
+    95446,
+    95471
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "UA",
+   "Spring (thất bại)",
+   "Shakeout (thất bại)",
+   "Shakeout (thất bại)",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 44,
+  "kind": "RE-ACC",
+  "kind_vn": "Tái tích lũy",
+  "start": "2026-07-17 13:39:00",
+  "end": "2026-07-17 15:53:00",
+  "bars": 134,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_44.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_44.md",
+  "phases": [
+   [
+    "A",
+    95462,
+    95503
+   ],
+   [
+    "B",
+    95504,
+    95537
+   ],
+   [
+    "C",
+    95538,
+    95570
+   ],
+   [
+    "D",
+    95571,
+    95595
+   ],
+   [
+    "E",
+    95596,
+    95596
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "LPS[C]",
+   "SOS"
+  ]
+ },
+ {
+  "idx": 45,
+  "kind": "RE-ACC",
+  "kind_vn": "Tái tích lũy",
+  "start": "2026-07-22 12:20:00",
+  "end": "2026-07-22 14:01:00",
+  "bars": 101,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_45.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_45.md",
+  "phases": [
+   [
+    "A",
+    99513,
+    99554
+   ],
+   [
+    "B",
+    99555,
+    99581
+   ],
+   [
+    "C",
+    99582,
+    99597
+   ],
+   [
+    "D",
+    99598,
+    99613
+   ],
+   [
+    "E",
+    99614,
+    99614
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "LPS[C]",
+   "SOS"
+  ]
+ },
+ {
+  "idx": 46,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-07-22 22:00:00",
+  "end": "2026-07-23 13:46:00",
+  "bars": 945,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_46.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_46.md",
+  "phases": [
+   [
+    "A",
+    100033,
+    100278
+   ],
+   [
+    "B",
+    100279,
+    100895
+   ],
+   [
+    "C",
+    100896,
+    100907
+   ],
+   [
+    "B",
+    100908,
+    100908
+   ],
+   [
+    "C",
+    100909,
+    100930
+   ],
+   [
+    "B",
+    100931,
+    100952
+   ],
+   [
+    "D",
+    100953,
+    100978
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Spring (thất bại)",
+   "LPS[C]",
+   "Spring (thất bại)",
+   "LPS[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 47,
+  "kind": "RE-DIST",
+  "kind_vn": "Tái phân phối",
+  "start": "2026-07-24 00:14:00",
+  "end": "2026-07-24 02:50:00",
+  "bars": 156,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_47.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_47.md",
+  "phases": [
+   [
+    "A",
+    101538,
+    101588
+   ],
+   [
+    "B",
+    101589,
+    101671
+   ],
+   [
+    "C",
+    101672,
+    101692
+   ],
+   [
+    "D",
+    101693,
+    101693
+   ],
+   [
+    "E",
+    101694,
+    101694
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "LPSY[C]",
+   "SOW"
+  ]
+ },
+ {
+  "idx": 48,
+  "kind": "RE-ACC",
+  "kind_vn": "Tái tích lũy",
+  "start": "2026-07-24 13:58:00",
+  "end": "2026-07-24 15:47:00",
+  "bars": 109,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_48.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_48.md",
+  "phases": [
+   [
+    "A",
+    102360,
+    102403
+   ],
+   [
+    "B",
+    102404,
+    102428
+   ],
+   [
+    "C",
+    102429,
+    102443
+   ],
+   [
+    "D",
+    102444,
+    102468
+   ],
+   [
+    "E",
+    102469,
+    102469
+   ]
+  ],
+  "events": [
+   "BCLX",
+   "AR",
+   "ST[A]",
+   "LPS[C]",
+   "SOS",
+   "LPS[D]"
+  ]
+ },
+ {
+  "idx": 49,
+  "kind": "ACC?",
+  "kind_vn": "Chưa rõ (SC)",
+  "start": "2026-07-27 12:19:00",
+  "end": "2026-07-27 15:56:00",
+  "bars": 217,
+  "png": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_49.png",
+  "md": "/home/asl86/Documents/footprint-tpo/quantower-entry-signal/research/wyckoff/grading/range_49.md",
+  "phases": [
+   [
+    "A",
+    103639,
+    103690
+   ],
+   [
+    "B",
+    103691,
+    103711
+   ],
+   [
+    "C",
+    103712,
+    103832
+   ],
+   [
+    "B",
+    103833,
+    103856
+   ]
+  ],
+  "events": [
+   "SC",
+   "AR",
+   "ST[A]",
+   "Shakeout (thất bại)",
+   "LPS[C]"
+  ]
+ }
+]

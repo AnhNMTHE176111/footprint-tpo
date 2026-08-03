@@ -235,7 +235,7 @@ canvas{display:block;width:100%;height:100%}
       <label><input type="checkbox" id="cbOnly"> Chỉ range đang chọn</label>
       <label><input type="checkbox" id="cbVol" checked> Khối lượng</label>
       <label><input type="checkbox" id="cbDrop"> Vẽ cả ứng viên bị bỏ (xám)</label>
-      <label><input type="checkbox" id="cbNoST" checked> Ẩn nhãn UA/UT/DA (đỡ rối)</label>
+      <label><input type="checkbox" id="cbNoST" checked> Ẩn nhãn UA/UT/DA + mSOS/mSOW (đỡ rối)</label>
       <button id="btnAll">Xem cả tháng</button>
     </div>
     <div id="tabs">
@@ -276,10 +276,12 @@ const C_KIND = {'ACC':'#4CAF50','RE-ACC':'#8BC34A','DIST':'#E53935','RE-DIST':'#
 function kcol(k){ return C_KIND[k] || '#78909C'; }
 const CAT = {
   climax:'#FF5252', ar:'#81C784', st:'#B0BEC5', shake:'#FFCA28',
-  break:'#42A5F5', lpsc:'#26C6A8', lpsd:'#BA68C8'
+  break:'#42A5F5', lpsc:'#26C6A8', lpsd:'#BA68C8', minor:'#FFA726'
 };
 const CAT_VN = [['climax','SC / BCLX — cao trào'],['ar','AR / ST[A] — bật ngược, chốt Phase A'],
-  ['st','UA / UT / DA — test nhẹ, chỉ nới biên phụ'],['shake','Spring / Shakeout / UTAD — cú rũ (Phase C)'],
+  ['st','UA / UT / DA — test nhẹ, chỉ nới biên phụ'],
+  ['minor','mSOS / mSOW — cú phá THẤT BẠI (minor), vẫn thuộc Phase B'],
+  ['shake','Spring / Shakeout / UTAD — cú rũ (Phase C)'],
   ['break','SOS / SOW — phá vỡ'],['lpsc','LPS[C] / LPSY[C] — test cuối trước phá vỡ'],
   ['lpsd','LPS[D] / LPSY[D] — hồi retest sau phá vỡ']];
 function catOf(lbl){
@@ -287,6 +289,7 @@ function catOf(lbl){
   if (b==='SC'||b==='BCLX') return 'climax';
   if (b==='AR' || b==='ST[A]') return 'ar';   // ST[A] thuộc Phase A, đọc chung màu với AR
   if (b==='ST'||b==='UA'||b==='DA'||b==='UT') return 'st';
+  if (b==='mSOS'||b==='mSOW') return 'minor';
   if (b==='Spring'||b==='Shakeout'||b==='UTAD') return 'shake';
   if (b==='SOS'||b==='SOW') return 'break';
   if (b==='LPS[C]'||b==='LPSY[C]') return 'lpsc';
@@ -516,8 +519,8 @@ function drawWyckoff(pl, ph, X, Y, a, b){
       ctx.strokeStyle = '#fff'; ctx.lineWidth = ev.st==='confirmed' ? 2 : 1;
       ctx.setLineDash(ev.st==='pending' ? [2,2] : []);
       ctx.stroke(); ctx.setLineDash([]);
-      if (showEv && (!dim || isSel) && !(noST && cat==='st')){
-        const above = cat==='ar'||cat==='st'||cat==='break';
+      if (showEv && (!dim || isSel) && !(noST && (cat==='st'||cat==='minor'))){
+        const above = cat==='ar'||cat==='st'||cat==='break'||cat==='minor';
         labelBox(xe-9, above ? ye-24 : ye+8, ev.l, cc);
       }
     }

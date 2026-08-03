@@ -4,10 +4,11 @@
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ENGINE="$HERE/../quantower-tpo-suite/ProfileEngine.cs"
+UIKIT="$HERE/UiKit.cs"
 SRC="$HERE/RunnerSignal.cs"
 QW="$HOME/quantower-libs/qw-build.sh"
 TMP="$(mktemp -d)"
-cat "$ENGINE" "$SRC" > "$TMP/RunnerSignal.cs"
+cat "$ENGINE" "$UIKIT" "$SRC" > "$TMP/RunnerSignal.cs"
 bash "$QW" "$TMP/RunnerSignal.cs" RunnerSignal
 mkdir -p "$HERE/dist"
 cp "$TMP/dist/RunnerSignal.dll" "$HERE/dist/RunnerSignal.dll"

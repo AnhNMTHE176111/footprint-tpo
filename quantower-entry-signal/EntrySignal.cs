@@ -159,8 +159,18 @@ namespace EntrySignal
         public bool ShowAllHistory { get; set; } = true;
         [InputParameter("(nếu tắt) số nến hiển thị gần nhất", 87, 50, 20000, 50, 0)]
         public int DisplayBars { get; set; } = 600;
-        [InputParameter("Số dòng tối đa trong bảng", 88, 2, 20, 1, 0)]
-        public int PanelRows { get; set; } = 4;
+        [InputParameter("Số dòng danh sách LỆNH (cuộn được)", 88, 2, 30, 1, 0)]
+        public int PanelRows { get; set; } = 5;
+        [InputParameter("Số dòng danh sách VÙNG HỢP LƯU", 115, 2, 20, 1, 0)]
+        public int ZoneListRows { get; set; } = 4;
+        [InputParameter("Bề rộng bảng (px)", 116, 300, 1400, 20, 0)]
+        public int PanelWidth { get; set; } = 700;
+        [InputParameter("Bấm 1 dòng = nhảy chart tới đó", 117)]
+        public bool ClickToNavigate { get; set; } = true;
+        [InputParameter("Nhảy chart: tự zoom vừa đối tượng", 118)]
+        public bool NavZoomFit { get; set; } = true;
+        [InputParameter("Nháy đúp dòng LỆNH = kính lúp (vẽ lại lệnh trong cửa sổ riêng)", 119)]
+        public bool TradeInspector { get; set; } = true;
         [InputParameter("Góc bảng (0=TL 1=TR 2=BL 3=BR)", 84, 0, 3, 1, 0)]
         public int PanelCorner { get; set; } = 0;
         [InputParameter("Cỡ chữ", 85, 7, 20, 1, 0)]
@@ -270,7 +280,11 @@ namespace EntrySignal
         private int _lastN = -1;
         private int _vaCov, _vaTot;          // số nến có footprint (Δ) / tổng nến → báo vùng quét thực tế
         private DateTime _vaFirst = DateTime.MinValue;
-        private readonly PanelDrag _drag = new();
+        private readonly UiPanel _ui = new(2);          // 0 = LỆNH, 1 = VÙNG HỢP LƯU
+        private readonly UiNav _nav = new();            // vòng lặp kín canh chart sau khi bấm dòng
+        private readonly UiMiniChart _ins = new();      // kính lúp
+        private string _inspectKey;                     // lệnh đang mở kính lúp (null = đóng)
+        private bool _apiDumped;
 
         // ---- cầu nối MT5 ----
         private bool _mt5Armed;                                 // false = lần quét đầu (nạp lịch sử) → KHÔNG gửi
@@ -304,7 +318,7 @@ namespace EntrySignal
         }
         protected override void OnClear()
         {
-            _drag.Detach();
+            _ui.Detach(); _nav.Cancel(); _inspectKey = null;
             lock (_calc)
             {
                 _vaLoaded = false; _lastN = -1; lock (_sync) _render = null;
@@ -386,6 +400,7 @@ namespace EntrySignal
         private sealed class Sig
         {
             public int Idx; public DateTime Time; public int Side;
+            public int HdIdx = -1, OutHd = -1;   // chỉ số HistoricalData của nến VÀO và nến ĐÓNG (bảng + kính lúp)
             public string Scen; public char Grade; public double Entry, Sl, Tp1, Tp2, RiskT, Rr2;
             public int Confl;        // số vùng THỰC SỰ kích hoạt cùng setup (gộp trigger)
             public int Cluster;      // số vùng NẰM TRONG cụm quanh giá vào (confluence "mắt nhìn") — dùng để lọc
@@ -414,7 +429,7 @@ namespace EntrySignal
 
                     var pool = BuildPool(hd, B);
                     var sigs = Scan(hd, B, pool);
-                    foreach (var s in sigs) Simulate(B, s);
+                    foreach (var s in sigs) { Simulate(B, s); s.HdIdx = B[s.Idx].HdIdx; }
 
                     if (Mt5Bridge) EmitMt5(sigs, B);
                     if (TeleAlerts) EmitTele(sigs, B);
@@ -428,7 +443,11 @@ namespace EntrySignal
                     double now = B[B.Count - 1].C;
                     var clusters = CurrentClusters(pool, B[B.Count - 1].Time, now);
 
-                    lock (_sync) _render = new RenderState { Sigs = show, Clusters = clusters, Panel = BuildPanel(show, now), Digits = _digits };
+                    lock (_sync) _render = new RenderState
+                    {
+                        Sigs = show, Clusters = clusters, Panel = BuildPanel(show, now), Digits = _digits,
+                        EntryRows = BuildEntryRows(show), ZoneRows = BuildZoneRows(clusters, now),
+                    };
                     _lastN = n;
                     _lastError = null;
                 }
@@ -890,10 +909,10 @@ namespace EntrySignal
                 var b = B[j];
                 bool hitSL = s.Side > 0 ? b.L <= s.Sl : b.H >= s.Sl;
                 bool hitTP = s.Side > 0 ? b.H >= s.Tp1 : b.L <= s.Tp1;
-                if (hitSL) { s.Outcome = "SL"; s.OutTime = b.Time; return; }
-                if (hitTP) { s.Outcome = "TP"; s.OutTime = b.Time; return; }
+                if (hitSL) { s.Outcome = "SL"; s.OutTime = b.Time; s.OutHd = b.HdIdx; return; }
+                if (hitTP) { s.Outcome = "TP"; s.OutTime = b.Time; s.OutHd = b.HdIdx; return; }
             }
-            s.Outcome = "running"; s.OutTime = B[B.Count - 1].Time;
+            s.Outcome = "running"; s.OutTime = B[B.Count - 1].Time; s.OutHd = B[B.Count - 1].HdIdx;
         }
 
         // ================= CẦU NỐI MT5 + TELEGRAM =================
@@ -1225,22 +1244,6 @@ namespace EntrySignal
             // cảnh báo vùng quét thực tế: nến cũ hơn _vaFirst chưa có footprint → không bắn được
             if (_vaTot > 0 && _vaCov < (int)(_vaTot * 0.98) && _vaFirst != DateTime.MinValue)
                 p.Add(($"⚠ footprint chỉ có {_vaCov}/{_vaTot} nến (từ {_vaFirst:dd/MM HH:mm}) — tăng số bar tính Volume Analysis để thấy lịch sử xa hơn", Color.FromArgb(255, 190, 120)));
-            var recent = pool.OrderByDescending(s => s.Idx).Take(Math.Max(2, PanelRows)).ToList();
-            if (recent.Count == 0)
-            {
-                p.Add(("(chưa có setup hợp lưu ≥2)", Color.Gray));
-                if (!string.IsNullOrEmpty(_lastError))
-                    p.Add(($"⚠ lần quét trước LỖI (đang hiện dữ liệu cũ): {_lastError}", Color.FromArgb(255, 160, 120)));
-                return p;
-            }
-            foreach (var s in recent)
-            {
-                Color col = s.Side > 0 ? LongColor : ShortColor;
-                string dir = s.Side > 0 ? "LONG" : "SHORT";
-                string oc = s.Outcome == "TP" ? "✓" : s.Outcome == "SL" ? "✗" : "•";
-                p.Add(($"{oc} {dir} {s.Grade} {s.Scen} | E {Fmt(s.Entry)} SL {Fmt(s.Sl)} ({s.RiskT * _tick:0.0}đ) TP {Fmt(s.Tp1)}→{Fmt(s.Tp2)} ({s.Rr2:0.0}R)", col));
-                p.Add(($"    hợp lưu ×{s.Cluster} · {string.Join(" · ", s.Why)}", Color.Silver));
-            }
             if (TrendFilter) p.Add(("↕ lọc thuận xu hướng: BẬT", Color.FromArgb(180, 200, 160)));
             if (Mt5Bridge)
                 p.Add((("⇄ MT5: " + (_mt5Status ?? "chờ tín hiệu…")), Color.FromArgb(255, 200, 120)));
@@ -1250,15 +1253,67 @@ namespace EntrySignal
                 p.Add(($"💾 CSV: {_exportedTo}", Color.FromArgb(150, 220, 150)));
             if (!string.IsNullOrEmpty(_lastError))
                 p.Add(($"⚠ lần quét trước LỖI (đang hiện dữ liệu cũ): {_lastError}", Color.FromArgb(255, 160, 120)));
+            if (ClickToNavigate || TradeInspector)
+                p.Add(("🧭 Bấm 1 dòng = nhảy chart tới đó" + (TradeInspector ? " · nháy đúp dòng LỆNH = kính lúp" : "") + " · " + ChartNav.Status,
+                       Color.FromArgb(170, 195, 225)));
             return p;
         }
+
+        // ---- danh sách LỆNH (mỗi lệnh = 1 dòng chính + 1 dòng phụ "vì sao"), mới nhất lên đầu ----
+        private List<UiRow> BuildEntryRows(List<Sig> sigs)
+        {
+            var rows = new List<UiRow>();
+            if (sigs == null) return rows;
+            foreach (var s in sigs.Where(z => !OnlyAGrade || z.Grade == 'A').OrderByDescending(z => z.Idx))
+            {
+                Color col = s.Side > 0 ? LongColor : ShortColor;
+                string dir = s.Side > 0 ? "LONG" : "SHORT";
+                string oc = s.Outcome == "TP" ? "✓" : s.Outcome == "SL" ? "✗" : "•";
+                rows.Add(new UiRow
+                {
+                    Key = SigKey(s),
+                    L1 = $"{oc} {s.Time.AddHours(TzOffset):dd/MM HH:mm} {dir} {s.Grade} {s.Scen} · E {Fmt(s.Entry)} SL {Fmt(s.Sl)} ({s.RiskT * _tick:0.0}đ) TP {Fmt(s.Tp1)} ({s.Rr2:0.0}R)",
+                    L2 = $"     hợp lưu ×{s.Cluster} · {string.Join(" · ", s.Why)}",
+                    C1 = col, C2 = Color.Silver,
+                    NavIdx = s.HdIdx, NavPrice = s.Entry,
+                    NavSpan = s.OutHd > s.HdIdx ? s.OutHd - s.HdIdx + 1 : 0,
+                });
+            }
+            return rows;
+        }
+
+        // ---- danh sách VÙNG HỢP LƯU đang hiệu lực (bấm = làm nổi vùng đó trên chart) ----
+        private List<UiRow> BuildZoneRows(List<(double price, double strength, int side)> zones, double now)
+        {
+            var rows = new List<UiRow>();
+            if (zones == null) return rows;
+            foreach (var (price, strength, side) in zones.OrderBy(z => Math.Abs(z.price - now)))
+                rows.Add(new UiRow
+                {
+                    Key = ZoneKey(price),
+                    L1 = $"⬥ HỢP LƯU {Fmt(price)} · {(side > 0 ? "dưới giá (hỗ trợ)" : "trên giá (kháng cự)")} · cách {Math.Abs(price - now):0.0} giá",
+                    L2 = $"     độ mạnh {strength:0} · giá hiện tại {Fmt(now)}",
+                    C1 = ConflColor, C2 = Color.FromArgb(190, 190, 190),
+                    NavIdx = -1, NavPrice = price,
+                });
+            return rows;
+        }
+
+        private static string SigKey(Sig s) => "S" + s.HdIdx + (s.Side > 0 ? "L" : "S");
+        private string ZoneKey(double price) => "Z" + Math.Round(price, 4).ToString("0.0###");
 
         // ================= RENDER =================
         public override void OnPaintChart(PaintChartEventArgs args)
         {
             base.OnPaintChart(args);
             if (CurrentChart == null) return;   // KHÔNG chặn theo _vaLoaded: _render==null bên dưới đã đủ (xem fix mất panel ở OnUpdate)
-            _drag.Attach(CurrentChart);
+            if (_ui.OnActivate == null)
+            {
+                _ui.OnActivate = OnRowActivate;
+                _ui.OnClose = () => { _inspectKey = null; CurrentChart?.RedrawBuffer(); };
+            }
+            _ui.Attach(CurrentChart);
+            ChartNav.Discover(CurrentChart, DumpChartApi);
             var win = CurrentChart.Windows[args.WindowIndex];
             if (!win.IsMainWindow) return;
             RenderState rs; lock (_sync) rs = _render;
@@ -1272,11 +1327,17 @@ namespace EntrySignal
                 {
                     using var fZ = new Font("Segoe UI", 8, FontStyle.Bold);
                     using var penZ = new Pen(ConflColor, Math.Max(1, ZoneLineWidth)) { DashStyle = DashStyle.Dash, DashPattern = new[] { 6f, 4f } };
+                    using var penZs = new Pen(ConflColor, Math.Max(1, ZoneLineWidth) + 2f);
+                    string selZone = _ui.SelKeyOf(1);
                     foreach (var (price, strength, side) in rs.Clusters)
                     {
                         float y = (float)conv.GetChartY(price);
                         if (y < clip.Top || y > clip.Bottom) continue;
-                        gr.DrawLine(penZ, clip.Left, y, clip.Right, y);
+                        bool selZ = selZone != null && selZone == ZoneKey(price);
+                        if (selZ)   // vùng ĐANG CHỌN trong bảng: dải nền mờ + đường dày để thấy ngay
+                            using (var bz = new SolidBrush(Color.FromArgb(45, ConflColor)))
+                                gr.FillRectangle(bz, clip.Left, y - 5, clip.Width, 10);
+                        gr.DrawLine(selZ ? penZs : penZ, clip.Left, y, clip.Right, y);
                         Chip(gr, fZ, clip.Left + 2, y, "⬥ HỢP LƯU " + price.ToString("0.0##"), ConflColor, false);
                     }
                 }
@@ -1285,6 +1346,7 @@ namespace EntrySignal
                     using var fLbl = new Font("Consolas", Math.Max(8, FontSize), FontStyle.Bold);
                     using var fChip = new Font("Consolas", Math.Max(8, FontSize), FontStyle.Bold);
                     var dash = DashedSlTp ? DashStyle.Dash : DashStyle.Solid;
+                    string selSig = _ui.SelKeyOf(0);
                     foreach (var s in rs.Sigs)
                     {
                         if (OnlyAGrade && s.Grade != 'A') continue;
@@ -1327,6 +1389,14 @@ namespace EntrySignal
                             using (var bd = new SolidBrush(active ? dir : Color.FromArgb(210, dir))) gr.FillEllipse(bd, xE - 4.5f, yE - 4.5f, 9, 9);
                             using (var pw = new Pen(Color.FromArgb(active ? 255 : 190, Color.White), 1.4f)) gr.DrawEllipse(pw, xE - 4.5f, yE - 4.5f, 9, 9);
                         }
+                        // lệnh ĐANG CHỌN trong bảng: vạch dọc + vòng tròn to để tìm thấy ngay sau khi nhảy chart
+                        if (selSig != null && selSig == SigKey(s))
+                        {
+                            using (var pSel = new Pen(Color.FromArgb(220, 255, 235, 130), 1.4f) { DashStyle = DashStyle.Dot })
+                                gr.DrawLine(pSel, xE, clip.Top, xE, clip.Bottom);
+                            using (var pSel2 = new Pen(Color.FromArgb(235, 255, 235, 130), 2f))
+                                gr.DrawEllipse(pSel2, xE - 10f, yE - 10f, 20, 20);
+                        }
                         if (ShowArrows) DrawArrow(gr, xE, yE, s.Side, active ? dir : Color.FromArgb(180, dir), Math.Max(4, active ? ArrowSize : ArrowSize - 2));
 
                         if (ShowLabels)
@@ -1348,17 +1418,127 @@ namespace EntrySignal
                         }
                     }
                 }
+                // KÍNH LÚP vẽ TRƯỚC bảng để bảng luôn nằm trên cùng (bảng là thứ đang thao tác).
+                _ui.CloseBox = RectangleF.Empty;
+                if (_inspectKey != null && rs.Sigs != null)
+                {
+                    var sIns = rs.Sigs.FirstOrDefault(z => SigKey(z) == _inspectKey);
+                    if (sIns == null) _inspectKey = null; else DrawTradeInspector(gr, sIns, clip);
+                }
                 if (ShowPanel && rs.Panel != null && rs.Panel.Count > 0)
                 {
-                    // PanelDrag.Draw lo trọn nền/viền/chữ + NÚT THU GỌN góc trên-phải (bấm ▾/▸ để
-                    // gập còn mỗi dòng tiêu đề). Trước đây EntrySignal tự vẽ tay nên thiếu nút này,
-                    // dù PanelDrag đã hỗ trợ sẵn — nay dùng chung đường vẽ với TPO suite.
+                    // Bảng tương tác dùng chung với RunnerSignal/WyckoffRunner (UiKit.cs): header thống kê
+                    // + 2 danh sách cuộn được (LỆNH, VÙNG HỢP LƯU), hover đổi nền, bấm = nhảy chart.
                     using var f = new Font("Consolas", FontSize, FontStyle.Regular);
-                    _drag.Draw(gr, f, rs.Panel, Math.Clamp(PanelOpacity, 100, 255), PanelCorner, clip);
+                    using var fb = new Font("Consolas", FontSize, FontStyle.Bold);
+                    var se = _ui.Sec(0); se.Title = "LỆNH"; se.Vis = Math.Max(2, PanelRows); se.Empty = "(chưa có setup hợp lưu ≥2)";
+                    se.Hint = TradeInspector ? "bấm = nhảy · nháy đúp = kính lúp" : (ClickToNavigate ? "bấm = nhảy chart" : "");
+                    se.Rows = rs.EntryRows ?? new List<UiRow>();
+                    var sz = _ui.Sec(1); sz.Title = "VÙNG HỢP LƯU"; sz.Vis = Math.Max(2, ZoneListRows); sz.Empty = "(chưa có vùng hợp lưu nào hiệu lực)";
+                    sz.Hint = "bấm = làm nổi trên chart";
+                    sz.Rows = rs.ZoneRows ?? new List<UiRow>();
+                    _ui.Draw(gr, f, fb, rs.Panel, Math.Clamp(PanelOpacity, 100, 255), PanelCorner, clip, PanelWidth);
                 }
+                else _ui.Hide();
+                _nav.Step(CurrentChart, conv, clip, ex => LogErr(ex, "UiNav.Step"));   // canh vị trí sau khi bấm dòng
             }
             catch { /* nuốt lỗi vẽ, giữ chuỗi paint sống */ }
             finally { gr.SetClip(prevClip); }
+        }
+
+        // ================= BẤM 1 DÒNG → NHẢY CHART / KÍNH LÚP =================
+        // Gọi từ UiPanel (UI thread). Chỉ ĐẶT yêu cầu; việc canh chính xác do UiNav.Step làm dần qua các
+        // khung hình vẽ (không biết chắc đơn vị RightOffset — xem ChartNav trong UiKit.cs).
+        private void OnRowActivate(int section, UiRow row, bool dbl)
+        {
+            try
+            {
+                if (row == null) return;
+                if (section == 0 && dbl && TradeInspector)
+                {
+                    _inspectKey = _inspectKey == row.Key ? null : row.Key;
+                    CurrentChart?.RedrawBuffer();
+                    return;
+                }
+                if (section == 1) { CurrentChart?.RedrawBuffer(); return; }   // vùng = đường ngang, chỉ làm nổi
+                if (!ClickToNavigate || row.NavIdx < 0) return;
+                var hd = HistoricalData; var chart = CurrentChart;
+                if (hd == null || chart == null) return;
+                ChartNav.Discover(chart, DumpChartApi);
+                if (!ChartNav.CanScroll)
+                {
+                    // Không cuộn được chart → mở luôn kính lúp để vẫn xem được lệnh quá khứ.
+                    if (section == 0 && TradeInspector) _inspectKey = row.Key;
+                    chart.RedrawBuffer();
+                    return;
+                }
+                if (NavZoomFit && row.NavSpan > 5 && ChartNav.CanZoom)
+                {
+                    int wpx = Math.Max(200, chart.MainWindow.ClientRectangle.Width);
+                    ChartNav.SetBarsWidth(chart, (int)Math.Floor(wpx / (row.NavSpan * 1.35)));
+                }
+                int center = Math.Max(0, Math.Min(hd.Count - 1, row.NavIdx + row.NavSpan / 2));
+                if (hd[center, SeekOriginHistory.Begin] is not HistoryItemBar hb) return;
+                _nav.Request(chart, hb.TimeLeft);
+                chart.RedrawBuffer();
+            }
+            catch (Exception ex) { LogErr(ex, "OnRowActivate"); }
+        }
+
+        private void DumpChartApi(string text)
+        {
+            if (_apiDumped || string.IsNullOrEmpty(text)) return;
+            _apiDumped = true;
+            try
+            {
+                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EntrySignal");
+                Directory.CreateDirectory(dir);
+                File.WriteAllText(Path.Combine(dir, "chart_api.txt"), text);
+            }
+            catch { }
+        }
+
+        // ================= KÍNH LÚP LỆNH =================
+        // Vẽ lại đoạn nến quanh lệnh (vào → đóng) trong 1 hộp trên chart, kèm E/SL/TP. Cần vì Quantower
+        // không công bố API cuộn chart: nếu ChartNav không dò được thì đây là cách duy nhất soi lệnh cũ.
+        private void DrawTradeInspector(Graphics gr, Sig s, Rectangle clip)
+        {
+            var hd = HistoricalData;
+            if (hd == null || hd.Count < 3 || s.HdIdx < 0) return;
+            int endHd = s.OutHd > s.HdIdx ? Math.Min(hd.Count - 1, s.OutHd) : Math.Min(hd.Count - 1, s.HdIdx + 60);
+            int span = Math.Max(20, endHd - s.HdIdx + 1);
+            int pad = Math.Max(10, span / 4);
+            int from = Math.Max(0, s.HdIdx - pad), to = Math.Min(hd.Count - 1, endHd + pad);
+            if (!_ins.Load(hd, SigKey(s), from, to)) return;
+            double lo = Math.Min(Math.Min(s.Entry, s.Sl), s.Tp1), hi = Math.Max(Math.Max(s.Entry, s.Sl), s.Tp1);
+            _ins.PriceRange(ref lo, ref hi);
+            if (hi <= lo) return;
+
+            Color dir = s.Side > 0 ? LongColor : ShortColor;
+            using var fTitle = new Font("Segoe UI", 10, FontStyle.Bold);
+            using var fSmall = new Font("Segoe UI", 8, FontStyle.Regular);
+            using var fLbl = new Font("Consolas", Math.Max(8, FontSize), FontStyle.Bold);
+            string oc = s.Outcome == "TP" ? "✓ TP" : s.Outcome == "SL" ? "✗ SL" : "• đang chạy";
+            string title = $"🔍 {(s.Side > 0 ? "LONG" : "SHORT")} {s.Grade} {s.Scen} · {s.Time.AddHours(TzOffset):dd/MM HH:mm} · E {Fmt(s.Entry)} SL {Fmt(s.Sl)} TP {Fmt(s.Tp1)} ({s.Rr2:0.0}R) · {oc}";
+            if (!_ins.Draw(gr, clip, lo, hi, title, dir, fTitle, fSmall, TzOffset, Fmt, out var XI, out var YI)) return;
+            _ui.CloseBox = _ins.CloseBox;
+
+            var plot = _ins.Plot;
+            float xE = XI(s.HdIdx), xEnd = XI(endHd);
+            float yE = YI(s.Entry), ySL = YI(s.Sl), yTP = YI(s.Tp1);
+            using (var bt = new SolidBrush(Color.FromArgb(38, TpLineColor)))
+                gr.FillRectangle(bt, xE, Math.Min(yE, yTP), Math.Max(1, xEnd - xE), Math.Abs(yTP - yE));
+            using (var bs = new SolidBrush(Color.FromArgb(38, SlLineColor)))
+                gr.FillRectangle(bs, xE, Math.Min(yE, ySL), Math.Max(1, xEnd - xE), Math.Abs(ySL - yE));
+            using (var pt = new Pen(TpLineColor, 1.6f) { DashStyle = DashStyle.Dash }) gr.DrawLine(pt, plot.X, yTP, plot.Right, yTP);
+            using (var ps = new Pen(SlLineColor, 1.6f) { DashStyle = DashStyle.Dash }) gr.DrawLine(ps, plot.X, ySL, plot.Right, ySL);
+            using (var pe = new Pen(dir, 2f)) gr.DrawLine(pe, plot.X, yE, plot.Right, yE);
+            using (var pv = new Pen(Color.FromArgb(220, dir), 1.5f)) gr.DrawLine(pv, xE, plot.Y, xE, plot.Bottom);
+            using (var bd = new SolidBrush(dir)) gr.FillEllipse(bd, xE - 5f, yE - 5f, 10, 10);
+            using (var pw = new Pen(Color.White, 1.4f)) gr.DrawEllipse(pw, xE - 5f, yE - 5f, 10, 10);
+            LabelBox(gr, fLbl, xE + 8, s.Side > 0 ? yE + 8 : yE - 22, $"hợp lưu ×{s.Cluster} · " + string.Join(" · ", s.Why), dir);
+            gr.SetClip(clip);
+            _ins.DrawTimeAxis(gr, fSmall, TzOffset, "nháy đúp lại dòng trong bảng (hoặc ✕) để đóng");
         }
 
         // ---- helper vẽ ----
@@ -1408,6 +1588,7 @@ namespace EntrySignal
         {
             public List<Sig> Sigs;
             public List<(double price, double strength, int side)> Clusters;
+            public List<UiRow> EntryRows, ZoneRows;
             public List<(string text, Color col)> Panel;
             public int Digits;
         }

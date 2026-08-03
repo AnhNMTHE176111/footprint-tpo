@@ -112,15 +112,16 @@ def main():
         evs = [{'i': rel(ev['i']), 'p': q(ev['price']), 'l': ev['label'],
                 'st': ev['status'] or ''} for ev in r.events if i_from <= ev['i'] <= i_to]
         d = {
-            'k': 'ACC' if r.kind == 'ACC' else 'DIST',
+            'k': r.kind, 'kvn': r.kind_vn,
             's': rel(r.start_i), 'e': rel(e),
             'lo': q(r.low) if r.low is not None else q(B[r.start_i]['lo']),
             'hi': q(r.high) if r.high is not None else q(B[r.start_i]['hi']),
             'done': r.status == 'completed',
             'ph': phases, 'ev': evs,
-            # v3: biên CHÍNH (nét liền) = mức climax + mức AR; biên làm việc rộng hơn vẽ nét đứt
-            'cx': q(r.climax_price) if r.climax_price is not None else None,
-            'ar': q(r.ar_price) if r.ar_price is not None else None,
+            # v3/v4: biên CHÍNH (nét liền) = mức climax + mức AR, cố định sau Phase A;
+            # 'lo'/'hi' là biên PHỤ (nét đứt), chỉ vẽ khi thật sự rộng hơn biên chính.
+            'slo': q(r.solid_low) if r.solid_low is not None else None,
+            'shi': q(r.solid_high) if r.solid_high is not None else None,
         }
         if why:
             d['why'] = why
@@ -234,7 +235,7 @@ canvas{display:block;width:100%;height:100%}
       <label><input type="checkbox" id="cbOnly"> Chỉ range đang chọn</label>
       <label><input type="checkbox" id="cbVol" checked> Khối lượng</label>
       <label><input type="checkbox" id="cbDrop"> Vẽ cả ứng viên bị bỏ (xám)</label>
-      <label><input type="checkbox" id="cbNoST" checked> Ẩn nhãn ST/UA/DA (đỡ rối)</label>
+      <label><input type="checkbox" id="cbNoST" checked> Ẩn nhãn UA/UT/DA (đỡ rối)</label>
       <button id="btnAll">Xem cả tháng</button>
     </div>
     <div id="tabs">
@@ -269,20 +270,24 @@ function fmtP(v){ return v.toFixed(1); }
 
 // ---------------- màu: khớp DrawWyckoff() trong WyckoffRunner.cs ----------------
 const C_ACC = '#4CAF50', C_DIST = '#E53935', C_PHASE = '#9696DC';
+// v4: đủ 4 pattern. Tái tích lũy / tái phân phối dùng cùng gam nhưng nhạt hơn để phân biệt.
+const C_KIND = {'ACC':'#4CAF50','RE-ACC':'#8BC34A','DIST':'#E53935','RE-DIST':'#FF7043',
+                'ACC?':'#78909C','DIST?':'#78909C'};
+function kcol(k){ return C_KIND[k] || '#78909C'; }
 const CAT = {
   climax:'#FF5252', ar:'#81C784', st:'#B0BEC5', shake:'#FFCA28',
   break:'#42A5F5', lpsc:'#26C6A8', lpsd:'#BA68C8'
 };
 const CAT_VN = [['climax','SC / BCLX — cao trào'],['ar','AR / ST[A] — bật ngược, chốt Phase A'],
-  ['st','ST / UA / DA — test biên'],['shake','Spring / Shakeout / UT / UTAD — cú rũ'],
-  ['break','SOS / SOW — phá vỡ'],['lpsc','LPS[C] / LPSY[C] — test khi chờ xác nhận'],
-  ['lpsd','LPS[D] / LPSY[D] — hồi sau phá vỡ']];
+  ['st','UA / UT / DA — test nhẹ, chỉ nới biên phụ'],['shake','Spring / Shakeout / UTAD — cú rũ (Phase C)'],
+  ['break','SOS / SOW — phá vỡ'],['lpsc','LPS[C] / LPSY[C] — test cuối trước phá vỡ'],
+  ['lpsd','LPS[D] / LPSY[D] — hồi retest sau phá vỡ']];
 function catOf(lbl){
   let b = lbl.endsWith(')') ? lbl.slice(0, lbl.indexOf('(')).trim() : lbl;
   if (b==='SC'||b==='BCLX') return 'climax';
   if (b==='AR' || b==='ST[A]') return 'ar';   // ST[A] thuộc Phase A, đọc chung màu với AR
-  if (b==='ST'||b==='UA'||b==='DA') return 'st';
-  if (b==='Spring'||b==='Shakeout'||b==='UT'||b==='UTAD') return 'shake';
+  if (b==='ST'||b==='UA'||b==='DA'||b==='UT') return 'st';
+  if (b==='Spring'||b==='Shakeout'||b==='UTAD') return 'shake';
   if (b==='SOS'||b==='SOW') return 'break';
   if (b==='LPS[C]'||b==='LPSY[C]') return 'lpsc';
   if (b==='LPS[D]'||b==='LPSY[D]') return 'lpsd';
@@ -460,15 +465,15 @@ function drawWyckoff(pl, ph, X, Y, a, b){
     if (only && !isSel) continue;
     if (r.e < a-2 || r.s > b+2) continue;
     if (dim && !isSel && !document.getElementById('cbDrop').checked) continue;
-    const col = dim ? (isSel ? '#c8a34a' : '#6b6f7d') : (r.k==='ACC' ? C_ACC : C_DIST);
+    const col = dim ? (isSel ? '#c8a34a' : '#6b6f7d') : kcol(r.k);
     const x0 = X(r.s), x1 = X(r.e);
     const xa = Math.max(x0, pl.x), xb = Math.min(x1, pl.x+pl.w);
     const yL = Y(r.lo), yH = Y(r.hi);
     if (isSel){ ctx.fillStyle = hexA(col, .07); ctx.fillRect(xa, yH, Math.max(1,xb-xa), yL-yH); }
     // BIÊN CHÍNH (nét liền, quan trọng nhất) = mức climax và mức AR.
     // BIÊN NỚI RỘNG (nét đứt) = biên làm việc khi ST[A]/Spring/UT đã đẩy ra ngoài mức climax.
-    const sLo = (r.cx==null||r.ar==null) ? r.lo : Math.min(r.cx, r.ar);
-    const sHi = (r.cx==null||r.ar==null) ? r.hi : Math.max(r.cx, r.ar);
+    const sLo = (r.slo==null) ? r.lo : r.slo;
+    const sHi = (r.shi==null) ? r.hi : r.shi;
     ctx.strokeStyle = col; ctx.lineWidth = isSel ? 3 : 2;
     ctx.beginPath();
     ctx.moveTo(xa, Y(sLo)); ctx.lineTo(xb, Y(sLo));
@@ -486,7 +491,7 @@ function drawWyckoff(pl, ph, X, Y, a, b){
     ctx.setLineDash([]);
     ctx.font = '11px "Segoe UI",sans-serif'; ctx.fillStyle = col;
     ctx.textAlign='left'; ctx.textBaseline='bottom';
-    ctx.fillText((r.k==='ACC'?'Tích luỹ':'Phân phối') + (dim?' — BỊ BỎ':''),
+    ctx.fillText(r.kvn + (dim?' — BỊ BỎ':''),
                  Math.min(xb+5, pl.x+pl.w-110), yH-2);
 
     if (showPh && (!dim || isSel)){
@@ -597,18 +602,18 @@ function renderList(){
     div.className = 'row' + (k===sel ? ' sel' : '');
     const t1 = fmtT(tm(r.s)), t2 = fmtT(tm(r.e));
     const phs = r.ph.map(p=>p.p).join('→') || '—';
-    // chỉ liệt kê mốc QUAN TRỌNG, bỏ ST/UA/DA (thường vài chục cái, đọc không xuể)
-    const key0 = r.ev.filter(e => catOf(e.l) !== 'st');
-    const evs = (key0.map(e=>e.l+(e.st==='failed'?'✗':e.st==='confirmed'?'✓':'')).join(' · ')
-                 || '(chỉ có ST/UA/DA)')
-              + (r.ev.length > key0.length ? `  +${r.ev.length-key0.length} ST/UA/DA` : '');
+    const evs = r.ev.map(e=>e.l+(e.st==='failed'?'✗':e.st==='confirmed'?'✓':'')).join(' · ') || '—';
     const key = tab + k, g = grades[key] || '';
+    const slo = r.slo==null ? r.lo : r.slo, shi = r.shi==null ? r.hi : r.shi;
+    const kcls = r.k.indexOf('ACC')>=0 ? 'acc' : r.k.indexOf('DIST')>=0 ? 'dist' : 'run';
     div.innerHTML =
-      `<div class="l1"><span class="tag ${r.k==='ACC'?'acc':'dist'}">${r.k==='ACC'?'TÍCH LUỸ':'PHÂN PHỐI'}</span>`
+      `<div class="l1"><span class="tag ${kcls}">${r.kvn.toUpperCase()}</span>`
       + `<span>${t1} → ${t2}</span><span style="color:#7d879c;font-weight:400">${r.e-r.s} nến</span>`
       + (r.why || r.done ? '' : '<span class="tag run">đang chạy</span>') + `</div>`
-      + `<div class="l2">${fmtP(px(r.lo))} – ${fmtP(px(r.hi))} `
-      + `(${((r.hi-r.lo)*TICK).toFixed(1)} giá) · Phase ${phs} · ${r.ev.length} mốc</div>`
+      + `<div class="l2">biên chính ${fmtP(px(slo))} – ${fmtP(px(shi))} `
+      + `(${((shi-slo)*TICK).toFixed(1)} giá)`
+      + ((r.lo<slo-0.5||r.hi>shi+0.5) ? ` · phụ ${fmtP(px(r.lo))} – ${fmtP(px(r.hi))}` : '')
+      + ` · Phase ${phs} · ${r.ev.length} mốc</div>`
       + (r.why ? `<div class="why">↳ bỏ vì: ${r.why}</div>` : '')
       + `<div class="l3">${evs}</div>`
       + `<div class="grade">`

@@ -72,6 +72,11 @@ MAX_BARS_PHASE_AB = 2500       # qua ngan nay ma chua chot duoc Phase D (SOS/SOW
 MAX_BARS_PHASE_D = 2000        # qua ngan nay o Phase D ma khong chot duoc E -> bo
 
 
+# Ung vien range da MO nhung bi BO giua chung (khong bao gio duoc ve). Chi de CHAN DOAN/review —
+# detect() xoa sach moi lan chay, khong anh huong ket qua tra ve. Moi phan tu: (WyRange, ly_do, bar_bo).
+DISCARDED = []
+
+
 def _avg_range(B, i, lookback):
     lo = max(0, i - lookback)
     win = B[lo:i]
@@ -113,6 +118,7 @@ def detect(B):
     """Tra list[WyRange] da phat hien (ca active lan completed) tren toan bo B."""
     ranges = []
     active = None
+    DISCARDED.clear()
 
     for i in range(CLIMAX_RANGE_LOOKBACK + 5, len(B)):
         b = B[i]
@@ -154,6 +160,7 @@ def detect(B):
         too_long_ab = r.state in ('A', 'B', 'C_pending') and (i - climax_i) > MAX_BARS_PHASE_AB
         too_long_d = r.state == 'D' and (i - climax_i) > MAX_BARS_PHASE_D
         if too_tall or too_long_ab or too_long_d:
+            DISCARDED.append((r, 'qua cao (>3.5% gia)' if too_tall else 'qua dai (>2500/2000 nen)', i))
             active = None   # bo, KHONG ghi vao ranges (gia thuyet khong tru thanh TR hop le)
             continue
 
@@ -237,6 +244,7 @@ def detect(B):
                 r.low = b['lo']   # mo rong bien am tham, chua du dieu kien gan nhan (thieu gap_ok)
 
             if abandon_b:
+                DISCARDED.append((r, 'Phase B: dong cua pha SAI huong -> bo gia thuyet', i))
                 active = None
                 continue
 
@@ -279,6 +287,7 @@ def detect(B):
                     r.high = b['hi']
 
             if abandon_b:
+                DISCARDED.append((r, 'Phase B: dong cua pha SAI huong -> bo gia thuyet', i))
                 active = None
                 continue
 

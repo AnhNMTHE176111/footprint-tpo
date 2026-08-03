@@ -242,7 +242,85 @@ Nến **đang hình thành** (nến cuối chưa đóng) luôn bị bỏ qua, gi
 
 ---
 
-## 13. Liên quan
+## 13. ĐO THẬT trên dữ liệu tháng 7/2026 — kết quả gây bất ngờ
+
+Đã dựng chart M1 thật của tháng 7 rồi chạy đúng thuật toán này lên đó:
+**[wyckoff-chart-thang7.html](wyckoff-chart-thang7.html)** (mở bằng trình duyệt, cuộn/zoom được).
+
+Dữ liệu: dxFeed **GCQ26**, 2026-06-29 → **2026-07-27 15:56 UTC**, 27.316 nến M1.
+dxFeed chỉ xuất tới 27/7; file footprint export có tới 31/7 nhưng là **hợp đồng khác**
+(giá lệch ~59 điểm: 4080 vs 4138) nên **không nối vào** — nối sẽ tạo khe giá giả.
+
+![toàn cảnh tháng 7](wyckoff-schematic-examples/html-thang7-toan-canh.png)
+
+### 13.1 Con số
+
+| | Toàn lịch sử (11/2025 → 27/7/2026, 103.857 nến) | Riêng tháng 7 (25.493 nến) |
+|---|---|---|
+| Nến thoả **biên độ ≥1.4×** | 21.683 | — |
+| Nến thoả **VSA ≥2.2x** | 8.738 | — |
+| Thoả **cả hai + đúng xu hướng nền** | 3.491 | 816 |
+| Range thực sự **được mở** | **120** | ~13 |
+| Range **được vẽ** | **3** | **1** |
+| Range **bị bỏ giữa chừng** | **117** | **12** |
+
+Lý do bỏ (toàn lịch sử): **61** vì "Phase B đóng cửa phá sai hướng → bỏ giả thuyết",
+**56** vì guard quá cao/quá dài. Chỉ **2** range đi hết tới Phase E — và cả hai đều ở **tháng 1–2**.
+
+### 13.2 Tháng 7 chỉ có ĐÚNG 1 range được vẽ
+
+`ACC 23/07 22:42 → 27/07 15:56 · 4024.0–4119.3 · Phase A→B→C→B→D→B→D→B · 46 mốc · đang chạy`
+
+Nghĩa là: lời phàn nàn "chỉ thấy range mới nhất" **không phải lỗi hiển thị** — cả tháng 7
+thật sự chỉ có **một** range, và nó là cái cuối cùng, vẫn đang chạy. Việc nâng trần hiển thị
+từ 6 lên 40 range ở bản v3 **không giải quyết được gì**, vì có tới 40 range đâu mà hiện.
+
+### 13.3 Cơ chế thoái hoá — đây mới là vấn đề thật
+
+12 ứng viên bị bỏ trong tháng 7 nối đuôi nhau **phủ gần kín cả tháng**, và **8/12 chết đúng
+tại mốc 2501 nến** (trần 2500):
+
+```
+29/06 16:32 → 01/07 12:18   2501 nến   quá dài
+01/07 13:17 → 03/07 01:08   2027 nến   Phase B phá sai hướng
+03/07 01:09 → 05/07 23:28   1037 nến   Phase B phá sai hướng
+06/07 00:01 → 07/07 18:56   2501 nến   quá dài   ← Phase A→B→C→B→C→B→C→B→C→B→C→B→C
+08/07 09:43 → 10/07 05:35   2501 nến   quá dài
+10/07 06:00 → 14/07 01:47   2501 nến   quá dài
+...
+```
+
+Ba điều đọc được từ đây:
+
+1. **Mỗi lúc chỉ có ĐÚNG MỘT range được theo dõi.** Khi một ứng viên đang mở, mọi climax mới
+   đều bị bỏ qua. Ứng viên đó sống tới 2500 nến (~2 ngày) rồi mới bị guard giết → suốt 2 ngày
+   đó thuật toán **mù**. Đây là lý do 816 nến climax hợp lệ trong tháng 7 chỉ đẻ ra ~13 range.
+2. **Range phình quá to.** Ứng viên `22/07` cao 128.9 giá, range được vẽ cao 95.3 giá — trên nền
+   giá ~4050 là 2.4–3.2%, lọt guard 3.5% nhưng **không còn là "vùng cân bằng hẹp"** nữa. Nó
+   đang bao trọn cả một xu hướng, đúng thứ mà chú thích trong code nói là phải tránh.
+3. **Vòng lặp C→B không thoát được.** Ứng viên `06/07` chạy `A→B→C→B→C→B→C→B→C→B→C→B→C` —
+   Spring/UTAD liên tục được gán rồi liên tục thất bại, không lần nào đủ 50% tiến độ.
+   Range chỉ chết vì hết hạn 2500 nến, chứ tự nó không bao giờ kết luận.
+
+### 13.4 Trang HTML có gì để review
+
+Hai tab bên trái: **Được vẽ (1)** và **Bị bỏ (12)** — tab thứ hai là thứ đáng xem, vì đó là
+những chỗ thuật toán đã thử và đầu hàng, kèm **lý do bỏ** ghi thẳng trên từng dòng.
+Bấm một dòng thì chart nhảy tới và fit đúng range đó; bật "Vẽ cả ứng viên bị bỏ" để thấy
+chúng nằm xám mờ trên nền chart. Mỗi dòng có 3 nút ✓ / ? / ✗ để tự chấm, lưu trong trình
+duyệt, bấm "Xuất ghi chú chấm điểm" để lấy ra JSON.
+
+![tab ứng viên bị bỏ](wyckoff-schematic-examples/html-thang7-ung-vien-bi-bo.png)
+
+⚠️ Trang HTML dựng từ **bản Python** của thuật toán (`wyckoff_schematic.py`), chạy song song
+với `ScanWyckoff()` bên C#. Hai bên đã được đồng bộ theo cùng một spec nhưng **chưa có test
+đối chiếu tự động** — nếu thấy chỗ nào lệch với chart Quantower thì báo, đó là lỗi parity.
+
+Script dựng lại trang: `quantower-entry-signal/research/wyckoff/v8/wyckoff/render_wyckoff_html.py`.
+
+---
+
+## 14. Liên quan
 
 - [wyckoff-schematic-tinh-nang-moi.md](wyckoff-schematic-tinh-nang-moi.md) — lịch sử tính năng, bản v2/v3, bảng tương tác.
 - [wyckoffrunner-setup-va-kich-ban.md](wyckoffrunner-setup-va-kich-ban.md) — phần **vào lệnh** (CBR, quay đầu), **tách hẳn** khỏi phần vẽ Wyckoff này.

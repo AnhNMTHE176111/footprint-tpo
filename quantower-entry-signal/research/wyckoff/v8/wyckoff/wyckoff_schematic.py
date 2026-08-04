@@ -134,9 +134,23 @@ PIVOT_CONFIRM_BARS = 5     # so nen khong tao cuc tri moi -> coi la swing DA doi
 PIVOT_MIN_ATR = 1.5        # nhip hoi phai lon hon nhieu 1 nen (x lan bien do TB 20 nen)
 STA_MAX_OVERSHOOT = 1.0    # ST[A] vuot qua muc climax hon x lan chieu cao range -> khong phai test
 
+# --- v6 muc 1.8: AR/ST[A] them RANG BUOC TUONG DOI (nguyen ly CHoCH: "doan hoi khong du lon so
+# voi boi canh" — giang vien bac CHoCH vi ly do nay, khong phai vi ngan hon mot so tuyet doi).
+# DA DO tren du lieu that (103,857 nen M1 GCQ26): mult=1.0/frac=0.4 giet 12/52 range dung; ha xuong
+# 0.5/0.2 chi mat 3/52 ma van siet duoc cac ca AR/ST[A] roi vao nhip hoi 4 nen tren VSA 0.25x. ---
+AR_RETRACE_MULT = 0.5      # AR phai VUOT QUA x% nhip hoi lon nhat DA XAY RA trong long move truoc do
+STA_MIN_AR_FRAC = 0.2      # ST[A] phai hoi toi thieu x% khoang AR<->climax (ngoai san PIVOT_MIN_ATR)
+# muc 1.2(c): bien phu / bien chinh > nguong nay -> huy range. DA DO (sau khi fix 1.2b het tu noi):
+# median 1.53x, p90 3.27x, max that 6.45x (chi 2-3 ca) -> 1.8 (chon truoc khi do) qua thap, cat oan
+# ca median; 4.0 giu duoc gan het, chi cat cac ca ngoai le thuc su.
+MAX_OUTER_RATIO = 4.0
+
 # --- v5: cum climax (LOI A) ---
 CLIMAX_EXT_BARS = 8        # cao trao = vung vai nen, cho phep doi mo climax trong ngan nay
-CLIMAX_FAIL_ATR = 3.0      # sau cua so cum, gia vuot muc climax qua nay -> climax khong chan duoc move
+# v6 muc 1.4: guard nay gio chay SUOT ca A_st (toi 400 nen) thay vi chi 8 nen dau -> DO LAI tren du
+# lieu that (thay 3.0 giu nguyen thi mat 9-14 range dung, 4.0 giu duoc gan het ma van bat duoc cac
+# ca climax thuc su khong chan duoc move).
+CLIMAX_FAIL_ATR = 4.0      # sau cua so cum, gia vuot muc climax qua nay -> climax khong chan duoc move
 
 # --- v4/v5: theo doi cu pha bien ---
 SPRING_MAX_BARS = 4        # <= bao nhieu nen thi cu pha duoc coi la Spring (nhanh); lau hon = Shakeout
@@ -174,39 +188,61 @@ def _find_move(B, i, acc):
 
     LOI I (v5): do move tren doan [chan .. i-1], KHONG tinh bien do cua chinh cay climax — truoc day
     mot cay tin 60 gia tu no da thoa MOVE_MIN_ATR nen gia dang di ngang van mo duoc range.
-    Tra (ok, chan_i, do_dai, hieu_suat)."""
+    v6 muc 1.7: khong bac qua khe cuoi tuan/nghi le khi nhin lai tim chan move.
+    v6 muc 1.8: do them max_pullback = nhip hoi lon nhat DA XAY RA trong long move, dung de AR/ST[A]
+    so sanh TUONG DOI (nguyen ly CHoCH) thay vi mot san tuyet doi co dinh.
+    Tra (ok, chan_i, do_dai, hieu_suat, max_pullback)."""
     if i < 2:
-        return (False, None, 0.0, 0.0)
+        return (False, None, 0.0, 0.0, 0.0)
     lo_i = max(0, i - MOVE_LOOKBACK)
+    for k in range(i, lo_i, -1):
+        gap_min = (B[k]['dt'] - B[k - 1]['dt']).total_seconds() / 60.0
+        if gap_min > GAP_CUT_MIN:
+            lo_i = k
+            break
     if i - lo_i < MOVE_MIN_BARS:
-        return (False, None, 0.0, 0.0)
+        return (False, None, 0.0, 0.0, 0.0)
     # climax phai la CUC TRI cua ca cua so — no dang CHAN move, khong phai nam giua move
     if acc:
         if B[i]['lo'] > min(B[k]['lo'] for k in range(lo_i, i)):
-            return (False, None, 0.0, 0.0)
+            return (False, None, 0.0, 0.0, 0.0)
         pk = max(range(lo_i, i), key=lambda k: B[k]['hi'])   # chan move = dinh cao nhat
         length = B[pk]['hi'] - min(B[k]['lo'] for k in range(pk, i))   # loai cay climax
     else:
         if B[i]['hi'] < max(B[k]['hi'] for k in range(lo_i, i)):
-            return (False, None, 0.0, 0.0)
+            return (False, None, 0.0, 0.0, 0.0)
         pk = min(range(lo_i, i), key=lambda k: B[k]['lo'])   # chan move = day thap nhat
         length = max(B[k]['hi'] for k in range(pk, i)) - B[pk]['lo']
+    worst = B[pk]['lo'] if acc else B[pk]['hi']
+    max_pullback = 0.0
+    for j in range(pk, i):
+        if acc:
+            if B[j]['lo'] < worst:
+                worst = B[j]['lo']
+            pullback = B[j]['hi'] - worst
+        else:
+            if B[j]['hi'] > worst:
+                worst = B[j]['hi']
+            pullback = worst - B[j]['lo']
+        if pullback > max_pullback:
+            max_pullback = pullback
     if i - pk < MOVE_MIN_BARS:
-        return (False, pk, length, 0.0)
+        return (False, pk, length, 0.0, max_pullback)
     avgr = _avg_range(B, i, CLIMAX_RANGE_LOOKBACK)
     if avgr <= 0 or length < MOVE_MIN_ATR * avgr:
-        return (False, pk, length, 0.0)
+        return (False, pk, length, 0.0, max_pullback)
     path = sum(abs(B[k]['c'] - B[k - 1]['c']) for k in range(pk + 1, i))
     eff = length / path if path > 1e-9 else 0.0
-    return (eff >= MOVE_MIN_EFF, pk, length, eff)
+    return (eff >= MOVE_MIN_EFF, pk, length, eff, max_pullback)
 
 
 class WyRange:
     __slots__ = ('start_i', 'end_i', 'origin', 'dir', 'low', 'high', 'solid_low', 'solid_high',
                  'events', 'phases', 'status', 'state', 'pending_shock', 'brk',
                  'climax_price', 'climax_ev', 'ar_i', 'ar_price', 'ar_ev', 'ar_ext', 'ar_ext_i',
-                 'sta_i', 'sta_price', 'move_i', 'move_len', 'move_eff', 'st_ext', 'st_ext_i',
-                 'shock_ev', 'shock_depth', 'fail_floor', 'void_breaks')
+                 'sta_i', 'sta_price', 'move_i', 'move_len', 'move_eff', 'move_max_pullback',
+                 'st_ext', 'st_ext_i', 'shock_ev', 'shock_depth', 'fail_floor', 'void_breaks',
+                 'climax_vsa', 'ar_vsa', 'sta_vsa')
 
     def __init__(self, start_i, origin):
         self.start_i = start_i
@@ -231,12 +267,16 @@ class WyRange:
         self.move_i = None
         self.move_len = 0.0
         self.move_eff = 0.0
+        self.move_max_pullback = 0.0   # v6 muc 1.8: nhip hoi lon nhat da xay ra trong long move
         self.st_ext = None
         self.st_ext_i = None
         self.shock_ev = None      # LOI G: MOI RANGE CHI MOT Spring/Shakeout/UTAD
         self.shock_depth = 0.0
         self.fail_floor = None    # LOI F: cu pha sau phai vuot qua cuc tri da that nay
         self.void_breaks = 0
+        self.climax_vsa = 0.0     # v6 muc 1.1/1.9: VSA cua cay MANG NHAN (khong phai cuc tri gia)
+        self.ar_vsa = 0.0         # v6 muc 1.9: VSA cua cay AR (chi DO, chua gate)
+        self.sta_vsa = 0.0        # v6 muc 1.9: VSA cua cay ST[A] (chi DO, chua gate)
         self.events = []
         self.phases = []
         self.status = 'active'
@@ -285,7 +325,7 @@ class WyRange:
 def _mark_outer(r, i, label, price, up_side):
     """Moi ben chi giu MOT nhan test/that-bai o cuc tri xa nhat ("bien phu cu bien mat, bien phu moi
     tiep tuc noi ra"). Cham nong hon cuc tri cu thi khong ghi gi ca."""
-    fam = ('UA', 'DA', 'UT', 'mSOS', 'mSOW')
+    fam = ('UT[B]', 'ST[B]', 'mSOS', 'mSOW')
     old = [e for e in r.events if e['label'] in fam
            and ((e['price'] > r.solid_high) if up_side else (e['price'] < r.solid_low))]
     for e in old:
@@ -296,34 +336,34 @@ def _mark_outer(r, i, label, price, up_side):
 
 
 def _minor_label(r, up_side, strong):
-    """Nhan cho mot cu tham do KHONG du tu cach shock.
-    strong=True (sau/volume lon nhung khong pha duoc) -> mSOS/mSOW (LOI H).
-    strong=False -> test nhe: canh AR = UA/DA; canh climax cua range origin UP = UT;
-                    canh climax cua range origin DOWN = day chinh la ST[B], nguoi hoc BO han (L6)."""
+    """Nhan cho mot cu tham do KHONG du tu cach shock (v6 muc 3.1, nguoi hoc chot 2026-08-04):
+    moi ben chi con DUNG HAI nhan — 'UT[B]' (test/tho nhe BIEN TREN roi doi) va 'ST[B]' (test/tho nhe
+    BIEN DUOI roi doi). Bo han UA/DA (gan nham vi khong con phan biet theo canh AR/canh climax).
+    strong=True (da PHA HAN ra ngoai nhung hoi ve THU HAN vao trong range) -> mSOS/mSOW (v6 muc 3.2)."""
     if strong:
         return 'mSOS' if up_side else 'mSOW'
-    climax_side = up_side == (r.origin == 'UP')
-    if not climax_side:
-        return 'UA' if up_side else 'DA'
-    return 'UT' if r.origin == 'UP' else None
+    return 'UT[B]' if up_side else 'ST[B]'
 
 
-def _demote_shock(r, reached_far):
+def _demote_shock(r):
     """LOI C + nguoi hoc chot: shock het han/that bai thi "tao thanh UT, UA hoac la mSOS, mSOW
-    (minor, tuc la bi fail)". Khong con nhan "(that bai)" treo lai."""
+    (minor, tuc la bi fail)". Khong con nhan "(that bai)" treo lai.
+    Mot pending shock luon da VUOT QUA bien phu (dieu kien exceeded_outer khi tao — xem is_shock),
+    nen theo dinh nghia moi (v6 muc 3.2) no LUON la mSOS/mSOW, khong con la UT[B]/ST[B] nhe.
+    v6 muc 1.2(b): CHI BAY GIO (da biet ket cuc THAT BAI) moi noi bien phu bang cuc tri thuc te cua
+    cu tham do — khong noi lien tuc trong luc con dang cho (fix "tu noi bien roi tu vuot chinh no")."""
     sh = r.pending_shock
     if sh is None:
         return
     ev = sh['event']
     up_poke = sh['dir'] < 0     # dir<0 = UTAD (tham do canh TREN) | dir>0 = Spring (canh DUOI)
-    lab = _minor_label(r, up_poke, strong=reached_far or True)
+    if up_poke:
+        r.high = max(r.high, sh['peak'])
+    else:
+        r.low = min(r.low, sh['peak'])
+    ev['label'] = _minor_label(r, up_poke, strong=True)
     ev['status'] = None
     ev['phase'] = 'B'
-    if lab is None:
-        if ev in r.events:
-            r.events.remove(ev)
-    else:
-        ev['label'] = lab
     if r.shock_ev is ev:
         r.shock_ev = None
         r.shock_depth = 0.0
@@ -332,9 +372,14 @@ def _demote_shock(r, reached_far):
 
 def _revert_to_B(r, i):
     """XOA moi doan C/D o duoi cung khoi timeline va mo lai Phase B dang chay (LOI C).
-    Truoc day chi goi set_phase(i,'B') nen mot doan "Phase C" dai bang ca tran timeout con nam lai."""
+    Truoc day chi goi set_phase(i,'B') nen mot doan "Phase C" dai bang ca tran timeout con nam lai.
+    v6 muc 1.6: XOA LUON cac nhan LPS[C]/LPSY[C]/LPS[D]/LPSY[D]/SOS/SOW da phat sinh trong doan
+    C/D/E vua bi xoa — truoc day chi xoa DOAN PHASE, nhan van treo mo coi lai giua Phase B.
+    Nhan shock (Spring/Shakeout/UTAD/mSOS/mSOW) KHONG dung toi: _demote_shock() da tu lo rieng."""
+    orphan_fam = ('LPS[C]', 'LPSY[C]', 'LPS[D]', 'LPSY[D]', 'SOS', 'SOW')
     while r.phases and r.phases[-1][0] in ('C', 'D', 'E'):
         r.phases.pop()
+    r.events = [e for e in r.events if not (e['phase'] in ('C', 'D', 'E') and e['label'] in orphan_fam)]
     if r.phases:
         r.phases[-1][2] = None
     else:
@@ -393,16 +438,28 @@ def _retro_phase_c(B, r, sos_i, up):
     ban ra roi NHIN NGUOC lai, nhip test cuoi cung truoc cu pha chinh la LPS[C]/LPSY[C], Phase C bat
     dau tu do ("co Phase D roi moi xac dinh duoc Phase C"). Chi 1 diem duy nhat.
     Cua so nhin lai bi chan boi CA HAI: RETRO_C_LOOKBACK va MOT NUA do dai Phase B (de Phase B van la
-    phase dai nhat va Phase C van la phase ngan nhat)."""
+    phase dai nhat va Phase C van la phase ngan nhat).
+    v6 muc 1.5: pivot phai (a) nam TRONG range (+-dung sai) va (b) nam DUNG NUA range — LPS[C] (pha
+    len) o NUA DUOI, LPSY[C] (pha xuong) o NUA TREN. Khong tim duoc pivot hop le -> KHONG ve Phase C
+    (Phase B chay thang sang Phase D), thay vi ep mot diem sai vi tri."""
     b_start = r.phases[-1][1] if r.phases else r.start_i
     win = min(RETRO_C_LOOKBACK, max(1, (sos_i - b_start) // 2))
     lo_i = max(b_start + 1, sos_i - win)
     if sos_i - lo_i < 3:
         return
+    tol = ST_TOL_TICKS * TICK
+    mid = (r.solid_low + r.solid_high) / 2.0
+    def _in_range(k):
+        px = B[k]['lo'] if up else B[k]['hi']
+        return r.solid_low - tol <= px <= r.solid_high + tol
+    def _right_half(k):
+        return B[k]['lo'] <= mid if up else B[k]['hi'] >= mid
+    cands = [k for k in range(lo_i, sos_i) if _in_range(k) and _right_half(k)]
+    if not cands:
+        return
     piv = _last_pivot(B, lo_i, sos_i, up)
-    if piv is None:
-        piv = min(range(lo_i, sos_i), key=lambda k: B[k]['lo']) if up \
-            else max(range(lo_i, sos_i), key=lambda k: B[k]['hi'])
+    if piv is None or piv not in cands:
+        piv = min(cands, key=lambda k: B[k]['lo']) if up else max(cands, key=lambda k: B[k]['hi'])
     price = B[piv]['lo'] if up else B[piv]['hi']
     r.set_phase(piv, 'C')
     _add_unique(r, piv, 'LPS[C]' if up else 'LPSY[C]', price, 'C')
@@ -418,10 +475,13 @@ def _emit_lps(B, r, pull_bars, ACC):
     _add_unique(r, k, label, B[k]['lo'] if ACC else B[k]['hi'], 'D')
 
 
-def _try_lps_and_phase_e(B, r, sos_i, up, level):
+def _try_lps_and_phase_e(B, r, sos_i, up, level, solid_edge):
     """muc 7: Phase D + E chinh la CBR — PHA bien, HOI ve retest nhung GIU duoc ben ngoai bien
     (nhip hoi do = LPS[D]/LPSY[D]), roi gia THUAN LUC di tiep tim vung gia moi (Phase E).
-    `level` = bien vua bi pha (bien PHU, vi SOS/SOW phai but qua no).
+    `level` = bien vua bi pha (bien PHU, dung de tinh tien do/muc tieu Phase E).
+    `solid_edge` = bien CHINH — v6 muc 3.2: vung giua bien chinh va bien phu la CHUA KET LUAN, gia
+    lui qua bien phu (level) van con co the la retest binh thuong; CHI khi lui qua HAN bien chinh
+    moi tinh la cu pha bi VO HIEU (truoc day dung `level` nen SOS/SOW that de bi vo hieu oan).
     Tra (ok, end_i): ok=False nghia la cu pha BI VO HIEU (call site phai ha cap nhan — LOI F)."""
     ACC = up
     N = len(B)
@@ -443,14 +503,14 @@ def _try_lps_and_phase_e(B, r, sos_i, up, level):
                 peak, ret_ext, ret_i = bj['hi'], None, None
             if ret_ext is None or bj['lo'] < ret_ext:
                 ret_ext, ret_i = bj['lo'], j
-            failed = bj['c'] < level - fail_tol
+            failed = bj['c'] < solid_edge - fail_tol
             pull = peak - ret_ext
         else:
             if bj['lo'] < peak:
                 peak, ret_ext, ret_i = bj['lo'], None, None
             if ret_ext is None or bj['hi'] > ret_ext:
                 ret_ext, ret_i = bj['hi'], j
-            failed = bj['c'] > level + fail_tol
+            failed = bj['c'] > solid_edge + fail_tol
             pull = ret_ext - peak
         moved_far = (peak - level) if ACC else (level - peak)
         if failed and moved_far < PHASE_E_MIN_PROGRESS_MULT * PHASE_E_MULT * range_height:
@@ -490,29 +550,39 @@ def _try_lps_and_phase_e(B, r, sos_i, up, level):
     return (True, e_end)
 
 
-def _fire_break(B, r, i, up, out_edge, first_i):
+def _fire_break(B, r, i, up, out_edge, poke_start_i):
     """Mot cu pha bien da du dieu kien chot. Nhan dat HOI TO vao cay pha that (LOI B).
     Neu Phase D/E khong giu duoc thi cu pha BI VO HIEU: ha cap nhan, tra dai phase ve B, KHONG dat
-    ten range (LOI F)."""
-    anchor = _anchor_break_bar(B, first_i, i, up, out_edge)
+    ten range (LOI F).
+    v6 muc 1.3: `poke_start_i` = nen DAU TIEN tho ra khoi bien (khong phai nen xac nhan thu 3), va
+    moc so sanh cua anchor la BIEN CHINH (solid) — cay pha that thuong nam TRUOC ca luc dong cua
+    vuot duoc bien phu."""
+    solid_edge = r.solid_high if up else r.solid_low
+    anchor = _anchor_break_bar(B, poke_start_i, i, up, solid_edge)
     r.brk = None
     r.pending_shock = None
     if not any(p[0] == 'C' for p in r.phases):
         _retro_phase_c(B, r, anchor, up)
     ev = r.add_event(anchor, 'SOS' if up else 'SOW', B[anchor]['c'], 'D')
     r.set_phase(anchor, 'D')
-    ok, e_end = _try_lps_and_phase_e(B, r, anchor, up, out_edge)
+    ok, e_end = _try_lps_and_phase_e(B, r, anchor, up, out_edge, solid_edge)
     if ok:
         r.dir = 1 if up else -1
         r.end_i = e_end
         r.state = 'END'
         return True
-    # --- cu pha bi vo hieu ---
+    # --- cu pha bi vo hieu: da lui han qua BIEN CHINH (vung giua chinh-phu la CHUA KET LUAN) ---
+    # v6 muc 3.2: mSOS/mSOW chi CHOT khi gia da di duoc >=50% chieu cao range VE HUONG BIEN DOI DIEN;
+    # chua di duoc thi de trang thai 'provisional' — Phase B se tiep tuc theo doi qua _mark_outer.
+    range_height = max(1e-9, r.height)
+    progress_opp = ((r.solid_high - B[e_end]['c']) / range_height) if up \
+        else ((B[e_end]['c'] - r.solid_low) / range_height)
     ev['label'] = 'mSOS' if up else 'mSOW'
     ev['phase'] = 'B'
+    ev['status'] = None if progress_opp >= 0.5 else 'provisional'
     r.void_breaks += 1
-    ext = max(B[j]['hi'] for j in range(first_i, i + 1)) if up \
-        else min(B[j]['lo'] for j in range(first_i, i + 1))
+    ext = max(B[j]['hi'] for j in range(poke_start_i, i + 1)) if up \
+        else min(B[j]['lo'] for j in range(poke_start_i, i + 1))
     r.fail_floor = ext
     if up:
         r.high = max(r.high, ext)
@@ -561,23 +631,25 @@ def detect(B):
             if not (b['rng'] >= CLIMAX_RANGE_MULT * avgr and b['vratio'] >= VSA_CLIMAX):
                 continue
             if b['dn']:
-                ok, pk, ln, eff = _find_move(B, i, acc=True)
+                ok, pk, ln, eff, max_pb = _find_move(B, i, acc=True)
                 if not ok:
                     continue
                 r = WyRange(i, 'DOWN')
                 r.low = r.climax_price = b['lo']
-                r.move_i, r.move_len, r.move_eff = pk, ln, eff
+                r.move_i, r.move_len, r.move_eff, r.move_max_pullback = pk, ln, eff, max_pb
                 r.climax_ev = r.add_event(i, 'SC', b['lo'], 'A')
+                r.climax_vsa = b['vratio']
                 r.set_phase(i, 'A')
                 active = r
             elif b['up']:
-                ok, pk, ln, eff = _find_move(B, i, acc=False)
+                ok, pk, ln, eff, max_pb = _find_move(B, i, acc=False)
                 if not ok:
                     continue
                 r = WyRange(i, 'UP')
                 r.high = r.climax_price = b['hi']
-                r.move_i, r.move_len, r.move_eff = pk, ln, eff
+                r.move_i, r.move_len, r.move_eff, r.move_max_pullback = pk, ln, eff, max_pb
                 r.climax_ev = r.add_event(i, 'BCLX', b['hi'], 'A')
+                r.climax_vsa = b['vratio']
                 r.set_phase(i, 'A')
                 active = r
             continue
@@ -591,24 +663,38 @@ def detect(B):
         # ------------------------------------------------------------ guard: bo range thoai hoa
         too_tall = r.height > MAX_RANGE_HEIGHT_PCT * b['c']
         too_long = r.state != 'END' and (i - climax_i) > MAX_BARS_PHASE_AB
-        if too_tall or too_long:
-            DISCARDED.append((r, 'qua cao (>3.5% gia)' if too_tall else 'qua dai (>2500 nen)', i))
+        # v6 muc 1.2(c): bien phu phinh qua bien chinh (do duoc 2x-6.4x o v5) -> huy, dung de tu noi
+        # vo han (bien phu chi duoc phep noi bang DUNG cu tham do that bai, khong hon).
+        too_wide = (r.solid_low is not None and r.height > 0
+                    and (r.high - r.low) > MAX_OUTER_RATIO * r.height)
+        if too_tall or too_long or too_wide:
+            reason = ('qua cao (>3.5% gia)' if too_tall else
+                       'qua dai (>2500 nen)' if too_long else
+                       f'bien phu phinh qua bien chinh (>{MAX_OUTER_RATIO}x)')
+            DISCARDED.append((r, reason, i))
             active = None
             continue
 
         # ============================================================ state A: cum climax + cho AR
         if r.state == 'A':
-            # (1) LOI A: cao trao la mot CUM — doi mo climax sang cuc tri moi cung phia
+            # (1) LOI A: cao trao la mot CUM vai nen — GIU DUNG co che mo rong cua so cum cua v5 (moi
+            # cuc tri gia moi cung phia thi doi mo r.start_i, cho phep cum keo dai qua nhieu dot song
+            # gia van con dang tao dinh/day moi), CHI SUA cach chon NHAN hien thi.
+            # v6 muc 1.1 (nguoi hoc chot "doi MUC bien, giu NHAN o cay volume cao nhat"): MUC BIEN
+            # (climax_price, dung de dung bien chinh/phu) doi theo cuc tri gia nhu cu; rieng VI TRI
+            # NHAN (climax_ev) chi doi khi gap cay co VSA CAO HON nhan hien tai — tranh nhan roi vao
+            # cay VSA 0.2x-1.5x trong khi cay 4x-14x nam ngay canh (day la loi nang nhat vong cham v5).
             if (i - climax_i) <= CLIMAX_EXT_BARS:
                 moved = False
                 if r.origin == 'DOWN' and b['lo'] < r.climax_price:
                     r.climax_price = r.low = b['lo']
-                    r.climax_ev['i'], r.climax_ev['price'] = i, b['lo']
                     moved = True
                 elif r.origin == 'UP' and b['hi'] > r.climax_price:
                     r.climax_price = r.high = b['hi']
-                    r.climax_ev['i'], r.climax_ev['price'] = i, b['hi']
                     moved = True
+                if b['vratio'] > r.climax_vsa:
+                    r.climax_ev['i'], r.climax_ev['price'] = i, (b['lo'] if r.origin == 'DOWN' else b['hi'])
+                    r.climax_vsa = b['vratio']
                 if moved:
                     r.start_i = i
                     r.phases[0][1] = i
@@ -635,10 +721,16 @@ def detect(B):
                 if r.ar_ext is None or b['lo'] < r.ar_ext:
                     r.ar_ext, r.ar_ext_i = b['lo'], i
                 span = r.climax_price - r.ar_ext
-            if span >= PIVOT_MIN_ATR * avgr and (i - r.ar_ext_i) >= PIVOT_CONFIRM_BARS:
+            # v6 muc 1.8 (nguyen ly CHoCH — giang vien bac CHoCH vi "doan hoi khong du lon so voi boi
+            # canh"): AR phai VUOT QUA chinh nhip hoi lon nhat DA XAY RA trong long move, khong chi
+            # mot san tuyet doi co dinh (PIVOT_MIN_ATR truoc day rieng minh de AR roi vao nhip hoi 4
+            # nen tren cay VSA 0.25x).
+            ar_min = max(PIVOT_MIN_ATR * avgr, AR_RETRACE_MULT * r.move_max_pullback)
+            if span >= ar_min and (i - r.ar_ext_i) >= PIVOT_CONFIRM_BARS:
                 r.ar_i, r.ar_price = r.ar_ext_i, r.ar_ext
                 lab = 'AR (yếu)' if (r.ar_i - climax_i) <= 2 else 'AR'
                 r.ar_ev = r.add_event(r.ar_i, lab, r.ar_price, 'A')
+                r.ar_vsa = B[r.ar_i]['vratio']
                 if r.origin == 'DOWN':
                     r.high = r.ar_price if r.high is None else max(r.high, r.ar_price)
                 else:
@@ -657,10 +749,18 @@ def detect(B):
                 DISCARDED.append((r, 'Phase A: climax va AR trung nhau', i))
                 active = None
                 continue
+            # v6 muc 1.4: guard "climax khong chan duoc move" (LOI A phan 2) phai chay SUOT ca A_st,
+            # khong chi trong state 'A' — truoc day tat han sau CLIMAX_EXT_BARS nen dau tien.
+            beyond = (r.climax_price - b['lo']) if r.origin == 'DOWN' else (b['hi'] - r.climax_price)
+            if beyond > CLIMAX_FAIL_ATR * avgr:
+                DISCARDED.append((r, 'climax khong chan duoc move (phat hien o A_st)', i))
+                active = None
+                continue
             if r.origin == 'DOWN':
                 if b['hi'] > r.ar_price:      # AR bi day cao hon -> doi CA MUC LAN NHAN (LOI E)
                     r.ar_price, r.ar_i = b['hi'], i
                     r.ar_ev['i'], r.ar_ev['price'] = i, b['hi']
+                    r.ar_vsa = b['vratio']
                     r.high = max(r.high, b['hi'])
                     r.st_ext = r.st_ext_i = None
                 if r.st_ext is None or b['lo'] < r.st_ext:
@@ -671,6 +771,7 @@ def detect(B):
                 if b['lo'] < r.ar_price:
                     r.ar_price, r.ar_i = b['lo'], i
                     r.ar_ev['i'], r.ar_ev['price'] = i, b['lo']
+                    r.ar_vsa = b['vratio']
                     r.low = min(r.low, b['lo'])
                     r.st_ext = r.st_ext_i = None
                 if r.st_ext is None or b['hi'] > r.st_ext:
@@ -683,8 +784,12 @@ def detect(B):
                 DISCARDED.append((r, 'ST[A] vuot han qua climax (khong phai test)', i))
                 active = None
                 continue
-            if swing >= PIVOT_MIN_ATR * avgr and (i - r.st_ext_i) >= PIVOT_CONFIRM_BARS:
+            # v6 muc 1.8: ST[A] cung phai hoi toi thieu mot TY LE cua khoang AR<->climax (khong chi
+            # san tuyet doi PIVOT_MIN_ATR) — ho tro cung nguyen ly CHoCH nhu AR.
+            sta_min = max(PIVOT_MIN_ATR * avgr, STA_MIN_AR_FRAC * span)
+            if swing >= sta_min and (i - r.st_ext_i) >= PIVOT_CONFIRM_BARS:
                 r.sta_i, r.sta_price = r.st_ext_i, r.st_ext
+                r.sta_vsa = B[r.sta_i]['vratio']
                 r.add_event(r.sta_i, 'ST[A]', r.sta_price, 'A')
                 # DONG BANG 2 bien CHINH tai day = muc climax + muc AR
                 r.solid_low = min(r.climax_price, r.ar_price)
@@ -765,12 +870,8 @@ def detect(B):
                     if r.shock_ev is not None:
                         # LOI G: moi range CHI MOT Spring/UTAD — cu cu bi ha cap
                         old = r.shock_ev
-                        lab = _minor_label(r, up_side, strong=True)
-                        if lab is None:
-                            if old in r.events:
-                                r.events.remove(old)
-                        else:
-                            old['label'], old['status'], old['phase'] = lab, None, 'B'
+                        old['label'], old['status'], old['phase'] = \
+                            _minor_label(r, up_side, strong=True), None, 'B'
                     if up_side:
                         label, tgt, sdir = 'UTAD', r.solid_low, -1
                     else:
@@ -802,8 +903,9 @@ def detect(B):
             if r.fail_floor is not None:
                 floor_ok = (k['ext'] > r.fail_floor) if up_side else (k['ext'] < r.fail_floor)
             if (k['hold'] >= BREAK_HOLD_BARS or timed_out) and floor_ok:
-                first = k['first_i'] if k['first_i'] is not None else k['start_i']
-                _fire_break(B, r, i, up_side, out_edge, first)
+                # v6 muc 1.3: quet ANCHOR tu nen DAU TIEN tho ra (k['start_i']), khong phai tu nen
+                # xac nhan thu 3 — cay pha THAT (VSA cao nhat) thuong nam som hon trong doan.
+                _fire_break(B, r, i, up_side, out_edge, k['start_i'])
             elif bars_out > BREAK_MAX_WAIT and not timed_out:
                 # o ngoai lau nhung phan lon nen van dong TRONG bien -> khong phai pha that
                 if up_side:
@@ -824,11 +926,15 @@ def detect(B):
             shock = r.pending_shock
             span = max(1e-9, abs(shock['target_edge'] - shock['price']))
             up = shock['dir'] > 0
-            # LOI C: van cap nhat bien phu CA HAI phia trong luc cho
-            if b['lo'] < r.low:
-                r.low = b['lo']
-            if b['hi'] > r.high:
-                r.high = b['hi']
+            # v6 muc 1.2(b): CHI noi bien phu o PHIA DOI DIEN (chua bi test) trong luc cho ket cuc.
+            # Phia dang bi test (up=True -> canh DUOI dang test, tuc r.low) KHONG duoc tu noi theo
+            # chinh cuc tri cua no — se noi mot lan duy nhat, SAU KHI biet ket cuc, trong _demote_shock.
+            if up:
+                if b['hi'] > r.high:
+                    r.high = b['hi']
+            else:
+                if b['lo'] < r.low:
+                    r.low = b['lo']
             if up:
                 if b['hi'] > shock['peak']:
                     shock['peak'], shock['peak_i'] = b['hi'], i
@@ -841,11 +947,11 @@ def detect(B):
                 failed_now = b['c'] > shock['price'] + tol
 
             if (i - shock['start_i']) > SHOCK_MAX_WAIT:
-                _demote_shock(r, reached_far=progress >= 1.0)
+                _demote_shock(r)
                 _revert_to_B(r, i)
                 continue
             if failed_now and progress < SHOCK_PROGRESS_MULT:
-                _demote_shock(r, reached_far=False)
+                _demote_shock(r)
                 _revert_to_B(r, i)
                 continue
             if progress >= SHOCK_PROGRESS_MULT and shock['event']['status'] == 'pending':
@@ -864,7 +970,7 @@ def detect(B):
             else:
                 shock['hold'] = 0
             if shock['hold'] >= BREAK_HOLD_BARS:
-                _fire_break(B, r, i, up, oe, shock.get('first_i', i))
+                _fire_break(B, r, i, up, oe, shock['start_i'])
             elif (not shock['lps_done'] and abs(b['c'] - shock['price']) <= 2.0 * tol
                   and (i - shock['start_i']) >= PIVOT_CONFIRM_BARS):
                 _add_unique(r, i, 'LPS[C]' if up else 'LPSY[C]', b['c'], 'C')

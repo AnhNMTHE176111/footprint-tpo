@@ -6,6 +6,15 @@
 - MOVE truoc climax: dai 95.5 gia, 78 nen, hieu suat huong 0.36.
 - Bien CHINH (net lien, climax+AR): 4720.0 - 4762.2 = 42.2 gia (0.89% gia).
 - Bien PHU (net dut, cuc tri xa nhat): 4704.8 - 4762.2 = 57.4 gia.
+- Ty le bien phu/bien chinh: **1.36x** (guard huy range khi > 4.0x).
+- Nhan climax mang VSA=6.61x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
+- Trang thai range: **completed**.
+
+## Ba chi so Phase B (v6 — CHI DO/HIEN THI, khong dung de loc)
+
+- **Bias bat doi xung test bien**: `+0` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
+- **SOT phia TREN**: trang thai=`none`, n=0 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
+- **SOT phia DUOI**: trang thai=`none`, n=0 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
 
 ## Phase (do dai tinh bang nen M1)
 
@@ -18,7 +27,7 @@
 
 | Nhan | Thoi diem | Gia | Phase | Trang thai | VSA nen do | Than/bien do |
 |---|---|---|---|---|---|---|
-| BCLX | 2026-04-02 14:43:00 | 4762.2 | A | - | 0.24x | 1.00 |
+| BCLX | 2026-04-02 14:36:00 | 4756.0 | A | - | 6.61x | 0.05 |
 | AR | 2026-04-02 15:25:00 | 4720.0 | A | - | 1.09x | 1.00 |
 | ST[A] | 2026-04-02 15:28:00 | 4737.6 | A | - | 0.45x | 0.00 |
 | mSOW | 2026-04-02 16:20:00 | 4704.8 | B | - | 1.20x | 0.73 |

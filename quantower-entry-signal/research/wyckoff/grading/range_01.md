@@ -3,9 +3,18 @@
 - Anh: `range_01.png`
 - Khung: M1 (GCQ26, gio UTC). Range: **2025-12-29 15:22:00 -> 2025-12-31 21:55:00** = 118 nen.
 - Climax mo range: **SC (move GIAM bi chan)** tai gia 4411.4, VSA=3.33x, bien do nen=14.2 gia.
-- MOVE truoc climax: dai 245.4 gia, 64 nen, hieu suat huong 0.47.
+- MOVE truoc climax: dai 107.8 gia, 56 nen, hieu suat huong 0.37.
 - Bien CHINH (net lien, climax+AR): 4411.4 - 4511.7 = 100.3 gia (2.27% gia).
 - Bien PHU (net dut, cuc tri xa nhat): 4383.6 - 4511.7 = 128.1 gia.
+- Ty le bien phu/bien chinh: **1.28x** (guard huy range khi > 4.0x).
+- Nhan climax mang VSA=3.64x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
+- Trang thai range: **completed**.
+
+## Ba chi so Phase B (v6 — CHI DO/HIEN THI, khong dung de loc)
+
+- **Bias bat doi xung test bien**: `+0` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
+- **SOT phia TREN**: trang thai=`none`, n=0 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
+- **SOT phia DUOI**: trang thai=`none`, n=0 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
 
 ## Phase (do dai tinh bang nen M1)
 
@@ -19,9 +28,10 @@
 
 | Nhan | Thoi diem | Gia | Phase | Trang thai | VSA nen do | Than/bien do |
 |---|---|---|---|---|---|---|
-| SC | 2025-12-29 15:22:00 | 4411.4 | A | - | 3.33x | 0.10 |
+| SC | 2025-12-29 13:42:00 | 4545.6 | A | - | 3.64x | 0.61 |
 | AR | 2025-12-30 12:22:00 | 4511.7 | A | - | 1.00x | 0.00 |
 | ST[A] | 2025-12-30 15:47:00 | 4476.0 | A | - | 1.00x | 0.00 |
+| ST[B] | 2025-12-31 05:50:00 | 4404.5 | B | - | 1.43x | 1.00 |
 | Spring | 2025-12-31 06:01:00 | 4383.6 | C | pending | 0.50x | 0.00 |
 
 ## 12 nen quanh climax (kiem dieu kien mo range)

@@ -49,16 +49,16 @@ DIM = (150, 150, 158)
 BOX_BG = (26, 26, 32)
 
 CAT = {
-    "SC": "climax", "BCLX": "climax", "AR": "ar",
-    "ST[A]": "st", "UA": "st", "DA": "st", "UT": "st",
+    "SC": "climax", "BCLX": "climax", "SC?": "climax", "BCLX?": "climax", "AR": "ar",
+    "ST[A]": "st", "UT[B]": "st", "ST[B]": "st",
     "Spring": "shake", "Shakeout": "shake", "UTAD": "shake",
-    "SOS": "break", "SOW": "break",
+    "SOS": "break", "SOW": "break", "mSOS": "minor", "mSOW": "minor",
     "LPS[C]": "lpsc", "LPSY[C]": "lpsc",
     "LPS[D]": "lpsd", "LPSY[D]": "lpsd",
 }
 CAT_COLOR = {
     "climax": (255, 82, 82), "ar": (129, 199, 132), "st": (176, 190, 197),
-    "shake": (255, 202, 40), "break": (66, 165, 245),
+    "shake": (255, 202, 40), "break": (66, 165, 245), "minor": (255, 167, 38),
     "lpsc": (38, 198, 168), "lpsd": (186, 104, 200),
 }
 
@@ -236,9 +236,14 @@ def render(B, r, out_png):
              f"{end_i - r.start_i} nen M1   [{r.status}]")
     d.text((PAD_L, 12), title, fill=TXT, font=ft)
     hh = (r.solid_high - r.solid_low) if r.solid_low is not None else 0.0
-    sub = (f"climax {r.origin}  VSA={B[r.start_i]['vratio']:.2f}x   "
+    outer_h = r.high - r.low
+    ratio = outer_h / hh if hh > 1e-9 else 0.0
+    born = "  [SINH TU CU PHA, khong co climax that]" if r.born_from_break else ""
+    sub = (f"climax {r.origin}  VSA_nhan={r.climax_vsa:.2f}x   "
            f"cao bien chinh={hh:.1f} gia ({hh / B[r.start_i]['c'] * 100:.2f}%)   "
-           f"cao bien phu={(r.high - r.low):.1f} gia")
+           f"cao bien phu={outer_h:.1f} gia (ty le {ratio:.2f}x)   "
+           f"bias={r.bias:+d}   SOT-up={r.sot_up['state']}(n={r.sot_up['n']})  "
+           f"SOT-dn={r.sot_dn['state']}(n={r.sot_dn['n']}){born}")
     d.text((PAD_L, 34), sub, fill=DIM, font=fs)
 
     img.save(out_png)
@@ -266,6 +271,34 @@ def facts(B, r, idx):
                  f"= {h:.1f} gia ({h / B[r.start_i]['c'] * 100:.2f}% gia).")
     L.append(f"- Bien PHU (net dut, cuc tri xa nhat): {r.low:.1f} - {r.high:.1f} "
              f"= {r.high - r.low:.1f} gia.")
+    if r.solid_low is not None:
+        hh0 = r.solid_high - r.solid_low
+        ratio0 = (r.high - r.low) / hh0 if hh0 > 1e-9 else 0.0
+        L.append(f"- Ty le bien phu/bien chinh: **{ratio0:.2f}x** (guard huy range khi > "
+                 f"{W.MAX_OUTER_RATIO}x).")
+    L.append(f"- Nhan climax mang VSA={r.climax_vsa:.2f}x (cay volume cao nhat trong cum, "
+             f"KHONG can trung voi cuc tri gia).")
+    L.append(f"- Trang thai range: **{r.status}**" +
+             (" (bi thay the boi mot range moi sinh tu cu pha, khong dat ten 4 mau hinh)"
+              if r.status == 'superseded' else "") +
+             (" — **SINH TU CHINH MOT CU PHA**, khong co cao trao thuc su." if r.born_from_break else "") + ".")
+    L.append("")
+    L.append("## Ba chi so Phase B (v6 — CHI DO/HIEN THI, khong dung de loc)")
+    L.append("")
+    L.append(f"- **Bias bat doi xung test bien**: `{r.bias:+d}` "
+             f"(+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, "
+             f"0 = test CA HAI bien — ca THUONG).")
+    for name, sot in (("TREN", r.sot_up), ("DUOI", r.sot_dn)):
+        L.append(f"- **SOT phia {name}**: trang thai=`{sot['state']}`, n={sot['n']} nhip lien tiep "
+                 f"rut ngan, ty le thrust cuoi/dau={sot['ratio']:.2f}, "
+                 f"ty le volume nhip cuoi/dau={sot['effort']:.2f} "
+                 f"({'HAP THU (volume >= nhip dau, canh giu vung)' if sot['effort'] >= 1.0 and sot['n'] >= 2 else 'can kiet' if sot['n'] >= 2 else '-'}).")
+    if r.er_legs:
+        top = max(r.er_legs, key=lambda x: x['er'])
+        L.append(f"- **Nhip no luc/ket qua cao nhat** trong Phase B: nen {top['i0']}..{top['i1']} "
+                 f"({B[top['i1']]['dt']}), effort(VSA TB)={top['effort']:.2f}x, "
+                 f"result(bien do/ATR)={top['result']:.2f}, ty le er={top['er']:.2f} "
+                 f"— vung hap thu NGHI VAN (volume nhieu, ket qua it).")
     L.append("")
     L.append("## Phase (do dai tinh bang nen M1)")
     L.append("")

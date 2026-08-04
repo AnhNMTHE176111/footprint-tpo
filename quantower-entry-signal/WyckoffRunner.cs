@@ -1723,14 +1723,19 @@ namespace WyckoffRunner
             {
                 anchorI = sosI; double best = B[sosI].H;
                 for (int k = sosI + 1; k <= end; k++) if (B[k].H > best) { best = B[k].H; anchorI = k; }
-                nr = new WyRange { StartIdx = anchorI, OriginDown = false, High = B[anchorI].H, ClimaxPrice = B[anchorI].H };
+                // Low PHAI duoc gan cung gia tri (khop cach WyRange binh thuong khoi tao Low=High=climax) —
+                // C# Low/High la double (khong nullable nhu Python None), de mac dinh 0.0 thi Math.Min(0,
+                // ~4600) o buoc AR/A_st se "dau doc" Low = 0, day chieu cao range len hang nghin gia va bi
+                // guard "qua cao" loai oan (bug thuc te bat duoc khi doi chieu voi Python — 2/3 range con
+                // sinh tu cu pha LEN bien mat trong C#).
+                nr = new WyRange { StartIdx = anchorI, OriginDown = false, High = B[anchorI].H, Low = B[anchorI].H, ClimaxPrice = B[anchorI].H };
                 nr.ClimaxEv = WyAddEvent(nr, anchorI, "BCLX?", B[anchorI].H);
             }
             else
             {
                 anchorI = sosI; double best = B[sosI].L;
                 for (int k = sosI + 1; k <= end; k++) if (B[k].L < best) { best = B[k].L; anchorI = k; }
-                nr = new WyRange { StartIdx = anchorI, OriginDown = true, Low = B[anchorI].L, ClimaxPrice = B[anchorI].L };
+                nr = new WyRange { StartIdx = anchorI, OriginDown = true, Low = B[anchorI].L, High = B[anchorI].L, ClimaxPrice = B[anchorI].L };
                 nr.ClimaxEv = WyAddEvent(nr, anchorI, "SC?", B[anchorI].L);
             }
             nr.ClimaxVsa = B[anchorI].Vratio;
@@ -1826,6 +1831,7 @@ namespace WyckoffRunner
                         if (active.Phases.Count > 0) active.Phases[active.Phases.Count - 1].EndIdx = i - 1;
                         active.EndIdx = i - 1;
                         active.Completed = true;
+                        active.Status = "completed";
                         ranges.Add(active);
                     }
                     active = null;
@@ -2197,6 +2203,7 @@ namespace WyckoffRunner
                     last.EndIdx = eEnd;
                     r.EndIdx = eEnd;
                     r.Completed = true;
+                    r.Status = "completed";
                     ranges.Add(r);
                     active = null;
                 }

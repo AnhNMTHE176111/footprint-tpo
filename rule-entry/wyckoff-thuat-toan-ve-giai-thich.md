@@ -8,8 +8,61 @@
 > [`wyckoff_schematic.py`](../quantower-entry-signal/research/wyckoff/v8/wyckoff/wyckoff_schematic.py)
 > (sửa một bên là phải sửa bên kia).
 >
-> Cập nhật: 2026-08-03 (bản **v5** — vá 11 lỗi hệ thống do **vòng chấm chart bằng agent giảng viên**
-> tìm ra, cộng 6 quyết định người học chốt trong lượt đó).
+> Cập nhật: 2026-08-04 (bản **v6** — vá 9 lỗi hệ thống do vòng chấm v5 tìm ra, thêm 3 chỉ số Phase B
+> [SOT / nỗ lực-kết quả / bias — chỉ đo, không gate] và cơ chế range sinh từ cú phá [SIDEWAYS]).
+
+---
+
+## 0c. Vòng chấm v6 — vá tiếp 9 lỗi vòng chấm v5
+
+**v5 gần như không cải thiện so với v4**: điểm trung vị đứng yên ở 3/10 (trung bình 3.41→3.57), và
+đuôi kém còn tệ hơn (điểm 1/10 tăng từ 4 lên 9 bài trên 47). Các lỗi A–K của v4 đã hết, nhưng bị thay
+bằng một nhóm lỗi mới — nặng nhất là **nhãn climax neo sai cây**. v6 vá 9 lỗi này:
+
+| # | Lỗi vòng chấm v5 | Cách vá ở v6 |
+|---|---|---|
+| 1 | Cụm climax dời **cả mức lẫn nhãn** theo cực trị giá → nhãn rơi vào cây VSA 0.2–1.5× trong khi cây 4–14× nằm ngay cạnh (lỗi nặng nhất, gần mọi bài) | Tách riêng: **mức biên** (climax_price) vẫn dời theo cực trị giá; **vị trí nhãn** (climax_ev) chỉ dời khi gặp cây có VSA cao hơn nhãn hiện tại |
+| 2 | Biên phụ tự nới bởi chính cú phá đang xét rồi tự vượt chính nó (vòng lặp tự thua) | Trong lúc chờ kết cục (`C_pending`), chỉ nới biên phụ ở **phía đối diện** (chưa bị test); phía đang test chỉ nới **một lần duy nhất, sau khi biết kết cục** |
+| 3 | Nhãn SOS/SOW chỉ quét 3 nến xác nhận cuối, mốc so sánh là biên phụ | Quét từ nến **đầu tiên** thò ra khỏi biên; mốc so sánh đổi sang **biên chính** — vùng giữa biên chính và biên phụ là "chưa kết luận", không vội vô hiệu |
+| 4 | Guard "climax không chặn được move" chỉ chạy 8 nến đầu, tắt hẳn khi sang chờ ST[A] | Chạy **suốt** Phase A và A_st |
+| 5 | Phase C gán ngược (khi không có Spring/UTAD) chọn điểm ngoài range hoặc giữa range | Bắt buộc pivot nằm **trong range** và đúng **nửa range** (LPS[C] nửa dưới, LPSY[C] nửa trên); không tìm được thì không vẽ Phase C |
+| 6 | Nhãn LPS[C]/LPS[D] mồ côi còn treo lại sau khi đoạn Phase C/D bị xoá | Xoá cả sự kiện phát sinh trong đoạn vừa xoá, không chỉ xoá đoạn phase |
+| 7 | Cửa sổ đo MOVE trước climax bắc qua khe cuối tuần | Dừng quét lùi tại khe > 4 giờ, giống luật cắt range |
+| 8 | AR/ST[A] dùng sàn tuyệt đối cố định → rơi vào nhịp hồi 4 nến trên VSA 0.25× | Thêm ràng buộc **tương đối** theo nguyên lý CHoCH: AR phải vượt quá nhịp hồi lớn nhất *đã xảy ra* trong lòng move; ST[A] phải hồi tối thiểu một tỷ lệ khoảng AR↔climax |
+| 9 | Chưa đo chất lượng volume của AR/ST[A] | Đo `ar_vsa`/`sta_vsa` (chỉ để hiển thị, chưa gate) |
+
+Ba tham số (`AR_RETRACE_MULT`, `STA_MIN_AR_FRAC`, `MAX_OUTER_RATIO`, `CLIMAX_FAIL_ATR`) đều **đo trên
+dữ liệu thật rồi mới chốt** — giá trị đề xuất ban đầu trong plan quá chặt (giết 12–29/49 range), giảm
+xuống mới giữ được gần hết mà vẫn siết đúng các ca lỗi.
+
+**Ba chỉ số Phase B mới** (SOT, nỗ lực↔kết quả, bias — mục 5.3): chỉ đo và hiển thị, **không** dùng
+lọc/gate quyết định vẽ. Đo trên 49 range đợt đầu: `bias=0` (test cả hai biên, đúng là ca *thường*
+theo lý thuyết) chiếm 36/49 (~73%); khi `bias≠0` thì khớp hướng phá thật 13/13.
+
+**Nhãn Phase B đổi** (mục 5.4): bỏ hẳn UA/DA/UT, chỉ còn `UT[B]` (test biên trên) / `ST[B]` (test biên
+dưới); `mSOS`/`mSOW` định nghĩa lại — **có** phá hẳn ra ngoài, nhưng nhịp hồi sau đó thu hẳn vào trong
+range rồi hướng sang biên đối diện (khác SOS/SOW thật là *giữ* được ngoài biên).
+
+**Cơ chế mới — range sinh từ một cú phá** (mục 5.4): khi giá phá biên thành công (không lùi vào biên
+chính) nhưng cũng không đi đủ xa để tính là Phase E, mà tạo một "seed" hẹp ngay ngoài biên — range cũ
+đóng ở trạng thái `superseded` (giữ vẽ, **không** đặt tên 4 mẫu hình), range mới mở tại đó, neo bằng
+cực trị của chính cú phá (nhãn `BCLX?`/`SC?`, không cần cao trào thật). Nếu trong 120 nến đầu giá bứt
+tiếp theo đúng hướng cú phá cũ, range mới bị huỷ — chỉ là nhịp hồi — và range cũ được hồi sinh, đặt tên
+bình thường.
+
+**Đối chiếu Python ↔ C#**: dựng một harness C# độc lập (không dùng Quantower SDK, đọc thẳng cùng file
+CSV M1) để chạy song song `ScanWyckoff()` (C#) và `detect()` (Python) trên đúng 103.857 nến M1 GCQ26.
+Lần đối chiếu này **bắt được một bug thật**: `WySpawnSidewaysRange` (C#) chỉ gán một trong hai
+`Low`/`High` khi tạo range con — khớp cách Python dùng `None` cho cạnh chưa biết, nhưng C# `Low`/`High`
+là `double` mặc định `0.0`, nên `Math.Min(0.0, ~4600)` ở bước AR/ST[A] "đầu độc" `Low=0`, đẩy chiều cao
+range lên hàng nghìn giá và bị guard "quá cao" loại oan — 2/3 range con sinh từ cú phá **lên** biến mất
+khỏi bản C#. Vá: gán **cả hai** `Low=High=giá climax` lúc tạo, khớp đúng cách range bình thường đã làm.
+Sau vá: khớp tuyệt đối 53/53 chỉ số bắt đầu range, toàn bộ phân bố kind, số superseded, số born-from-break
+giữa Python và C#.
+
+Bài chấm v6 lưu ở
+[`research/wyckoff/grading/`](../quantower-entry-signal/research/wyckoff/grading/); v5 archive ở
+[`grading_v5/`](../quantower-entry-signal/research/wyckoff/grading_v5/).
 
 ---
 
@@ -254,8 +307,13 @@ chỗ, nên không phân biệt được Spring (rút nhanh) với Shakeout (lù
 Biên phụ nói lên rằng **có thế lực đã cố phá range gốc** và tạo được mức giá ngoài range. Vì thế
 **SOS/SOW muốn tính là mạnh phải đóng cửa bứt qua biên phụ**, không chỉ qua biên chính.
 
-Nhãn **UA / UT / DA** mỗi bên cũng chỉ giữ **một cái duy nhất**, đúng theo quy tắc biên phụ:
+Nhãn **UT[B] / ST[B]** mỗi bên cũng chỉ giữ **một cái duy nhất**, đúng theo quy tắc biên phụ:
 cú thăm dò mới nông hơn cú cũ thì không ghi gì cả.
+
+**v6:** biên phụ **không còn tự nới liên tục** trong lúc một cú thăm dò còn đang chờ kết cục (state
+`C_pending`) — chỉ nới ở **phía đối diện** (chưa bị test); phía đang test chỉ nới **một lần**, ngay
+sau khi biết kết cục thất bại. Trước v6, biên phụ tự nới theo đúng cực trị của cú thăm dò đang xét,
+rồi chính nó lại trở thành mốc mà cú thăm dò đó phải vượt qua — một vòng lặp tự thua.
 
 ### 5.1 Theo dõi một cú phá biên
 
@@ -273,15 +331,19 @@ Ba câu hỏi quyết định nhãn (v5 — lỗi G và H):
 
 | Cạnh bị phá | Vượt biên phụ + mạnh + sâu nhất | Mạnh nhưng không đủ tư cách rũ | Thật NHẸ |
 |---|---|---|---|
-| Cạnh **climax** (SC ở dưới) | **≤ 4 nến** quay lại → **Spring**<br>**> 4 nến** lùng bùng → **Shakeout** | **mSOW** | không ghi gì — đây chính là ST[B], bỏ theo yêu cầu |
-| Cạnh **climax** (BCLX ở trên) | **UTAD** | **mSOS** | **UT** |
-| Cạnh **AR** (cạnh còn lại) | — (không quyết định) | **mSOS** (trên) / **mSOW** (dưới) | **UA** (trên) / **DA** (dưới) |
+| Cạnh **dưới** (climax SC, hoặc AR nếu origin UP) | **≤ 4 nến** quay lại → **Spring**<br>**> 4 nến** lùng bùng → **Shakeout** | **mSOW** | **ST[B]** |
+| Cạnh **trên** (climax BCLX, hoặc AR nếu origin DOWN) | **UTAD** | **mSOS** | **UT[B]** |
 
 Chỉ Spring / Shakeout / UTAD → vào **Phase C**. Mọi nhãn còn lại **ở lại Phase B**, chỉ nới biên phụ.
+**v6:** bỏ hẳn UA/DA/UT — không còn phân biệt "cạnh climax" với "cạnh AR" khi gán nhãn nhẹ, chỉ còn
+phân biệt THEO BÊN (trên/dưới). Thực tế phần lớn Phase B chỉ có đúng 1 UT[B] và 1 ST[B].
 
-> **mSOS / mSOW là gì:** một cú phá **thất bại** (minor sign of strength / weakness). Trước v5 những cú
-> này bị hạ thành "UA/DA test nhẹ", rồi chính chúng nới biên phụ và làm hỏng điều kiện xác nhận SOW —
-> giảng viên bắt được một cú thọc 5,5 giá VSA 2,44× có nến đóng dưới biên bị gọi là "test nhẹ".
+> **mSOS / mSOW là gì (định nghĩa lại ở v6):** một cú phá **CÓ THẬT** — giá đã bứt hẳn ra ngoài biên
+> chính giống SOS/SOW thật — nhưng nhịp hồi sau đó **thu hẳn vào trong range** rồi hướng sang biên đối
+> diện, thay vì *giữ* được ngoài biên (đó là điểm khác duy nhất so với SOS/SOW thật). Trước v6 định
+> nghĩa là "thăm dò mạnh nhưng không phá được" — sai: mSOS/mSOW đã **phá được**, chỉ là không **giữ**
+> được. Một pending shock (Spring/Shakeout/UTAD) khi hết hạn/thất bại LUÔN hạ cấp thành mSOS/mSOW
+> (không còn UT[B]/ST[B]), vì nó đã thoả điều kiện "vượt biên phụ" ngay từ lúc được nhận diện là shock.
 
 > **Spring khác Shakeout ở THỜI GIAN, không phải độ sâu.** Spring phá xuống rồi rút vào rất nhanh.
 > Shakeout phá xuống, lùng bùng ngoài đó một lúc rồi mới quay lại — bản chất là **một SOW thất bại**.
@@ -291,16 +353,62 @@ Chỉ Spring / Shakeout / UTAD → vào **Phase C**. Mọi nhãn còn lại **�
 quá **40 nến** **và** ≥ 60% số nến trong đoạn đóng cửa ngoài biên (v5: trước đây chỉ cần "quá 40 nến"
 bất kể giá đang ở đâu, nên nhãn rơi vào đúng nến thứ 40 dù nến đó là gì).
 
-**Nhãn đặt ở đâu (v5 — lỗi B, lỗi lặp nhiều nhất cả vòng chấm):** vẫn cần 3 nến để **chốt**, nhưng nhãn
-SOS/SOW được đặt **hồi tố** vào **cây phá thật** — nến có VSA cao nhất trong đoạn, đúng hướng, đóng cửa
-vượt biên. Trước đây nhãn nằm ở nến xác nhận thứ 3 nên đo được VSA 0,30× / 0,37× / 0,47× / 0,69× trong
-khi cây phá thật có VSA 4,2×–9,6×. Sửa chỗ này còn kéo theo ranh giới C/D về đúng chỗ.
+**Nhãn đặt ở đâu (v5 — lỗi B, lỗi lặp nhiều nhất cả vòng chấm; v6 nới rộng thêm):** vẫn cần 3 nến để
+**chốt**, nhưng nhãn SOS/SOW được đặt **hồi tố** vào **cây phá thật** — nến có VSA cao nhất trong đoạn,
+đúng hướng, đóng cửa vượt biên. Trước đây nhãn nằm ở nến xác nhận thứ 3 nên đo được VSA 0,30× / 0,37× /
+0,47× / 0,69× trong khi cây phá thật có VSA 4,2×–9,6×. **v6:** cửa sổ quét được mở rộng từ **nến đầu
+tiên thò ra khỏi biên** (trước đây chỉ quét 3 nến xác nhận cuối) và mốc so sánh đổi từ biên phụ sang
+**biên chính** — cây phá thật thường nằm sớm hơn cả lúc đóng cửa vượt được biên phụ.
+
+**v6 — vô hiệu hoá dùng biên chính, không dùng biên phụ:** sau khi SOS/SOW bắn ra, nếu giá lùi qua
+biên phụ nhưng vẫn còn ở trên/dưới biên chính, đó là **chưa kết luận**, không phải vô hiệu — máy vẫn
+tiếp tục chờ. Chỉ khi giá đóng cửa lùi hẳn qua **biên chính** mới tính là cú phá bị vô hiệu (hạ cấp
+thành mSOS/mSOW, xem mục 8). Trước v6, dùng biên phụ làm mốc khiến SOS/SOW thật dễ "bị vô hiệu oan".
 
 ### 5.2 Phá "sai hướng" KHÔNG huỷ range nữa
 
 Đây là điểm sửa quan trọng nhất. Một range xuất phát từ SC mà đóng cửa hẳn **xuống dưới** thì
 **không phải** giả thuyết tích luỹ sai — nó là **tái phân phối**. Ngược lại, range từ BCLX mà phá
 hẳn **lên trên** là **tái tích luỹ**. Range **không bị xoá**, chỉ **đổi tên** (xem mục 2b).
+
+### 5.3 (v6) Ba chỉ số Phase B — CHỈ ĐO, KHÔNG GATE
+
+Ba chỉ số dưới đây được tính một lần khi Phase B kết thúc (lúc SOS/SOW bắn ra), dựa trên một chuỗi
+**swing pivot nhân quả** trong đoạn Phase B (xác nhận sau 5 nến không tạo cực trị mới — cùng cơ chế
+AR/ST[A]). Cả ba đều **chỉ để đo và hiển thị**, không dùng để lọc hay quyết định vẽ gì.
+
+- **Bias bất đối xứng test biên**: `+1` nếu Phase B chạm nổi biên trên nhưng **không với nổi** biên
+  dưới (≥95% chiều cao vs <75%); `-1` ngược lại; `0` nếu test được **cả hai** biên. Theo lý thuyết,
+  `0` là ca **thường** (tay to cố tình giấu hành vi bằng cách test cả hai phía); bất đối xứng là ca
+  **hiếm**, xảy ra khi họ lỡ để lộ ý đồ hoặc đang gấp gáp. Đo trên 49 range: `bias=0` chiếm ~73%; khi
+  `bias≠0` thì khớp hướng phá thật 13/13 trong mẫu đo.
+- **SOT (Shortening of the Thrust)**: đo riêng mỗi bên (nhịp đẩy lên bằng cặp pivot đáy→đỉnh, nhịp
+  đẩy xuống bằng cặp đỉnh→đáy). Bắt đầu đo khi nhận ra chuỗi đỉnh sau thấp hơn đỉnh trước (hoặc đáy sau
+  cao hơn đáy trước — "lower high"/"higher low"). Đếm số nhịp liên tiếp có quãng đẩy **ngắn dần**:
+  `n≥3` = SOT thật, `n>4` = xu hướng quá mạnh (đánh ngược là nguy hiểm, không phải cơ hội). So thêm
+  volume trung bình nhịp cuối/nhịp đầu: `≥1.0` = **hấp thụ** (nỗ lực giữ nguyên hoặc tăng mà kết quả co
+  lại — tín hiệu đảo chiều mạnh hơn); `<1.0` = cạn kiệt thật.
+- **Nỗ lực ↔ kết quả từng nhịp**: mỗi đoạn giữa hai pivot liên tiếp có `effort` = VSA trung bình,
+  `result` = biên độ đi được / ATR. Đoạn có `effort/result` cao nhất là vùng **hấp thụ nghi vấn** (nhiều
+  volume, ít kết quả) — dùng để lấp khoảng trống mà Phase B thường bị chê "trống hàng trăm nến".
+
+### 5.4 (v6) Range sinh từ một cú phá (SIDEWAYS)
+
+Khi một cú phá **có thật** (không lùi vào biên chính) nhưng cũng **không đi đủ xa** để tính là Phase E
+— mà tạo một dải giá **hẹp** (≤ 0,6× chiều cao range cũ) ngay ngoài biên trong 25 nến — đó không phải
+vô hiệu (mSOS/mSOW) mà là **"phá xong rồi đi ngang tại đó"**:
+
+1. Range cũ đóng ở trạng thái `superseded` — **giữ vẽ** (không xoá, để còn ngữ cảnh), nhưng **không**
+   đặt tên theo 4 mẫu hình (vì Phase E chưa hoàn tất).
+2. Range mới mở ngay tại đó, chấp nhận **không có cao trào thật** — neo bằng cực trị của chính cú phá
+   (nhãn `BCLX?` nếu phá lên, `SC?` nếu phá xuống, dấu `?` nghĩa là "không phải climax thật"). Từ đó
+   chạy đúng máy trạng thái bình thường (chờ AR, ST[A], Phase B...).
+3. Trong 120 nến đầu (phương án đo bằng số nến tuyệt đối), nếu giá bứt tiếp **đúng hướng cú phá cũ**
+   qua khỏi mức peak ± 1× độ rộng dải giá ban đầu — đó **chỉ là một nhịp hồi**, không phải range mới:
+   huỷ range con, hồi sinh range cha (đặt lại hướng, đóng bình thường, đặt tên 4 mẫu hình).
+
+Nếu range con bị loại bởi một guard khác (ví dụ climax không chặn được move) trước khi tự xác định
+xong, range cha vẫn giữ nguyên trạng thái `superseded` vĩnh viễn — chưa xử lý ca này ở v6.
 
 ---
 
@@ -343,8 +451,11 @@ bên ngoài biên → giá thuận lực đi tiếp tìm vùng giá mới.**
 Ngay khi có SOS/SOW, máy nhìn tới **25 nến kế tiếp**:
 
 **Câu 1 — có giữ được bên ngoài biên vừa phá không?**
-Một nến **đóng cửa lùi hẳn** vào trong range (quá 3× dung sai chuẩn ~30 tick) **trước khi đi được
-≥ 50% tiến độ tối thiểu** → cú phá **BỊ VÔ HIỆU** (v5 — lỗi F, xem dưới).
+Một nến **đóng cửa lùi hẳn qua biên CHÍNH** (quá 3× dung sai chuẩn ~30 tick — **v6:** trước đây mốc là
+biên phụ, dễ vô hiệu oan các cú phá thật, xem mục 5.1) **trước khi đi được ≥ 50% tiến độ tối thiểu** →
+cú phá **BỊ VÔ HIỆU** (v5 — lỗi F, xem dưới). **v6 thêm kết cục thứ ba:** không lùi qua biên chính,
+cũng không đi đủ xa, nhưng tạo một dải giá hẹp ngay ngoài biên → không phải vô hiệu, mà là **range
+mới sinh ra** (xem mục 5.4).
 
 **Câu 2 — LPS[D]/LPSY[D] đo bằng CẤU TRÚC (v5, cùng cơ chế với AR/ST[A] ở mục 4.1):** không còn
 chờ "đóng cửa trong 20 tick quanh biên" — đó quá chặt, khiến 17/47 range không có nhịp retest nào và
@@ -381,8 +492,9 @@ nhau đúng 42 nến).
 |---|---|---|
 | Range quá cao | **biên chính** cao > **3.5% giá** | range Wyckoff là vùng **cân bằng hẹp**, không phải cả một xu hướng dài |
 | Kéo quá dài | > **2500 nến** kể từ climax | như trên |
+| (v6) Biên phụ phình quá biên chính | tỷ lệ **> 4.0×** | biên phụ chỉ được phép nới bằng ĐÚNG cú thăm dò thất bại; phình vượt xa nghĩa là cơ chế đóng băng/nới đang sai (đo trên dữ liệu thật: trung vị 1.3–1.5×, chỉ 2–3 ca ngoại lệ vượt 3.8×) |
 
-⚠️ Hai mốc này là **guard tự đặt, KHÔNG có trong tài liệu Wyckoff gốc**.
+⚠️ Ba mốc này là **guard tự đặt, KHÔNG có trong tài liệu Wyckoff gốc**.
 
 Guard "quá cao" đo bằng **biên chính** (cố định) chứ không phải biên phụ, nên nó gần như không còn
 bắn sau Phase A — trước đây biên làm việc phình theo mỗi cú thăm dò, khiến range bị giết oan vì "quá
@@ -426,12 +538,14 @@ Nến **đang hình thành** (nến cuối chưa đóng) luôn bị bỏ qua, gi
 | Biên độ climax | ≥ **1.4×** TB 20 nến | mở range |
 | VSA climax | ≥ **2.2x** | mở range |
 | Cụm climax: cửa sổ dời mốc | **8 nến** | mở range (v5, lỗi A) |
-| Climax không chặn được move | vượt hẳn quá **3×** biên độ TB | mở range (v5, lỗi A) |
-| MOVE: cửa sổ nhìn lại | **240 nến**, loại bỏ hẳn nến climax | mở range (v5, lỗi I) |
+| Climax không chặn được move | vượt hẳn quá **4×** biên độ TB (v6: tăng từ 3×, chạy suốt Phase A **và** A_st) | mở range + Phase A (v5 lỗi A, v6 mục 1.4) |
+| MOVE: cửa sổ nhìn lại | **240 nến**, loại bỏ hẳn nến climax, **không bắc qua khe > 4 giờ** (v6) | mở range (v5, lỗi I; v6 mục 1.7) |
 | MOVE: dài tối thiểu | **20 nến** và ≥ **8×** TB biên độ | mở range |
 | MOVE: hiệu suất hướng | ≥ **0.35** | mở range (loại đi ngang) |
 | AR / ST[A]: xác nhận swing pivot | **5 nến** không cực trị mới | Phase A (v5, lỗi D — đo bằng cấu trúc) |
-| AR / ST[A]: sàn chống nhiễu | nhịp hồi ≥ **1.5×** biên độ TB | Phase A (v5, lỗi D) |
+| AR / ST[A]: sàn chống nhiễu (tuyệt đối) | nhịp hồi ≥ **1.5×** biên độ TB | Phase A (v5, lỗi D) |
+| (v6) AR: sàn tương đối | ≥ **0.5×** nhịp hồi lớn nhất *đã xảy ra* trong lòng move (nguyên lý CHoCH) | Phase A (v6 mục 1.8) |
+| (v6) ST[A]: sàn tương đối | ≥ **0.2×** khoảng AR↔climax | Phase A (v6 mục 1.8) |
 | ST[A]: trần vượt climax | ≤ **1.0×** chiều cao range | Phase A (v5, lỗi D) |
 | AR: chờ tối đa | **300 nến** | Phase A |
 | ST[A]: chờ tối đa | **400 nến** từ AR | Phase A |
@@ -439,12 +553,12 @@ Nến **đang hình thành** (nến cuối chưa đóng) luôn bị bỏ qua, gi
 | Cú rũ: sâu/mạnh tối thiểu | ≥ max(**15 tick**, **15%** chiều cao) **hoặc** VSA ≥ 2.2x | Phase B (v5, lỗi H) |
 | Mỗi range chỉ một cú rũ | cú sâu hơn hạ cấp cú trước | Phase B (v5, lỗi G) |
 | Spring ↔ Shakeout | quay về trong **≤ 4 nến** = Spring | Phase B (mục 5.1) |
-| Phá THẬT: số nến giữ ngoài biên | **3 nến** liên tiếp, nhãn hồi tố về cây phá | Phase B → D (v5, lỗi B) |
+| Phá THẬT: số nến giữ ngoài biên | **3 nến** liên tiếp, nhãn hồi tố về cây phá, **quét từ nến đầu tiên thò ra, mốc = biên chính** (v6) | Phase B → D (v5 lỗi B, v6 mục 5.1) |
 | Phá THẬT: ở ngoài quá lâu | **40 nến** **và** ≥ 60% nến đóng ngoài biên | Phase B → D (v5) |
 | Phase C: chờ tối đa | **120 nến**, hết hạn thì xoá đoạn C (v5, lỗi C) | Phase C (phase ngắn nhất) |
-| Phase C gán ngược: cửa sổ nhìn lại | min(**60 nến**, 1/2 độ dài Phase B), lấy swing pivot | Phase C case khó |
+| Phase C gán ngược: cửa sổ nhìn lại | min(**60 nến**, 1/2 độ dài Phase B); pivot phải **trong range + đúng nửa range** (v6) | Phase C case khó (v6 mục 1.5) |
 | Sai số chạm biên (ST) | **10 tick** | Phase B |
-| Đóng cửa "lùi hẳn" qua biên | **30 tick** | Phase B, D |
+| Đóng cửa "lùi hẳn" qua biên | **30 tick**, mốc = **biên chính** (v6, trước là biên phụ) | Phase B, D (v6 mục 5.1) |
 | Thân nến tối thiểu để công nhận SOS/SOW | **45%** | Phase B, C, D |
 | Tiến độ để xác nhận cú rũ | **50%** quãng đường sang biên đối diện | Phase C |
 | Cửa sổ chờ retest sau SOS/SOW | **25 nến** | Phase D |
@@ -455,7 +569,11 @@ Nến **đang hình thành** (nến cuối chưa đóng) luôn bị bỏ qua, gi
 | Phase E: độ dài thật, tối đa | **120 nến** hoặc đi xa **2.0×** chiều cao | Phase E (v5, lỗi J) |
 | Chiều cao **biên chính** tối đa | **3.5% giá** | huỷ range |
 | Số nến tối đa kể từ climax | **2500** | huỷ range |
+| (v6) Tỷ lệ biên phụ/biên chính tối đa | **4.0×** | huỷ range (v6 mục 1.2) |
 | Khe thời gian cắt range | > **240 phút** (4 giờ) | huỷ range (v5, lỗi K) |
+| (v6) "Seed" range mới sinh: độ rộng tối đa | ≤ **0.6×** chiều cao range cũ | SIDEWAYS (v6 mục 5.4) |
+| (v6) Range mới sinh: số nến xác nhận | **120 nến** (2 giờ M1), chưa đo kỹ | SIDEWAYS (v6 mục 5.4) |
+| (v6) Range mới sinh: ngưỡng "chỉ là nhịp hồi" | but qua peak ± **1.0×** độ rộng seed | SIDEWAYS (v6 mục 5.4) |
 | Số range gần nhất hiển thị | **40** (chỉnh được tới 300) | phần vẽ |
 
 ---
@@ -475,8 +593,16 @@ Nến **đang hình thành** (nến cuối chưa đóng) luôn bị bỏ qua, gi
 7. **Ngưỡng "cú rũ mạnh" = 15% chiều cao range hoặc VSA≥2.2x** (v5, lỗi H) — tự đặt để thay ngưỡng
    tuyệt đối 15 tick cũ (quá nhỏ với vàng); chưa quét tham số.
 8. **Ngưỡng "phá thật khi ở ngoài lâu" = 40 nến và ≥60% nến đóng ngoài biên** (v5) — tỉ lệ 60% tự đặt.
-9. **UT vs UA vs DA** — đặt theo **origin** (SC hay BCLX) vì lúc đó chưa biết range là tích luỹ hay
-   phân phối. Cách gán này là suy luận từ mục 5, cần xác nhận.
+9. **(v6) UT[B] vs ST[B]** chỉ phân biệt theo BÊN (trên/dưới), không còn phân biệt theo origin như
+   UA/UT/DA cũ — đơn giản hơn nhưng chưa có case thực tế nào giảng viên chê để xác nhận ngược lại.
+9b. **(v6) Ngưỡng SOT** (`n≥3`=SOT, `n>4`=quá mạnh, hệ số hấp thụ 1.0) — lấy thẳng từ mô tả lý thuyết
+   trong THEORY.md, chưa quét tham số hay đối chiếu với case nào của giảng viên.
+9c. **(v6) Bias bất đối xứng** (0.95/0.75) và **guard tỷ lệ biên phụ/chính 4.0×** — đều đo trên đúng
+   MỘT lô 49–53 range của bản thân indicator này; chưa kiểm tra trên dữ liệu ngoài mẫu (front-month
+   khác, hoặc symbol khác).
+9d. **(v6) Cơ chế SIDEWAYS** (seed ≤0.6×, xác nhận 120 nến, ngưỡng nhịp hồi 1.0×) — cơ chế MỚI nhất,
+   ít được kiểm chứng nhất trong toàn bộ v6; con số 120 nến do người học chọn phương án (số nến tuyệt
+   đối) nhưng CHƯA đo phân bố thực tế để chốt giá trị, plan gốc đã ghi rõ "chưa đo kỹ".
 10. **Phase C gán ngược lấy swing pivot trong cửa sổ ≤60 nến** làm LPS[C] — đỡ hơn "lấy đúng cực trị
     cả cửa sổ" của v4, nhưng vẫn là cách chọn đơn giản, chưa chắc trùng nhịp test mắt người sẽ chọn.
 11. **Khe cắt range = 240 phút (4 giờ)** — tự chọn để vừa cắt cuối tuần (73 giờ) vừa nối nghỉ phiên

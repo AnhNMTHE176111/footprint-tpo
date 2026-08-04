@@ -169,6 +169,15 @@ PHASE_E_TARGET_MULT = 2.0  # ... hoac dung khi gia da di xa x lan chieu cao rang
 # --- v5: khe thoi gian (LOI K, nguoi hoc chot) ---
 GAP_CUT_MIN = 240          # khe > 4 gio (cuoi tuan/nghi le) -> cat range; nghi phien 1h thi noi
 
+# --- v6 muc 4: range SINH TU MOT CU PHA (nguoi hoc chot 2026-08-04) — gia pha xong roi di ngang
+# TAI DO (khong lui vao bien chinh, cung khong di du xa de tinh la Phase E) -> range CU bi thay the
+# (giu ve, danh dau 'superseded', KHONG dat ten 4 mau hinh), range MOI mo tai do, chap nhan KHONG CO
+# climax that (neo bang cuc tri cua chinh cu pha). San "du dai" = phuong an A nguoi hoc chon (so nen
+# tuyet doi) — NEW_RANGE_MIN_BARS CHUA DUOC DO KY tren du lieu, se do lai va dieu chinh sau khi chay. */
+NEW_RANGE_SEED_MAX = 0.6    # "seed" (dai gia 25 nen sau cu pha) phai HEP hon 0.6x chieu cao range cu
+NEW_RANGE_MIN_BARS = 120    # range moi song du 120 nen (2 gio) moi tinh la CHINH THUC, khong phai hoi
+NEW_RANGE_CONT_MULT = 1.0   # trong luc cho: gia but tiep qua peak +/- 1.0x seed_h -> chi la nhip hoi
+
 
 # Ung vien range da MO nhung bi BO giua chung. Chi de CHAN DOAN/review.
 DISCARDED = []
@@ -243,7 +252,9 @@ class WyRange:
                  'sta_i', 'sta_price', 'move_i', 'move_len', 'move_eff', 'move_max_pullback',
                  'st_ext', 'st_ext_i', 'shock_ev', 'shock_depth', 'fail_floor', 'void_breaks',
                  'climax_vsa', 'ar_vsa', 'sta_vsa',
-                 'pivots', 'sot_up', 'sot_dn', 'bias', 'er_legs')
+                 'pivots', 'sot_up', 'sot_dn', 'bias', 'er_legs',
+                 'born_from_break', 'pullback_ref', 'pullback_dir', 'pullback_seed_h',
+                 'pullback_until', 'superseded_ref')
 
     def __init__(self, start_i, origin):
         self.start_i = start_i
@@ -285,6 +296,13 @@ class WyRange:
         self.sot_dn = dict(_sot0)   # SOT phia DUOI — chua chot Phase B thi giu mac dinh 'none'
         self.bias = 0             # +1 test tren khong voi noi duoi | -1 nguoc lai | 0 test ca hai (ca THUONG)
         self.er_legs = []         # [dict(i0,i1,effort,result,er)] no luc/ket qua tung nhip Phase B
+        # --- v6 muc 4: range sinh tu mot cu pha (SIDEWAYS) ---
+        self.born_from_break = False   # True -> khong co climax that, neo bang cuc tri cua cu pha
+        self.pullback_ref = None       # gia moc (climax_price cua range moi) de xet "chi la nhip hoi"
+        self.pullback_dir = 0          # +1/-1 = chieu cu pha da tao ra range nay
+        self.pullback_seed_h = 0.0     # do rong "seed" luc moi sinh
+        self.pullback_until = None     # het han theo doi thi coi la range CHINH THUC
+        self.superseded_ref = None     # range CU da bi thay the — hoi sinh lai neu day chi la nhip hoi
         self.events = []
         self.phases = []
         self.status = 'active'
@@ -600,7 +618,10 @@ def _try_lps_and_phase_e(B, r, sos_i, up, level, solid_edge):
     `solid_edge` = bien CHINH — v6 muc 3.2: vung giua bien chinh va bien phu la CHUA KET LUAN, gia
     lui qua bien phu (level) van con co the la retest binh thuong; CHI khi lui qua HAN bien chinh
     moi tinh la cu pha bi VO HIEU (truoc day dung `level` nen SOS/SOW that de bi vo hieu oan).
-    Tra (ok, end_i): ok=False nghia la cu pha BI VO HIEU (call site phai ha cap nhan — LOI F)."""
+    Tra (outcome, end_i, extra): outcome = 'TREND' (thanh cong, LOI F cu) | 'VOID' (vo hieu, ha cap
+    nhan) | 'SIDEWAYS' (v6 muc 4: khong lui vao bien chinh NHUNG cung khong di du xa — gia dang tao
+    mot "seed" hep NGOAI bien, day la ca "pha xong roi di ngang tai do" -> sinh range MOI, extra =
+    dict(seed_hi, seed_lo))."""
     ACC = up
     N = len(B)
     end = min(N - 1, sos_i + LPS_WAIT_BARS)
@@ -632,7 +653,7 @@ def _try_lps_and_phase_e(B, r, sos_i, up, level, solid_edge):
             pull = ret_ext - peak
         moved_far = (peak - level) if ACC else (level - peak)
         if failed and moved_far < PHASE_E_MIN_PROGRESS_MULT * PHASE_E_MULT * range_height:
-            return (False, j)      # dong nen lui han vao trong range truoc khi di duoc dau -> vo hieu
+            return ('VOID', j, None)   # dong nen lui han vao trong bien chinh truoc khi di duoc dau
         if (lps_i is None and ret_i is not None and pull >= PIVOT_MIN_ATR * avgr
                 and (j - ret_i) >= PIVOT_CONFIRM_BARS):
             lps_i = ret_i
@@ -645,7 +666,16 @@ def _try_lps_and_phase_e(B, r, sos_i, up, level, solid_edge):
     if target_j is None:
         final_moved = (peak - level) if ACC else (level - peak)
         if final_moved < PHASE_E_MIN_PROGRESS_MULT * PHASE_E_MULT * range_height:
-            return (False, end)
+            # v6 muc 4: KHONG lui vao bien chinh (khong "failed" — da qua het vong for ma khong
+            # trigger return VOID ben tren), nhung cung KHONG di du xa. Kiem xem gia co dang tao
+            # mot "seed" (dai gia HEP) ngoai bien chinh hay khong — day chinh la ca nguoi hoc mo ta
+            # "pha xong ma di ngang tai do" (khac VOID: VOID la lui HAN vao trong, con day la GIU
+            # duoc ngoai bien nhung khong buoc tiep).
+            seed_hi = max(B[k]['hi'] for k in range(sos_i, end + 1))
+            seed_lo = min(B[k]['lo'] for k in range(sos_i, end + 1))
+            if (seed_hi - seed_lo) <= NEW_RANGE_SEED_MAX * range_height:
+                return ('SIDEWAYS', end, dict(seed_hi=seed_hi, seed_lo=seed_lo))
+            return ('VOID', end, None)
         target_j = end
     # Phase D phai BAO TRON nhip retest (muc 7: pha -> hoi ve retest GIU duoc ngoai bien -> roi moi
     # thuan luc di tiep). Khong co nhip retest thi Phase D ngan that (CHART_CASES Ca #21: "khong phai
@@ -665,16 +695,45 @@ def _try_lps_and_phase_e(B, r, sos_i, up, level, solid_edge):
         e_end = j
         if ((peak - level) if ACC else (level - peak)) >= PHASE_E_TARGET_MULT * range_height:
             break
-    return (True, e_end)
+    return ('TREND', e_end, None)
 
 
-def _fire_break(B, r, i, up, out_edge, poke_start_i):
+def _spawn_sideways_range(B, up, sos_i, end, seed_hi, seed_lo):
+    """v6 muc 4.3: range MOI sinh tu chinh cu pha — chap nhan KHONG CO climax that, neo bang cuc
+    tri gia THUC SU dat duoc trong cu pha (BCLX?/SC?, nhan co dau '?' de bao "khong phai cao trao
+    that"). Phia UP (pha len) -> origin='UP' (nhu dinh BCLX — sau nay pha len tiep = RE-ACC, pha
+    xuong = DIST); phia DOWN -> origin='DOWN' (nhu day SC — pha xuong tiep = RE-DIST, pha len = ACC).
+    move_max_pullback=0: range nay KHONG co mot 'move' truoc do theo nghia thong thuong (chinh cu
+    pha LA move), nen AR chi can san tuyet doi PIVOT_MIN_ATR, khong doi hoi tuong doi CHoCH."""
+    if up:
+        anchor_i = max(range(sos_i, end + 1), key=lambda k: B[k]['hi'])
+        nr = WyRange(anchor_i, 'UP')
+        nr.high = nr.climax_price = B[anchor_i]['hi']
+        nr.climax_ev = nr.add_event(anchor_i, 'BCLX?', B[anchor_i]['hi'], 'A')
+    else:
+        anchor_i = min(range(sos_i, end + 1), key=lambda k: B[k]['lo'])
+        nr = WyRange(anchor_i, 'DOWN')
+        nr.low = nr.climax_price = B[anchor_i]['lo']
+        nr.climax_ev = nr.add_event(anchor_i, 'SC?', B[anchor_i]['lo'], 'A')
+    nr.climax_vsa = B[anchor_i]['vratio']
+    nr.set_phase(anchor_i, 'A')
+    nr.born_from_break = True
+    nr.pullback_ref = nr.climax_price
+    nr.pullback_dir = 1 if up else -1
+    nr.pullback_seed_h = seed_hi - seed_lo
+    nr.pullback_until = anchor_i + NEW_RANGE_MIN_BARS
+    return nr
+
+
+def _fire_break(B, r, i, up, out_edge, poke_start_i, ranges):
     """Mot cu pha bien da du dieu kien chot. Nhan dat HOI TO vao cay pha that (LOI B).
     Neu Phase D/E khong giu duoc thi cu pha BI VO HIEU: ha cap nhan, tra dai phase ve B, KHONG dat
     ten range (LOI F).
     v6 muc 1.3: `poke_start_i` = nen DAU TIEN tho ra khoi bien (khong phai nen xac nhan thu 3), va
     moc so sanh cua anchor la BIEN CHINH (solid) — cay pha that thuong nam TRUOC ca luc dong cua
-    vuot duoc bien phu."""
+    vuot duoc bien phu.
+    Tra True (TREND, r tu dong) | False (VOID, r tu dong) | mot WyRange MOI (SIDEWAYS, muc 4: r da
+    duoc dong o trang thai 'superseded' va DAY VAO `ranges`, caller phai gan active = gia tri tra ve)."""
     solid_edge = r.solid_high if up else r.solid_low
     anchor = _anchor_break_bar(B, poke_start_i, i, up, solid_edge)
     r.brk = None
@@ -684,13 +743,25 @@ def _fire_break(B, r, i, up, out_edge, poke_start_i):
         _retro_phase_c(B, r, anchor, up)
     ev = r.add_event(anchor, 'SOS' if up else 'SOW', B[anchor]['c'], 'D')
     r.set_phase(anchor, 'D')
-    ok, e_end = _try_lps_and_phase_e(B, r, anchor, up, out_edge, solid_edge)
-    if ok:
+    outcome, e_end, extra = _try_lps_and_phase_e(B, r, anchor, up, out_edge, solid_edge)
+    if outcome == 'TREND':
         r.dir = 1 if up else -1
         r.end_i = e_end
         r.state = 'END'
         return True
-    # --- cu pha bi vo hieu: da lui han qua BIEN CHINH (vung giua chinh-phu la CHUA KET LUAN) ---
+    if outcome == 'SIDEWAYS':
+        # v6 muc 4: KHONG ha cap nhan SOS/SOW — cu pha nay THAT, chi la sau do gia dung lai di ngang
+        # tai do thay vi tiep tuc ngay. Range CU dong lai, giu VE (KHONG xoa, muc 4.5) nhung KHONG
+        # dat ten 4 mau hinh (dir=0 -> kind tra ve 'ACC?'/'DIST?').
+        r.status = 'superseded'
+        r.end_i = e_end
+        if r.phases:
+            r.phases[-1][2] = e_end
+        ranges.append(r)
+        nr = _spawn_sideways_range(B, up, anchor, e_end, extra['seed_hi'], extra['seed_lo'])
+        nr.superseded_ref = r
+        return nr
+    # --- VOID: da lui han qua BIEN CHINH (vung giua chinh-phu la CHUA KET LUAN) ---
     # v6 muc 3.2: mSOS/mSOW chi CHOT khi gia da di duoc >=50% chieu cao range VE HUONG BIEN DOI DIEN;
     # chua di duoc thi de trang thai 'provisional' — Phase B se tiep tuc theo doi qua _mark_outer.
     range_height = max(1e-9, r.height)
@@ -793,6 +864,25 @@ def detect(B):
             DISCARDED.append((r, reason, i))
             active = None
             continue
+
+        # ------------------------------------------------------ v6 muc 4.4: range SINH TU CU PHA —
+        # trong luc con "provisional" (chua song du NEW_RANGE_MIN_BARS), neu gia BUT TIEP qua chinh
+        # peak cua cu pha (>= NEW_RANGE_CONT_MULT x seed_h) THEO DUNG HUONG cu pha cu, thi day KHONG
+        # phai mot range moi — chi la mot nhip HOI truoc khi xu huong tiep tuc. Huy range moi, hoi
+        # sinh range CU (no dung la mot cu pha THANH CONG, chi bi danh gia nham la 'di ngang').
+        if r.born_from_break and i <= r.pullback_until:
+            beyond_seed = (b['c'] > r.pullback_ref + NEW_RANGE_CONT_MULT * r.pullback_seed_h) \
+                if r.pullback_dir > 0 else \
+                (b['c'] < r.pullback_ref - NEW_RANGE_CONT_MULT * r.pullback_seed_h)
+            if beyond_seed:
+                old = r.superseded_ref
+                old.status = 'completed'
+                old.dir = r.pullback_dir
+                old.end_i = i
+                if old.phases:
+                    old.phases[-1][2] = i
+                active = None
+                continue
 
         # ============================================================ state A: cum climax + cho AR
         if r.state == 'A':
@@ -1024,7 +1114,10 @@ def detect(B):
             if (k['hold'] >= BREAK_HOLD_BARS or timed_out) and floor_ok:
                 # v6 muc 1.3: quet ANCHOR tu nen DAU TIEN tho ra (k['start_i']), khong phai tu nen
                 # xac nhan thu 3 — cay pha THAT (VSA cao nhat) thuong nam som hon trong doan.
-                _fire_break(B, r, i, up_side, out_edge, k['start_i'])
+                result = _fire_break(B, r, i, up_side, out_edge, k['start_i'], ranges)
+                if isinstance(result, WyRange):
+                    active = result
+                    continue
             elif bars_out > BREAK_MAX_WAIT and not timed_out:
                 # o ngoai lau nhung phan lon nen van dong TRONG bien -> khong phai pha that
                 if up_side:
@@ -1089,7 +1182,10 @@ def detect(B):
             else:
                 shock['hold'] = 0
             if shock['hold'] >= BREAK_HOLD_BARS:
-                _fire_break(B, r, i, up, oe, shock['start_i'])
+                result = _fire_break(B, r, i, up, oe, shock['start_i'], ranges)
+                if isinstance(result, WyRange):
+                    active = result
+                    continue
             elif (not shock['lps_done'] and abs(b['c'] - shock['price']) <= 2.0 * tol
                   and (i - shock['start_i']) >= PIVOT_CONFIRM_BARS):
                 _add_unique(r, i, 'LPS[C]' if up else 'LPSY[C]', b['c'], 'C')

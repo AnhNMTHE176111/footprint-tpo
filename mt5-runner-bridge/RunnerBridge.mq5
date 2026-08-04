@@ -63,8 +63,8 @@ input int             InpMaxPositions    = 1;                  // So vi the toi 
 input double          InpMaxDailyLossPct = 6.0;                // Dung giao dich khi lo ngay vuot % (0 = tat)
 input bool            InpAllowBuy        = true;               // Cho phep BUY
 input bool            InpAllowSell       = true;               // Cho phep SELL
-input bool            InpTakeCbr         = true;               // Nhan nhanh CBR (3R)
-input bool            InpTakeRev         = true;               // Nhan nhanh QUAY DAU (1.5R)
+// Da BO InpTakeCbr / InpTakeRev (2026-08-04): EA nhan MOI nhanh tu MOI file lenh.
+// Muon tat mot nhanh thi tat ngay tai indicator ghi ra no, dung loc lai o day.
 input bool            InpOnlyGradeA      = false;              // Chi nhan grade A
 
 CTrade   trade;
@@ -199,12 +199,9 @@ void HandleCmd(const string line, const string id)
    if(slDist <= 0.0 || rr <= 0.0 || (side != "BUY" && side != "SELL"))
      { Reject(id, line, "du lieu tin hieu khong hop le"); return; }
 
-   // --- loc nhanh / huong / grade ---
-   // Nhanh phan lam 2 HO, khong so khop chinh xac: runner ghi "CBR"/"REV", EntrySignal ghi
-   // "SCALP_BR"/"SCALP_REV". So == se lam ca hai cong tac vo hieu voi tin hieu EntrySignal.
-   bool isRev = (StringFind(branch, "REV") >= 0);
-   if(!isRev && !InpTakeCbr)            { Reject(id, line, "tat nhanh tiep dien"); return; }
-   if(isRev  && !InpTakeRev)            { Reject(id, line, "tat nhanh QUAY DAU");  return; }
+   // --- loc huong / grade ---
+   // KHONG loc theo nhanh (bo 2026-08-04 theo yeu cau): bat ke indicator nao ghi lenh vao file,
+   // EA deu chay. "branch" gio chi la NHAN de ghi log/comment, khong con quyet dinh nhan hay bo.
    if(isBuy  && !InpAllowBuy)           { Reject(id, line, "tat BUY");            return; }
    if(!isBuy && !InpAllowSell)          { Reject(id, line, "tat SELL");           return; }
    if(InpOnlyGradeA && grade != "A")    { Reject(id, line, "chi nhan grade A");   return; }
@@ -634,12 +631,29 @@ void PrintSpec()
                equity, AccountInfoString(ACCOUNT_CURRENCY), (int)AccountInfoInteger(ACCOUNT_LEVERAGE),
                r3, equity > 0 ? 100.0*r3/equity : 0.0, r7, equity > 0 ? 100.0*r7/equity : 0.0);
    // KIEM TRA TRUOC: voi che do sizing dang chon, lenh SL 3.0 va SL 7.0 se ra lot / rui ro bao nhieu
+   // szMult = 1.0: dong nay xem lot CO SO (chua nhoi) — nhoi in rieng o dong duoi.
    double l3 = 0, m3 = 0, l7 = 0, m7 = 0; string e3 = "", e7 = "";
-   bool ok3 = CalcLot(3.0, l3, m3, e3), ok7 = CalcLot(7.0, l7, m7, e7);
+   bool ok3 = CalcLot(3.0, 1.0, l3, m3, e3), ok7 = CalcLot(7.0, 1.0, l7, m7, e7);
    PrintFormat("RunnerBridge SIZING (che do %d): SL 3.0 -> lot %.2f rui ro %.2f (%.1f%%) %s | SL 7.0 -> lot %.2f rui ro %.2f (%.1f%%) %s",
                (int)InpRiskMode,
                l3, m3, equity > 0 ? 100.0*m3/equity : 0.0, ok3 ? "OK" : ("=> BO LENH: " + e3),
                l7, m7, equity > 0 ? 100.0*m7/equity : 0.0, ok7 ? "OK" : ("=> BO LENH: " + e7));
+
+   // NHOI: in ra lot that se dung khi tin hieu mang size_mult = tran, de doi chieu ngay luc khoi dong
+   // (truoc day khong co dong nay nen "nhoi khong an" rat kho phat hien).
+   if(InpUseSizeMult && InpMaxSizeMult > 1.0)
+     {
+      double ln = 0, mn = 0; string en = "";
+      bool okn = CalcLot(3.0, InpMaxSizeMult, ln, mn, en);
+      PrintFormat("RunnerBridge NHOI: bat (tran x%.1f). SL 3.0 lot co so %.2f -> nhoi %.2f, rui ro %.2f (%.1f%%) %s",
+                  InpMaxSizeMult, l3, ln, mn, equity > 0 ? 100.0*mn/equity : 0.0,
+                  okn ? "OK" : ("=> BO LENH: " + en));
+      if(okn && ln <= l3)
+         Print("RunnerBridge CANH BAO: nhoi KHONG lam tang lot (dinh tran rui ro hoac buoc lot) — ",
+               "kiem InpMaxRiskPct / InpRiskMode truoc khi tin la da nhoi.");
+     }
+   else
+      Print("RunnerBridge NHOI: TAT (InpUseSizeMult=false hoac InpMaxSizeMult=1) — luon dung lot co so.");
 
    double spr = CurSpread();
    PrintFormat("RunnerBridge exec mode %d | spread hien tai %.3f -> voi tran %.0f%% thi SL toi thieu duoc nhan = %.2f USD"

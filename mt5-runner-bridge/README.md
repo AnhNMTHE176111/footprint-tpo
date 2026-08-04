@@ -13,13 +13,41 @@ Nay `InpCmdFile` nhận **danh sách cách nhau bằng dấu phẩy**, mặc đ�
 runner_cmd.jsonl,entry_cmd.jsonl
 ```
 
-Muốn chạy riêng một nguồn thì để lại đúng file đó. Hai lỗi liên quan đã sửa cùng lúc:
+Muốn chạy riêng một nguồn thì để lại đúng file đó. Lỗi liên quan đã sửa cùng lúc:
 
-- **Lọc nhánh vô hiệu:** EA so `branch == "CBR"` / `== "REV"`, nhưng EntrySignal ghi
-  `SCALP_BR` / `SCALP_REV` → cả `InpTakeCbr` lẫn `InpTakeRev` đều không tác dụng với tín hiệu
-  entry (tắt cũng vẫn vào lệnh). Nay phân loại theo *có chứa* `REV` hay không.
 - **Nạp id cũ bỏ sót file:** `MarkExistingDone()` chỉ quét 1 file; nếu không sửa, mọi dòng cũ
   trong file thứ hai sẽ bị bắn lại ngay khi khởi động EA. Nay quét đủ mọi file.
+
+## ⛔ EA KHÔNG COMPILE ĐƯỢC từ 9f75180 → nhồi chưa từng chạy (sửa 2026-08-04)
+
+Commit `9f75180` thêm tham số `szMult` vào `CalcLot(...)` nhưng **quên sửa chỗ gọi trong
+`PrintSpec()`** — hàm 5 tham số bị gọi với 4. MQL5 báo *wrong parameters count* → **file không
+biên dịch được kể từ hôm đó**.
+
+Hệ quả: MT5 vẫn chạy bản `.ex5` **cũ** — bản chưa biết đọc `size_mult`. Nên "nhồi ×N" chỉ là con
+số trên panel Quantower, **lot thật chưa bao giờ được nhân**, đúng như triệu chứng. Mọi sửa đổi
+khác trong khoảng thời gian đó cũng chưa hề có hiệu lực.
+
+Đã sửa chỗ gọi. **Phải recompile (F7) và xác nhận 0 error** thì các sửa đổi mới thật sự chạy.
+
+Khi khởi động, EA giờ in thêm một dòng để kiểm nhồi ngay, khỏi phải đoán:
+
+```
+RunnerBridge NHOI: bat (tran x5.0). SL 3.0 lot co so 0.01 -> nhoi 0.05, rui ro ... OK
+```
+
+Nếu lot nhồi **không lớn hơn** lot cơ sở, EA in cảnh báo — thường do đụng trần `InpMaxRiskPct`
+hoặc bước lot, chứ không phải do tín hiệu thiếu `size_mult`.
+
+⚠ Nhồi chỉ có tác dụng khi **indicator** thật sự gửi `size_mult > 1`. Mặc định cả ba indicator đều
+để `NhoiMult = 1.0` (**tắt**) — phải bật trong properties, kèm điều kiện kích hoạt: EntrySignal
+theo `NhoiConflGate` (hợp lưu ≥ 3), Runner/Wyckoff theo `NhoiVsaGate` (VSA nến vào ≥ 2.2).
+
+## Không còn lọc nhánh (2026-08-04)
+
+Đã **bỏ hẳn** `InpTakeCbr` / `InpTakeRev`. Bất kể indicator nào ghi lệnh vào file, EA đều chạy;
+`branch` giờ chỉ là nhãn ghi log và comment lệnh. Muốn tắt một nhánh thì tắt tại chính indicator
+sinh ra nó.
 
 ## ⚠ Chưa sửa: RunnerSignal và WyckoffRunner đụng nhau
 

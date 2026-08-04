@@ -1,6 +1,33 @@
-# Cầu nối Quantower RunnerSignal → MT5 (Exness)
+# Cầu nối Quantower (Runner / Entry Signal) → MT5 (Exness)
 
-Mỗi khi RunnerSignal bắn tín hiệu trên Quantower, MT5 tự vào lệnh cùng hướng.
+Mỗi khi indicator bắn tín hiệu trên Quantower, MT5 tự vào lệnh cùng hướng.
+
+## ⚠ EntrySignal: phải chỉnh `InpCmdFile` (sửa 2026-08-04)
+
+EntrySignal ghi ra **`entry_cmd.jsonl`**, còn EA trước đây chỉ đọc **một** file `runner_cmd.jsonl`
+→ tín hiệu EntrySignal **không bao giờ tới MT5** dù phía Quantower báo "gửi N" trên panel.
+
+Nay `InpCmdFile` nhận **danh sách cách nhau bằng dấu phẩy**, mặc định:
+
+```
+runner_cmd.jsonl,entry_cmd.jsonl
+```
+
+Muốn chạy riêng một nguồn thì để lại đúng file đó. Hai lỗi liên quan đã sửa cùng lúc:
+
+- **Lọc nhánh vô hiệu:** EA so `branch == "CBR"` / `== "REV"`, nhưng EntrySignal ghi
+  `SCALP_BR` / `SCALP_REV` → cả `InpTakeCbr` lẫn `InpTakeRev` đều không tác dụng với tín hiệu
+  entry (tắt cũng vẫn vào lệnh). Nay phân loại theo *có chứa* `REV` hay không.
+- **Nạp id cũ bỏ sót file:** `MarkExistingDone()` chỉ quét 1 file; nếu không sửa, mọi dòng cũ
+  trong file thứ hai sẽ bị bắn lại ngay khi khởi động EA. Nay quét đủ mọi file.
+
+## ⚠ Chưa sửa: RunnerSignal và WyckoffRunner đụng nhau
+
+Cả hai đều hardcode ghi vào `runner_cmd.jsonl` **và** sinh `id` cùng công thức
+`symbol|phút|hướng|R hoặc C`. Chạy đồng thời hai indicator này thì tín hiệu trùng phút + trùng
+hướng + trùng nhánh sẽ bị EA coi là **một lệnh** (cái thứ hai bị nuốt vì `IsDone`). EntrySignal
+không dính (hậu tố `P`/`D` khác `R`/`C`). **Chỉ bật một trong hai runner cùng lúc**, cho tới khi
+tách file/prefix id.
 
 ```
 Quantower / RunnerSignal.cs          %APPDATA%\MetaQuotes\Terminal\Common\Files\

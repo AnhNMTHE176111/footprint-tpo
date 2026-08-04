@@ -39,7 +39,7 @@ input long            InpMagic           = 20260728;           // Magic number
 input bool            InpMarkExistingDone= true;               // Danh dau cac dong dang co la "da xu ly" khi khoi dong
 
 input group "=== FILE CAU NOI ==="
-input string          InpCmdFile         = "runner_cmd.jsonl"; // File lenh (Quantower ghi)
+input string          InpCmdFile         = "runner_cmd.jsonl,entry_cmd.jsonl"; // File lenh (Quantower ghi) — nhieu file cach nhau bang dau phay
 input string          InpAckFile         = "runner_ack.csv";   // File ack (EA ghi)
 input string          InpDoneFile        = "runner_done.txt";  // File id da xu ly
 input bool            InpUseCommonFolder = true;               // Dung thu muc Common\Files (khop mac dinh Quantower)
@@ -69,7 +69,8 @@ input bool            InpOnlyGradeA      = false;              // Chi nhan grade
 
 CTrade   trade;
 string   g_done[];
-ulong    g_lastSize = 0;
+string   g_cmdFiles[];      // danh sach file lenh (tach tu InpCmdFile)
+ulong    g_lastSize[];      // kich thuoc lan doc truoc — MOI file mot o, khong dung chung
 string   g_lastMsg  = "chua co tin hieu";
 int      g_traded   = 0;
 int      g_skipped  = 0;
@@ -81,6 +82,14 @@ int OnInit()
    trade.SetExpertMagicNumber(InpMagic);
    trade.SetDeviationInPoints(InpDeviationPts);
    trade.SetTypeFillingBySymbol(_Symbol);
+
+   SplitCmdFiles();
+   if(ArraySize(g_cmdFiles) == 0)
+     {
+      Print("RunnerBridge: LOI - InpCmdFile rong, khong co file lenh nao de doc");
+      return(INIT_FAILED);
+     }
+   Print("RunnerBridge: doc ", ArraySize(g_cmdFiles), " file lenh: ", InpCmdFile);
 
    ArrayResize(g_done, 0);
    LoadDone();
@@ -110,16 +119,25 @@ void OnTimer()
 //+------------------------------------------------------------------+
 void ProcessCmdFile()
   {
+   for(int i = 0; i < ArraySize(g_cmdFiles); i++)
+      ProcessOneCmdFile(i);
+  }
+
+//+------------------------------------------------------------------+
+//| Doc 1 file lenh — chi doc lai khi kich thuoc file do doi          |
+//+------------------------------------------------------------------+
+void ProcessOneCmdFile(const int fi)
+  {
    int flags = FILE_READ|FILE_TXT|FILE_ANSI|FILE_SHARE_READ|FILE_SHARE_WRITE;
    if(InpUseCommonFolder) flags |= FILE_COMMON;
 
-   int h = FileOpen(InpCmdFile, flags);
+   int h = FileOpen(g_cmdFiles[fi], flags);
    if(h == INVALID_HANDLE)
       return;
 
    ulong sz = FileSize(h);
-   if(sz == g_lastSize) { FileClose(h); return; }
-   g_lastSize = sz;
+   if(sz == g_lastSize[fi]) { FileClose(h); return; }
+   g_lastSize[fi] = sz;
 
    while(!FileIsEnding(h))
      {
@@ -131,6 +149,32 @@ void ProcessCmdFile()
       HandleCmd(line, id);
      }
    FileClose(h);
+  }
+
+//+------------------------------------------------------------------+
+//| Tach InpCmdFile ("a.jsonl,b.jsonl") thanh mang, bo trung/rong     |
+//+------------------------------------------------------------------+
+void SplitCmdFiles()
+  {
+   ArrayResize(g_cmdFiles, 0);
+   string parts[];
+   int k = StringSplit(InpCmdFile, StringGetCharacter(",", 0), parts);
+   for(int i = 0; i < k; i++)
+     {
+      string s = parts[i];
+      StringTrimLeft(s);
+      StringTrimRight(s);
+      if(s == "") continue;
+      bool dup = false;
+      for(int j = 0; j < ArraySize(g_cmdFiles); j++)
+         if(g_cmdFiles[j] == s) { dup = true; break; }
+      if(dup) continue;
+      int n = ArraySize(g_cmdFiles);
+      ArrayResize(g_cmdFiles, n+1);
+      g_cmdFiles[n] = s;
+     }
+   ArrayResize(g_lastSize, ArraySize(g_cmdFiles));
+   for(int i = 0; i < ArraySize(g_lastSize); i++) g_lastSize[i] = 0;
   }
 
 //+------------------------------------------------------------------+
@@ -156,8 +200,11 @@ void HandleCmd(const string line, const string id)
      { Reject(id, line, "du lieu tin hieu khong hop le"); return; }
 
    // --- loc nhanh / huong / grade ---
-   if(branch == "CBR" && !InpTakeCbr)   { Reject(id, line, "tat nhanh CBR");      return; }
-   if(branch == "REV" && !InpTakeRev)   { Reject(id, line, "tat nhanh QUAY DAU"); return; }
+   // Nhanh phan lam 2 HO, khong so khop chinh xac: runner ghi "CBR"/"REV", EntrySignal ghi
+   // "SCALP_BR"/"SCALP_REV". So == se lam ca hai cong tac vo hieu voi tin hieu EntrySignal.
+   bool isRev = (StringFind(branch, "REV") >= 0);
+   if(!isRev && !InpTakeCbr)            { Reject(id, line, "tat nhanh tiep dien"); return; }
+   if(isRev  && !InpTakeRev)            { Reject(id, line, "tat nhanh QUAY DAU");  return; }
    if(isBuy  && !InpAllowBuy)           { Reject(id, line, "tat BUY");            return; }
    if(!isBuy && !InpAllowSell)          { Reject(id, line, "tat SELL");           return; }
    if(InpOnlyGradeA && grade != "A")    { Reject(id, line, "chi nhan grade A");   return; }
@@ -413,21 +460,26 @@ void LoadDone()
    Print("RunnerBridge: nap ", ArraySize(g_done), " id da xu ly tu ", InpDoneFile);
   }
 
+// Danh dau MOI dong dang co trong TAT CA file lenh la da-xu-ly. Phai quet du moi file:
+// bo sot mot file = toan bo tin hieu cu trong file do se bi ban lai khi khoi dong.
 void MarkExistingDone()
   {
    int flags = FILE_READ|FILE_TXT|FILE_ANSI|FILE_SHARE_READ|FILE_SHARE_WRITE;
    if(InpUseCommonFolder) flags |= FILE_COMMON;
-   int h = FileOpen(InpCmdFile, flags);
-   if(h == INVALID_HANDLE) return;
    int n = 0;
-   while(!FileIsEnding(h))
+   for(int fi = 0; fi < ArraySize(g_cmdFiles); fi++)
      {
-      string line = FileReadString(h);
-      string id = JStr(line, "id");
-      if(id != "" && !IsDone(id)) { MarkDone(id); n++; }
+      int h = FileOpen(g_cmdFiles[fi], flags);
+      if(h == INVALID_HANDLE) continue;   // file chua ton tai -> g_lastSize[fi] giu 0
+      while(!FileIsEnding(h))
+        {
+         string line = FileReadString(h);
+         string id = JStr(line, "id");
+         if(id != "" && !IsDone(id)) { MarkDone(id); n++; }
+        }
+      g_lastSize[fi] = FileSize(h);
+      FileClose(h);
      }
-   g_lastSize = FileSize(h);
-   FileClose(h);
    if(n > 0) Print("RunnerBridge: danh dau ", n, " dong CU la da-xu-ly (khong vao lenh)");
   }
 

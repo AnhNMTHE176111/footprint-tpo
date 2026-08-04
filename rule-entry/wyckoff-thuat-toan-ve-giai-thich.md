@@ -626,12 +626,38 @@ dxFeed chỉ xuất tới 27/7; file footprint export có tới 31/7 nhưng là 
 
 Toàn lịch sử 11/2025 → 27/7/2026 (103.857 nến M1):
 
-| | v2 | v3 (+MOVE, +ST[A]) | v4 (+4 pattern, biên phụ, CBR) | **v5 (vòng chấm chart)** |
-|---|---|---|---|---|
-| Range **được mở** | 120 | 41 | 66 | **52** |
-| Range **được vẽ** | 3 | 1 | 49 | **47** |
-| Range **bị bỏ** | 117 | 40 | 17 | **5** |
-| Trong đó **tới Phase E** | — | 1 | 20 | **37** |
+| | v2 | v3 (+MOVE, +ST[A]) | v4 (+4 pattern, biên phụ, CBR) | v5 (vòng chấm chart) | **v6 (vá 9 lỗi + SIDEWAYS)** |
+|---|---|---|---|---|---|
+| Range **được mở** | 120 | 41 | 66 | 52 | **53** |
+| Range **được vẽ** | 3 | 1 | 49 | 47 | **53** |
+| Range **bị bỏ** | 117 | 40 | 17 | 5 | **0** |
+| Trong đó **tới Phase E** | — | 1 | 20 | 37 | *(chưa tách riêng, xem ghi chú)* |
+| **Điểm chấm trung vị / trung bình** | — | — | 3/10 · 3.41 | 3/10 · 3.57 | **4/10 · 4.19** |
+
+Bảng v6 đo trên cùng 103.857 nến M1 (11/2025 → 27/7/2026), khớp CHÍNH XÁC Python↔C# sau khi vá lỗi
+`WySpawnSidewaysRange` (đối chiếu bằng harness C# độc lập, xem mục 0c). Số **bị bỏ về 0** không có nghĩa
+"hết lỗi" — guard tỷ lệ biên phụ/chính 4.0× và ngưỡng AR/ST[A] tương đối chỉ đơn giản khoan dung hơn v5;
+đây là đánh đổi có chủ đích (đo/hiệu chỉnh trên đúng lô dữ liệu này) chưa kiểm tra ngoài mẫu, xem mục 9c.
+53 range vẽ = 52 range gốc của v5 cộng đúng 1 range mới xuất hiện, cấu trúc chuỗi
+gồm 3 range con `born_from_break` (sinh từ SIDEWAYS) trong đó range cha bị đánh dấu `superseded`
+(vẫn vẽ, không đặt tên 4 mẫu hình) — xem `range_19.md` làm ví dụ.
+
+Điểm chấm v6 (n=53, 10 giảng viên chấm song song): trung vị **4/10**, trung bình **4.19**, phân bố
+`1×2 · 2×11 · 3×10 · 4×6 · 5×9 · 6×8 · 7×5 · 8×2` — cải thiện thật so với v5 (trung vị 3, TB 3.57,
+phân bố `1×9 · 2×9 · 3×6 · 4×7 · 5×6 · 6×6 · 7×3 · 8×1`) nhưng còn xa mục tiêu ban đầu của plan v6
+("trung vị ≥6/10, không còn điểm 1-2"). Lỗi lặp lại nổi lên qua 10 lô chấm, chưa sửa trong v6 (ứng
+viên cho vòng v7):
+- Chú thích nỗ lực/kết quả trong `render_range_for_grading.py` **hard-code "vùng hấp thụ NGHI VẤN"**
+  bất kể dấu er thật — đa số lô chấm bắt lỗi ngược.
+- ST[A] vẫn thiếu ràng buộc khoảng cách đáy tới climax (nhiều ca rơi ở 40–70% chiều cao range).
+- Cửa sổ gán ngược Phase C `min(60, len(B)/2)` vẫn co gần về 0 khi Phase B ngắn → Phase C hay thiếu
+  (vi phạm L8 lặp lại).
+- Nhãn cụm climax một số ca vẫn rơi đúng nến sai màu/ngoài cửa sổ.
+- Mốc hạ cấp mSOS/mSOW đôi lúc vẫn chọn nến VSA thấp thay vì nến mạnh nhất hồi tố.
+- Một lô ghi nhận còn sót ca "biên phụ tự nới rồi tự vượt" dù đã vá ở v6.
+
+Các lỗi này KHÔNG được sửa trong phiên này (phạm vi phiên là "implement và test đúng plan v6" đã chốt),
+để lại làm plan v7 nếu cần.
 
 v5 vẽ ít hơn v4 một chút (47 so với 49) nhưng vẽ **đúng hơn**: điểm chấm trung vị của v4 là 3/10 trên
 49 bài (10 agent giảng viên chấm hết, xem mục 0b); tỉ lệ tới Phase E tăng từ 20/49 (41%) lên **37/47

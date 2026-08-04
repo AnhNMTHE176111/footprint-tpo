@@ -4,10 +4,56 @@
 > indicator vẽ Wyckoff đúng hay sai. Không phải lý thuyết Wyckoff chung chung.
 >
 > Code tương ứng: [`quantower-entry-signal/WyckoffRunner.cs`](../quantower-entry-signal/WyckoffRunner.cs)
-> — hàm `ScanWyckoff()` (dòng 1208–1522), `WyTryLpsAndPhaseE()` (1153), `WyEmitLps()` (1191),
-> `DrawWyckoff()` (2590).
+> — hàm `ScanWyckoff()`, `WyTryLpsAndPhaseE()`, `WyFireBreak()`, `DrawWyckoff()`; bản Python song sinh
+> [`wyckoff_schematic.py`](../quantower-entry-signal/research/wyckoff/v8/wyckoff/wyckoff_schematic.py)
+> (sửa một bên là phải sửa bên kia).
 >
-> Cập nhật: 2026-08-03 (bản **v4** — vá review mục 5, 5.1, 5.2, 6, 7 của người học).
+> Cập nhật: 2026-08-03 (bản **v5** — vá 11 lỗi hệ thống do **vòng chấm chart bằng agent giảng viên**
+> tìm ra, cộng 6 quyết định người học chốt trong lượt đó).
+
+---
+
+## 0b. Vòng chấm chart — nguồn của bản v5
+
+Bản v4 vẽ 49 range trên toàn bộ lịch sử. 10 agent
+[giảng viên Wyckoff](../.claude/agents/wyckoff-giao-vien.md) — nhập vai chính người đã chữa ~70 bài của
+học viên trong [CHART_CASES.md](../data-export/wyckoff/CHART_CASES.md) — chấm **đủ 49 bài**, mỗi bài một
+ảnh chart + một phiếu số liệu (giá, VSA từng nến, độ dài từng phase) để không phải đọc số từ pixel.
+
+**Điểm trung vị 3/10.** Phân bố: 1 điểm ×4 · 2 ×13 · 3 ×12 · 4 ×11 · 5 ×2 · 6 ×3 · 7 ×3 · 8 ×1.
+Bài chấm lưu ở [`research/wyckoff/grading_v4/`](../quantower-entry-signal/research/wyckoff/grading_v4/);
+bộ ảnh + phiếu số liệu do
+[`render_range_for_grading.py`](../quantower-entry-signal/research/wyckoff/v8/wyckoff/render_range_for_grading.py)
+sinh ra.
+
+Điều đáng giá không phải điểm số, mà là **11 lỗi lặp trên phần lớn bài** — tức lỗi thuật toán, không
+phải lỗi lẻ từng nhãn:
+
+| Mã | Lỗi hệ thống | Cách vá ở v5 |
+|---|---|---|
+| A | Climax không phải cực trị thật (cực trị thật cách 2–8 nến, cá biệt 93 nến) → **biên chính nằm giữa vùng giá** | Cao trào là một **cụm**: 8 nến đầu còn cực trị mới thì dời mốc climax; sau đó giá còn vượt mức climax quá 3× biên độ TB → climax không chặn được move, **bỏ range** |
+| B | Nhãn SOS/SOW neo ở nến xác nhận thứ 3 → rơi vào nến VSA 0.30–0.69× trong khi cây phá thật VSA 4.2–9.6× | Vẫn đợi đủ 3 nến mới **chốt**, nhưng nhãn đặt **hồi tố** vào cây phá thật (VSA cao nhất, đúng hướng, đóng cửa vượt biên) |
+| C | Phase C dài đúng 121 nến = trần timeout; hết hạn thì shock ghi "(thất bại)" nhưng **đoạn C vẫn nằm lại** trong timeline | Shock hết hạn → đổi nhãn thành UT/UA/**mSOS/mSOW** và **xoá hẳn đoạn C**; đồng thời Phase C không còn làm máy mù: vẫn theo dõi cú phá biên và vẫn nới biên phụ |
+| D | Phase A bị sàn cứng 41 nến (AR chỉ chốt tại đúng nến climax+40); ST[A] rơi giữa range (đo được 41%–179% chiều cao) | AR và ST[A] đều là **swing pivot** đầu tiên được xác nhận (5 nến không tạo cực trị mới) + sàn chống nhiễu 1.5× biên độ TB. Bỏ hết ngưỡng % |
+| E | Nhãn AR không dời khi mức AR bị dời → nhãn lệch tới **110.8 giá** so với chính biên nó tạo ra | Giữ tham chiếu tới sự kiện AR, đổi cả mức lẫn nhãn |
+| F | Giá trị trả về của hàm xét Phase D/E **bị bỏ**: cú phá hỏng vẫn đóng range và vẫn **đặt tên** pattern | Cú phá vô hiệu → hạ cấp thành mSOS/mSOW, trả dải phase về B, **không đặt tên range**; cú sau phải vượt qua cực trị đã thất bại; 3 lần vô hiệu thì đóng range ở trạng thái "chưa rõ" |
+| G | Cú rũ đo bằng **biên chính** thay vì cực trị thật của TR (lỗi giảng viên sửa nhiều nhất: 4/22 ca nguồn 2.pdf) | Chỉ **vượt qua biên phụ** mới là Spring/Shakeout/UTAD, và **mỗi range chỉ MỘT** cú rũ — cú sâu hơn hạ cấp cú trước |
+| H | UA/DA gán bất kể độ sâu/volume: một cú thọc 5.5 giá VSA 2.44× bị hạ thành "test nhẹ" rồi chính nó làm hỏng điều kiện xác nhận SOW | Thăm dò **mạnh** mà không phá được = **mSOS/mSOW**; chỉ cú thật nhẹ mới là UA/UT/DA |
+| I | Move trước climax tính cả **chính cây climax** (một cây tin 60 giá tự nó đã thoả) | Đo move trên đoạn *chân → nến trước climax* |
+| J | Phase E luôn dài 1 nến (mốc chốt E là nến cuối cửa sổ chờ) | Phase D bao trọn nhịp retest; Phase E kéo tới khi giá lùi vào trong biên / đi xa 2× chiều cao / hết 120 nến |
+| K | Cửa sổ chờ đếm bằng **số nến** trên dữ liệu chỉ có nến khi có giao dịch → 54 nến trải **4,8 ngày lịch** (bắc qua khe cuối tuần 73 giờ) | Khe > 4 giờ thì **cắt range** (nghỉ phiên 1 giờ vẫn nối) |
+
+Sáu quyết định người học chốt trong lượt này (ưu tiên cao hơn câu chữ trong sách):
+
+1. **Không** đặt sàn độ dài tối thiểu cho range — range ngắn vẫn hợp lệ nếu đủ cấu trúc.
+2. Chỉ vẽ range ở M1, **chưa cần range lồng nhau**.
+3. Shock đã tới biên đối diện nhưng hết hạn chờ mà không phá được → "**tạo thành UT, UA hoặc là mSOS,
+   mSOW (minor, tức là bị fail), và phase này vẫn là phase B**".
+4. ST[A] "**không đo bằng %, đo bằng cấu trúc**".
+5. Cắt range tại khe cuối tuần, nối qua nghỉ phiên 1 giờ.
+6. **Không** dùng sàn khối lượng tuyệt đối (giữ VSA tương đối) — dù giảng viên bắt được nhiều climax chỉ
+   6–19 hợp đồng ở phiên Á giờ chết. Lọc bằng cấu trúc, không bằng số lot.
+7. Mỗi range **chỉ một** Spring/UTAD duy nhất — cú rũ sâu nhất là cú thật, các cú khác hạ xuống test nhẹ.
 
 ---
 
@@ -140,28 +186,41 @@ thì mới hình thành được vùng đi ngang:
 
 **Phase A kết thúc ĐÚNG tại ST[A]**, không phải tại AR. Phase B bắt đầu ngay sau ST[A].
 
-### 4.1 Bước tìm AR
+### 4.0 Cụm climax (v5, lỗi A)
 
-Chờ **40 nến** sau climax, lấy cực trị phía đối diện (đỉnh cao nhất cho tích luỹ / đáy thấp nhất
-cho phân phối) làm **AR**. Song song, biên cùng phía climax vẫn nới thụ động mỗi nến.
+Mốc climax **không** cố định ngay tại nến đầu tiên đủ ngưỡng. Trong **8 nến** đầu, nếu có cực trị mới
+cùng phía thì mốc climax **dời** sang đó — kéo theo cả nhãn SC/BCLX và mốc bắt đầu range. Cao trào là
+một *cụm* vài nến, không phải một cây.
 
-AR phải là cú bật ngược **thật**: khoảng cách climax↔AR phải ≥ **30% độ dài move**. Chưa đủ thì
-tiếp tục chờ; quá **300 nến** vẫn không đủ → **bỏ ứng viên**.
+Sau cửa sổ cụm, nếu giá còn vượt mức climax quá **3× biên độ trung bình 20 nến** thì cây climax đó
+**không chặn được move** → bỏ ứng viên. Vượt nhẹ hơn thì chỉ nới biên phụ, biên chính giữ nguyên.
 
-**Nhãn "AR (yếu)":** AR rơi vào 1–2 nến ngay sát climax → nhiều khả năng chỉ là râu nhiễu.
-Chỉ là cảnh báo hiển thị, không đổi logic.
+### 4.1 Bước tìm AR (v5, lỗi D — đo bằng cấu trúc)
 
-### 4.2 Bước tìm ST[A]
+Không còn chờ cứng 40 nến. AR là **swing pivot ngược đầu tiên được xác nhận**: cực trị phía đối diện
+đã giữ được **5 nến** mà không có cực trị mới, và nhịp bật ngược đó lớn hơn nhiễu (**≥ 1,5× biên độ
+trung bình 20 nến**). Không còn ngưỡng "≥ 30% độ dài move" — ngưỡng đó chính là thứ đẩy Phase A xuống
+sàn 41 nến và làm Phase A dài hơn Phase B ở 5/5 bài trong một lô chấm.
 
-Sau AR, theo dõi giá quay lại phía climax:
-- Phải hồi lại ít nhất **40% chiều cao** (khoảng cách climax↔AR).
-- Rồi phải **thật sự đổi hướng**: **5 nến liên tiếp** không tạo cực trị mới.
+Quá **300 nến** vẫn không thành hình AR → bỏ ứng viên.
 
-Đủ hai điều đó → đánh dấu **ST[A]** tại điểm cực trị, đóng Phase A, mở Phase B.
-Quá **400 nến** kể từ AR mà không có ST[A] → **bỏ ứng viên** (chưa thành vùng đi ngang).
+**Nhãn "AR (yếu)":** AR rơi vào 1–2 nến ngay sát climax → nhiều khả năng chỉ là râu nhiễu. Chỉ là cảnh
+báo hiển thị, không đổi logic.
 
-Nếu trong lúc chờ mà giá phá xa hơn AR về phía đối diện, AR được dời tới cực trị mới và
-đồng hồ chờ ST[A] tính lại từ đó.
+### 4.2 Bước tìm ST[A] (v5, lỗi D)
+
+Cùng một cơ chế: ST[A] là **swing pivot đầu tiên** về phía climax được xác nhận (5 nến không tạo cực
+trị mới, nhịp hồi ≥ 1,5× biên độ TB). **Không đo bằng % chiều cao** nữa — người học chốt "đo bằng cấu
+trúc".
+
+Đổi lại có một **trần**: nếu nhịp hồi vượt hẳn qua mức climax hơn **một lần chiều cao range** thì đó
+không còn là một cú *test* — giá đang đi tiếp, không phải cân bằng → **bỏ ứng viên**. (Giảng viên bắt
+được ST[A] ở 179% và 275% chiều cao range vẫn được nhận.)
+
+Quá **400 nến** kể từ AR mà không có ST[A] → bỏ ứng viên.
+
+Nếu trong lúc chờ mà giá phá xa hơn AR về phía đối diện, AR được dời tới cực trị mới — **và nhãn AR dời
+theo** (lỗi E: trước đây chỉ mức dời, nhãn đứng lại, lệch tới 110,8 giá).
 
 ### 4.3 Hai loại biên khi vẽ
 
@@ -204,20 +263,38 @@ Từ nến thò ra, máy theo dõi liên tục cho tới khi rơi vào **một t
 
 **Kết cục A — giá rút về trong range** (đóng cửa quay lại phía bên kia biên chính):
 
-| Cạnh bị phá | Thăm dò NHẸ<br>(< 15 tick **và** VSA < 3.3x) | Thăm dò THẬT |
-|---|---|---|
-| Cạnh **climax** (SC ở dưới) | không ghi gì — đây chính là ST[B], bỏ theo yêu cầu | **≤ 4 nến** quay lại → **Spring**<br>**> 4 nến** lùng bùng rồi mới về → **Shakeout** |
-| Cạnh **climax** (BCLX ở trên) | **UT** | **UTAD** |
-| Cạnh **AR** (cạnh còn lại) | **UA** (trên) / **DA** (dưới) | UA / DA — vẫn không quyết định |
+Ba câu hỏi quyết định nhãn (v5 — lỗi G và H):
 
-Spring / Shakeout / UTAD → vào **Phase C**. UA / UT / DA → **ở lại Phase B**, chỉ nới biên phụ.
+1. Cú thăm dò có **vượt qua biên phụ** (cực trị xa nhất đã có) không? Không vượt → chỉ là test, dù có
+   qua biên chính. *Đây là mâu thuẫn giữa tài liệu thuật toán và giảng viên (Ca #19 nguồn 2.pdf), người
+   học phân xử: đo bằng cực trị thật.*
+2. Cú đó có **mạnh** không: sâu ≥ max(15 tick, **15% chiều cao range**) hoặc VSA ≥ 2,2×?
+3. Range đã có Spring/UTAD nào **sâu hơn** chưa? Người học chốt **mỗi range chỉ MỘT** cú rũ.
+
+| Cạnh bị phá | Vượt biên phụ + mạnh + sâu nhất | Mạnh nhưng không đủ tư cách rũ | Thật NHẸ |
+|---|---|---|---|
+| Cạnh **climax** (SC ở dưới) | **≤ 4 nến** quay lại → **Spring**<br>**> 4 nến** lùng bùng → **Shakeout** | **mSOW** | không ghi gì — đây chính là ST[B], bỏ theo yêu cầu |
+| Cạnh **climax** (BCLX ở trên) | **UTAD** | **mSOS** | **UT** |
+| Cạnh **AR** (cạnh còn lại) | — (không quyết định) | **mSOS** (trên) / **mSOW** (dưới) | **UA** (trên) / **DA** (dưới) |
+
+Chỉ Spring / Shakeout / UTAD → vào **Phase C**. Mọi nhãn còn lại **ở lại Phase B**, chỉ nới biên phụ.
+
+> **mSOS / mSOW là gì:** một cú phá **thất bại** (minor sign of strength / weakness). Trước v5 những cú
+> này bị hạ thành "UA/DA test nhẹ", rồi chính chúng nới biên phụ và làm hỏng điều kiện xác nhận SOW —
+> giảng viên bắt được một cú thọc 5,5 giá VSA 2,44× có nến đóng dưới biên bị gọi là "test nhẹ".
 
 > **Spring khác Shakeout ở THỜI GIAN, không phải độ sâu.** Spring phá xuống rồi rút vào rất nhanh.
 > Shakeout phá xuống, lùng bùng ngoài đó một lúc rồi mới quay lại — bản chất là **một SOW thất bại**.
 
 **Kết cục B — giá ở hẳn ngoài biên** = phá THẬT → **SOS** (lên) / **SOW** (xuống) → Phase D.
-Điều kiện: **3 nến liên tiếp** đóng cửa vượt **biên phụ** thêm ≥ 30 tick với thân ≥ 45%.
-Hoặc: ở ngoài quá **40 nến** mà không quay lại — giá đã bỏ đi hẳn.
+Điều kiện: **3 nến liên tiếp** đóng cửa vượt **biên phụ** thêm ≥ 30 tick với thân ≥ 45%. Hoặc: ở ngoài
+quá **40 nến** **và** ≥ 60% số nến trong đoạn đóng cửa ngoài biên (v5: trước đây chỉ cần "quá 40 nến"
+bất kể giá đang ở đâu, nên nhãn rơi vào đúng nến thứ 40 dù nến đó là gì).
+
+**Nhãn đặt ở đâu (v5 — lỗi B, lỗi lặp nhiều nhất cả vòng chấm):** vẫn cần 3 nến để **chốt**, nhưng nhãn
+SOS/SOW được đặt **hồi tố** vào **cây phá thật** — nến có VSA cao nhất trong đoạn, đúng hướng, đóng cửa
+vượt biên. Trước đây nhãn nằm ở nến xác nhận thứ 3 nên đo được VSA 0,30× / 0,37× / 0,47× / 0,69× trong
+khi cây phá thật có VSA 4,2×–9,6×. Sửa chỗ này còn kéo theo ranh giới C/D về đúng chỗ.
 
 ### 5.2 Phá "sai hướng" KHÔNG huỷ range nữa
 
@@ -236,11 +313,20 @@ Phase C là tín hiệu đầu tiên cho thấy giá đang ở biên bên này s
 
 Sau đó máy đo giá đã đi được **bao nhiêu phần đường từ điểm rũ sang biên đối diện**:
 - Đi được **≥ 50%** → cú rũ **XÁC NHẬN** (chấm viền trắng đậm).
-- Quay lại **đóng cửa vượt qua điểm rũ** khi **chưa đi nổi 50%** → **THẤT BẠI**: nhãn thêm
-  "(thất bại)", vẽ xám, range **lùi về Phase B** — không huỷ range.
-- Chờ quá **120 nến** vẫn chưa ra SOS/SOW → cũng coi là thất bại, lùi Phase B.
-  (Phase C là phase **ngắn nhất**; kéo dài hàng trăm nến thì nó không còn là Phase C.)
-- Trong lúc chờ, giá quay về test đúng vùng điểm rũ → đánh dấu **LPS[C]** / **LPSY[C]**, **một điểm duy nhất**.
+- Quay lại **đóng cửa vượt qua điểm rũ** khi **chưa đi nổi 50%** → thất bại.
+- Chờ quá **120 nến** vẫn chưa ra SOS/SOW → cũng coi là thất bại ("Phase C là phase ngắn nhất").
+
+**Shock thất bại thì xảy ra gì (v5 — lỗi C, người học chốt):** nhãn Spring/Shakeout/UTAD **đổi thành**
+UT / UA / mSOS / mSOW, và **đoạn Phase C bị xoá hẳn khỏi timeline** — "phase này vẫn là phase B". Trước
+v5 chỉ ghi thêm "(thất bại)" rồi lùi state, nên một đoạn "Phase C" dài đúng **121 nến** (= trần timeout)
+còn nằm lại trên chart: phase ngắn nhất hoá thành phase dài nhất, tự phủ định cả hai luật tỉ lệ phase.
+Đo lại sau khi vá: Phase C từ 121 nến xuống **5–34 nến**.
+
+Trong lúc chờ, Phase C **không còn làm máy mù**: vẫn theo dõi cú phá biên bằng đúng bộ điều kiện của
+Phase B và vẫn nới biên phụ cả hai phía. Trước đây một cú sụp thật 46 giá bị xếp thành "Phase C" và
+range **mất hẳn** SOW.
+
+Trong lúc chờ, giá quay về test đúng vùng điểm rũ → đánh dấu **LPS[C]** / **LPSY[C]**, **một điểm duy nhất**.
 
 **Case KHÓ — không có cú rũ nào:** chỉ có LPS[C]/LPSY[C], rất khó xác nhận tại thời điểm đó.
 Cách xử lý: **đợi có Phase D rồi quay lại vẽ Phase C**. Khi SOS/SOW thật sự bắn ra mà range chưa
@@ -257,23 +343,35 @@ bên ngoài biên → giá thuận lực đi tiếp tìm vùng giá mới.**
 Ngay khi có SOS/SOW, máy nhìn tới **25 nến kế tiếp**:
 
 **Câu 1 — có giữ được bên ngoài biên vừa phá không?**
-Một nến **đóng cửa lùi hẳn** vào trong range quá **30 tick** → cú phá hỏng. (Râu chạm nhẹ không tính.)
+Một nến **đóng cửa lùi hẳn** vào trong range (quá 3× dung sai chuẩn ~30 tick) **trước khi đi được
+≥ 50% tiến độ tối thiểu** → cú phá **BỊ VÔ HIỆU** (v5 — lỗi F, xem dưới).
 
-**Câu 2 — giá có đi ĐỦ XA không?**
-Mốc: đi thêm **bằng đúng chiều cao biên chính**. Đạt → chốt **Phase E**.
-Hết 25 nến mà mới đi được **≥ 50%** → vẫn cho chốt Phase E.
+**Câu 2 — LPS[D]/LPSY[D] đo bằng CẤU TRÚC (v5, cùng cơ chế với AR/ST[A] ở mục 4.1):** không còn
+chờ "đóng cửa trong 20 tick quanh biên" — đó quá chặt, khiến 17/47 range không có nhịp retest nào và
+Phase D dài đúng 1 nến. Giờ LPS[D] là **swing pivot ngược hướng phá đầu tiên được xác nhận** (5 nến
+không tạo cực trị mới, nhịp hồi ≥ 1,5× biên độ TB) — tính từ đỉnh/đáy sau cú phá tới điểm hồi đó.
 
-**LPS[D] / LPSY[D]:** nhịp hồi về loanh quanh biên vừa phá (trong 20 tick), đánh dấu **một điểm
-duy nhất** — đáy sâu nhất (phá lên) / đỉnh cao nhất (phá xuống) của nhịp hồi đó.
+**Câu 3 — giá có đi ĐỦ XA không?** Mốc: đi thêm bằng đúng chiều cao biên chính → chốt **Phase E**.
+Hết 25 nến mà mới đi được ≥ 50% → vẫn cho chốt Phase E; **Phase D bao trọn nhịp retest** (không để
+Phase E bắt đầu trước khi nhịp hồi LPS[D] kết thúc — trước đây Phase D có thể chỉ dài 1 nến vì Phase E
+mở ngay khi giá chạy nhanh).
 
-**Dù Phase E có đạt hay không, range vẫn ĐÓNG tại đây.** Cú phá đã được xác nhận bằng 3 nến giữ
-ngoài biên, tức vùng đấu giá này hết vai trò. Bản trước lùi về Phase B khi Phase E không đạt, mà
-lúc đó giá vẫn đang ở ngoài biên nên nến kế tiếp lại bắn SOS/SOW mới → **vòng lặp vô tận**
-(đo được: một range ngày 16/07 bắn **20 cái SOW liên tiếp** cách nhau đúng 42 nến).
+**Phase E có độ dài THẬT (v5 — lỗi J):** trước đây mốc chốt E luôn là nến cuối cửa sổ chờ, nên Phase E
+đo được **luôn dài 1 nến** ở mọi range. Giờ sau khi vào Phase E, máy kéo tiếp tới khi một trong ba điều
+xảy ra: giá đóng cửa lùi hẳn vào trong biên đã phá, hoặc đã đi xa **gấp đôi** chiều cao range (= tìm
+được vùng giá mới), hoặc hết **120 nến**.
+
+**Cú phá BỊ VÔ HIỆU thì sao (v5 — lỗi F, người học chốt gián tiếp qua mục 5.1/5.2):** trước đây giá
+trị này bị **bỏ hoàn toàn** — cú phá hỏng vẫn đóng range và vẫn **đặt tên pattern**, nên có range mang
+nhãn "Phân phối" mà không hề có một cú phá nào thành công. Giờ: nhãn SOS/SOW hạ cấp thành **mSOS/mSOW**,
+dải phase trả về B, range **không được đặt tên**, và cú phá lần sau phải vượt qua chính cực trị đã thất
+bại đó mới được tính. Sau **3 lần** vô hiệu liên tiếp thì đóng range ở trạng thái **"chưa rõ hướng"**
+(chặn vòng lặp D→B→D vô tận của bản v3: một range ngày 16/07 từng bắn **20 cái SOW liên tiếp** cách
+nhau đúng 42 nến).
 
 > Phân biệt hai loại LPS (đặt tên khác nhau có chủ đích):
-> - **LPS[C] / LPSY[C]** = test **trước** SOS/SOW.
-> - **LPS[D] / LPSY[D]** = hồi retest **sau** SOS/SOW.
+> - **LPS[C] / LPSY[C]** = test **trước** SOS/SOW, thuộc Phase C.
+> - **LPS[D] / LPSY[D]** = hồi retest **sau** SOS/SOW, thuộc Phase D.
 
 ---
 
@@ -286,12 +384,13 @@ lúc đó giá vẫn đang ở ngoài biên nên nến kế tiếp lại bắn S
 
 ⚠️ Hai mốc này là **guard tự đặt, KHÔNG có trong tài liệu Wyckoff gốc**.
 
-Từ v4, guard "quá cao" đo bằng **biên chính** (cố định) chứ không phải biên phụ, nên nó gần như
-không còn bắn sau Phase A — cũng là mục đích: trước đây biên làm việc phình theo mỗi cú thăm dò,
-khiến range bị giết oan vì "quá cao" trong khi vùng cân bằng thật vẫn hẹp.
+Guard "quá cao" đo bằng **biên chính** (cố định) chứ không phải biên phụ, nên nó gần như không còn
+bắn sau Phase A — trước đây biên làm việc phình theo mỗi cú thăm dò, khiến range bị giết oan vì "quá
+cao" trong khi vùng cân bằng thật vẫn hẹp.
 
-Ngoài ra còn 3 chỗ **bỏ ứng viên khi Phase A không hoàn thành**: không có AR thật (quá 300 nến),
-không có ST[A] (quá 400 nến từ AR), climax trùng AR.
+Ngoài ra còn các chỗ **bỏ ứng viên khi Phase A/B không hoàn thành** (v5 mở rộng đáng kể so với v4):
+climax không chặn được move (lỗi A), không thành hình AR hoặc ST[A] trong cửa sổ chờ, ST[A] vượt hẳn
+qua mức climax (lỗi D), climax trùng AR, hoặc khe thời gian > 4 giờ cắt ngang range đang chạy (lỗi K).
 
 ## 9. Range chưa xong
 
@@ -326,33 +425,37 @@ Nến **đang hình thành** (nến cuối chưa đóng) luôn bị bỏ qua, gi
 |---|---|---|
 | Biên độ climax | ≥ **1.4×** TB 20 nến | mở range |
 | VSA climax | ≥ **2.2x** | mở range |
-| MOVE: cửa sổ nhìn lại | **240 nến** | mở range |
+| Cụm climax: cửa sổ dời mốc | **8 nến** | mở range (v5, lỗi A) |
+| Climax không chặn được move | vượt hẳn quá **3×** biên độ TB | mở range (v5, lỗi A) |
+| MOVE: cửa sổ nhìn lại | **240 nến**, loại bỏ hẳn nến climax | mở range (v5, lỗi I) |
 | MOVE: dài tối thiểu | **20 nến** và ≥ **8×** TB biên độ | mở range |
 | MOVE: hiệu suất hướng | ≥ **0.35** | mở range (loại đi ngang) |
-| AR phải hồi ≥ | **30%** độ dài move | Phase A |
+| AR / ST[A]: xác nhận swing pivot | **5 nến** không cực trị mới | Phase A (v5, lỗi D — đo bằng cấu trúc) |
+| AR / ST[A]: sàn chống nhiễu | nhịp hồi ≥ **1.5×** biên độ TB | Phase A (v5, lỗi D) |
+| ST[A]: trần vượt climax | ≤ **1.0×** chiều cao range | Phase A (v5, lỗi D) |
 | AR: chờ tối đa | **300 nến** | Phase A |
-| ST[A] phải hồi ≥ | **40%** chiều cao climax↔AR | Phase A |
-| ST[A]: xác nhận đổi hướng | **5 nến** không cực trị mới | Phase A |
 | ST[A]: chờ tối đa | **400 nến** từ AR | Phase A |
-| VSA climax cực mạnh | ≥ **3.3x** (1.5 × 2.2) | phân biệt thăm dò NHẸ ↔ cú rũ THẬT |
+| Cú rũ: phải vượt biên phụ | bắt buộc | Phase B (v5, lỗi G) |
+| Cú rũ: sâu/mạnh tối thiểu | ≥ max(**15 tick**, **15%** chiều cao) **hoặc** VSA ≥ 2.2x | Phase B (v5, lỗi H) |
+| Mỗi range chỉ một cú rũ | cú sâu hơn hạ cấp cú trước | Phase B (v5, lỗi G) |
 | Spring ↔ Shakeout | quay về trong **≤ 4 nến** = Spring | Phase B (mục 5.1) |
-| Phá THẬT: số nến giữ ngoài biên | **3 nến** liên tiếp | Phase B → D |
-| Phá THẬT: ở ngoài quá lâu | **40 nến** không quay lại | Phase B → D |
-| Thăm dò NHẸ (UA/UT/DA) | < **15 tick** **và** VSA < 3.3x | Phase B |
-| Phase C: chờ tối đa | **120 nến** | Phase C (phase ngắn nhất) |
-| Phase C gán ngược: cửa sổ nhìn lại | **60 nến** | Phase C case khó |
-| Cửa sổ tìm AR | **40 nến** | Phase A |
+| Phá THẬT: số nến giữ ngoài biên | **3 nến** liên tiếp, nhãn hồi tố về cây phá | Phase B → D (v5, lỗi B) |
+| Phá THẬT: ở ngoài quá lâu | **40 nến** **và** ≥ 60% nến đóng ngoài biên | Phase B → D (v5) |
+| Phase C: chờ tối đa | **120 nến**, hết hạn thì xoá đoạn C (v5, lỗi C) | Phase C (phase ngắn nhất) |
+| Phase C gán ngược: cửa sổ nhìn lại | min(**60 nến**, 1/2 độ dài Phase B), lấy swing pivot | Phase C case khó |
 | Sai số chạm biên (ST) | **10 tick** | Phase B |
-| Giãn cách tối thiểu giữa 2 sự kiện | **5 nến** | mọi Phase |
 | Đóng cửa "lùi hẳn" qua biên | **30 tick** | Phase B, D |
 | Thân nến tối thiểu để công nhận SOS/SOW | **45%** | Phase B, C, D |
 | Tiến độ để xác nhận cú rũ | **50%** quãng đường sang biên đối diện | Phase C |
-| Cửa sổ chờ sau SOS/SOW | **25 nến** | Phase D |
-| Đích Phase E | đi thêm **1.0 × chiều cao range** | Phase D |
-| Đích Phase E tối thiểu (khi hết giờ) | **0.5 × chiều cao range** | Phase D |
-| Sai số gom LPS[D] | **20 tick** | Phase D |
+| Cửa sổ chờ retest sau SOS/SOW | **25 nến** | Phase D |
+| LPS[D]/LPSY[D]: đo bằng cấu trúc | swing pivot 5 nến, sàn 1.5× biên độ TB | Phase D (v5, lỗi J) |
+| Cú phá vô hiệu: số lần tối đa | **3 lần** liên tiếp mới đóng range "chưa rõ" | Phase D (v5, lỗi F) |
+| Đích Phase E | đi thêm **1.0 ×** chiều cao range | Phase D |
+| Đích Phase E tối thiểu (khi hết giờ) | **0.5 ×** chiều cao range | Phase D |
+| Phase E: độ dài thật, tối đa | **120 nến** hoặc đi xa **2.0×** chiều cao | Phase E (v5, lỗi J) |
 | Chiều cao **biên chính** tối đa | **3.5% giá** | huỷ range |
 | Số nến tối đa kể từ climax | **2500** | huỷ range |
+| Khe thời gian cắt range | > **240 phút** (4 giờ) | huỷ range (v5, lỗi K) |
 | Số range gần nhất hiển thị | **40** (chỉnh được tới 300) | phần vẽ |
 
 ---
@@ -360,22 +463,27 @@ Nến **đang hình thành** (nến cuối chưa đóng) luôn bị bỏ qua, gi
 ## 12. Danh sách những chỗ nên nghi ngờ khi review
 
 1. **Ngưỡng 1.4× biên độ + 2.2x VSA** — có thể quá lỏng ở phiên Á (thanh khoản thấp, VSA dễ vọt).
-2. **Cửa sổ AR cố định 40 nến** — nếu AR thật xảy ra ở nến thứ 45 thì máy bắt nhầm.
+   Người học đã chốt **không** dùng sàn khối lượng tuyệt đối để chặn việc này — chấp nhận đánh đổi.
+2. **Sàn chống nhiễu 1.5× biên độ TB cho AR/ST[A]/LPS[D]** — con số tự đặt để thay cho ngưỡng % cũ,
+   chưa quét tham số.
 3. **Bốn ngưỡng của phép đo MOVE** (240 / 20 nến / 8× ATR / hiệu suất 0.35) — thêm ở v3,
    chưa quét tham số, chỉ mới kiểm bằng mắt.
-4. **AR phải hồi ≥ 30% độ dài move** — đây là **Claude tự thêm**, KHÔNG có trong review. Lý do:
-   soi chart thấy nhiều ca AR chỉ ngọ nguậy 7 giá sau một move 35 giá, khiến ngưỡng 40% của ST[A]
-   thành vô nghĩa. Không đồng ý thì gỡ được.
+4. **Trần ST[A] = 1.0× chiều cao range** — tự đặt ở v5 để chặn ST[A] "chạy đi tiếp" bị nhận nhầm
+   thành test; chưa hiệu chỉnh bằng số liệu.
 5. **Hai guard huỷ range** (3.5%, 2500 nến) — hoàn toàn tự đặt, chưa hiệu chỉnh bằng số liệu.
 6. **Mốc 4 nến phân biệt Spring ↔ Shakeout** — người học nói "3-4 cây nến hoặc ít hơn"; chọn 4.
-7. **UT vs UA vs DA** — đặt theo **origin** (SC hay BCLX) vì lúc đó chưa biết range là tích luỹ hay
-   phân phối. Origin BCLX → thăm dò nhẹ trên đỉnh = **UT**; origin SC → thăm dò nhẹ dưới đáy chính
-   là ST[B] nên **không ghi gì**. Cách gán này là suy luận từ mục 5, cần xác nhận.
-8. **Phase C gán ngược lấy đúng cực trị trong 60 nến** làm LPS[C] — cách chọn đơn giản nhất,
-   chưa chắc trùng với nhịp test mà mắt người sẽ chọn.
-9. **Không dùng dữ liệu order flow** — phần Wyckoff này chỉ đọc OHLC + khối lượng, **chưa** dùng
-   delta / bid-ask từng mức giá dù indicator có sẵn.
-10. **Vẫn chỉ theo dõi ĐÚNG MỘT range một lúc** — chưa sửa, xem mục 13.3.
+7. **Ngưỡng "cú rũ mạnh" = 15% chiều cao range hoặc VSA≥2.2x** (v5, lỗi H) — tự đặt để thay ngưỡng
+   tuyệt đối 15 tick cũ (quá nhỏ với vàng); chưa quét tham số.
+8. **Ngưỡng "phá thật khi ở ngoài lâu" = 40 nến và ≥60% nến đóng ngoài biên** (v5) — tỉ lệ 60% tự đặt.
+9. **UT vs UA vs DA** — đặt theo **origin** (SC hay BCLX) vì lúc đó chưa biết range là tích luỹ hay
+   phân phối. Cách gán này là suy luận từ mục 5, cần xác nhận.
+10. **Phase C gán ngược lấy swing pivot trong cửa sổ ≤60 nến** làm LPS[C] — đỡ hơn "lấy đúng cực trị
+    cả cửa sổ" của v4, nhưng vẫn là cách chọn đơn giản, chưa chắc trùng nhịp test mắt người sẽ chọn.
+11. **Khe cắt range = 240 phút (4 giờ)** — tự chọn để vừa cắt cuối tuần (73 giờ) vừa nối nghỉ phiên
+    (~1 giờ); chưa kiểm với lịch nghỉ lễ dài hơn 4 giờ nhưng ngắn hơn cuối tuần.
+12. **Không dùng dữ liệu order flow** — phần Wyckoff này chỉ đọc OHLC + khối lượng, **chưa** dùng
+    delta / bid-ask từng mức giá dù indicator có sẵn.
+13. **Vẫn chỉ theo dõi ĐÚNG MỘT range một lúc** — chưa sửa, xem mục 13.3.
 
 ## 13. ĐO THẬT trên dữ liệu tháng 7/2026
 
@@ -388,69 +496,94 @@ dxFeed chỉ xuất tới 27/7; file footprint export có tới 31/7 nhưng là 
 
 ![toàn cảnh tháng 7](wyckoff-schematic-examples/html-thang7-toan-canh.png)
 
-### 13.1 Con số qua ba bản
+### 13.1 Con số qua bốn bản
 
 Toàn lịch sử 11/2025 → 27/7/2026 (103.857 nến M1):
 
-| | v2 (xu hướng nền) | v3 (+MOVE, +ST[A]) | **v4 (+4 pattern, biên phụ, CBR)** |
-|---|---|---|---|
-| Range **được mở** | 120 | 41 | **66** |
-| Range **được vẽ** | 3 | 1 | **49** |
-| Range **bị bỏ** | 117 | 40 | **17** |
-| Trong đó **tới Phase E** | — | 1 | **20** |
+| | v2 | v3 (+MOVE, +ST[A]) | v4 (+4 pattern, biên phụ, CBR) | **v5 (vòng chấm chart)** |
+|---|---|---|---|---|
+| Range **được mở** | 120 | 41 | 66 | **52** |
+| Range **được vẽ** | 3 | 1 | 49 | **47** |
+| Range **bị bỏ** | 117 | 40 | 17 | **5** |
+| Trong đó **tới Phase E** | — | 1 | 20 | **37** |
 
-Hai bước sửa có tác dụng trái chiều và cả hai đều đúng:
+v5 vẽ ít hơn v4 một chút (47 so với 49) nhưng vẽ **đúng hơn**: điểm chấm trung vị của v4 là 3/10 trên
+49 bài (10 agent giảng viên chấm hết, xem mục 0b); tỉ lệ tới Phase E tăng từ 20/49 (41%) lên **37/47
+(79%)** — không phải vì "dễ đạt E hơn" mà vì Phase D/E giờ đo bằng cấu trúc thật (lỗi J) nên phần lớn
+cú phá thật sự chạy đủ xa mới được ghi nhận, thay vì bị cắt ở nến cuối cửa sổ chờ.
 
-- **v3** (phép đo MOVE) siết cửa vào, loại 2/3 ứng viên rác mở ra giữa lúc giá đi ngang.
-- **v4** mở cửa ra: bỏ chuyện "phá sai hướng ⇒ xoá range" (mục 2b) và bỏ vòng lặp D→B→D vô tận
-  (mục 7). **1 → 49 range** hầu hết đến từ hai lỗi đó, không phải từ việc nới ngưỡng.
+Số ứng viên bị bỏ giảm mạnh (17 → 5) vì hai ngưỡng gây bỏ oan nhiều nhất ở v4 đã bị thay: "AR phải hồi
+≥30% move" (bỏ 12/17 ca ở v4) nay là swing pivot đo bằng cấu trúc; "biên chính quá cao" (bỏ 4/17) gần
+như không còn bắn vì biên chính giờ chốt đúng tại climax+AR thật. Lý do bỏ 5 ứng viên còn lại của v5:
+**3** ST[A] vượt hẳn qua climax (không phải test) · **2** climax không chặn được move.
 
-Phân bố 4 pattern: **Tích luỹ 10 · Tái tích luỹ 6 · Phân phối 14 · Tái phân phối 18** ·
-1 range đang chạy chưa rõ hướng. Tái phân phối nhiều nhất — hợp với việc giai đoạn này giá vàng
-giảm từ ~4800 về ~4000.
+Phân bố 4 pattern (v5): **Tích luỹ 12 · Tái tích luỹ 5 · Phân phối 9 · Tái phân phối 11** ·
+10 range đang chạy/đóng ở trạng thái chưa rõ hướng (cú phá bị vô hiệu — lỗi F). Tỉ trọng đổi khá nhiều
+so với v4 (10/6/14/18) vì phần lớn range "Phân phối"/"Tái phân phối" cũ của v4 thực ra là cú phá bị
+vô hiệu chứ không phải cú phá thật — đây chính là hệ quả của việc vá lỗi F.
 
-Lý do bỏ 17 ứng viên: **12** không có AR thật (bật ngược < 30% move) · **4** biên chính quá cao ·
-**1** quá dài.
+Chiều cao biên chính: nhỏ nhất **4.1 giá**, trung vị **18.4 giá**, lớn nhất 136.0 giá — hẹp hơn cả v4
+(trung vị 21.6 giá) vì climax giờ chốt đúng tại cực trị cụm, không lệch vào giữa vùng giá.
 
-Chiều cao biên chính: nhỏ nhất **6.6 giá**, trung vị **21.6 giá**, lớn nhất 143.9 giá.
-Trung vị ~21 giá trên nền giá ~4300 là **0.5%** — đúng là "vùng cân bằng hẹp", khác hẳn bản trước
-(range phình 95–129 giá).
+39/47 range có Phase C; trong đó **36 (92%)** dùng cách gán ngược (không có Spring/Shakeout/UTAD) —
+case khó vẫn phổ biến hơn case dễ, xem mục 13.3.
 
-### 13.2 Tháng 7: từ 1 lên 18 range
+### 13.2 Tháng 7: 12 range, bản v5
 
-18 range được vẽ trong tháng 7 (trước v4 chỉ có 1). Ví dụ ba range liền nhau đọc rất rõ:
+Trang HTML minh hoạ (`wyckoff-chart-thang7.html`) đã dựng lại từ bản v5: **12 range**, **0 ứng viên bị
+bỏ**. So với v4 (18 range vẽ, 3 bị bỏ) số lượng giảm — hợp lý vì v5 hẹp climax về đúng cụm cực trị nên
+một số range v4 tách nhỏ nay có thể gộp lại hoặc không đủ điều kiện tách riêng.
 
 ```
-16/07 11:46 → 13:04        Phân phối       biên chính 3981.0-4048.7   A→B→C→D→E
-16/07 13:04 → 17/07 13:48  Tái phân phối   biên chính 3963.0-4021.8   A→B→C→B→C→B→C→B→D
-17/07 13:39 → 15:53        Tái tích luỹ    biên chính 3984.8-4007.9   A→B→C→D→E
+06/07 12:43 → 07/07 22:23  Tái phân phối       biên chính 4127.7-4192.4   1886 nến, 8 mốc, xong
+08/07 07:19 → 08/07 08:54  Tái phân phối       biên chính 4125.4-4139.0     95 nến, 7 mốc, xong
+09/07 00:54 → 09/07 06:22  Tích luỹ             biên chính 4063.4-4092.3    328 nến, 8 mốc, xong
+12/07 22:48 → 13/07 00:34  Tích luỹ             biên chính 4075.8-4091.4    105 nến, 7 mốc, xong
+14/07 12:33 → 15/07 01:48  Chưa rõ (BCLX)       biên chính 4043.8-4112.5    735 nến, 7 mốc, xong (A→B→C→D)
+15/07 18:31 → 16/07 03:54  Phân phối            biên chính 4055.2-4089.1    503 nến, 7 mốc, xong
+16/07 11:48 → 16/07 13:22  Phân phối            biên chính 4017.4-4048.7     94 nến, 7 mốc, xong
+16/07 13:05 → 17/07 20:59  Chưa rõ (SC)         biên chính 3963.0-4028.9   1853 nến, 6 mốc, xong (A→B, không phá)
+20/07 12:02 → 21/07 00:59  Tích luỹ             biên chính 4001.6-4023.9    715 nến, 7 mốc, xong
+22/07 12:30 → 22/07 16:08  Tái tích luỹ         biên chính 4110.4-4139.8    218 nến, 6 mốc, xong
+24/07 14:00 → 24/07 20:59  Chưa rõ (BCLX)       biên chính 4051.3-4085.2    419 nến, 5 mốc, xong (A→B)
+27/07 12:23 → 27/07 15:56  Chưa rõ (SC)         biên chính 4067.1-4091.8    213 nến, 5 mốc, ĐANG CHẠY
 ```
+
+Bốn trong 12 range tháng 7 kết thúc ở trạng thái **"chưa rõ hướng"** — đúng như mục 13.3 điểm 3 đã nói:
+đây là hành vi mới của v5 (không còn ép đặt tên khi cú phá chưa xác nhận thật), nhưng cũng là 1/3 số
+range của tháng không đưa ra kết luận cấu trúc rõ ràng.
 
 ![range tháng 7 sau khi vá Phase A](wyckoff-schematic-examples/html-thang7-phaseA-v3.png)
 
-### 13.3 Chỗ CHƯA sửa
+*(Ảnh chụp trên vẫn là ảnh minh hoạ từ bản v4 — cách đọc biên/phase trên chart không đổi, chỉ số liệu
+cụ thể đã khác; ảnh chưa chụp lại.)*
+
+### 13.3 Chỗ CHƯA sửa (sau v5)
 
 1. **Vẫn chỉ theo dõi ĐÚNG MỘT range một lúc.** Khi một ứng viên đang mở, mọi climax mới đều bị bỏ
-   qua. Với v4 range chết nhanh hơn nhiều (đa số đóng trong vài trăm nến thay vì treo 2500 nến)
-   nên tác hại giảm mạnh, nhưng **vấn đề còn nguyên**: thực tế các range chồng lấn nhau —
-   một range tuần chứa nhiều range ngày — thuật toán chưa mô tả được.
-2. **Phase C gán ngược chiếm đa số:** 36/49 range không có cú rũ nào (Spring/Shakeout/UTAD),
-   Phase C phải suy ra sau khi có SOS/SOW. Nghĩa là **case khó phổ biến hơn case dễ** trên M1 —
-   chất lượng của cách chọn LPS[C] gán ngược vì thế ảnh hưởng khá lớn, cần soi kỹ.
-3. **Chỉ 20/49 range đạt Phase E.** 28 range còn lại phá biên xác nhận nhưng chưa chạy đủ 1 lần
-   chiều cao range trong 25 nến. Range vẫn được đóng ở Phase D — đúng ý mục 7, nhưng nghĩa là
-   **giá trị dự báo của cú phá cần đo lại bằng backtest**, hiện chưa có số.
+   qua. Range chết nhanh hơn v4 (khe cuối tuần giờ cắt range — lỗi K) nên tác hại giảm thêm, nhưng
+   **vấn đề còn nguyên**: thực tế các range chồng lấn nhau — một range tuần chứa nhiều range ngày —
+   thuật toán chưa mô tả được. Người học đã chốt: chưa cần sửa trong lượt này ("chỉ vẽ range ở M1,
+   chưa cần range lồng nhau").
+2. **Phase C gán ngược vẫn chiếm đa số:** 36/47 range (92%, tăng tỉ trọng so với 36/49=73% ở v4)
+   không có cú rũ nào (Spring/Shakeout/UTAD), Phase C phải suy ngược sau khi có SOS/SOW. Case khó
+   càng rõ là phổ biến hơn case dễ trên M1 — chất lượng cách chọn LPS[C]/LPSY[C] gán ngược (mục 12.10)
+   vì thế ảnh hưởng lớn tới toàn bộ, cần soi kỹ hơn nữa.
+3. **10/47 range đóng ở trạng thái "chưa rõ hướng"** (dir=0, sau 3 lần cú phá bị vô hiệu — lỗi F).
+   Đây là hành vi MỚI ở v5: trước đây những range này bị đặt tên sai (đóng range và gán pattern dù
+   không có cú phá thật). Giờ trung thực hơn nhưng cũng nghĩa là **~1/5 range không đưa ra kết luận
+   gì** — chưa có cách xử lý tiếp cho nhóm này (bỏ hẳn hay giữ lại chờ dữ liệu mới).
+4. **Giá trị dự báo của cú phá vẫn chưa có backtest.** Tỉ lệ tới Phase E tăng lên 79% (mục 13.1) là
+   tín hiệu đo đúng hơn, không phải bằng chứng cú phá "ăn tiền" — chưa đo lợi nhuận/rủi ro thật.
 
 ### 13.4 Trang HTML có gì để review
 
-Hai tab bên trái: **Được vẽ (18)** và **Bị bỏ (3)** — tab thứ hai kèm **lý do bỏ** ghi thẳng
-trên từng dòng. Bấm một dòng thì chart nhảy tới và fit đúng range đó; bật "Vẽ cả ứng viên bị bỏ"
-để thấy chúng nằm xám mờ trên nền chart. Mỗi dòng có 3 nút ✓ / ? / ✗ để tự chấm, lưu trong trình
-duyệt, bấm "Xuất ghi chú chấm điểm" để lấy ra JSON.
+Hai tab bên trái: **Được vẽ (12)** và **Bị bỏ (0 trong tháng 7)** — tab thứ hai kèm **lý do bỏ** ghi
+thẳng trên từng dòng khi có. Bấm một dòng thì chart nhảy tới và fit đúng range đó; bật "Vẽ cả ứng viên
+bị bỏ" để thấy chúng nằm xám mờ trên nền chart. Mỗi dòng có 3 nút ✓ / ? / ✗ để tự chấm, lưu trong trình
+duyệt, bấm "Xuất ghi chú chấm điểm" để lấy ra JSON. Legend đã thêm màu **cam** cho mSOS/mSOW (v5).
 
 Mỗi dòng hiển thị **biên chính** và (nếu có) **biên phụ** riêng, để đối chiếu nét liền / nét đứt.
-
-![tab ứng viên bị bỏ](wyckoff-schematic-examples/html-thang7-ung-vien-bi-bo.png)
 
 ⚠️ Trang HTML dựng từ **bản Python** của thuật toán (`wyckoff_schematic.py`), chạy song song
 với `ScanWyckoff()` bên C#. Hai bên được sửa cùng lúc theo cùng một spec nhưng **chưa có test

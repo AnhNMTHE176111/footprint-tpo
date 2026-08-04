@@ -649,7 +649,30 @@ namespace WyckoffRunner
             public WyEvent ShockEv; public double ShockDepth;  // LOI G: moi range CHI MOT Spring/UTAD
             public double FailFloor = double.NaN;             // LOI F: cu pha sau phai vuot qua cuc tri da that
             public int VoidBreaks;                            // so lan cu pha bi vo hieu
+            // ===== v6 muc 1.1/1.9: VSA cua cay MANG NHAN (khong phai cuc tri gia) — chi DO, chua gate =====
+            public double ClimaxVsa, ArVsa, StaVsa;
+            public double MoveMaxPullback;                    // v6 muc 1.8: nhip hoi lon nhat trong long move
+            // ===== v6 muc 4.5: 'active' | 'completed' | 'superseded' (giu ve, khong dat ten) =====
+            public string Status = "active";
+            // ===== v6 muc 2: ba chi so Phase B — CHI DO/HIEN THI, KHONG loc/gate =====
+            public List<WyPivot> Pivots = new();
+            public WySotResult SotUp = WySotResult.None();
+            public WySotResult SotDn = WySotResult.None();
+            public int Bias;                                  // +1/-1 bat doi xung test bien | 0 = test ca hai (ca thuong)
+            public List<WyErLeg> ErLegs = new();
+            // ===== v6 muc 4: range sinh tu mot cu pha (SIDEWAYS) =====
+            public bool BornFromBreak;
+            public double PullbackRef; public int PullbackDir; public double PullbackSeedH;
+            public int PullbackUntil = -1;
+            public WyRange SupersededRef;
         }
+        private struct WyPivot { public int Idx; public double Price; public char Kind; }
+        private sealed class WySotResult
+        {
+            public int N; public double Ratio; public double Effort; public string State = "none";
+            public static WySotResult None() => new WySotResult();
+        }
+        private sealed class WyErLeg { public int I0, I1; public double Effort, Result, Er; }
         /// <summary>v4: ten range theo DU 4 pattern — chi chot duoc khi da biet huong pha (Dir).</summary>
         private static string WyKind(bool originDown, int dir)
         {
@@ -1211,7 +1234,9 @@ namespace WyckoffRunner
         private const double WY_STA_MAX_OVERSHOOT = 1.0;
         // ===== v5: cum climax (LOI A) =====
         private const int WY_CLIMAX_EXT_BARS = 8;
-        private const double WY_CLIMAX_FAIL_ATR = 3.0;
+        // v6 muc 1.4: guard nay gio chay SUOT ca A_st (toi 400 nen) thay vi chi 8 nen dau -> DO LAI
+        // tren du lieu that: 3.0 giu nguyen thi mat 9-14 range dung, 4.0 giu duoc gan het.
+        private const double WY_CLIMAX_FAIL_ATR = 4.0;
         // ===== v4/v5: theo doi cu pha bien =====
         private const int WY_SPRING_MAX_BARS = 4;
         private const int WY_BREAK_HOLD_BARS = 3;
@@ -1226,16 +1251,36 @@ namespace WyckoffRunner
         private const double WY_PHASE_E_TARGET_MULT = 2.0;
         private const double WY_GAP_CUT_MIN = 240;      // khe > 4 gio (cuoi tuan) -> cat range (LOI K)
 
+        // ===== v6 muc 1.8: AR/ST[A] rang buoc TUONG DOI (nguyen ly CHoCH). Da do tren du lieu that
+        // (103,857 nen M1 GCQ26): mult=1.0/frac=0.4 giet 12/52 range dung; ha xuong 0.5/0.2 chi mat
+        // 3/52 ma van siet duoc cac ca AR/ST[A] roi vao nhip hoi ngan tren VSA thap. =====
+        private const double WY_AR_RETRACE_MULT = 0.5;
+        private const double WY_STA_MIN_AR_FRAC = 0.2;
+        // v6 muc 1.2(c): bien phu/bien chinh > nguong nay -> huy range. Do sau khi fix 1.2(b) (het tu
+        // noi): median 1.53x, p90 3.27x, max that 6.45x (chi 2-3 ca) -> 4.0 giu duoc gan het.
+        private const double WY_MAX_OUTER_RATIO = 4.0;
+
+        // ===== v6 muc 4: range SINH TU MOT CU PHA (nguoi hoc chot 2026-08-04) =====
+        private const double WY_NEW_RANGE_SEED_MAX = 0.6;   // "seed" phai HEP hon 0.6x chieu cao range cu
+        private const int WY_NEW_RANGE_MIN_BARS = 120;      // song du 120 nen (2 gio) moi la CHINH THUC
+        private const double WY_NEW_RANGE_CONT_MULT = 1.0;  // but tiep qua peak +/- 1.0x seed_h = nhip hoi
+
         /// <summary>
         /// v3: trước nến climax i có một MOVE xu hướng thật không? acc=true cần move GIẢM (SC chặn đáy).
         /// v5 (LỖI I): đo move trên đoạn [chân .. i-1], KHÔNG tính biên độ của chính cây climax — trước
         /// đây một cây tin 60 giá tự nó đã thoả WY_MOVE_MIN_ATR nên giá đang đi ngang vẫn mở được range.
         /// </summary>
-        private bool WyFindMove(List<Bar> B, int i, bool acc, out int footIdx, out double len, out double eff)
+        private bool WyFindMove(List<Bar> B, int i, bool acc, out int footIdx, out double len, out double eff, out double maxPullback)
         {
-            footIdx = -1; len = 0; eff = 0;
+            footIdx = -1; len = 0; eff = 0; maxPullback = 0;
             if (i < 2) return false;
             int lo = Math.Max(0, i - WY_MOVE_LOOKBACK);
+            // v6 muc 1.7: khong bac qua khe cuoi tuan/nghi le khi nhin lai tim chan move
+            for (int k = i; k > lo; k--)
+            {
+                double gapMin = (B[k].Time - B[k - 1].Time).TotalMinutes;
+                if (gapMin > WY_GAP_CUT_MIN) { lo = k; break; }
+            }
             if (i - lo < WY_MOVE_MIN_BARS) return false;
             if (acc)
             {
@@ -1254,6 +1299,16 @@ namespace WyckoffRunner
                 double hiSeg = double.MinValue;
                 for (int k = footIdx; k < i; k++) if (B[k].H > hiSeg) hiSeg = B[k].H;
                 len = hiSeg - best;
+            }
+            // v6 muc 1.8: nhip hoi lon nhat DA XAY RA trong long move — AR/ST[A] phai vuot qua chinh
+            // no (nguyen ly CHoCH), khong chi mot san tuyet doi co dinh.
+            double worst = acc ? B[footIdx].L : B[footIdx].H;
+            for (int k = footIdx; k < i; k++)
+            {
+                double pull;
+                if (acc) { if (B[k].L < worst) worst = B[k].L; pull = B[k].H - worst; }
+                else { if (B[k].H > worst) worst = B[k].H; pull = worst - B[k].L; }
+                if (pull > maxPullback) maxPullback = pull;
             }
             if (footIdx < 0 || i - footIdx < WY_MOVE_MIN_BARS) return false;
             double avgr = WyAvgRange(B, i, WY_CLIMAX_LOOKBACK);
@@ -1317,7 +1372,7 @@ namespace WyckoffRunner
             for (int k = r.Events.Count - 1; k >= 0; k--)
             {
                 var e = r.Events[k];
-                if (e.Label != "UA" && e.Label != "DA" && e.Label != "UT"
+                if (e.Label != "UT[B]" && e.Label != "ST[B]"
                     && e.Label != "mSOS" && e.Label != "mSOW") continue;
                 bool sameSide = upSide ? e.Price > r.SolidHigh : e.Price < r.SolidLow;
                 if (!sameSide) continue;
@@ -1328,44 +1383,60 @@ namespace WyckoffRunner
         }
 
         /// <summary>
-        /// Nhãn cho một cú thăm dò KHÔNG đủ tư cách shock. strong=true (sâu/volume lớn nhưng không phá
-        /// được) → mSOS/mSOW (LỖI H). strong=false → test nhẹ: cạnh AR = UA/DA; cạnh climax của range
-        /// origin UP = UT; cạnh climax của range origin DOWN chính là ST[B] — người học BỎ hẳn (L6).
-        /// Trả null nghĩa là KHÔNG ghi nhãn nào.
+        /// v6 muc 3.1 (nguoi hoc chot 2026-08-04): moi ben chi con DUNG HAI nhan — "UT[B]" (test/tho
+        /// nhe BIEN TREN roi doi) va "ST[B]" (test/tho nhe BIEN DUOI roi doi). Bo han UA/DA.
+        /// strong=true (v6 muc 3.2: DA PHA HAN ra ngoai nhung hoi ve THU HAN vao trong range) -> mSOS/mSOW.
         /// </summary>
         private static string WyMinorLabel(WyRange r, bool upSide, bool strong)
         {
             if (strong) return upSide ? "mSOS" : "mSOW";
-            bool climaxSide = upSide == !r.OriginDown;
-            if (!climaxSide) return upSide ? "UA" : "DA";
-            return r.OriginDown ? null : "UT";
+            return upSide ? "UT[B]" : "ST[B]";
         }
 
         /// <summary>LỖI C + người học chốt: shock hết hạn/thất bại thì "tạo thành UT, UA hoặc là mSOS,
-        /// mSOW (minor, tức là bị fail)". Không còn nhãn "(thất bại)" treo lại.</summary>
-        private void WyDemoteShock(WyRange r, bool reachedFar)
+        /// mSOW (minor, tức là bị fail)". Không còn nhãn "(thất bại)" treo lại.
+        /// Một pending shock LUÔN đã vượt qua biên phụ (điều kiện exceededOuter lúc tạo), nên theo
+        /// định nghĩa mới (v6 mục 3.2) nó LUÔN là mSOS/mSOW.
+        /// v6 mục 1.2(b): CHỈ BÂY GIỜ (đã biết kết cục THẤT BẠI) mới nới biên phụ bằng cực trị thực tế
+        /// của cú thăm dò — không nới liên tục trong lúc còn đang chờ (fix "tự nới biên rồi tự vượt
+        /// chính nó").</summary>
+        private void WyDemoteShock(WyRange r)
         {
             var sh = r.Pending;
             if (sh == null) return;
             var ev = sh.Ev;
             bool upPoke = sh.Dir < 0;     // Dir<0 = UTAD (canh TREN) | Dir>0 = Spring (canh DUOI)
-            string lab = WyMinorLabel(r, upPoke, true);
+            if (upPoke) r.High = Math.Max(r.High, sh.Peak); else r.Low = Math.Min(r.Low, sh.Peak);
+            ev.Label = WyMinorLabel(r, upPoke, true);
             ev.Status = WyShockStatus.None;
-            if (lab == null) r.Events.Remove(ev); else ev.Label = lab;
             if (ReferenceEquals(r.ShockEv, ev)) { r.ShockEv = null; r.ShockDepth = 0; }
             r.Pending = null;
         }
 
         /// <summary>XOÁ mọi đoạn C/D/E ở dưới cùng khỏi timeline và mở lại Phase B đang chạy (LỖI C).
         /// Trước đây chỉ gọi WySetPhase(i,'B') nên một đoạn "Phase C" dài bằng cả trần timeout còn nằm
-        /// lại — biến phase NGẮN NHẤT thành phase DÀI NHẤT.</summary>
+        /// lại — biến phase NGẮN NHẤT thành phase DÀI NHẤT.
+        /// v6 mục 1.6: XOÁ LUÔN các nhãn LPS[C]/LPSY[C]/LPS[D]/LPSY[D]/SOS/SOW phát sinh TRONG đoạn
+        /// C/D/E vừa bị xoá (lọc theo chỉ số nến >= mốc bắt đầu đoạn sớm nhất bị xoá, vì WyEvent
+        /// không lưu phase riêng). Nhãn shock (Spring/Shakeout/UTAD/mSOS/mSOW) KHÔNG đụng tới.</summary>
         private void WyRevertToB(WyRange r, int i)
         {
+            int cutFrom = -1;
             while (r.Phases.Count > 0)
             {
                 char ph = r.Phases[r.Phases.Count - 1].Phase;
-                if (ph == 'C' || ph == 'D' || ph == 'E') r.Phases.RemoveAt(r.Phases.Count - 1);
+                if (ph == 'C' || ph == 'D' || ph == 'E')
+                {
+                    cutFrom = r.Phases[r.Phases.Count - 1].StartIdx;
+                    r.Phases.RemoveAt(r.Phases.Count - 1);
+                }
                 else break;
+            }
+            if (cutFrom >= 0)
+            {
+                r.Events.RemoveAll(e => e.Idx >= cutFrom &&
+                    (e.Label == "LPS[C]" || e.Label == "LPSY[C]" || e.Label == "LPS[D]" || e.Label == "LPSY[D]"
+                     || e.Label == "SOS" || e.Label == "SOW"));
             }
             if (r.Phases.Count > 0) r.Phases[r.Phases.Count - 1].EndIdx = -1;
             else r.Phases.Add(new WyPhaseSeg { Phase = 'B', StartIdx = i, EndIdx = -1 });
@@ -1409,17 +1480,31 @@ namespace WyckoffRunner
         /// <summary>mục 6, case KHÓ: không có Spring/Shakeout/UTAD nào để nhận ra Phase C ngay lúc đó →
         /// chờ SOS/SOW bắn ra rồi NHÌN NGƯỢC lại, nhịp test cuối cùng trước cú phá chính là
         /// LPS[C]/LPSY[C] ("có Phase D rồi mới xác định được Phase C"). Chỉ 1 điểm duy nhất.</summary>
+        /// <summary>v6 mục 1.5: pivot phải (a) nằm TRONG range (+- dung sai) và (b) nằm ĐÚNG NỬA range —
+        /// LPS[C] (phá lên) ở NỬA DƯỚI, LPSY[C] (phá xuống) ở NỬA TRÊN. Không tìm được pivot hợp lệ →
+        /// KHÔNG vẽ Phase C (Phase B chạy thẳng sang Phase D), thay vì ép một điểm sai vị trí.</summary>
         private void WyRetroPhaseC(List<Bar> B, WyRange r, int sosI, bool up)
         {
             int bStart = r.Phases.Count > 0 ? r.Phases[r.Phases.Count - 1].StartIdx : r.StartIdx;
             int win = Math.Min(WY_RETRO_C_LOOKBACK, Math.Max(1, (sosI - bStart) / 2));
             int loI = Math.Max(bStart + 1, sosI - win);
             if (sosI - loI < 3) return;
-            int piv = WyLastPivot(B, loI, sosI, up);
-            if (piv < 0)
+            double tol = WY_ST_TOL_TICKS * _tick;
+            double mid = (r.SolidLow + r.SolidHigh) / 2.0;
+            var cands = new List<int>();
+            for (int k = loI; k < sosI; k++)
             {
-                piv = loI;
-                for (int k = loI; k < sosI; k++)
+                double px = up ? B[k].L : B[k].H;
+                bool inRange = r.SolidLow - tol <= px && px <= r.SolidHigh + tol;
+                bool rightHalf = up ? B[k].L <= mid : B[k].H >= mid;
+                if (inRange && rightHalf) cands.Add(k);
+            }
+            if (cands.Count == 0) return;
+            int piv = WyLastPivot(B, loI, sosI, up);
+            if (piv < 0 || !cands.Contains(piv))
+            {
+                piv = cands[0];
+                foreach (var k in cands)
                 {
                     if (up) { if (B[k].L < B[piv].L) piv = k; }
                     else { if (B[k].H > B[piv].H) piv = k; }
@@ -1436,6 +1521,111 @@ namespace WyckoffRunner
             WyAddUnique(r, idx, acc ? "LPS[D]" : "LPSY[D]", acc ? B[idx].L : B[idx].H);
         }
 
+        // ============================================================================
+        // v6 muc 2: ba chi so Phase B — CHI DO VA HIEN THI, KHONG dung de loc/gate quyet dinh nao.
+        // ============================================================================
+        private List<WyPivot> WySwingPivots(List<Bar> B, int loI, int hiI)
+        {
+            var pivots = new List<WyPivot>();
+            int n = WY_PIVOT_CONFIRM_BARS;
+            for (int j = loI; j <= hiI; j++)
+            {
+                int wLo = Math.Max(loI, j - n), wHi = Math.Min(hiI, j + n);
+                bool isH = true, isL = true;
+                for (int k = wLo; k <= wHi; k++)
+                {
+                    if (B[j].H < B[k].H) isH = false;
+                    if (B[j].L > B[k].L) isL = false;
+                }
+                if (isH && (pivots.Count == 0 || pivots[pivots.Count - 1].Kind != 'H'))
+                    pivots.Add(new WyPivot { Idx = j, Price = B[j].H, Kind = 'H' });
+                else if (isL && (pivots.Count == 0 || pivots[pivots.Count - 1].Kind != 'L'))
+                    pivots.Add(new WyPivot { Idx = j, Price = B[j].L, Kind = 'L' });
+            }
+            return pivots;
+        }
+
+        /// <summary>SOT (Shortening of the Thrust), THEORY.md mục 7. upSide=true → nhịp đẩy LÊN (cặp
+        /// pivot L->H, khởi động khi gặp lower high); false → nhịp đẩy XUỐNG (cặp H->L, higher low).
+        /// n>4 = "xu hướng quá mạnh" (đánh ngược lại là nguy hiểm, không phải cơ hội).</summary>
+        private WySotResult WyComputeSot(List<Bar> B, List<WyPivot> pivots, bool upSide)
+        {
+            char kindFrom = upSide ? 'L' : 'H', kindTo = upSide ? 'H' : 'L';
+            var legs = new List<(double thrust, int i0, int i1, double endPrice)>();
+            for (int a = 0; a < pivots.Count - 1; a++)
+            {
+                var pa = pivots[a]; var pb = pivots[a + 1];
+                if (pa.Kind == kindFrom && pb.Kind == kindTo)
+                    legs.Add((Math.Abs(pb.Price - pa.Price), pa.Idx, pb.Idx, pb.Price));
+            }
+            var empty = new WySotResult();
+            if (legs.Count < 2) return empty;
+            int start = -1;
+            for (int k = 1; k < legs.Count; k++)
+            {
+                bool conservative = upSide ? legs[k].endPrice < legs[k - 1].endPrice : legs[k].endPrice > legs[k - 1].endPrice;
+                if (conservative) { start = k - 1; break; }
+            }
+            if (start < 0) return empty;
+            var seq = legs.GetRange(start, legs.Count - start);
+            int n = 1;
+            for (int k = 1; k < seq.Count; k++) { if (seq[k].thrust < seq[k - 1].thrust) n++; else break; }
+            if (n < 2) return new WySotResult { N = n, State = "chớm" };
+            var first = seq[0]; var last = seq[n - 1];
+            double AvgV(int i0, int i1) { double s = 0; int c = 0; for (int k = i0; k <= i1; k++) { s += B[k].Vratio; c++; } return c > 0 ? s / c : 0; }
+            double ratio = first.thrust > 1e-9 ? last.thrust / first.thrust : 0;
+            double vFirst = AvgV(first.i0, first.i1), vLast = AvgV(last.i0, last.i1);
+            double effort = vFirst > 1e-9 ? vLast / vFirst : 0;
+            string state = n > 4 ? "xu hướng quá mạnh" : (n >= 3 ? "SOT" : "chớm");
+            return new WySotResult { N = n, Ratio = ratio, Effort = effort, State = state };
+        }
+
+        /// <summary>Nỗ lực <-> kết quả từng nhịp Phase B (lấp khoảng trống giảng viên chê "trống hàng
+        /// trăm nến"). er cao = nhiều volume mà ít kết quả = vùng hấp thụ NGHI VẤN — CHỈ ghi lại.</summary>
+        private List<WyErLeg> WyComputeErLegs(List<Bar> B, List<WyPivot> pivots)
+        {
+            var legs = new List<WyErLeg>();
+            for (int a = 0; a < pivots.Count - 1; a++)
+            {
+                int i0 = pivots[a].Idx, i1 = pivots[a + 1].Idx;
+                if (i1 <= i0) continue;
+                double sum = 0; int n = 0;
+                for (int k = i0; k <= i1; k++) { sum += B[k].Vratio; n++; }
+                double effort = n > 0 ? sum / n : 0;
+                double avgr = WyAvgRange(B, i1, WY_CLIMAX_LOOKBACK);
+                double result = Math.Abs(pivots[a + 1].Price - pivots[a].Price) / Math.Max(1e-9, avgr);
+                legs.Add(new WyErLeg { I0 = i0, I1 = i1, Effort = effort, Result = result, Er = effort / Math.Max(1e-9, result) });
+            }
+            return legs;
+        }
+
+        /// <summary>Bất đối xứng test hai biên: +1 chạm nổi biên TRÊN nhưng KHÔNG với nổi biên DƯỚI
+        /// (ngược lại -1); 0 = test CẢ HAI (ca THƯỜNG — tay to cố tình giấu hành vi). Đây là MỘT chỉ số
+        /// bias, không phải luôn dùng được — chỉ báo hiệu khi thị trường LỘ Ý ĐỒ hoặc đang gấp.</summary>
+        private int WyComputeBias(List<Bar> B, WyRange r, int bStart, int bEnd)
+        {
+            double height = WyHeight(r);
+            if (height <= 0 || bEnd <= bStart) return 0;
+            double hi = double.MinValue, lo = double.MaxValue;
+            for (int k = bStart; k <= bEnd; k++) { hi = Math.Max(hi, B[k].H); lo = Math.Min(lo, B[k].L); }
+            double reachHi = (hi - r.SolidLow) / height, reachLo = (r.SolidHigh - lo) / height;
+            if (reachHi >= 0.95 && reachLo < 0.75) return 1;
+            if (reachLo >= 0.95 && reachHi < 0.75) return -1;
+            return 0;
+        }
+
+        /// <summary>Gọi một lần khi Phase B đã biết ĐẦY ĐỦ (lúc SOS/SOW bắn ra) — tính cả 3 chỉ số mục 2.</summary>
+        private void WyComputePhaseBIndices(List<Bar> B, WyRange r, int bStart, int bEnd)
+        {
+            if (bEnd <= bStart) return;
+            var pivots = WySwingPivots(B, bStart, bEnd);
+            r.Pivots = pivots;
+            r.SotUp = WyComputeSot(B, pivots, true);
+            r.SotDn = WyComputeSot(B, pivots, false);
+            r.ErLegs = WyComputeErLegs(B, pivots);
+            r.Bias = WyComputeBias(B, r, bStart, bEnd);
+        }
+
         /// <summary>
         /// mục 7: Phase D + E chính là CBR — PHÁ biên, HỒI về retest nhưng GIỮ được bên ngoài biên (nhịp
         /// hồi đó = LPS[D]/LPSY[D]), rồi giá THUẬN LỰC đi tiếp tìm vùng giá mới (Phase E).
@@ -1444,11 +1634,18 @@ namespace WyckoffRunner
         /// trong 2 giá quanh biên") quá chặt nên 17/47 range không có nhịp retest nào và Phase D dài
         /// đúng 1 nến. Trả false = cú phá BỊ VÔ HIỆU (call site phải hạ cấp nhãn — LỖI F).
         /// </summary>
-        private bool WyTryLpsAndPhaseE(List<Bar> B, WyRange r, int sosI, bool acc, double level, out int endIdx)
+        /// <summary>Trả về: "TREND" (thành công) | "VOID" (vô hiệu, hạ cấp nhãn) | "SIDEWAYS" (v6 mục 4:
+        /// không lùi vào biên chính NHƯNG cũng không đi đủ xa — giá đang tạo một "seed" hẹp NGOÀI biên,
+        /// sinh range MỚI; seedHi/seedLo chỉ có giá trị khi outcome="SIDEWAYS").
+        /// `level` = biên PHỤ vừa bị phá (dùng tính tiến độ/mục tiêu Phase E). `solidEdge` = biên CHÍNH —
+        /// v6 mục 3.2: vùng giữa biên chính và biên phụ là CHƯA KẾT LUẬN; chỉ lùi qua HẲN biên chính mới
+        /// tính là vô hiệu (trước đây dùng `level` nên SOS/SOW thật dễ bị vô hiệu oan).</summary>
+        private string WyTryLpsAndPhaseE(List<Bar> B, WyRange r, int sosI, bool acc, double level, double solidEdge,
+                                          out int endIdx, out double seedHi, out double seedLo)
         {
             int N = B.Count;
             int end = Math.Min(N - 1, sosI + WY_LPS_WAIT_BARS);
-            endIdx = end;
+            endIdx = end; seedHi = 0; seedLo = 0;
             double failTol = 3.0 * WY_ST_TOL_TICKS * _tick;
             double peak = acc ? B[sosI].H : B[sosI].L;
             double rangeHeight = Math.Max(1e-9, WyHeight(r));
@@ -1462,19 +1659,19 @@ namespace WyckoffRunner
                 {
                     if (bj.H > peak) { peak = bj.H; retI = -1; }
                     if (retI < 0 || bj.L < retExt) { retExt = bj.L; retI = j; }
-                    failed = bj.C < level - failTol;
+                    failed = bj.C < solidEdge - failTol;
                     pull = peak - retExt;
                 }
                 else
                 {
                     if (bj.L < peak) { peak = bj.L; retI = -1; }
                     if (retI < 0 || bj.H > retExt) { retExt = bj.H; retI = j; }
-                    failed = bj.C > level + failTol;
+                    failed = bj.C > solidEdge + failTol;
                     pull = retExt - peak;
                 }
                 double movedFar = acc ? (peak - level) : (level - peak);
                 if (failed && movedFar < WY_PHASE_E_MIN_PROGRESS_MULT * WY_PHASE_E_MULT * rangeHeight)
-                { endIdx = j; return false; }
+                { endIdx = j; return "VOID"; }
                 if (lpsI < 0 && retI >= 0 && pull >= WY_PIVOT_MIN_ATR * avgr && (j - retI) >= WY_PIVOT_CONFIRM_BARS)
                     lpsI = retI;
                 if (targetJ < 0 && movedFar >= WY_PHASE_E_MULT * rangeHeight) targetJ = j;
@@ -1485,7 +1682,14 @@ namespace WyckoffRunner
             {
                 double finalMoved = acc ? (peak - level) : (level - peak);
                 if (finalMoved < WY_PHASE_E_MIN_PROGRESS_MULT * WY_PHASE_E_MULT * rangeHeight)
-                { endIdx = end; return false; }
+                {
+                    // v6 muc 4: KHONG lui vao bien chinh nhung cung KHONG di du xa — kiem "seed" hep
+                    double hi = double.MinValue, lo = double.MaxValue;
+                    for (int k = sosI; k <= end; k++) { hi = Math.Max(hi, B[k].H); lo = Math.Min(lo, B[k].L); }
+                    endIdx = end;
+                    if ((hi - lo) <= WY_NEW_RANGE_SEED_MAX * rangeHeight) { seedHi = hi; seedLo = lo; return "SIDEWAYS"; }
+                    return "VOID";
+                }
                 targetJ = end;
             }
             // Phase D phải BAO TRỌN nhịp retest. Không có nhịp retest thì Phase D ngắn thật
@@ -1505,37 +1709,92 @@ namespace WyckoffRunner
                 if ((acc ? (peak - level) : (level - peak)) >= WY_PHASE_E_TARGET_MULT * rangeHeight) break;
             }
             endIdx = eEnd;
-            return true;
+            return "TREND";
+        }
+
+        /// <summary>v6 mục 4.3: range MỚI sinh từ chính cú phá — chấp nhận KHÔNG CÓ climax thật, neo
+        /// bằng cực trị giá THỰC SỰ đạt được trong cú phá (BCLX?/SC?). up -> origin=UP (sau này phá
+        /// lên tiếp = RE-ACC, phá xuống = DIST); !up -> origin=DOWN (phá xuống tiếp = RE-DIST, phá lên
+        /// = ACC). MoveMaxPullback=0: KHÔNG có một 'move' trước đó theo nghĩa thông thường.</summary>
+        private WyRange WySpawnSidewaysRange(List<Bar> B, bool up, int sosI, int end, double seedHi, double seedLo)
+        {
+            int anchorI; WyRange nr;
+            if (up)
+            {
+                anchorI = sosI; double best = B[sosI].H;
+                for (int k = sosI + 1; k <= end; k++) if (B[k].H > best) { best = B[k].H; anchorI = k; }
+                nr = new WyRange { StartIdx = anchorI, OriginDown = false, High = B[anchorI].H, ClimaxPrice = B[anchorI].H };
+                nr.ClimaxEv = WyAddEvent(nr, anchorI, "BCLX?", B[anchorI].H);
+            }
+            else
+            {
+                anchorI = sosI; double best = B[sosI].L;
+                for (int k = sosI + 1; k <= end; k++) if (B[k].L < best) { best = B[k].L; anchorI = k; }
+                nr = new WyRange { StartIdx = anchorI, OriginDown = true, Low = B[anchorI].L, ClimaxPrice = B[anchorI].L };
+                nr.ClimaxEv = WyAddEvent(nr, anchorI, "SC?", B[anchorI].L);
+            }
+            nr.ClimaxVsa = B[anchorI].Vratio;
+            WySetPhase(nr, anchorI, 'A');
+            nr.BornFromBreak = true;
+            nr.PullbackRef = nr.ClimaxPrice;
+            nr.PullbackDir = up ? 1 : -1;
+            nr.PullbackSeedH = seedHi - seedLo;
+            nr.PullbackUntil = anchorI + WY_NEW_RANGE_MIN_BARS;
+            return nr;
         }
 
         /// <summary>
         /// Một cú phá biên đã đủ điều kiện chốt. Nhãn đặt HỒI TỐ vào cây phá thật (LỖI B). Nếu Phase D/E
         /// không giữ được thì cú phá BỊ VÔ HIỆU: hạ cấp nhãn, trả dải phase về B, KHÔNG đặt tên range
-        /// (LỖI F). Trả true nếu range đã chốt xong (State="END").
+        /// (LỖI F).
+        /// v6 mục 1.3: `pokeStartI` = nến ĐẦU TIÊN thò ra khỏi biên (không phải nến xác nhận thứ 3), và
+        /// mốc so sánh của anchor là BIÊN CHÍNH (solid).
+        /// Trả về: null (VOID, r tự đóng) | r (TREND, r.State="END") | WyRange MỚI (SIDEWAYS, r đã đóng
+        /// ở trạng thái "superseded" và ĐÃ được đẩy vào `ranges`, caller phải gán active = giá trị trả về).
         /// </summary>
-        private bool WyFireBreak(List<Bar> B, WyRange r, int i, bool up, double outEdge, int firstI)
+        private WyRange WyFireBreak(List<Bar> B, WyRange r, int i, bool up, double outEdge, int pokeStartI, List<WyRange> ranges)
         {
-            int anchor = WyAnchorBreakBar(B, firstI, i, up, outEdge);
+            double solidEdge = up ? r.SolidHigh : r.SolidLow;
+            int anchor = WyAnchorBreakBar(B, pokeStartI, i, up, solidEdge);
             r.Brk = null;
             r.Pending = null;
+            WyComputePhaseBIndices(B, r, r.StaIdx + 1, anchor);
             bool hasC = false;
             foreach (var p in r.Phases) if (p.Phase == 'C') { hasC = true; break; }
             if (!hasC) WyRetroPhaseC(B, r, anchor, up);
             var ev = WyAddEvent(r, anchor, up ? "SOS" : "SOW", B[anchor].C);
             WySetPhase(r, anchor, 'D');
-            bool ok = WyTryLpsAndPhaseE(B, r, anchor, up, outEdge, out int eEnd);
-            if (ok)
+            string outcome = WyTryLpsAndPhaseE(B, r, anchor, up, outEdge, solidEdge, out int eEnd, out double seedHi, out double seedLo);
+            if (outcome == "TREND")
             {
                 r.Dir = up ? 1 : -1;
                 r.EndIdx = eEnd;
                 r.State = "END";
-                return true;
+                return null;
             }
-            // --- cú phá bị vô hiệu ---
+            if (outcome == "SIDEWAYS")
+            {
+                // v6 muc 4: KHONG ha cap nhan SOS/SOW — cu pha nay THAT, chi la sau do gia dung lai
+                // di ngang tai do. Range CU dong lai, giu VE (KHONG xoa, muc 4.5) nhung KHONG dat ten.
+                r.Status = "superseded";
+                r.Completed = true;
+                r.EndIdx = eEnd;
+                if (r.Phases.Count > 0) r.Phases[r.Phases.Count - 1].EndIdx = eEnd;
+                ranges.Add(r);
+                var nr = WySpawnSidewaysRange(B, up, anchor, eEnd, seedHi, seedLo);
+                nr.SupersededRef = r;
+                return nr;
+            }
+            // --- VOID: da lui han qua BIEN CHINH (vung giua chinh-phu la CHUA KET LUAN) ---
+            // v6 muc 3.2: mSOS/mSOW chi CHOT khi gia da di duoc >=50% chieu cao range VE HUONG BIEN
+            // DOI DIEN; chua di duoc thi de trang thai Pending — Phase B tiep tuc theo doi qua WyMarkOuter.
+            double rangeHeight2 = Math.Max(1e-9, WyHeight(r));
+            double progressOpp = up ? (r.SolidHigh - B[eEnd].C) / rangeHeight2 : (B[eEnd].C - r.SolidLow) / rangeHeight2;
             ev.Label = up ? "mSOS" : "mSOW";
+            ev.Status = progressOpp >= 0.5 ? WyShockStatus.None : WyShockStatus.Pending;
             r.VoidBreaks++;
             double ext = up ? double.MinValue : double.MaxValue;
-            for (int j = Math.Max(0, firstI); j <= i && j < B.Count; j++)
+            for (int j = Math.Max(0, pokeStartI); j <= i && j < B.Count; j++)
                 ext = up ? Math.Max(ext, B[j].H) : Math.Min(ext, B[j].L);
             r.FailFloor = ext;
             if (up) r.High = Math.Max(r.High, ext); else r.Low = Math.Min(r.Low, ext);
@@ -1543,10 +1802,10 @@ namespace WyckoffRunner
             {
                 r.State = "END";
                 r.EndIdx = Math.Min(B.Count - 1, i);
-                return true;
+                return null;
             }
             WyRevertToB(r, i);
-            return false;
+            return null;
         }
 
         private List<WyRange> ScanWyckoff(List<Bar> B)
@@ -1579,25 +1838,27 @@ namespace WyckoffRunner
                     if (!(b.Rng >= WY_CLIMAX_RANGE_MULT * avgr0 && b.Vratio >= VsaClimax)) continue;
                     if (b.C < b.O)
                     {
-                        if (!WyFindMove(B, i, true, out int fi, out double ln, out double ef)) continue;
+                        if (!WyFindMove(B, i, true, out int fi, out double ln, out double ef, out double mpb)) continue;
                         var nr = new WyRange
                         {
                             StartIdx = i, OriginDown = true, Low = b.L, High = b.L,
-                            ClimaxPrice = b.L, MoveIdx = fi, MoveLen = ln, MoveEff = ef,
+                            ClimaxPrice = b.L, MoveIdx = fi, MoveLen = ln, MoveEff = ef, MoveMaxPullback = mpb,
                         };
                         nr.ClimaxEv = WyAddEvent(nr, i, "SC", b.L);
+                        nr.ClimaxVsa = b.Vratio;
                         WySetPhase(nr, i, 'A');
                         active = nr;
                     }
                     else if (b.C > b.O)
                     {
-                        if (!WyFindMove(B, i, false, out int fi, out double ln, out double ef)) continue;
+                        if (!WyFindMove(B, i, false, out int fi, out double ln, out double ef, out double mpb)) continue;
                         var nr = new WyRange
                         {
                             StartIdx = i, OriginDown = false, Low = b.H, High = b.H,
-                            ClimaxPrice = b.H, MoveIdx = fi, MoveLen = ln, MoveEff = ef,
+                            ClimaxPrice = b.H, MoveIdx = fi, MoveLen = ln, MoveEff = ef, MoveMaxPullback = mpb,
                         };
                         nr.ClimaxEv = WyAddEvent(nr, i, "BCLX", b.H);
+                        nr.ClimaxVsa = b.Vratio;
                         WySetPhase(nr, i, 'A');
                         active = nr;
                     }
@@ -1613,23 +1874,46 @@ namespace WyckoffRunner
                 // ---------- guard: bỏ range thoái hoá ----------
                 bool tooTall = WyHeight(r) > WY_MAX_HEIGHT_PCT * b.C;
                 bool tooLong = r.State != "END" && (i - climaxI) > WY_MAX_BARS_AB;
-                if (tooTall || tooLong) { active = null; continue; }
+                // v6 muc 1.2(c): bien phu phinh qua bien chinh (do duoc 2x-6.4x o v5) -> huy.
+                bool tooWide = r.SolidSet && WyHeight(r) > 0 && (r.High - r.Low) > WY_MAX_OUTER_RATIO * WyHeight(r);
+                if (tooTall || tooLong || tooWide) { active = null; continue; }
+
+                // ---------- v6 muc 4.4: range SINH TU CU PHA — trong luc con "provisional", neu gia
+                // BUT TIEP qua chinh peak cua cu pha theo DUNG HUONG cu, day KHONG phai range moi ma
+                // chi la nhip HOI — huy range moi, hoi sinh range CU (no dung la mot cu pha THANH CONG).
+                if (r.BornFromBreak && i <= r.PullbackUntil)
+                {
+                    bool beyondSeed = r.PullbackDir > 0
+                        ? b.C > r.PullbackRef + WY_NEW_RANGE_CONT_MULT * r.PullbackSeedH
+                        : b.C < r.PullbackRef - WY_NEW_RANGE_CONT_MULT * r.PullbackSeedH;
+                    if (beyondSeed)
+                    {
+                        var old = r.SupersededRef;
+                        old.Status = "completed";
+                        old.Completed = true;
+                        old.Dir = r.PullbackDir;
+                        old.EndIdx = i;
+                        if (old.Phases.Count > 0) old.Phases[old.Phases.Count - 1].EndIdx = i;
+                        active = null;
+                        continue;
+                    }
+                }
 
                 // ================= state A: cụm climax + chờ AR =================
                 if (r.State == "A")
                 {
+                    // v6 muc 1.1 (nguoi hoc chot "doi MUC bien, giu NHAN o cay volume cao nhat"): MUC
+                    // BIEN (ClimaxPrice) doi theo cuc tri gia nhu cu; NHAN (ClimaxEv) chi doi khi gap
+                    // cay co VSA CAO HON nhan hien tai — tranh nhan roi vao cay VSA thap trong khi cay
+                    // manh nam ngay canh (loi nang nhat vong cham v5).
                     if (i - climaxI <= WY_CLIMAX_EXT_BARS)
                     {
                         bool moved = false;
-                        if (r.OriginDown && b.L < r.ClimaxPrice)
+                        if (r.OriginDown && b.L < r.ClimaxPrice) { r.ClimaxPrice = b.L; r.Low = b.L; moved = true; }
+                        else if (!r.OriginDown && b.H > r.ClimaxPrice) { r.ClimaxPrice = b.H; r.High = b.H; moved = true; }
+                        if (b.Vratio > r.ClimaxVsa)
                         {
-                            r.ClimaxPrice = b.L; r.Low = b.L;
-                            r.ClimaxEv.Idx = i; r.ClimaxEv.Price = b.L; moved = true;
-                        }
-                        else if (!r.OriginDown && b.H > r.ClimaxPrice)
-                        {
-                            r.ClimaxPrice = b.H; r.High = b.H;
-                            r.ClimaxEv.Idx = i; r.ClimaxEv.Price = b.H; moved = true;
+                            r.ClimaxEv.Idx = i; r.ClimaxEv.Price = r.OriginDown ? b.L : b.H; r.ClimaxVsa = b.Vratio;
                         }
                         if (moved)
                         {
@@ -1657,10 +1941,14 @@ namespace WyckoffRunner
                         if (r.ArExtIdx < 0 || b.L < r.ArExt) { r.ArExt = b.L; r.ArExtIdx = i; }
                         spanAr = r.ClimaxPrice - r.ArExt;
                     }
-                    if (spanAr >= WY_PIVOT_MIN_ATR * avgr && (i - r.ArExtIdx) >= WY_PIVOT_CONFIRM_BARS)
+                    // v6 muc 1.8 (nguyen ly CHoCH — giang vien bac CHoCH vi "doan hoi khong du lon so
+                    // voi boi canh"): AR phai vuot qua chinh nhip hoi lon nhat DA XAY RA trong long move.
+                    double arMin = Math.Max(WY_PIVOT_MIN_ATR * avgr, WY_AR_RETRACE_MULT * r.MoveMaxPullback);
+                    if (spanAr >= arMin && (i - r.ArExtIdx) >= WY_PIVOT_CONFIRM_BARS)
                     {
                         r.ArIdx = r.ArExtIdx; r.ArPrice = r.ArExt;
                         r.ArEv = WyAddEvent(r, r.ArIdx, (r.ArIdx - climaxI) <= 2 ? "AR (yếu)" : "AR", r.ArPrice);
+                        r.ArVsa = B[r.ArIdx].Vratio;
                         if (r.OriginDown) r.High = Math.Max(r.High, r.ArPrice); else r.Low = Math.Min(r.Low, r.ArPrice);
                         r.State = "A_st";
                         r.StExt = 0; r.StExtIdx = -1;
@@ -1674,6 +1962,10 @@ namespace WyckoffRunner
                 {
                     double span = Math.Abs(r.ArPrice - r.ClimaxPrice);
                     if (span < 1e-9) { active = null; continue; }
+                    // v6 muc 1.4: guard "climax khong chan duoc move" (LOI A phan 2) phai chay SUOT
+                    // ca A_st — truoc day tat han sau WY_CLIMAX_EXT_BARS nen dau tien.
+                    double beyondAst = r.OriginDown ? (r.ClimaxPrice - b.L) : (b.H - r.ClimaxPrice);
+                    if (beyondAst > WY_CLIMAX_FAIL_ATR * avgr) { active = null; continue; }
                     double swing, overshoot;
                     if (r.OriginDown)
                     {
@@ -1681,6 +1973,7 @@ namespace WyckoffRunner
                         {
                             r.ArPrice = b.H; r.ArIdx = i;
                             r.ArEv.Idx = i; r.ArEv.Price = b.H;      // LỖI E: dời cả NHÃN
+                            r.ArVsa = b.Vratio;
                             r.High = Math.Max(r.High, b.H);
                             r.StExtIdx = -1;
                         }
@@ -1694,6 +1987,7 @@ namespace WyckoffRunner
                         {
                             r.ArPrice = b.L; r.ArIdx = i;
                             r.ArEv.Idx = i; r.ArEv.Price = b.L;
+                            r.ArVsa = b.Vratio;
                             r.Low = Math.Min(r.Low, b.L);
                             r.StExtIdx = -1;
                         }
@@ -1702,10 +1996,13 @@ namespace WyckoffRunner
                         overshoot = (r.StExt - r.ClimaxPrice) / Math.Max(1e-9, span);
                     }
                     if (overshoot > WY_STA_MAX_OVERSHOOT) { active = null; continue; }
-                    if (swing >= WY_PIVOT_MIN_ATR * avgr && (i - r.StExtIdx) >= WY_PIVOT_CONFIRM_BARS)
+                    // v6 muc 1.8: ST[A] cung phai hoi toi thieu mot TY LE cua khoang AR<->climax.
+                    double staMin = Math.Max(WY_PIVOT_MIN_ATR * avgr, WY_STA_MIN_AR_FRAC * span);
+                    if (swing >= staMin && (i - r.StExtIdx) >= WY_PIVOT_CONFIRM_BARS)
                     {
                         r.StaIdx = r.StExtIdx; r.StaPrice = r.StExt;
                         WyAddEvent(r, r.StaIdx, "ST[A]", r.StaPrice);
+                        r.StaVsa = B[r.StaIdx].Vratio;
                         r.SolidLow = Math.Min(r.ClimaxPrice, r.ArPrice);
                         r.SolidHigh = Math.Max(r.ClimaxPrice, r.ArPrice);
                         r.SolidSet = true;
@@ -1816,8 +2113,10 @@ namespace WyckoffRunner
                                    (upSide ? k.Ext > r.FailFloor : k.Ext < r.FailFloor);
                     if ((k.Hold >= WY_BREAK_HOLD_BARS || timedOut) && floorOk)
                     {
-                        int first = k.FirstIdx >= 0 ? k.FirstIdx : k.StartIdx;
-                        WyFireBreak(B, r, i, upSide, outEdge, first);
+                        // v6 muc 1.3: quet ANCHOR tu nen DAU TIEN tho ra (k.StartIdx), khong phai tu
+                        // nen xac nhan thu 3 — cay pha THAT (VSA cao nhat) thuong nam som hon trong doan.
+                        var spawned = WyFireBreak(B, r, i, upSide, outEdge, k.StartIdx, ranges);
+                        if (spawned != null) { active = spawned; continue; }
                     }
                     else if (barsOut > WY_BREAK_MAX_WAIT && !timedOut)
                     {
@@ -1838,8 +2137,9 @@ namespace WyckoffRunner
                     var shock = r.Pending;
                     double spanSh = Math.Max(1e-9, Math.Abs(shock.TargetEdge - shock.Price));
                     bool up = shock.Dir > 0;
-                    if (b.L < r.Low) r.Low = b.L;      // LỖI C: vẫn cập nhật biên phụ CẢ HAI phía
-                    if (b.H > r.High) r.High = b.H;
+                    // v6 muc 1.2(b): CHI noi bien phu o PHIA DOI DIEN (chua bi test); phia dang bi
+                    // test se noi MOT LAN DUY NHAT, SAU KHI biet ket cuc, trong WyDemoteShock.
+                    if (up) { if (b.H > r.High) r.High = b.H; } else { if (b.L < r.Low) r.Low = b.L; }
                     double progress; bool failedNow;
                     if (up)
                     {
@@ -1856,13 +2156,13 @@ namespace WyckoffRunner
 
                     if (i - shock.StartIdx > WY_SHOCK_MAX_WAIT)
                     {
-                        WyDemoteShock(r, progress >= 1.0);
+                        WyDemoteShock(r);
                         WyRevertToB(r, i);
                         continue;
                     }
                     if (failedNow && progress < WY_SHOCK_PROGRESS_MULT)
                     {
-                        WyDemoteShock(r, false);
+                        WyDemoteShock(r);
                         WyRevertToB(r, i);
                         continue;
                     }
@@ -1876,7 +2176,10 @@ namespace WyckoffRunner
                     if (dec) { if (shock.Hold == 0) shock.FirstIdx = i; shock.Hold++; }
                     else shock.Hold = 0;
                     if (shock.Hold >= WY_BREAK_HOLD_BARS)
-                        WyFireBreak(B, r, i, up, oe, shock.FirstIdx >= 0 ? shock.FirstIdx : i);
+                    {
+                        var spawned = WyFireBreak(B, r, i, up, oe, shock.StartIdx, ranges);
+                        if (spawned != null) { active = spawned; continue; }
+                    }
                     else if (!shock.LpsDone && Math.Abs(b.C - shock.Price) <= 2.0 * tol
                              && (i - shock.StartIdx) >= WY_PIVOT_CONFIRM_BARS)
                     {

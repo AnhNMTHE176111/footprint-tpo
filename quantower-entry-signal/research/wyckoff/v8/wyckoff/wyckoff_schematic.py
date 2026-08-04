@@ -242,7 +242,8 @@ class WyRange:
                  'climax_price', 'climax_ev', 'ar_i', 'ar_price', 'ar_ev', 'ar_ext', 'ar_ext_i',
                  'sta_i', 'sta_price', 'move_i', 'move_len', 'move_eff', 'move_max_pullback',
                  'st_ext', 'st_ext_i', 'shock_ev', 'shock_depth', 'fail_floor', 'void_breaks',
-                 'climax_vsa', 'ar_vsa', 'sta_vsa')
+                 'climax_vsa', 'ar_vsa', 'sta_vsa',
+                 'pivots', 'sot_up', 'sot_dn', 'bias', 'er_legs')
 
     def __init__(self, start_i, origin):
         self.start_i = start_i
@@ -277,6 +278,13 @@ class WyRange:
         self.climax_vsa = 0.0     # v6 muc 1.1/1.9: VSA cua cay MANG NHAN (khong phai cuc tri gia)
         self.ar_vsa = 0.0         # v6 muc 1.9: VSA cua cay AR (chi DO, chua gate)
         self.sta_vsa = 0.0        # v6 muc 1.9: VSA cua cay ST[A] (chi DO, chua gate)
+        # --- v6 muc 2: ba chi so Phase B — CHI DO VA HIEN THI, KHONG dung de loc/gate ---
+        self.pivots = []          # [(i, price, 'H'|'L')] swing pivot nhan qua trong Phase B
+        _sot0 = dict(n=0, ratio=0.0, effort=0.0, state='none')
+        self.sot_up = dict(_sot0)   # dict(n, ratio, effort, state) — SOT phia TREN (_compute_sot)
+        self.sot_dn = dict(_sot0)   # SOT phia DUOI — chua chot Phase B thi giu mac dinh 'none'
+        self.bias = 0             # +1 test tren khong voi noi duoi | -1 nguoc lai | 0 test ca hai (ca THUONG)
+        self.er_legs = []         # [dict(i0,i1,effort,result,er)] no luc/ket qua tung nhip Phase B
         self.events = []
         self.phases = []
         self.status = 'active'
@@ -465,6 +473,116 @@ def _retro_phase_c(B, r, sos_i, up):
     _add_unique(r, piv, 'LPS[C]' if up else 'LPSY[C]', price, 'C')
 
 
+# ============================================================================
+# v6 muc 2: ba chi so Phase B — CHI DO VA HIEN THI, KHONG dung de loc/gate quyet dinh nao.
+# Nguoi hoc chot 2026-08-04: "hay do, lay va bao chi so" truoc khi ban nguong loc.
+# ============================================================================
+def _swing_pivots(B, lo_i, hi_i):
+    """Chuoi swing pivot NHAN QUA trong [lo_i, hi_i], xen ke H/L (PIVOT_CONFIRM_BARS nen quanh
+    khong tao cuc tri moi). Dung chung cho SOT, nо luc/ket qua, va bias."""
+    pivots = []
+    n = PIVOT_CONFIRM_BARS
+    for j in range(lo_i, hi_i + 1):
+        w_lo, w_hi = max(lo_i, j - n), min(hi_i, j + n)
+        is_h = all(B[j]['hi'] >= B[k]['hi'] for k in range(w_lo, w_hi + 1))
+        is_l = all(B[j]['lo'] <= B[k]['lo'] for k in range(w_lo, w_hi + 1))
+        if is_h and (not pivots or pivots[-1][2] != 'H'):
+            pivots.append((j, B[j]['hi'], 'H'))
+        elif is_l and (not pivots or pivots[-1][2] != 'L'):
+            pivots.append((j, B[j]['lo'], 'L'))
+    return pivots
+
+
+def _compute_sot(B, pivots, up_side):
+    """SOT (Shortening of the Thrust), THEORY.md muc 7. up_side=True -> nhip day LEN (cap pivot
+    L->H, khoi dong khi gap lower high); up_side=False -> nhip day XUONG (cap H->L, higher low).
+    volume nhip cuoi >= nhip dau (effort>=1) -> hap thu (no luc giu/tang, ket qua co lai); < 1 ->
+    can kiet. Tra dict(n, ratio, effort, state); n<2 'none', n==2 'chớm', n>=3 'SOT', n>4 'xu huong
+    qua manh' (dung nguoc lai SOT nay la nguy hiem, khong phai co hoi)."""
+    kind_from, kind_to = ('L', 'H') if up_side else ('H', 'L')
+    legs = []
+    for a in range(len(pivots) - 1):
+        pa, pb = pivots[a], pivots[a + 1]
+        if pa[2] == kind_from and pb[2] == kind_to:
+            legs.append((abs(pb[1] - pa[1]), pa[0], pb[0], pb[1]))
+    empty = dict(n=0, ratio=0.0, effort=0.0, state='none')
+    if len(legs) < 2:
+        return empty
+    start = None
+    for k in range(1, len(legs)):
+        conservative = (legs[k][3] < legs[k - 1][3]) if up_side else (legs[k][3] > legs[k - 1][3])
+        if conservative:
+            start = k - 1
+            break
+    if start is None:
+        return empty
+    seq = legs[start:]
+    n = 1
+    for k in range(1, len(seq)):
+        if seq[k][0] < seq[k - 1][0]:
+            n += 1
+        else:
+            break
+    if n < 2:
+        return dict(n=n, ratio=0.0, effort=0.0, state='chớm')
+    first, last = seq[0], seq[n - 1]
+
+    def _avg_vratio(i0, i1):
+        bars = [B[k]['vratio'] for k in range(i0, i1 + 1)]
+        return sum(bars) / len(bars) if bars else 0.0
+
+    ratio = last[0] / first[0] if first[0] > 1e-9 else 0.0
+    v_first, v_last = _avg_vratio(first[1], first[2]), _avg_vratio(last[1], last[2])
+    effort = v_last / v_first if v_first > 1e-9 else 0.0
+    state = 'xu hướng quá mạnh' if n > 4 else ('SOT' if n >= 3 else 'chớm')
+    return dict(n=n, ratio=ratio, effort=effort, state=state)
+
+
+def _compute_er_legs(B, pivots):
+    """No luc <-> ket qua tung nhip Phase B (lap khoang trong giang vien che 'trong hang tram
+    nen'). er cao = nhieu volume ma it ket qua = vung hap thu NGHI VAN — CHI ghi lai, khong loc."""
+    legs = []
+    for a in range(len(pivots) - 1):
+        i0, p0, _ = pivots[a]
+        i1, p1, _ = pivots[a + 1]
+        if i1 <= i0:
+            continue
+        n = i1 - i0 + 1
+        effort = sum(B[k]['vratio'] for k in range(i0, i1 + 1)) / n
+        avgr = _avg_range(B, i1, CLIMAX_RANGE_LOOKBACK)
+        result = abs(p1 - p0) / max(1e-9, avgr)
+        er = effort / max(1e-9, result)
+        legs.append(dict(i0=i0, i1=i1, effort=effort, result=result, er=er))
+    return legs
+
+
+def _compute_bias(B, r, b_start, b_end):
+    """Bat doi xung test hai bien: +1 cham noi bien TREN nhung KHONG voi noi bien DUOI (nguoc lai
+    -1); 0 = test CA HAI (ca THUONG — tay to co tinh giau hanh vi). Day la MOT chi so bias, khong
+    phai luon dung duoc — chi bao hieu khi thi truong LO Y DO hoac dang gap."""
+    if r.height <= 0 or b_end <= b_start:
+        return 0
+    reach_hi = (max(B[k]['hi'] for k in range(b_start, b_end + 1)) - r.solid_low) / r.height
+    reach_lo = (r.solid_high - min(B[k]['lo'] for k in range(b_start, b_end + 1))) / r.height
+    if reach_hi >= 0.95 and reach_lo < 0.75:
+        return 1
+    if reach_lo >= 0.95 and reach_hi < 0.75:
+        return -1
+    return 0
+
+
+def _compute_phase_b_indices(B, r, b_start, b_end):
+    """Goi mot lan khi Phase B da biet DAY DU (luc SOS/SOW ban ra) — tinh ca 3 chi so muc 2."""
+    if b_end <= b_start:
+        return
+    pivots = _swing_pivots(B, b_start, b_end)
+    r.pivots = pivots
+    r.sot_up = _compute_sot(B, pivots, up_side=True)
+    r.sot_dn = _compute_sot(B, pivots, up_side=False)
+    r.er_legs = _compute_er_legs(B, pivots)
+    r.bias = _compute_bias(B, r, b_start, b_end)
+
+
 def _emit_lps(B, r, pull_bars, ACC):
     """LPS[D]/LPSY[D] CHI danh dau 1 DIEM (nguoi hoc chot): day sau nhat (pha len) / dinh cao nhat
     (pha xuong) cua nhip hoi."""
@@ -561,6 +679,7 @@ def _fire_break(B, r, i, up, out_edge, poke_start_i):
     anchor = _anchor_break_bar(B, poke_start_i, i, up, solid_edge)
     r.brk = None
     r.pending_shock = None
+    _compute_phase_b_indices(B, r, r.sta_i + 1, anchor)
     if not any(p[0] == 'C' for p in r.phases):
         _retro_phase_c(B, r, anchor, up)
     ev = r.add_event(anchor, 'SOS' if up else 'SOW', B[anchor]['c'], 'D')

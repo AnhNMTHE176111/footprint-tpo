@@ -7,7 +7,7 @@
 - Bien CHINH (net lien, climax+AR): 4941.5 - 4989.4 = 47.9 gia (0.96% gia).
 - Bien PHU (net dut, cuc tri xa nhat): 4916.4 - 4989.7 = 73.3 gia.
 - Ty le bien phu/bien chinh: **1.53x** (guard huy range khi > 4.0x).
-- Nhan climax mang VSA=13.62x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
+- Nhan climax mang VSA=3.12x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
 - Trang thai range: **completed**.
 
 ## Ba chi so Phase B (v6 — CHI DO/HIEN THI, khong dung de loc)
@@ -15,14 +15,15 @@
 - **Bias bat doi xung test bien**: `+0` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
 - **SOT phia TREN**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.93, ty le volume nhip cuoi/dau=0.69 (can kiet).
 - **SOT phia DUOI**: trang thai=`none`, n=0 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
-- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 2528..2537 (2026-01-21 15:11:00), effort(VSA TB)=0.81x, result(bien do/ATR)=9.46, ty le er=0.09 — vung hap thu NGHI VAN (volume nhieu, ket qua it).
+- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 2528..2537 (2026-01-21 15:11:00), effort(VSA TB)=0.81x, result(bien do/ATR)=9.46, ty le er=0.09 — nhip HIEU QUA (ket qua nhieu hon no luc, khong phai hap thu).
 
 ## Phase (do dai tinh bang nen M1)
 
 | Phase | Bat dau | Ket thuc | So nen |
 |---|---|---|---|
 | A | 2026-01-21 06:34:00 | 2026-01-21 09:31:00 | 18 |
-| B | 2026-01-21 11:29:00 | 2026-01-21 20:52:00 | 70 |
+| B | 2026-01-21 11:29:00 | 2026-01-21 13:52:00 | 15 |
+| C | 2026-01-21 13:55:00 | 2026-01-21 20:52:00 | 55 |
 | D | 2026-01-21 21:00:00 | 2026-01-22 01:57:00 | 25 |
 | E | 2026-01-22 02:03:00 | 2026-01-22 05:50:00 | 15 |
 
@@ -30,9 +31,10 @@
 
 | Nhan | Thoi diem | Gia | Phase | Trang thai | VSA nen do | Than/bien do |
 |---|---|---|---|---|---|---|
-| BCLX | 2026-01-21 06:57:00 | 4961.6 | A | - | 13.62x | 0.72 |
+| BCLX | 2026-01-21 04:19:00 | 4958.9 | A | - | 3.12x | 1.00 |
 | AR | 2026-01-21 07:20:00 | 4941.5 | A | - | 0.12x | 0.00 |
 | ST[A] | 2026-01-21 09:31:00 | 4985.9 | A | - | 0.13x | 0.00 |
+| LPSY[C] | 2026-01-21 13:55:00 | 4989.7 | C | - | 0.39x | 0.00 |
 | mSOW | 2026-01-21 17:31:00 | 4916.4 | B | - | 0.57x | 0.00 |
 | SOW | 2026-01-21 21:00:00 | 4928.5 | D | - | 5.00x | 0.77 |
 | LPSY[D] | 2026-01-22 01:21:00 | 4911.9 | D | - | 1.00x | 0.00 |

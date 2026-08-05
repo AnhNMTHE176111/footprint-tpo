@@ -15,14 +15,15 @@
 - **Bias bat doi xung test bien**: `+0` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
 - **SOT phia TREN**: trang thai=`none`, n=0 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
 - **SOT phia DUOI**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.52, ty le volume nhip cuoi/dau=1.30 (HAP THU (volume >= nhip dau, canh giu vung)).
-- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 77819..77826 (2026-06-30 14:00:00), effort(VSA TB)=1.21x, result(bien do/ATR)=2.16, ty le er=0.56 — vung hap thu NGHI VAN (volume nhieu, ket qua it).
+- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 77819..77826 (2026-06-30 14:00:00), effort(VSA TB)=1.21x, result(bien do/ATR)=2.16, ty le er=0.56 — nhip HIEU QUA (ket qua nhieu hon no luc, khong phai hap thu).
 
 ## Phase (do dai tinh bang nen M1)
 
 | Phase | Bat dau | Ket thuc | So nen |
 |---|---|---|---|
 | A | 2026-06-30 12:58:00 | 2026-06-30 13:24:00 | 27 |
-| B | 2026-06-30 13:25:00 | 2026-06-30 14:08:00 | 44 |
+| B | 2026-06-30 13:25:00 | 2026-06-30 13:36:00 | 12 |
+| C | 2026-06-30 13:37:00 | 2026-06-30 14:08:00 | 32 |
 | D | 2026-06-30 14:09:00 | 2026-06-30 14:22:00 | 14 |
 | E | 2026-06-30 14:23:00 | 2026-06-30 15:14:00 | 52 |
 
@@ -33,6 +34,7 @@
 | SC | 2026-06-30 13:00:00 | 4022.9 | A | - | 3.33x | 0.66 |
 | AR | 2026-06-30 13:20:00 | 4047.5 | A | - | 3.03x | 0.76 |
 | ST[A] | 2026-06-30 13:24:00 | 4033.0 | A | - | 1.78x | 0.85 |
+| LPS[C] | 2026-06-30 13:37:00 | 4027.2 | C | - | 1.09x | 0.61 |
 | SOS | 2026-06-30 14:09:00 | 4058.0 | D | - | 4.17x | 0.87 |
 | LPS[D] | 2026-06-30 14:12:00 | 4051.6 | D | - | 1.36x | 0.25 |
 

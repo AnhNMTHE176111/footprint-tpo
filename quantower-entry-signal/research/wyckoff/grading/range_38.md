@@ -13,16 +13,16 @@
 ## Ba chi so Phase B (v6 — CHI DO/HIEN THI, khong dung de loc)
 
 - **Bias bat doi xung test bien**: `+1` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
-- **SOT phia TREN**: trang thai=`SOT`, n=4 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.78, ty le volume nhip cuoi/dau=1.43 (HAP THU (volume >= nhip dau, canh giu vung)).
-- **SOT phia DUOI**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.29, ty le volume nhip cuoi/dau=0.34 (can kiet).
-- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 77169..77175 (2026-06-30 03:09:00), effort(VSA TB)=0.83x, result(bien do/ATR)=1.57, ty le er=0.53 — vung hap thu NGHI VAN (volume nhieu, ket qua it).
+- **SOT phia TREN**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.99, ty le volume nhip cuoi/dau=1.36 (HAP THU (volume >= nhip dau, canh giu vung)).
+- **SOT phia DUOI**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.42, ty le volume nhip cuoi/dau=0.47 (can kiet).
+- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 77169..77175 (2026-06-30 03:09:00), effort(VSA TB)=0.83x, result(bien do/ATR)=1.57, ty le er=0.53 — nhip HIEU QUA (ket qua nhieu hon no luc, khong phai hap thu).
 
 ## Phase (do dai tinh bang nen M1)
 
 | Phase | Bat dau | Ket thuc | So nen |
 |---|---|---|---|
-| A | 2026-06-30 01:07:00 | 2026-06-30 01:40:00 | 34 |
-| B | 2026-06-30 01:41:00 | 2026-06-30 03:33:00 | 113 |
+| A | 2026-06-30 01:07:00 | 2026-06-30 01:49:00 | 43 |
+| B | 2026-06-30 01:50:00 | 2026-06-30 03:33:00 | 104 |
 | C | 2026-06-30 03:34:00 | 2026-06-30 04:29:00 | 56 |
 | D | 2026-06-30 04:30:00 | 2026-06-30 06:30:00 | 121 |
 
@@ -32,7 +32,7 @@
 |---|---|---|---|---|---|---|
 | SC | 2026-06-30 01:07:00 | 3955.4 | A | - | 7.11x | 0.86 |
 | AR | 2026-06-30 01:29:00 | 3994.2 | A | - | 1.37x | 0.03 |
-| ST[A] | 2026-06-30 01:40:00 | 3979.4 | A | - | 1.17x | 0.70 |
+| ST[A] | 2026-06-30 01:49:00 | 3974.5 | A | - | 0.76x | 0.20 |
 | LPS[C] | 2026-06-30 03:34:00 | 3973.1 | C | - | 0.41x | 0.18 |
 | SOS | 2026-06-30 04:30:00 | 4000.1 | D | - | 4.09x | 0.69 |
 | LPS[D] | 2026-06-30 04:48:00 | 3997.2 | D | - | 0.44x | 0.12 |

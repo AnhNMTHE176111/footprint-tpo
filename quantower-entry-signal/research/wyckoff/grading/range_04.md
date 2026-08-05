@@ -15,7 +15,7 @@
 - **Bias bat doi xung test bien**: `+0` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
 - **SOT phia TREN**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.75, ty le volume nhip cuoi/dau=0.67 (can kiet).
 - **SOT phia DUOI**: trang thai=`SOT`, n=4 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.56, ty le volume nhip cuoi/dau=0.77 (can kiet).
-- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 3381..3400 (2026-01-29 05:27:00), effort(VSA TB)=1.42x, result(bien do/ATR)=17.42, ty le er=0.08 — vung hap thu NGHI VAN (volume nhieu, ket qua it).
+- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 3381..3400 (2026-01-29 05:27:00), effort(VSA TB)=1.42x, result(bien do/ATR)=17.42, ty le er=0.08 — nhip HIEU QUA (ket qua nhieu hon no luc, khong phai hap thu).
 
 ## Phase (do dai tinh bang nen M1)
 

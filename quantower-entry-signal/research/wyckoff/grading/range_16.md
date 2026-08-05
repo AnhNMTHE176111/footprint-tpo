@@ -15,7 +15,7 @@
 - **Bias bat doi xung test bien**: `+0` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
 - **SOT phia TREN**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.46, ty le volume nhip cuoi/dau=0.31 (can kiet).
 - **SOT phia DUOI**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.07, ty le volume nhip cuoi/dau=0.25 (can kiet).
-- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 33639..33644 (2026-05-12 15:56:00), effort(VSA TB)=2.48x, result(bien do/ATR)=5.45, ty le er=0.45 — vung hap thu NGHI VAN (volume nhieu, ket qua it).
+- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 33639..33644 (2026-05-12 15:56:00), effort(VSA TB)=2.48x, result(bien do/ATR)=5.45, ty le er=0.45 — nhip HIEU QUA (ket qua nhieu hon no luc, khong phai hap thu).
 
 ## Phase (do dai tinh bang nen M1)
 
@@ -35,7 +35,7 @@
 | AR | 2026-05-12 13:43:00 | 4744.4 | A | - | 0.88x | 0.62 |
 | ST[A] | 2026-05-12 14:00:00 | 4719.1 | A | - | 4.71x | 0.36 |
 | ST[B] | 2026-05-12 14:31:00 | 4721.2 | B | - | 0.55x | 0.58 |
-| mSOW | 2026-05-12 14:33:00 | 4714.5 | B | - | 2.83x | 0.30 |
+| mSOW | 2026-05-12 15:10:00 | 4712.6 | B | - | 10.51x | 0.52 |
 | Shakeout | 2026-05-12 16:54:00 | 4710.8 | C | confirmed | 2.14x | 0.67 |
 | SOS | 2026-05-12 19:25:00 | 4746.6 | D | - | 2.44x | 1.00 |
 

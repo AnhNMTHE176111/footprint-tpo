@@ -1,40 +1,40 @@
 # Bai lam #25 — Chưa rõ (SC) (ACC?)
 
 - Anh: `range_25.png`
-- Khung: M1 (GCQ26, gio UTC). Range: **2026-06-04 14:53:00 -> 2026-06-04 16:35:00** = 102 nen.
+- Khung: M1 (GCQ26, gio UTC). Range: **2026-06-04 14:53:00 -> 2026-06-05 02:56:00** = 663 nen.
 - Climax mo range: **SC (move GIAM bi chan)** tai gia 4483.8, VSA=2.31x, bien do nen=8.7 gia.
 - MOVE truoc climax: dai 50.6 gia, 68 nen, hieu suat huong 0.46.
-- Bien CHINH (net lien, climax+AR): 4483.8 - 4502.4 = 18.6 gia (0.41% gia).
-- Bien PHU (net dut, cuc tri xa nhat): 4483.8 - 4505.0 = 21.2 gia.
-- Ty le bien phu/bien chinh: **1.14x** (guard huy range khi > 4.0x).
+- Bien CHINH (net lien, climax+AR): 4483.8 - 4513.2 = 29.4 gia (0.66% gia).
+- Bien PHU (net dut, cuc tri xa nhat): 4477.5 - 4513.2 = 35.7 gia.
+- Ty le bien phu/bien chinh: **1.21x** (guard huy range khi > 4.0x).
 - Nhan climax mang VSA=3.32x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
 - Trang thai range: **superseded** (bi thay the boi mot range moi sinh tu cu pha, khong dat ten 4 mau hinh).
 
 ## Ba chi so Phase B (v6 — CHI DO/HIEN THI, khong dung de loc)
 
-- **Bias bat doi xung test bien**: `+1` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
-- **SOT phia TREN**: trang thai=`none`, n=0 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
-- **SOT phia DUOI**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.49, ty le volume nhip cuoi/dau=0.96 (can kiet).
-- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 53377..53382 (2026-06-04 16:10:00), effort(VSA TB)=2.16x, result(bien do/ATR)=5.81, ty le er=0.37 — vung hap thu NGHI VAN (volume nhieu, ket qua it).
+- **Bias bat doi xung test bien**: `+0` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
+- **SOT phia TREN**: trang thai=`SOT`, n=3 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.43, ty le volume nhip cuoi/dau=0.33 (can kiet).
+- **SOT phia DUOI**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.41, ty le volume nhip cuoi/dau=0.74 (can kiet).
+- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 53763..53783 (2026-06-04 23:51:00), effort(VSA TB)=0.88x, result(bien do/ATR)=1.23, ty le er=0.71 — nhip HIEU QUA (ket qua nhieu hon no luc, khong phai hap thu).
 
 ## Phase (do dai tinh bang nen M1)
 
 | Phase | Bat dau | Ket thuc | So nen |
 |---|---|---|---|
-| A | 2026-06-04 14:53:00 | 2026-06-04 15:27:00 | 35 |
-| B | 2026-06-04 15:28:00 | 2026-06-04 16:09:00 | 42 |
-| D | 2026-06-04 16:10:00 | 2026-06-04 16:35:00 | 26 |
+| A | 2026-06-04 14:53:00 | 2026-06-04 18:36:00 | 224 |
+| B | 2026-06-04 18:37:00 | 2026-06-05 02:30:00 | 414 |
+| D | 2026-06-05 02:31:00 | 2026-06-05 02:56:00 | 26 |
 
 ## Su kien da gan nhan
 
 | Nhan | Thoi diem | Gia | Phase | Trang thai | VSA nen do | Than/bien do |
 |---|---|---|---|---|---|---|
 | SC | 2026-06-04 14:51:00 | 4487.0 | A | - | 3.32x | 0.38 |
-| AR | 2026-06-04 15:11:00 | 4502.4 | A | - | 1.70x | 0.74 |
-| ST[A] | 2026-06-04 15:27:00 | 4496.9 | A | - | 0.50x | 0.08 |
-| UT[B] | 2026-06-04 15:39:00 | 4505.0 | B | - | 0.94x | 0.93 |
-| SOS | 2026-06-04 16:10:00 | 4510.9 | D | - | 3.76x | 0.41 |
-| LPS[D] | 2026-06-04 16:20:00 | 4508.3 | D | - | 1.93x | 0.34 |
+| AR | 2026-06-04 16:19:00 | 4513.2 | A | - | 1.92x | 0.30 |
+| ST[A] | 2026-06-04 18:36:00 | 4500.0 | A | - | 3.25x | 0.59 |
+| mSOW | 2026-06-05 01:00:00 | 4479.5 | B | - | 6.50x | 0.21 |
+| SOW | 2026-06-05 02:31:00 | 4470.7 | D | - | 5.11x | 0.04 |
+| LPSY[D] | 2026-06-05 02:50:00 | 4476.1 | D | - | 1.17x | 0.72 |
 
 ## 12 nen quanh climax (kiem dieu kien mo range)
 

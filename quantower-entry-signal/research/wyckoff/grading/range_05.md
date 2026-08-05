@@ -7,7 +7,7 @@
 - Bien CHINH (net lien, climax+AR): 4918.1 - 4970.0 = 51.9 gia (1.06% gia).
 - Bien PHU (net dut, cuc tri xa nhat): 4918.1 - 4978.0 = 59.9 gia.
 - Ty le bien phu/bien chinh: **1.15x** (guard huy range khi > 4.0x).
-- Nhan climax mang VSA=3.61x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
+- Nhan climax mang VSA=2.26x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
 - Trang thai range: **completed**.
 
 ## Ba chi so Phase B (v6 — CHI DO/HIEN THI, khong dung de loc)
@@ -15,7 +15,7 @@
 - **Bias bat doi xung test bien**: `+0` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
 - **SOT phia TREN**: trang thai=`SOT`, n=3 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.21, ty le volume nhip cuoi/dau=0.60 (can kiet).
 - **SOT phia DUOI**: trang thai=`chớm`, n=1 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
-- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 7883..7885 (2026-03-18 15:02:00), effort(VSA TB)=1.62x, result(bien do/ATR)=5.06, ty le er=0.32 — vung hap thu NGHI VAN (volume nhieu, ket qua it).
+- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 7883..7885 (2026-03-18 15:02:00), effort(VSA TB)=1.62x, result(bien do/ATR)=5.06, ty le er=0.32 — nhip HIEU QUA (ket qua nhieu hon no luc, khong phai hap thu).
 
 ## Phase (do dai tinh bang nen M1)
 
@@ -31,7 +31,7 @@
 
 | Nhan | Thoi diem | Gia | Phase | Trang thai | VSA nen do | Than/bien do |
 |---|---|---|---|---|---|---|
-| SC | 2026-03-18 13:30:00 | 4930.4 | A | - | 3.61x | 0.74 |
+| SC | 2026-03-18 12:43:00 | 4953.9 | A | - | 2.26x | 0.94 |
 | AR | 2026-03-18 14:05:00 | 4970.0 | A | - | 0.75x | 0.00 |
 | ST[A] | 2026-03-18 14:31:00 | 4937.0 | A | - | 0.95x | 1.00 |
 | mSOS | 2026-03-18 17:35:00 | 4978.0 | B | - | 0.54x | 0.00 |

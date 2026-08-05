@@ -295,10 +295,15 @@ def facts(B, r, idx):
                  f"({'HAP THU (volume >= nhip dau, canh giu vung)' if sot['effort'] >= 1.0 and sot['n'] >= 2 else 'can kiet' if sot['n'] >= 2 else '-'}).")
     if r.er_legs:
         top = max(r.er_legs, key=lambda x: x['er'])
+        # v7 muc 13.1 (cham_24 #4): cau dien giai truoc day HARD-CODE "hap thu NGHI VAN" bat ke er
+        # that (in y het voi er=0.18 lan er=1.54) — er=effort/result nen er<1 nghia la KET QUA NHIEU
+        # HON no luc (nhip hieu qua, khong phai hap thu); chi er>=1 (no luc >= ket qua) moi dang ngo
+        # hap thu that su. Doi cau chu theo dung dau cua er.
+        tag = ("vung hap thu NGHI VAN (volume nhieu, ket qua it)" if top['er'] >= 1.0
+               else "nhip HIEU QUA (ket qua nhieu hon no luc, khong phai hap thu)")
         L.append(f"- **Nhip no luc/ket qua cao nhat** trong Phase B: nen {top['i0']}..{top['i1']} "
                  f"({B[top['i1']]['dt']}), effort(VSA TB)={top['effort']:.2f}x, "
-                 f"result(bien do/ATR)={top['result']:.2f}, ty le er={top['er']:.2f} "
-                 f"— vung hap thu NGHI VAN (volume nhieu, ket qua it).")
+                 f"result(bien do/ATR)={top['result']:.2f}, ty le er={top['er']:.2f} — {tag}.")
     L.append("")
     L.append("## Phase (do dai tinh bang nen M1)")
     L.append("")

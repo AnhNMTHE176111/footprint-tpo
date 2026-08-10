@@ -1,37 +1,52 @@
-# Chấm bài #50 — Tích lũy (ACC) · 2026-07-20 12:02 → 2026-07-21 01:16 (732 nến M1)
+# Chấm bài #50 — Phân phối (DIST) · 2026-07-16 11:48 → 12:51 (63 nến M1)
 
-**Điểm: 5/10** — khung range và tên range đúng, nhưng **hai biên chính đặt sai chỗ** (nằm gọn trong nửa trên vùng đấu giá) nên kéo theo hỏng cả chuỗi nhãn giữa range: cú rũ đáy thật bị gọi thành mSOW và Phase C bị đẩy tới sát SOS. Sửa nhãn + sửa mức AR, giữ range.
+**Điểm: 2/10** — không nên vẽ range ở đây. Lỗi chí tử: **BCLX và AR được gắn lên CÙNG MỘT CÂY NẾN**, và cây nến đó là nến **ĐỎ sập 15 giá**. Phase A vì thế không tồn tại; mọi thứ phía sau là hệ quả.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Biên chính không mô tả vùng đấu giá — AR chốt sau đúng 4 nến — luật vi phạm: L3 (biên chính = climax + AR, phải là hai biên "quan trọng nhất")
-- **Thuật toán gắn:** biên chính 4016.5 – 4021.9 = **5.4 giá (0.13%)**; biên phụ 4003.3 – 4023.9 = **20.6 giá**. Tỷ lệ biên phụ/biên chính **3.81×**, sát ngưỡng guard 4.0× nên guard không bắn.
-- **Đúng phải là:** vùng cân bằng thật của 732 nến này là **4003 – 4024**. AR phải là cú bật ngược *thật* — trên ảnh, sau SC giá bật lên 4021.9 rồi lập tức lăn xuống 4003; nhịp 4 nến 12:02→12:06 chỉ là râu hồi kỹ thuật. Đúng ra AR phải chốt tại đỉnh 4023.9 (mức mà 673 nến Phase B liên tục chạm rồi dội), và biên dưới lấy 4003.3.
-- **Dấu hiệu quyết định trên chart:** AR ở 12:06 có VSA **0.69×** (dưới trung bình) — chính là ca "AR (yếu)" mà spec mục 4.1 tự cảnh báo. Chiều cao 5.4 giá mà Phase B dao động trong dải 20.6 giá: biên chính chỉ chiếm **26%** dải giá thật. Mọi phép đo phái sinh (15% chiều cao = 0.8 giá) trở nên vô nghĩa.
-- **Nghi phạm trong thuật toán:** nhánh tìm AR ở mục 4.1 — "swing pivot đầu tiên xác nhận 5 nến + sàn 1.5× ATR". Ở giờ tin (12:00 UTC) ATR đang phình vì chính cây climax, nên sàn chống nhiễu quá thấp và pivot 4 nến được nhận. Cần thêm điều kiện: nếu sau khi ST[A] chốt mà biên phụ vượt biên chính quá ~2×, phải **dời AR** tới cực trị mới thay vì chỉ nới biên phụ (guard 4.0× hiện chỉ xoá range, không sửa biên).
+### 1. BCLX và AR trùng đúng một nến — Phase A không có lần đổi hướng nào — luật vi phạm: L2; guard "climax trùng AR" (mục 8) KHÔNG bắn
+- **Thuật toán gắn:** BCLX 11:49 giá 4047.8 (VSA 5.10×, thân 0.65) và **AR (yếu) 11:49 giá 4032.8 (VSA 5.10×, thân 0.65)** — cùng thời điểm, cùng nến.
+- **Đúng phải là:** Phase A cần **đúng 3 lần đổi hướng** (climax chặn move → hồi ngược tới AR → quay lại bị chặn = ST[A]). Ở đây climax và AR là đỉnh và đáy của **cùng một cây**, tức không có lần đổi hướng nào — chỉ có một cây nến biên độ 15 giá. Range này chưa đủ điều kiện tồn tại.
+- **Dấu hiệu quyết định trên chart:** bảng 12 nến, nến 11:49: O 4047.8 / H 4047.8 / L 4032.8 / C 4038.0. Biên chính 4032.8–4048.4 = 15.6 giá thì **15.0 giá đến từ đúng cây nến này**.
+- **Nghi phạm trong thuật toán:** mục 8 có ghi điều kiện bỏ ứng viên "climax trùng AR", nhưng phép so sánh gần như chắc chắn so **chỉ số nến của mốc mở range (11:48)** với chỉ số nến AR (11:49) → khác nhau nên không bắn, trong khi **nhãn** climax đã bị dời sang đúng nến 11:49. Guard phải so với `climax_ev.bar` (nến mang nhãn) chứ không phải nến mở range.
 
-### 2. Cú rũ đáy bị hạ thành mSOW → Phase C gán ngược sai chỗ — luật vi phạm: L5, L8, và bảng 5.1 của chính spec
-- **Thuật toán gắn:** `mSOW` tại 22:55 @4003.3 (Phase B), rồi Phase C chỉ dài **5 nến** với `LPS[C]` @4018.6 lúc 00:31 (gán ngược từ SOS).
-- **Đúng phải là:** cú 22:31–23:00 thủng xuống 4003.3 rồi lùng bùng ngoài một lúc mới thu về, sau đó giá đi một mạch lên phá biên → theo L5 đây là **Shakeout** (SOW thất bại), tức **cú rũ của Phase C**, và Phase C phải bắt đầu từ đó. LPS[C] 00:31 giữ được, nhưng là *test sau shakeout*, không phải điểm mở Phase C.
-- **Dấu hiệu quyết định trên chart:** 4003.3 là **đáy sâu nhất của cả range**, thủng biên chính dưới 13.2 giá = 2.4× chiều cao biên chính, VSA 1.57×; và toàn bộ diễn biến sau nó là đi lên tới 4040 — đúng nghĩa "một phe vừa thua". Đây là case DỄ, không phải case khó, nên không được dùng nhánh gán ngược.
-- **Nghi phạm trong thuật toán:** điều kiện "cú rũ phải **vượt biên phụ** đã có" (lỗi G, mục 5.1 câu 1). Tại 22:55 biên phụ dưới đang là 4012.8 do chính ST[A] tạo, cú này vượt xa — nên đúng ra phải đủ tư cách. Nghi ngờ thứ tự đánh giá: máy nới biên phụ **trước** khi xét tư cách rũ, nên cú tự so với chính mình rồi rớt xuống mSOW.
+### 2. Nhãn BCLX đặt lên một cây nến ĐỎ — luật vi phạm: mục 3 (3) "màu nến khớp hướng move"; vá #4 CHƯA đủ
+- **Thuật toán gắn:** BCLX (cao trào **mua**) tại 11:49 — nến đỏ, đóng cửa 4038.0 thấp hơn mở cửa 4047.8, sập 15 giá.
+- **Đúng phải là:** BCLX phải là nến **xanh** chặn move tăng, đánh dấu tại **đỉnh** nến. Nến mở range 11:48 (O 4043.8 / C 4048.2, xanh, thân 0.90) mới đúng vai — chỉ tiếc VSA của nó là 1.38×.
+- **Dấu hiệu quyết định trên chart:** trên ảnh, chấm đỏ BCLX nằm ngay đầu một cây nến đỏ dài duy nhất trong cụm nến xanh của nhịp tăng.
+- **Nghi phạm trong thuật toán:** vá #4 kẹp cửa sổ cụm theo nến mở range cố định, nhưng khi dời nhãn theo VSA cao nhất **không kiểm lại điều kiện màu nến / phía cực trị**. Cây đỏ 5.10× ở đây thực chất là cây **bắt đầu cú xả** — nó là mSOW/SOW sớm, không phải BCLX.
 
-### 3. ST[A] thủng dưới mức climax — luật vi phạm: L2 ("ST[A] là test lại vùng climax")
-- **Thuật toán gắn:** `ST[A]` @4012.8, tức **dưới** mức climax 4016.5 3.7 giá.
-- **Đúng phải là:** ST[A] phải bị chặn **tại hoặc trên** vùng climax; ở đây nó tạo đáy mới → không còn là test.
-- **Dấu hiệu quyết định trên chart:** 3.7 giá thủng = **68% chiều cao biên chính**; nến ST[A] có VSA 3.83× và thân chỉ 0.23 — cây hấp thụ mạnh, không phải nến test volume co lại như định nghĩa ST (THEORY §3.3).
-- **Nghi phạm trong thuật toán:** trần "ST[A] vượt climax ≤ 1.0× chiều cao range" (v5, lỗi D). Trần này tự vô hiệu khi range đo được quá hẹp: 1.0 × 5.4 = 5.4 giá, thủng 3.7 giá vẫn lọt. Nên đổi trần sang **× ATR** hoặc gộp với điều kiện #1.
+### 3. Cây phá thật (VSA 8.14×) bị hạ cấp thành mSOW; nhãn SOW trao cho cây yếu hơn muộn 27 nến — luật vi phạm: L5, mục 5.1; vá #5 CHƯA đủ
+- **Thuật toán gắn:** mSOW 12:16 tại **4017.4, VSA 8.14×** (cây volume cao nhất cả chart) — ở lại Phase B; SOW 12:43 tại 4007.5, VSA **3.36×**.
+- **Đúng phải là:** cú 12:16 phá thủng biên chính dưới 15 giá và giá **không hề quay lại giữ trong range** — nhìn ảnh, nhịp hồi sau đó chỉ bò lên chạm đúng biên chính dưới 4032.8 lúc ~12:31 rồi rơi tiếp. Theo L5 đó là **SOW thật**, nhịp hồi 12:31 là **LPSY[D]**, Phase D bắt đầu từ 12:16.
+- **Dấu hiệu quyết định trên chart:** cột volume vàng cao nhất panel dưới nằm đúng tại 12:16; sau đó giá không bao giờ đóng cửa lại trên 4032.8.
+- **Nghi phạm trong thuật toán:** vá #5 "quét lại lấy nến VSA cao nhất trong đoạn thăm dò" chỉ chỉnh **vị trí nhãn**, không chỉnh **quyết định hạ cấp**. Điều kiện hạ cấp (giá lùi qua biên chính) đang bắn nhầm ở nhịp hồi *chạm* biên; cần dùng **đóng cửa vượt hẳn 30 tick vào trong** như mục 5.1 đã nêu, và cây VSA 8.14× phải được ưu tiên giữ vai SOS/SOW.
 
-### 4. Chỉ số nỗ lực/kết quả lấy nhịp nằm ngoài Phase B — lỗi trình bày/nhất quán
-- **Thuật toán gắn:** "Nhịp nỗ lực/kết quả cao nhất **trong Phase B**" ghi kết thúc tại 2026-07-21 **00:31**, trong khi bảng phase ghi Phase B kết thúc **00:30** và 00:31 là nến mở Phase C.
-- **Đúng phải là:** cửa sổ đo phải kẹp trong đúng dải Phase B.
-- **Nghi phạm trong thuật toán:** off-by-one khi lấy `phaseB_end` (dùng index nến bắt đầu Phase C).
+### 4. Phase C (37 nến) là phase DÀI NHẤT, Phase B (10 nến) là phase ngắn nhất — luật vi phạm: L8 và L9 cùng lúc
+- **Thuật toán gắn:** A 8 · B **10** · C **37** · D 7 · E 2.
+- **Đúng phải là:** B dài nhất, C ngắn nhất. Ở đây đảo ngược hoàn toàn — và Phase C 37 nến nuốt trọn cả cú sụp 12:16 lẫn nhịp hồi, tức nuốt cả Phase D.
+- **Nghi phạm trong thuật toán:** nhánh Phase C gán ngược không có trần độ dài; cộng thêm lỗi #3 (SOW bị đẩy lùi tới 12:43) kéo dài đuôi Phase C thêm 27 nến.
+
+### 5. LPSY[C] lại đặt lên một ĐỈNH sát biên trên — sai vai (lỗi lặp với bài #46)
+- **Thuật toán gắn:** LPSY[C] 12:06 tại 4045.4 (VSA 2.94×) — cách biên chính trên 4048.4 đúng 3 giá.
+- **Đúng phải là:** **UT[B]** (test biên trên rồi bị chặn). LPSY là nhịp hồi **yếu, biên hẹp, ở nửa dưới**, sau khi cung đã áp đảo — không phải một đỉnh chạm kháng cự.
+- **Nghi phạm trong thuật toán:** giống bài #46 — nhánh gán ngược mặc định đặt tên LPSY[C] cho pivot nửa trên mà không phân loại hình thái.
+
+### 6. Range 63 nến với đủ Phase A→E = một cú xả thẳng đứng bị cắt ngang, không phải vùng đấu giá — luật vi phạm: L1
+- MOVE trước climax chỉ **16.8 giá / 23 nến** (vừa chạm sàn 20 nến). Toàn bộ "range" là 1 giờ đồng hồ, còn cú xả sau đó đi 40 giá. Theo chuẩn đã chốt, TR M1 ngắn mà đủ A→E phải nghi ngay là nhiễu.
+
+### 7. Trình bày: biên phụ trên 4048.7 gần trùng biên chính trên 4048.4
+- Hai đường (nét đứt và nét liền) chồng lên nhau trên ảnh, kèm nhãn đè lên chữ "bias" ở dòng phụ đề — không đọc được. Lỗi trình bày, không phải cấu trúc. Chênh 0.3 giá (3 tick) thì nên gộp, không vẽ biên phụ.
 
 ## Đạt
-- **Mở range (L1):** MOVE giảm 22.9 giá / 28 nến / hiệu suất 0.67, climax là đáy thấp nhất cửa sổ, VSA 4.88× — điều kiện CẦN + ĐỦ đều thật, không phải nổ volume giữa vùng đi ngang.
-- **Tên range (L4):** SC + phá lên = Tích lũy, khớp đúng hướng phá thật trên chart (4024 → 4040).
-- **Tỷ lệ phase:** B 673 nến dài nhất (L9), C 5 nến ngắn nhất (L8) — đúng thứ tự, dù mốc C sai chỗ.
-- **Phase D/E (L10):** SOS @4023.9 đóng cửa bứt qua **biên phụ**, LPS[D] @4025.8 hồi về nhưng giữ được bên ngoài, Phase E 28 nến giá đi tới 4040 — CBR hoàn chỉnh, đúng tinh thần L10.
-- **UT[B] @4023.0:** thò trên biên chính mà chưa qua biên phụ 4023.9 → giữ ở Phase B là đúng, không bị gọi UTAD (không mắc lỗi kinh điển Ca #1 nguồn 4.pdf).
-- **Chỉ số Phase B (v6) đo đúng bản chất:** SOT phía dưới n=4, thrust cuối/đầu 0.57 nhưng volume nhịp cuối/đầu **1.55×** → đọc thành "hấp thụ, đang giữ vùng"; SOT phía trên volume 0.35× → "cạn kiệt". Hai con số này nói trước rằng phe mua đang đỡ đáy và cú phá sẽ đi **lên** — đúng kết cục. Đây là phần làm tốt nhất của bài.
-- Bias `+0` (test cả hai biên) khớp hình: giá chạm cả 4003 và 4024.
+- **Tên range đúng (L4):** origin BCLX + phá xuống thật = **Phân phối** — và giá thực sự đi tiếp xuống 3986 sau đó.
+- **Biên phụ dưới 4017.4 đúng là cực trị xa nhất** (đáy mSOW), mỗi bên 1 cái — L3 đạt ở phía dưới.
+- **ST[A] 11:55 tại 4047.3** nằm sát mức climax 4048.4 (cách 1.1 giá) — về vị trí là một test đúng vai, dù Phase A tổng thể đã hỏng vì lỗi #1.
+- Vá #1 chạy đúng: er = 0.27 → "nhịp HIỆU QUẢ, không phải hấp thụ", đúng dấu.
+- SOT ghi `none` trung thực trên dữ liệu 10 nến Phase B, không bịa chuỗi.
+
+## Nếu là tôi
+Không vẽ range ở đây. Ngày 16/07 từ 11:48 là **một nhịp xả liên tục** 4048 → 3986; cây 11:49 (đỏ, 5.10×) là cú xả đầu tiên, cây 12:16 (8.14×) là SOW chính. Muốn vẽ Wyckoff cho đoạn này thì phải lùi ra khung lớn hơn để tìm vùng phân phối thật ở phía trên, chứ không cắt 63 nến giữa một cú rơi rồi dán đủ 5 phase lên đó.
+
+## Cần hỏi người học
+- Khi cây VSA cao nhất của cụm climax **ngược màu** với hướng move (như cây đỏ 5.10× ở đây), nên: (a) giữ nhãn ở nến đúng màu dù VSA thấp hơn, hay (b) coi cây ngược màu đó là tín hiệu đảo chiều tức thì và **bỏ luôn ứng viên range**? Tôi nghiêng về (b) nhưng lý thuyết không phân xử dứt khoát.

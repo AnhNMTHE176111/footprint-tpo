@@ -1,39 +1,42 @@
 # Chấm bài #14 — Tái tích luỹ (RE-ACC) · 2026-05-06 03:20 → 08:12 (159 nến M1)
 
-**Điểm: 1/10** — **Không được vẽ range ở đây.** Không có climax, range cao 7.5 giá trên vàng 4690 (0.16%) trong phiên Á thanh khoản 1–3 hợp đồng: đây là nhiễu, không phải vùng đấu giá.
+**Điểm: 1/10** — Không nên vẽ range ở đây. Đây là một đoạn xu hướng tăng bị cắt ngang bằng một cây doji 3 lot ở phiên Á chết, không phải vùng đấu giá.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Không có cao trào nào — luật vi phạm: L1 (climax là điều kiện ĐỦ, ở đây thiếu luôn) + mục 3(1) của chính spec
-- **Thuật toán gắn:** BCLX, mức climax 4695.2 tại nến 03:20 — **VSA 0.58x, biên độ nến 1.0 giá, volume 3 hợp đồng**.
-- **Đúng phải là:** nến mở range phải có biên độ ≥ 1.4× TB 20 nến **và** VSA ≥ 2.2x. Nến này **không thoả cả hai**. Không có cao trào thì không mở range.
-- **Dấu hiệu quyết định trên chart:** bảng 12 nến quanh climax — 11/12 nến có volume 1–8 hợp đồng, 5 nến là doji O=H=L=C. Panel volume quanh 03:20 phẳng.
-- **Nghi phạm trong thuật toán:** cơ chế **cụm climax** (mục 4.0) dời mốc climax sang cực trị giá mới trong 8 nến đầu, nhưng **không kiểm lại điều kiện climax tại mốc mới**. Nến gốc 02:56 (VSA 10.10x) thoả; mốc bị dời sang 03:20 (VSA 0.58x) thì range đứng trên một cây rác. Phải: dời mốc chỉ khi nến mới **vẫn** thoả ngưỡng, hoặc giữ mức = cực trị nhưng bỏ range nếu cực trị đó không có nỗ lực nào đỡ.
+### 1. Cây mở range không phải climax — luật vi phạm: L1 + mục 3(1) THUẬT TOÁN
+- **Thuật toán gắn:** `climax BCLX @4695.2, VSA 0.58x, biên độ nến 1.0 giá, volume = 3 hợp đồng`.
+- **Đúng phải là:** ngưỡng mở range của chính thuật toán là biên độ ≥1.4× TB và VSA ≥2.2×. Cây này **trượt cả hai**. Không có cao trào nào chặn move cả — giá chỉ khựng lại vài phút rồi đi tiếp lên 4728.
+- **Dấu hiệu quyết định trên chart:** 6 nến quanh climax có volume 1–3 lot, ba nến liền có `thân/biên độ = 0.00` (giá không nhúc nhích); dữ liệu còn thiếu hẳn các phút 03:16, 03:21, 03:22, 03:24–03:26.
+- **Nghi phạm trong thuật toán:** cụm climax dời **mức** theo cực trị giá 8 nến nhưng **không kiểm lại** cây được chọn có còn thoả ngưỡng VSA/biên độ hay không. Cây thoả ngưỡng thật (VSA 10.10× lúc 02:56) nằm ngoài cụm.
 
-### 2. Nhãn BCLX vẽ ở 4684.5, thấp hơn cả biên chính dưới 4687.7 — luật vi phạm: L3 (biên chính = mức climax) + lỗi trình bày nặng
-- **Thuật toán gắn:** nhãn BCLX ở giá 4684.5, mức climax ở 4695.2 — lệch **10.7 giá**, tức 1.4 lần chiều cao cả range, và nhãn nằm **hẳn ngoài khung range** phía dưới.
-- **Đúng phải là:** tách nhãn/mức là cơ chế hợp lệ của v6, nhưng phải kèm trần: nếu nến mang nhãn cách mức climax quá (ví dụ) 0.5× chiều cao range thì cụm đó không phải một cụm — hai sự kiện khác nhau, và bản thân điều đó chứng minh climax không chặn được gì.
-- **Dấu hiệu quyết định trên chart:** trên ảnh, chấm BCLX đỏ nằm bên dưới cả đường "biên CHÍNH dưới 4687.7" — người đọc không thể hiểu climax ở đâu.
+### 2. Nhãn BCLX nằm ngoài khung range VÀ dưới đáy range — luật vi phạm: L3 + vá v7 #4
+- **Thuật toán gắn:** nhãn `BCLX 02:56 @4684.5` trong khi range bắt đầu 03:20 và biên chính dưới là 4687.7.
+- **Đúng phải là:** climax phải là **cực trị trên** của range phân phối/tái tích luỹ; ở đây nhãn nằm **thấp hơn cả đáy range 3.2 giá** và lệch 24 phút về bên trái khung.
+- **Dấu hiệu quyết định trên chart:** chấm BCLX đỏ nằm hẳn dưới-trái hình chữ nhật range.
+- **Nghi phạm trong thuật toán:** vá v7 #4 chỉ kẹp trong "cửa sổ cụm 8 nến" nhưng không kẹp theo `range_start` và **không kẹp theo giá** (nhãn climax phải nằm ở phía biên mà nó tạo ra). Đây là ca nặng nhất của lỗi này trong lô.
 
-### 3. Climax không chặn được move — giá đi tiếp hẳn ra ngoài rồi range vẫn sống 139 nến "Phase B" — luật vi phạm: L1 + mục 4.0 guard "climax không chặn được move"
-- **Thuật toán gắn:** Phase B từ 03:48 tới 07:57 (139 nến).
-- **Đúng phải là:** từ 04:05 tới 07:39, **toàn bộ nến nằm trên cả biên chính trên 4695.2 và biên phụ trên 4699.2**, dao động 4700–4712. Giá đã bỏ range đi từ 04:05; SOS phải nằm ở đó, không phải ở 07:59.
-- **Dấu hiệu quyết định trên chart:** nhìn ảnh, dải nến ở giữa chart chạy hẳn trên hai đường cam; SOS gán tại 4728.0 = **33 giá trên biên chính** = 4.4 lần chiều cao range.
-- **Nghi phạm trong thuật toán:** cùng nghi phạm với bài #13 — ngưỡng "3 nến đóng vượt biên phụ +30 tick, thân ≥45%" đo bằng tick tuyệt đối, vô nghĩa với range chỉ 7.5 giá; guard "vượt mức climax quá 3× biên độ TB" chỉ áp trong 8 nến đầu nên không bắn về sau.
+### 3. Range chỉ cao 7.5 giá (0.16%) và giá rời khỏi nó ngay sau Phase A — luật vi phạm: L1 (không phải vùng đấu giá) + L9
+- **Thuật toán gắn:** Phase B dài 139 nến.
+- **Đúng phải là:** nhìn ảnh, từ ~04:05 trở đi toàn bộ nến nằm **trên** biên phụ trên 4699.2 và đi một mạch lên 4728. "Phase B" ở đây là một chân xu hướng nằm ngoài range, không phải giai đoạn cân bằng xây nguyên nhân.
+- **Dấu hiệu quyết định trên chart:** biên chính 4687.7–4695.2 chỉ dày bằng ~1/4 chiều cao một nến của đợt tăng ngay sau đó; SOS đặt tại 4728.0, tức **4.4 lần chiều cao range** phía trên biên.
+- **Nghi phạm trong thuật toán:** không có sàn chiều cao range tối thiểu (người học đã chốt không đặt sàn **độ dài**, nhưng chiều cao 0.16% ở phiên 1–3 lot là nhiễu thuần tuý). Guard "biên phụ/biên chính > 4.0×" cũng vô dụng vì biên phụ không được nới (lỗi 4).
 
-### 4. Thiếu Phase C — luật vi phạm: L8
-- A(12) → B(139) → D(7) → E(2), nhảy thẳng B sang D. Cơ chế gán ngược lại không chạy, giống bài #13.
+### 4. Biên phụ trên không được nới bởi cú thăm dò thất bại — luật vi phạm: L3
+- **Thuật toán gắn:** `biên phụ trên 4699.2`, trong khi có `mSOS 06:42 @4709.3 (VSA 11.27x)`.
+- **Đúng phải là:** biên phụ = cực trị **xa nhất** một thế lực đã đẩy tới; 4709.3 > 4699.2 nên biên phụ trên phải là 4709.3 (thực tế giá còn lên cao hơn nữa).
+- **Nghi phạm trong thuật toán:** nhánh đóng băng biên phụ trong `C_pending` (vá v6 #2) đang chặn nhầm — phía đang test chỉ được nới "một lần sau khi biết kết cục", và lần nới đó không xảy ra.
 
-### 5. ST[A] không test lại vùng climax — luật vi phạm: L2
-- ST[A] tại 4692.4, tức giữa 4687.7–4695.2. Trên một range 7.5 giá thì mọi điểm đều "giữa range" — thêm một bằng chứng nữa range này không tồn tại.
+### 5. Phase C thiếu; ST[A] không test được vùng climax — luật vi phạm: L8, L2
+- `ST[A] 03:44 @4692.4` cách climax 4695.2 tới 2.8 giá = 37% chiều cao range — không phải một cú test vùng cao trào. Vá v7 #2 (ngưỡng hồi 0.4) cho qua vì tính theo tỷ lệ AR↔climax (0.63) chứ **không** ràng buộc khoảng cách còn lại tới climax — đúng đầu mục "ST[A] vẫn thiếu ràng buộc khoảng cách đáy tới climax" ghi ở 13.1, chưa vá.
+- Không có Phase C (A→B→D→E), vi phạm L8 giống bài #13.
 
-### 6. Phase E chỉ 2 nến — lỗi J của vòng v5 tái xuất ở dạng nhẹ
-- Sau khi vá, Phase E phải có độ dài thật (tới khi lùi vào biên / đi 2× chiều cao / 120 nến). Ở đây 2 nến. Với chiều cao range 7.5 giá thì mốc "2× chiều cao" = 15 giá bị đạt ngay lập tức → Phase E co về gần 0. Range quá hẹp làm mọi mốc đo theo chiều cao vô nghĩa.
+### 6. (Trình bày) Dải phase hở nến
+- A kết thúc 03:44 nhưng B bắt đầu 03:48; B kết thúc 07:57 nhưng D bắt đầu 07:59. Do dữ liệu khuyết nến, nhưng nên kẹp liền mạch để dải phase không có khe.
 
 ## Đạt
-- MOVE trước climax có thật: 91.7 giá / 137 nến, hiệu suất 0.36 — nhìn ảnh là một chân tăng rõ từ 4590 lên 4695. Riêng phần này đo đúng.
-- Tên range (L4): BCLX + phá lên = Tái tích luỹ. Đúng logic 4 mẫu hình (nhưng vô nghĩa vì range không hợp lệ).
-- Chỉ số Phase B: SOT trên n=2, tỷ lệ volume nhịp cuối/đầu 1.62 → gắn "HẤP THỤ" — đọc đúng bản chất về mặt số học.
+- Tên range: BCLX origin + phá lên = Tái tích luỹ, khớp L4 (đây là điều đúng duy nhất về mặt đặt tên).
+- Chú thích nỗ lực/kết quả đọc đúng dấu er (er=0.18 → "nhịp HIỆU QUẢ") — vá v7 #1 chạy tốt.
 
 ## Cần hỏi người học
-- Đã chốt "không đặt sàn độ dài tối thiểu cho range". Nhưng còn **sàn CHIỀU CAO**? Range 7.5 giá = 0.16% giá vàng, nhỏ hơn cả biên độ một nến M1 giờ Mỹ. Có nên đặt sàn kiểu "chiều cao biên chính ≥ 3× biên độ TB 20 nến" để chặn nhóm range phiên Á này?
+- Có chấp nhận đặt **sàn chiều cao range tuyệt đối** (ví dụ ≥ 1.0× ATR20 hoặc ≥ 0.3% giá) không? Người học đã chốt không đặt sàn *độ dài*, nhưng ca này chết vì *chiều cao*, và nó lặp lại ở mọi range phiên Á thanh khoản 1–3 lot.

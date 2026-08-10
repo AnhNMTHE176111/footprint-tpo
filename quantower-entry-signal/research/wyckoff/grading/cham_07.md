@@ -1,45 +1,37 @@
-# Chấm bài #07 — Tái tích luỹ (RE-ACC) · 2026-04-13 16:47 → 2026-04-14 06:26 (265 nến M1)
+# Chấm bài #07 — Tái tích lũy (RE-ACC) · 2026-04-13 16:47 → 2026-04-14 06:26 (265 nến M1)
 
-**Điểm: 7/10** — cấu trúc đọc đúng, tên range đúng, chỉ cần sửa vị trí ba nhãn (Phase C, LPS[C], SOS) và sửa cách diễn giải chỉ số nỗ lực/kết quả.
+**Điểm: 3/10** — Khung range và tên gọi chấp nhận được, nhưng **dải phase vẽ sai hoàn toàn**: Phase C dài gấp đôi Phase B, Phase A cũng dài hơn Phase B. Phải vẽ lại toàn bộ ranh giới B/C/D.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Phase C dài 41 nến, gần bằng Phase B (44 nến) — luật vi phạm: L8 (Phase C là phase NGẮN NHẤT), L9
-- **Thuật toán gắn:** A=36 · B=44 · **C=41** · D=24 · E=121.
-- **Đúng phải là:** Phase C phải là đoạn ngắn nhất, chỉ bao nhịp test cuối cùng ngay trước SOS. Ở đây SOS bắn lúc 23:04; Phase C phải bắt đầu quanh 22:2x–22:46 (nhịp test cuối trước khi giá bứt biên phụ 4810.9), tức 10-20 nến, không phải mở từ 19:07.
-- **Dấu hiệu quyết định trên chart:** từ LPS[C] 19:07 (4791.4) tới SOS, giá đi lên **liên tục** qua 4796 → 4806.7 → 4810.9 mà không có nhịp lùi nào. Đoạn đó là markup đang chạy, không phải một phase "test nguồn cung còn lại". Nhìn ảnh: cụm nến từ 19:07 tới 22:46 leo thang từng bậc, không lùng bùng.
-- **Nghi phạm trong thuật toán:** nhánh Phase C gán ngược (mục 6 case khó) lấy cửa sổ min(60 nến, 1/2 Phase B) rồi chọn **đáy sâu nhất** trong cửa sổ. Với Phase B=44 nến, cửa sổ 22 nến vẫn quá rộng và tiêu chí "đáy sâu nhất" luôn kéo mốc về sớm nhất có thể. Phải chọn **swing pivot cuối cùng** trước cú phá, không phải cực trị sâu nhất.
+### 1. Phase C (59 nến) DÀI HƠN Phase B (26 nến) — luật vi phạm: L8 + L9
+- **Thuật toán gắn:** A=36 · B=26 · **C=59** · D=24 · E=121.
+- **Đúng phải là:** B là phase dài nhất, C là phase ngắn nhất. Đoạn 18:17→23:03 mà máy gọi "Phase C" thực ra là **nguyên nhịp đi ngang rồi bò lên của Phase B** — nhìn ảnh, trong đoạn đó giá đi từ 4785 lên tận 4810 (hơn cả chiều cao biên chính 21.0 giá). Một đoạn giá chạy hết chiều cao range không thể là "phase ngắn nhất, tín hiệu đầu tiên".
+- **Đúng ra:** Phase B kéo tới ~22:40; Phase C chỉ là nhịp test cuối ngay trước SOS (vài nến); Phase D bắt đầu tại cây phá.
+- **Dấu hiệu quyết định:** LPS[C] gán tại 18:17 giá 4785.0 — cách SOS (23:04) tới 59 nến và 39.7 giá. Không có cách nào gọi đó là "điểm test cuối cùng trước cú phá" (Ca #8 nguồn 2.pdf: giảng viên thu hẹp Phase C quanh đúng điểm test cuối trước SOS).
+- **Nghi phạm trong thuật toán:** nhánh gán ngược Phase C (mục 6 "case khó") — cửa sổ `min(60, 0.8×len(B))` với len(B)=26 cho ra 21 nến, nhưng LPS[C] lại nằm ở nến thứ 59 trước SOS ⇒ điểm này **không** đến từ nhánh gán ngược mà từ một nhánh khác (nhịp test vùng điểm rũ trong lúc chờ). Nhánh đó đang được phép đặt LPS[C] mà **không kiểm ràng buộc khoảng cách tới SOS**, rồi Phase C bị kéo từ đó tới hết.
 
-### 2. Nhãn SOS đặt cách biên bị phá 14 giá — luật vi phạm: L3 (SOS phải đóng cửa bứt qua biên PHỤ), mục 5.1 lỗi B
-- **Thuật toán gắn:** SOS tại 4824.7, VSA 1.94x.
-- **Đúng phải là:** cây phá thật là cây đầu tiên đóng cửa vượt biên phụ 4810.9 với thân ≥45%. 4824.7 nằm **13.8 giá trên biên phụ** — đó là giữa nhịp markup, không phải điểm phá.
-- **Dấu hiệu quyết định trên chart:** biên phụ trên vẽ ở 4810.9; chấm SOS trên ảnh nằm hẳn phía trên vùng nhãn LPS[D] (4814.6), tức cao hơn cả nhịp retest sau đó. Một cú phá mà nhãn nằm trên đỉnh của cả nhịp retest là dấu hiệu neo sai.
-- **Nghi phạm trong thuật toán:** "hồi tố về cây VSA cao nhất trong đoạn" — cây VSA cao nhất trong markup thường là cây **giữa** nhịp, không phải cây phá biên. Phải thêm điều kiện: trong số các cây đóng cửa vượt biên, lấy cây **sớm nhất** đủ thân, không lấy cây VSA lớn nhất.
+### 2. Nhãn ST[B] (Phase B) nằm BÊN TRONG dải Phase C — luật vi phạm: L8, tính nhất quán timeline
+- **Thuật toán gắn:** LPS[C] tại 18:17 (Phase C) rồi ST[B] tại 18:27 (ghi Phase B).
+- **Đúng phải là:** một sự kiện xảy ra **sau** mốc mở Phase C không thể mang nhãn Phase B. Và về nội dung: ST[B] tại 4783.2 **sâu hơn** LPS[C] tại 4785.0 — cú test biên dưới thật sự là cú sau, nên nếu có Phase C thì phải bắt đầu tại 18:27 chứ không phải 18:17.
+- **Dấu hiệu quyết định:** phiếu số liệu, cột Phase: `LPS[C] … 18:17 … C` / `ST[B] … 18:27 … B`; dải Phase C ghi bắt đầu 18:17.
+- **Nghi phạm trong thuật toán:** trường `phase` của sự kiện được gán lúc tạo và không cập nhật lại khi dải phase dịch; thiếu một bước kiểm "mọi sự kiện phải nằm trong dải phase của nó".
 
-### 3. ST[A] không test vùng climax mà vượt qua nó 4.2 giá — luật vi phạm: L2 (ST[A] = test lại vùng climax)
-- **Thuật toán gắn:** ST[A] tại 4810.9, trong khi mức climax BCLX = 4806.7.
-- **Đúng phải là:** hợp lệ về câu chữ (dưới trần 1.0× chiều cao range, và L3 cho phép ST[A] vượt climax để tạo biên phụ), nhưng phải ghi nhận đây là **ST[A] ở biên trên / ngoài range** — theo THEORY §5 đó là dấu "phe mua rất mạnh", tức tín hiệu sớm cho hướng phá LÊN. Thuật toán không dùng thông tin này ở đâu cả.
-- **Dấu hiệu quyết định trên chart:** ST[A] VSA 0.58x (volume co lại) nhưng lại tạo **đỉnh mới** trên climax — nỗ lực nhỏ mà kết quả vượt đỉnh = không có cung ở biên trên. Đó là bằng chứng RE-ACC sớm hơn SOS 6 giờ.
-- **Nghi phạm trong thuật toán:** không có nhánh nào đọc vị trí ST[A] trong range (THEORY §5) để làm bias hướng.
+### 3. Phase A (36 nến) dài hơn Phase B (26 nến) — luật vi phạm: L9
+- **Thuật toán gắn:** ST[A] chốt tại 17:27, Phase B kết ở 18:16.
+- **Đúng phải là:** với một TR 265 nến, Phase B phải chiếm phần lớn thời lượng. Ở đây A+C = 95 nến trong khi B chỉ 26.
+- **Dấu hiệu quyết định:** cùng bảng độ dài phase ở trên; ST[A] tại 4810.9 đã vượt hẳn qua mức climax 4806.7 (4.2 giá) nên nó thực chất là một cú **thăm dò lên** đầu Phase B, không phải mốc kết Phase A.
+- **Nghi phạm trong thuật toán:** ST[A] chỉ bị chặn bởi trần "≤1.0× chiều cao range" khi vượt climax — quá lỏng, cho phép ST[A] biến thành cú phá biên trên.
 
-### 4. Diễn giải chỉ số nỗ lực/kết quả bị ĐẢO DẤU — lỗi chỉ số (không phải lỗi cấu trúc)
-- **Thuật toán gắn:** effort 3.45x, result 3.93, er=0.88 → in nhãn "vùng hấp thụ **NGHI VẤN** (volume nhiều, kết quả ít)".
-- **Đúng phải là:** er = effort/result = 0.88 nghĩa là kết quả **tương xứng** nỗ lực. "Volume nhiều, kết quả ít" chỉ đúng khi er lớn hẳn (>1.5-2). Nhãn này đang in cứng cho mọi nhịp bất kể giá trị er (đối chiếu bài #09 er=0.10, #12 er=0.04 cũng mang đúng nhãn đó) → chỉ số **không đo đúng bản chất** ở tầng diễn giải, dù phép đo thô có thể đúng.
-- **Nghi phạm trong thuật toán:** chuỗi mô tả gắn cứng vào nhịp "er cao nhất" thay vì phân ngưỡng er.
-
-### 5. Phase E 121 nến dài gấp 2,7 lần Phase B — luật vi phạm: L9 (Phase B dài nhất)
-- **Thuật toán gắn:** E=121 nến (đúng trần 120).
-- **Đúng phải là:** Phase E dài hơn Phase B không tự động sai (E ở ngoài range), nhưng B=44 nến cho một vùng cân bằng trải gần 2 giờ là **mỏng**. Đây là hệ quả của lỗi #1: 41 nến đáng lẽ thuộc B bị cắt sang C. Sửa lỗi #1 thì B≈75, tỷ lệ phase mới đúng hình.
-- **Dấu hiệu quyết định trên chart:** vạch tím "Phase B (44n)" và "Phase C (41n)" nằm sát nhau trong khi cụm nến hai đoạn có hành vi giống nhau (đều lình xình rồi leo).
+### 4. Nhãn SOS neo vào cây volume tầm thường — luật vi phạm: THEORY §2.2 (Effort vs Result), mục 5.1 spec
+- **Thuật toán gắn:** SOS tại 23:04, giá 4824.7, **VSA 1.94x**.
+- **Đúng phải là:** SOS là cú phá có nỗ lực nổi bật. VSA 1.94x còn dưới ngưỡng climax 2.2x của chính hệ. Nhìn panel volume ở đoạn 22:46–23:04, các thanh đều thấp — cú "phá" này đi lên bằng quán tính chứ không bằng nỗ lực.
+- **Ghi thêm:** giá đã đóng cửa vượt biên phụ trên 4810.9 từ **trước** 23:04 khá lâu (nhìn ảnh, quanh 22:10 giá đã ở 4815+). Nhãn SOS đang bị đặt muộn so với chỗ cấu trúc thật sự vỡ.
+- **Nghi phạm trong thuật toán:** hồi tố "cây VSA cao nhất trong đoạn" chỉ quét từ nến thò khỏi **biên chính**; ở đây đoạn quét nhiều nến volume thấp nên cây được chọn vẫn yếu. Thiếu một sàn tuyệt đối kiểu "VSA cây phá phải ≥ VSA climax" hoặc ít nhất cảnh báo khi VSA < 2.2x.
 
 ## Đạt
-- **Mục 1 (L1):** MOVE thật — 42.4 giá / 60 nến, hiệu suất 0.36; trên ảnh đường xám đi từ 4753 lên đúng chân nến BCLX. Climax là đỉnh cao nhất cửa sổ, đang chặn move.
-- **Mục 2 (L2):** đủ 3 lần đổi hướng: BCLX 4806.7 → AR 4785.7 → ST[A]. AR là cú bật ngược thật (21 giá, 21 nến, VSA 1.71x), không phải râu nhiễu.
-- **Mục 3 (L3):** biên chính = climax + AR, không bị kéo theo giá; biên phụ mỗi bên đúng 1 cái (4810.9 trên do ST[A], 4783.2 dưới do ST[B]), tỷ lệ 1.32x — hợp lý.
-- **Mục 4 (L4):** BCLX + phá LÊN = **Tái tích luỹ**. Đúng, và đây chính là ca mà bản trước hay xoá oan.
-- **Mục 6:** ST[B] 18:27 thọc xuống 4783.2 (2.5 giá dưới biên chính, dưới ngưỡng 15% chiều cao) — **không** bị nâng thành Spring. Đúng: cú này quá nhẹ để làm cú rũ, đối chiếu Ca #7 nguồn 7.pdf (chỉ cú thủng biên rồi bật mới là Spring).
-- **Mục 7 (L10):** LPS[D] 4814.6 nằm **trên** biên phụ 4810.9 — retest giữ được ở ngoài biên, đúng CBR.
-- **Mục 8:** chỉ số SOT phía DƯỚI đo **đúng bản chất**: n=3 nhịp rút ngắn, tỷ lệ volume 1.89 → hấp thụ ở đáy range. Range phá lên. Đây là chỉ số hữu ích nhất trong bài, khớp THEORY §7 (rút ngắn + volume lớn = phe đối lập sắp xuất hiện).
-
-## Cần hỏi người học
-- 265 nến M1 nhưng trải **13,5 giờ lịch** (phiên Á thưa nến). Khi so tỷ lệ độ dài phase, đếm bằng **số nến** hay bằng **thời gian lịch**? Câu này quyết định L8/L9 có bị vi phạm ở các range phiên Á hay không — áp cho cả bài #09, #11, #12.
+- **Mục 1 (L1):** có MOVE tăng thật 42.4 giá / 60 nến, hiệu suất 0.36; cây BCLX 16:47 là đỉnh của move và VSA 2.72x — climax **chặn** move, không nằm giữa move. Đúng điều kiện mở range.
+- **Mục 3 (L3):** biên chính 4785.7–4806.7 = đúng AR + climax, cố định suốt range; biên phụ 4783.2 / 4810.9 đúng là cực trị xa nhất, mỗi bên đúng 1 cái, tỷ lệ 1.32x lành mạnh.
+- **Mục 4 (L4):** BCLX chặn move tăng + phá thật lên trên ⇒ **Tái tích luỹ**. Tên đúng bảng 4 pattern.
+- **Mục 8 một phần:** nhãn climax neo đúng cây VSA cao nhất của cụm (2.72x) và đúng đỉnh giá 4806.7 — lỗi "nhãn climax trôi" của vòng trước **đã hết ở bài này**.
+- **Chú thích nỗ lực/kết quả đã sửa đúng dấu:** er=0.88 ghi "nhịp HIỆU QUẢ", không còn hard-code "vùng hấp thụ NGHI VẤN".

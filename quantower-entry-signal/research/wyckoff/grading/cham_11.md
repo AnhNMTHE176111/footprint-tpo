@@ -1,53 +1,40 @@
-# Chấm bài #11 — Tích luỹ (ACC) · 2026-04-26 23:41 → 2026-04-27 05:49 (146 nến M1)
+# Chấm bài #11 — Tích lũy (ACC) · 2026-04-26 23:41 → 2026-04-27 05:49 (146 nến M1)
 
-**Điểm: 2/10** — **không nên vẽ range ở đây.** Cây "climax" chỉ có biên độ **0.6 giá / 3 hợp đồng**, và MOVE dùng để mở range **bắc qua khe cuối tuần ~50 giờ**. Trước climax giá đang đi ngang, tức vi phạm thẳng L1.
+**Điểm: 2/10** — **Không nên vẽ range ở đây.** Cái được gọi là "SC" là một nến 3 hợp đồng, biên độ 0,6 giá, trong phiên Á chết. Cả cấu trúc là một cú bật chữ V có nghỉ giữa chừng, không phải vùng đấu giá.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. MOVE trước climax bắc qua khe cuối tuần — luật vi phạm: L1, và biến thể của lỗi K (khe > 4 giờ) chưa được vá cho phép đo MOVE
-- **Thuật toán gắn:** MOVE 39.0 giá / **28 nến**, hiệu suất 0.63 — con số nhìn qua thì đẹp nhất cả lô.
-- **Đúng phải là:** không có move nào. Trục thời gian trên ảnh đi **04-24 19:58 → 04-24 20:49 → 04-26 22:25 → 04-27 00:10**: chân MOVE nằm ở **thứ Sáu 04-24 ~20:00**, climax nằm ở **Chủ Nhật 04-26 23:41**. Giữa hai điểm là khe nghỉ cuối tuần ~50 giờ. "28 nến" là 28 nến **có giao dịch**, không phải 28 phút liên tục.
-- **Dấu hiệu quyết định trên chart:** đường xám chân-MOVE trên ảnh vẽ vắt từ cụm nến bên trái (04-24) sang chấm SC — cắt ngang một vùng chart hoàn toàn trống. Ngay trước climax, giá **đi ngang** 4727-4733 suốt cả đoạn 04-26 22:25 → 23:40 (xem cụm nến ngắn nằm sát nhau ở nửa dưới ảnh). Đó chính xác là ca L1 cấm: "giá đang đi ngang mà xuất hiện nến volume cao thì không được mở range".
-- **Nghi phạm trong thuật toán:** guard khe > 240 phút hiện chỉ áp cho **range đang chạy** (mục 8). Cửa sổ nhìn lại 240 nến để đo MOVE **không** kiểm khe. Phải cắt cửa sổ MOVE tại khe > 4 giờ giống như cắt range.
+### 1. "Climax" không phải climax — nến 0,6 giá / 3 lot — luật vi phạm: THEORY §3.3 (SC), L1
+- **Thuật toán gắn:** climax mở range tại 23:41, giá 4724.5, **VSA 1.94x, biên độ nến 0.6 giá**; nhãn SC vẽ ở nến 23:40 (VSA 4.14x, **6 hợp đồng**, biên độ 0.8 giá).
+- **Đúng phải là:** SC theo định nghĩa gốc là "**chênh lệch biên độ giá mở rộng + khối lượng tăng mạnh**, áp lực bán lên đỉnh điểm". Ở đây không có cái nào: 6 lot và 0,8 giá. VSA 4.14x chỉ là ảo giác của mẫu số — 6 nến trước đó đều **1 hợp đồng** (xem bảng 12 nến: volume 1,1,1,1,1). Đây đúng là ca giảng viên các vòng trước đã bắt: "climax chỉ 6–19 hợp đồng ở phiên Á giờ chết".
+- **Dấu hiệu quyết định:** bảng 12 nến quanh climax — volume `1,1,1,1,1,6,3,1,4,1,2,1`. Toàn bộ cụm climax giao dịch **21 hợp đồng**.
+- **Nghi phạm trong thuật toán:** người học đã chốt **không** dùng sàn khối lượng tuyệt đối (quyết định 6, mục 0b). Nhưng ca này cho thấy VSA tương đối vô nghĩa khi mẫu số ≈1. Đề xuất thay thế **không dùng số lot**: yêu cầu biên độ nến climax ≥ k×ATR *và* ≥ một tỷ lệ tối thiểu của **chiều cao range sẽ tạo ra** (0.6 / 34.6 = 1.7% — quá nhỏ để gọi là climax của range đó).
 
-### 2. Cây climax là nhiễu: biên độ 0.6 giá, volume 3 hợp đồng — luật vi phạm: L1 (climax phải chặn được một move), THEORY §3.3 (SC = "biên độ mở rộng + khối lượng tăng mạnh")
-- **Thuật toán gắn:** climax SC tại 4724.5 (nến 23:41), **VSA 1.94x, biên độ nến 0.6 giá, volume 3**; nhãn SC dời về 23:40 (4724.7, VSA 4.14x, volume **6**, biên độ 0.8 giá).
-- **Đúng phải là:** bỏ ứng viên. Cây climax chiếm **1.7% chiều cao range (0.6 / 34.6 giá)** — về mặt vật lý nó không thể "chặn" bất cứ move nào. Sáu nến trước climax là **O=H=L=C** (biên độ **bằng 0**, volume 1) → biên độ TB 20 nến ≈ 0.2-0.3 giá, nên ngưỡng "biên độ ≥ 1.4× TB20" bị thoả bởi một nến 0.6 giá. Đây là nhiễu chia cho nhiễu.
-- **Dấu hiệu quyết định trên chart:** panel volume ở vùng climax gần như trống; cột volume cao nhất cả chart nằm ở **00:50-01:04** (cú bung lên), không ở climax.
-- **Nghi phạm trong thuật toán:** hai ngưỡng mở range đều **tương đối** (1.4× ATR20, VSA ≥ 2.2x) và người học đã chốt không dùng sàn khối lượng tuyệt đối. Nhưng vẫn cần một sàn **cấu trúc**: biên độ cây climax ≥ X% chiều cao range sẽ tạo ra, hoặc mẫu số ATR20 phải có sàn (loại các nến biên độ 0 ra khỏi TB).
+### 2. Sự kiện có ý nghĩa thật nằm ở nhịp TĂNG, không phải ở "SC" — luật vi phạm: L1 (climax phải chặn move)
+- **Thuật toán gắn:** cả cụm volume lớn nhất chart (các thanh vàng cao vọt quanh 00:50–01:04) rơi vào **nhịp AR**, không phải nhịp climax.
+- **Đúng phải là:** cây có nỗ lực thật là cây đẩy giá từ 4731 lên 4759 trong ~10 nến. Nếu muốn đọc cấu trúc ở đây thì phải neo vào cú bùng nổ đó, không neo vào cái đáy lặng lẽ trước nó.
+- **Dấu hiệu quyết định:** panel volume — cụm 3 thanh vàng cao nhất toàn ảnh nằm đúng dưới nhịp nến xanh dựng đứng lúc 00:57, còn tại SC (23:40–23:41) panel gần như phẳng.
 
-### 3. AR không phải "phản ứng tự động" mà là một cú breakout tăng — luật vi phạm: L2, L3 (biên chính = climax + AR)
-- **Thuật toán gắn:** AR tại 4759.1 (01:04), VSA 0.24x → chốt biên chính trên. Chiều cao biên chính **34.6 giá**.
-- **Đúng phải là:** AR là nhịp bật ngược **ngay sau** climax do áp lực bán cạn. Ở đây giá lình xình 4727-4733 suốt **60+ nến** sau climax, rồi tới 00:50-01:04 mới bùng một mạch **+30 giá** với cột volume lớn nhất chart. Đó là một cú đẩy có chủ đích (THEORY §8 "nguồn cầu khẩn cấp"), không phải AR. Range dựng từ [nến nhiễu ở dưới, đỉnh cú bung ở trên] không mô tả vùng đấu giá nào.
-- **Dấu hiệu quyết định trên chart:** khoảng cách climax → AR là **43 nến**, và toàn bộ 43 nến đó nằm sát biên **dưới** (4727-4733), không có nhịp bật nào. Trên ảnh, cả nửa trái của khung range trống hoàn toàn ở phần giữa/trên.
-- **Nghi phạm trong thuật toán:** AR = swing pivot ngược đầu tiên được xác nhận, không có trần thời gian ngoài 300 nến và không kiểm "nhịp bật có liền kề climax không". Nhãn "AR (yếu)" chỉ bắn khi AR **quá gần** climax (1-2 nến); thiếu nhánh đối xứng cho AR **quá xa** climax.
+### 3. THIẾU Phase C — luật vi phạm: L8
+- **Thuật toán gắn:** A → B → **D** → E, không có Phase C.
+- **Đúng phải là:** phải gán ngược từ SOS (02:47). Cửa sổ hiện tại min(60, 0.8×44) = 35 nến — vẫn không tìm ra pivot hợp lệ "trong range + đúng nửa dưới". Lỗi lặp lại y hệt bài #09; bản vá #3 (0.5x→0.8x) không giải quyết.
+- **Nghi phạm trong thuật toán:** ràng buộc kép "trong range **và** đúng nửa range" (vá v6 số 5) đang quá chặt — ở đây nhịp test cuối trước SOS nằm quanh 4753–4757, tức **nửa trên** range 4724.5–4759.1, nên bị loại. Nhưng với tích luỹ dốc lên (THEORY §3.4) LPS[C] nằm nửa trên là **bình thường**, thậm chí là dấu hiệu mạnh.
 
-### 4. ST[A] nằm đúng 50% chiều cao range, không test vùng climax — luật vi phạm: L2
-- **Thuật toán gắn:** ST[A] tại 4741.7 (01:16), VSA 0.29x, thân 1.00.
-- **Đúng phải là:** ST[A] phải quay về test vùng SC 4724.5. 4741.7 còn cách **17.2 giá = 50% chiều cao range** — là một cái ngọ nguậy giữa range, chỉ 12 nến sau AR.
-- **Dấu hiệu quyết định trên chart:** nhãn ST[A] trên ảnh lơ lửng giữa hai đường cam, cách đường "biên CHÍNH dưới 4724.5" gần nửa chart. Đúng lỗi đã gặp ở bài #09.
-- **Nghi phạm trong thuật toán:** cùng nghi phạm với #09 — sàn chống nhiễu ST[A] = 1.5× biên độ TB, quá thấp ở phiên Á. Nên neo theo % chiều cao range hoặc yêu cầu ST[A] vào **1/3 phía climax** (THEORY §5 chia 3 phần).
+### 4. Phase B (44 nến) ngắn hơn Phase A (46 nến) — luật vi phạm: L9
+Phase A chiếm 46/146 nến vì AR mất tới 83 phút mới thành hình. Với một range 146 nến thì B phải áp đảo, không phải chia đều.
 
-### 5. Thiếu hẳn Phase C — luật vi phạm: L8 + mục 6 (case khó phải gán ngược LPS[C] khi có SOS)
-- **Thuật toán gắn:** dải phase A → B → **D** → E.
-- **Đúng phải là:** SOS bắn lúc 02:47 mà range chưa từng có Phase C → bắt buộc nhìn ngược lấy nhịp test cuối làm LPS[C]. Trên ảnh, nhịp lùi về ~4744 quanh 01:40-01:50 rồi bò lên là ứng viên LPS[C] rõ ràng.
-- **Nghi phạm trong thuật toán:** cửa sổ gán ngược = min(60, 1/2 Phase B) = min(60, 22) = 22 nến; nhịp test nói trên nằm ngoài 22 nến đó. Lỗi lặp ở #09 (cửa sổ 6 nến) và #12 — công thức min(...) tự khoá ở mọi range có Phase B ngắn.
+### 5. ST[A] ở giữa range, VSA 0.29x — luật vi phạm: L2
+- **Thuật toán gắn:** ST[A] 01:16, giá 4741.7.
+- **Đúng phải là:** 4741.7 cách climax 4724.5 tới **17.2 giá = 50% chiều cao range** — chính giữa range, không test được vùng climax. Cùng lỗi với bài #08 và #09: ngưỡng hồi 0.4× (ở đây đạt 0.50) không thay được ràng buộc khoảng cách tới climax.
 
-### 6. Thiếu LPS[D] dù Phase D dài 25 nến — luật vi phạm: L10, L7
-- **Thuật toán gắn:** SOS 02:47 (4766.7) rồi Phase D 25 nến, không nhãn retest nào.
-- **Đúng phải là:** trên ảnh, sau SOS giá lên 4773, lùi về ~4762 (vẫn **trên** biên phụ 4760.1), rồi lên 4780. Nhịp lùi đó là LPS[D] chuẩn CBR — phải đánh 1 điểm.
-- **Nghi phạm trong thuật toán:** giống #10 — sàn 1.5× biên độ TB tính trên ATR đã bị cây phá kéo lên, nên nhịp hồi thật bị loại.
-
-### 7. Phase E kết thúc trong lúc giá đã lùi vào lại trong biên — luật vi phạm: L10 (Phase E = đi tìm vùng giá mới)
-- **Thuật toán gắn:** Phase E 32 nến, range "completed", kết ở 05:49.
-- **Đúng phải là:** nửa cuối ảnh cho thấy sau đỉnh 4780 (~04:20) giá đổ về **4757-4762**, tức **lùi lại quanh và dưới biên chính trên 4759.1**. Theo mục 7, Phase E phải chốt ngay khi có nến đóng cửa lùi hẳn vào trong biên đã phá — và về bản chất cú phá này **không giữ được vùng giá mới**.
-- **Nghi phạm trong thuật toán:** điều kiện đóng Phase E ("lùi hẳn vào trong biên đã phá") hoặc dùng biên phụ 4760.1 với dung sai 30 tick nên 4757 chưa đủ, hoặc mốc "đi xa 2.0× chiều cao" đã bắn trước đó nên nhánh lùi không được xét.
+### 6. Không có LPS[D] trong Phase D 25 nến
+Theo L10, Phase D là "phá biên → hồi retest **giữ được** ngoài biên". Ở đây chỉ có mỗi nhãn SOS. Nhìn ảnh thì giá sau SOS đi thẳng lên 4780 không hồi — đây là ca hợp lệ theo Ca #21 nguồn 7.pdf (Phase D không bắt buộc có BU), nên **không tính là lỗi cấu trúc**, chỉ ghi nhận Phase D trống nhãn suốt 25 nến.
 
 ## Đạt
-- **Mục 3 phần biên phụ (L3):** biên phụ mỗi bên tối đa 1, tỷ lệ 1.03x — vẽ trung thực, không phình.
-- **Mục 4 (L4):** SC + phá lên = Tích luỹ; tên khớp origin + hướng phá thật.
-- **Mục 8 phần SOS:** SOS đặt tại cây VSA **2.33x** thân 1.00, đóng cửa vượt biên phụ 4760.1 — neo đúng cây phá, không rơi vào nến rác (vá lỗi B của v5 chạy đúng).
-- **Chỉ số bias = +1** (chạm nổi biên trên, không nổi biên dưới): đo đúng, khớp chart và khớp hướng phá.
+- **Mục 3 (L3):** biên chính 4724.5–4759.1 = climax + AR, cố định; biên phụ 4760.1 đúng cực trị xa nhất, tỷ lệ 1.03x. Sạch, không có ca "biên phụ tự nới rồi tự vượt".
+- **Mục 4 (L4):** climax từ move giảm + phá thật lên ⇒ **Tích luỹ**. Tên khớp bảng 4 pattern (với điều kiện chấp nhận cái climax kia là climax).
+- **Mục 7 (L10) một phần:** SOS 02:47 (VSA 2.33x, thân 1.00) đóng cửa vượt cả biên chính lẫn biên phụ trên — cú phá thật, đúng yêu cầu L3. Phase E 32 nến, giá đi tiếp lên 4780.
+- **Chú thích nỗ lực/kết quả đúng dấu** (er=0.09 → "HIỆU QUẢ").
 
 ## Cần hỏi người học
-- Ở phiên Á, chuỗi nến **O=H=L=C** (biên độ 0, volume 1) làm mẫu số ATR20 tụt gần 0 và mọi ngưỡng tương đối mất nghĩa. Người học đã chốt không dùng sàn khối lượng tuyệt đối — vậy chấp nhận cách nào: (a) loại nến biên độ 0 khỏi phép tính TB, (b) đặt sàn tick cho ATR20, hay (c) không mở range khi số nến biên độ 0 trong 20 nến trước > ngưỡng?
+- Ở phiên Á thanh khoản ~1 hợp đồng/nến, VSA tương đối mất ý nghĩa nhưng anh đã chốt không dùng sàn lot tuyệt đối. Chấp nhận thay bằng ràng buộc **hình học** (biên độ nến climax ≥ x% chiều cao range mà nó tạo ra) chứ?

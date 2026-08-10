@@ -1,47 +1,38 @@
-# Chấm bài #42 — Tái phân phối (RE-DIST) · 2026-07-07 19:18 → 07-08 10:56 (877 nến M1)
+# Chấm bài #42 — Phân phối (DIST) · 2026-07-06 18:36 → 07-07 00:24 (274 nến M1)
 
-**Điểm: 5/10** — Cấu trúc lớn đọc **đúng** (move giảm bị chặn, đi ngang 13 tiếng, sụp tiếp = tái phân phối, tên đúng L4, Phase B dài nhất, Phase E có độ dài thật). Sai ở nội bộ: ST[A] nằm ở 70% chiều cao, biên chính không bao được nửa sau của range, và LPSY[C] gán cho một cây bán VSA 10× — ngược hẳn định nghĩa LPSY.
+**Điểm: 5/10** — bài khá nhất trong lô: cấu trúc A→E đủ, cú SOW và nhịp retest đọc đúng. Sửa 3 nhãn: vị trí BCLX?, ST[A], và ranh giới Phase C.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. LPSY[C] gán cho cây bán VSA 10.06× — sai vai nhãn — THEORY §4.1, L8
-- **Thuật toán gắn:** `LPSY[C]` 08:17 tại 4117.7, **VSA 10.06×**, thân **0.88**.
-- **Đúng phải là:** LPSY theo định nghĩa gốc là *"một đợt phục hồi **yếu** trên biên hẹp → nguồn cầu cạn kiệt"* — tức nhịp hồi **ngược** hướng phá, volume **co lại**. Cây 08:17 là cây thân dài, volume gấp **10 lần** trung bình, đi **cùng** hướng phá. Đó là **MSOW / cây phá vỡ**, không phải LPSY. Nếu muốn giữ Phase C thì LPSY[C] phải là nhịp hồi lên vùng 4118–4125 **trước** cú sụp (nhìn ảnh: nhịp 07:10–07:50 hồi về 4128 rồi rớt — đó mới là điểm cung cuối).
-- **Dấu hiệu quyết định trên chart:** panel volume — thanh vàng cao nhất toàn bộ 877 nến nằm đúng tại 08:17, cùng lúc giá xuyên từ 4118 xuống 4091. Không có "phục hồi yếu" nào ở đây.
-- **Nghi phạm trong thuật toán:** Phase C gán ngược chọn "**đỉnh cao nhất trong 60 nến trước cú phá**" — thuần theo cực trị giá, **không kiểm tính chất nến**. Phải thêm điều kiện: nến LPSY[C] phải ngược hướng phá (nến xanh khi sẽ phá xuống) **và** VSA ≤ ~1.0× (test cạn cầu), nếu không tìm được thì để range không có Phase C.
+### 1. Nhãn BCLX? đặt trên một nến GIẢM, không phải cực trị — luật vi phạm: mục 3 điều kiện (3), L2
+- **Thuật toán gắn:** BCLX? tại 18:42, giá 4177.1, VSA 3.29x.
+- **Đúng phải là:** đỉnh cụm là nến **18:36** (H=4179.6, xanh) — chính là nến mở range và là mức biên chính trên. Nhãn climax phải nằm đó, hoặc ở nến 18:35 (O=4175.5 C=4178.3, xanh, VSA 2.41x) là cây đẩy cuối.
+- **Dấu hiệu quyết định trên chart:** nến 18:42 có **O=4176.8, C=4175.8 → nến đỏ**, và đỉnh của nó (4177.1) thấp hơn biên trên 2.5 giá. Trên ảnh nhãn BCLX? rõ ràng treo lơ lửng dưới đường liền 4179.6. Một cao trào MUA không thể nằm trên nến giảm.
+- **Nghi phạm trong thuật toán:** quy tắc "nhãn cụm climax = cây VSA cao nhất trong 8 nến" **không kiểm màu nến và không kiểm hướng**. Vá #4 của v7 (kẹp theo nến mở range) chỉ giới hạn cửa sổ, chưa lọc màu → lỗi còn nguyên. Phải thêm điều kiện: nến mang nhãn BCLX phải là nến **xanh** (hoặc close ≥ mid) và nằm trong 1× ATR của mức climax.
 
-### 2. Biên chính không bao được vùng đấu giá nửa sau — L3 (hệ quả), L1
-- **Thuật toán gắn:** biên chính 4102.7–4125.9 (**23.2 giá**), biên phụ 4091.3–4144.7 (**53.4 giá**, 2.30×).
-- **Đúng phải là:** trên ảnh, từ 07-08 01:21 đến 07:10 (~350 nến, tức nửa Phase B) giá dao động **4128–4145 — hoàn toàn phía trên biên chính trên**. Một biên chính bị bỏ ra ngoài suốt 6 tiếng thì không còn là biên. Đọc bằng mắt đây là **hai vùng cân bằng nối tiếp**: 4100–4126 (19:18 → 01:20) rồi 4128–4145 (01:21 → 07:10), vùng thứ hai chính là tái phân phối cấp trên, và cú sụp 08:17 phá **vùng thứ hai**, không phá vùng thứ nhất.
-- **Dấu hiệu quyết định trên chart:** nét liền trên (4125.9) đi xuyên giữa thân cụm nến suốt đoạn 02:48–07:10; toàn bộ nhãn mSOS nằm trên nét liền 19 giá.
-- **Nghi phạm trong thuật toán:** mục 13.3.1 — chỉ theo dõi **đúng một range một lúc**, nên climax mở vùng thứ hai bị bỏ qua và range thứ nhất bị kéo dài 877 nến. Cần một guard đơn giản trước khi có range lồng nhau: nếu ≥ N nến liên tiếp (vd 120) **đóng cửa ngoài biên chính** mà chưa thành SOS/SOW thì **đóng range** ở trạng thái chưa rõ và mở lại từ vùng mới.
+### 2. Phase C dài 56 nến — dài hơn cả Phase D (25) và E (3) — luật vi phạm: L8
+- **Thuật toán gắn:** Phase C 22:56 → 23:56.
+- **Đúng phải là:** Phase C phải là phase ngắn nhất. Nhịp test cuối trước khi sụp là đỉnh **22:35** chạm biên trên rồi cụm đi ngang 23:30–23:50; LPSY[C] nên lấy ở nhịp 23:40–23:50, Phase C rút xuống ~15–20 nến.
+- **Dấu hiệu quyết định trên chart:** từ LPSY[C] (22:56) tới SOW (23:57) giá còn đi ngang cả tiếng trong lòng range, có tới 3 nhịp lên/xuống — đó là hành vi Phase B, không phải Phase C.
+- **Nghi phạm trong thuật toán:** cửa sổ gán ngược Phase C vừa nới 0.5x→**0.8x** độ dài Phase B = 116 nến; máy lấy pivot **xa nhất** hợp lệ trong cửa sổ thay vì **nhịp test cuối cùng**. Nới cửa sổ đã sửa được ca "thiếu Phase C" nhưng đẻ ra ca "Phase C phình". Nên chốt bằng trần tuyệt đối (vd Phase C ≤ 1/3 Phase B) hoặc luôn lấy pivot **gần SOS/SOW nhất** thoả điều kiện.
 
-### 3. ST[A] ở 70% chiều cao range — Phase A chưa hoàn thành — L2
-- **Thuật toán gắn:** `ST[A]` 19:43 tại **4118.9**, VSA 0.68×, thân 0.07.
-- **Đúng phải là:** (4118.9 − 4102.7)/23.2 = **70%** chiều cao — ST[A] nằm ngay dưới AR, chưa quay về vùng climax chút nào. Đó chỉ là một nến doji ngay sau AR. Test lại vùng climax thật xuất hiện muộn hơn (nhìn ảnh: nhịp ~21:00–21:40 xuống vùng 4098–4105, thọc dưới biên chính dưới).
-- **Nghi phạm:** cùng gốc với bài #41 — ST[A] là "swing pivot đầu tiên về phía climax" mà **không có ràng buộc phải chạm vùng climax**; với sàn nhiễu chỉ 1.5× ATR thì một nến doji sát AR cũng đủ chốt Phase A.
+### 3. ST[A] không test vùng climax — luật vi phạm: L2
+- **Thuật toán gắn:** ST[A] 19:21 tại 4174.5.
+- **Đúng phải là:** test quay về vùng 4178–4179.6.
+- **Dấu hiệu quyết định trên chart:** biên chính 4170.5–4179.6 = 9.1 giá; ST[A] ở 4174.5 = **44% chiều cao range**, đúng giữa. Hồi 4.0/9.1 = 0.44 nên vừa lọt ngưỡng 0.4 mới.
+- **Nghi phạm trong thuật toán:** cùng gốc với bài #41 — `STA_MIN_AR_FRAC` đo nhịp hồi từ AR, không đo khoảng cách còn lại tới climax.
 
-### 4. mSOW 08:18 gọi là cú phá "thất bại" trong khi 22 nến sau là SOW thật — L5
-- **Thuật toán gắn:** `mSOW` 08:18 tại 4091.3 (VSA 5.32×, thân 0.09) rồi `SOW` 08:40 tại 4075.8 (VSA 3.18×).
-- **Đúng phải là:** theo L5, phá ra → lùng bùng ngoài một lúc → **đi tiếp** = phá **THẬT**. Cú 08:18 phá xuống 4091.3, giá lùng bùng 4092–4105 khoảng 20 nến rồi đi tiếp xuống 4048. Vậy 08:18 là **khởi đầu của MSOW**, không phải một SOW thất bại; nhãn mSOW ở đây là nhãn **dư** và nó làm ranh giới C/D lệch 22 nến.
-- **Dấu hiệu quyết định trên chart:** ba nhãn LPSY[C] (08:17), mSOW (08:18), SOW (08:40) chồng chất trong **23 phút** trên cùng một cú sụp 42 giá — một sự kiện bị xé thành ba vai.
-- **Nghi phạm:** nhánh "kết cục A — giá rút về trong range" xét theo **đóng cửa quay lại phía bên kia biên chính**; với biên chính đặt quá cao (lỗi #2) thì giá chỉ cần bật nhẹ đã tính là "thu vào", nên cú phá thật bị gắn mSOW.
+### 4. Range mở không có cao trào thật — luật vi phạm: L1 (điều kiện CẦN)
+- **Thuật toán gắn:** "SINH TỪ CÚ PHÁ, không có cao trào thực sự", climax gắn dấu `?`.
+- **Đúng phải là:** ghi nhận trung thực là tốt, nhưng phiếu **không có dòng MOVE** nào — không chứng minh được có move xu hướng bị chặn. Thực tế nhìn ảnh thì có (đợt tăng 4170→4179.6 lúc 18:20–18:36), chỉ là máy không đo. Nên vẫn đo và in MOVE cho cả range sinh từ cú phá, nếu không đạt thì đừng mở.
 
-### 5. mSOS 06:24 gán cho cây râu VSA 1.68×, thân 0.20 — THEORY §6.4
-- Nghĩa v6 của mSOS là "phá hẳn ra ngoài rồi thu hẳn vào trong range", nhưng lúc 06:24 giá **đã ở ngoài biên chính trên suốt nhiều giờ** — mô tả "phá ra rồi thu vào" không đúng thực tế. Cây đó thân 20%, volume 1.68× → đây là **UT[B]** (test biên trên, đỉnh cao nhất range), không có nỗ lực phá vỡ nào.
-
-### 6. Phase D (16) ngắn hơn Phase C (23) — L8
-- A 26 · B **692** · C 23 · D 16 · E 121. B dài nhất: đúng. Nhưng C phải là phase ngắn nhất; ở đây D còn ngắn hơn — hệ quả của việc ranh giới C/D bị lệch (lỗi #4).
-
-### 7. Ba chỉ số Phase B mới
-- **SOT phía dưới:** `SOT, n=3, thrust 0.23, volume 0.13 (cạn kiệt)` — **đo đúng**: 3 nhịp, lực đẩy còn 23% và volume còn 13% ⇒ đúng biến thể "rút ngắn + volume yếu = cạn kiệt thật" của THEORY §7. Dùng được.
-- **SOT phía trên:** `chớm, n=1, 0.00/0.00` — n=1 không đủ ≥3 lần đẩy để có nghĩa; tỉ lệ 0.00 nghĩa là không tính được nhưng vẫn in trạng thái. Nên ghi `n/a`.
-- **Nỗ lực/kết quả:** `effort=1.24x, result=0.53, er=2.33` → "hấp thụ NGHI VẤN (volume nhiều, kết quả ít)". **Ở bài này câu đó đúng** (er > 1), nhưng đối chiếu bài #40 (er=0.46) và #43 (er=0.94) thấy cùng một câu → câu chữ **dán cứng**, không suy từ er. Phải gắn ngưỡng: er > ~1.5 mới nói hấp thụ; er < ~0.7 phải nói ngược lại ("nỗ lực nhỏ, kết quả lớn — thiếu đối lực").
-- **Bias:** `+0`, giống cả lô 40–44.
+### 5. Phase E chỉ 3 nến (trình bày)
+Giá sau 00:24 còn rơi thẳng từ 4163 xuống 4149 (thấy rõ nửa phải ảnh) nhưng range đã đóng. Không sai luật (đã đi đủ 2× chiều cao 9.1 giá) — nhưng chiều cao range quá mỏng khiến mốc "đi đủ xa" trở nên vô nghĩa. Đây là hệ quả biên chính chỉ 0.22% giá.
 
 ## Đạt
-- **Điều kiện mở range (L1):** MOVE giảm **46.2 giá** / 107 nến / hiệu suất 0.41, cụm climax 19:15–19:18 (VSA 2.94× rồi 1.53×) chặn đúng đáy move. Đây là ca mở range thuyết phục nhất trong lô.
-- **Tên range (L4):** origin SC + phá **xuống** thật ⇒ **Tái phân phối**. Đúng, và đúng cả trên thực tế (giá đi tiếp xuống 4048).
-- **Phase B dài nhất (L9):** 692/877 = 79%.
-- **Phase D/E theo khuôn CBR (L10):** SOW 08:40 → LPSY[D] 08:48 (4087.0, VSA 1.09×, hồi yếu, **giữ được dưới biên**) → Phase E 121 nến chạy tiếp 40 giá. LPSY[D] ở đây gán **đúng vai** — trái ngược với LPSY[C] ở lỗi #1, cho thấy vấn đề nằm ở nhánh gán ngược chứ không ở định nghĩa.
-- **Biên phụ (L3):** mỗi bên đúng 1, đều là cực trị xa nhất thật (4091.3 / 4144.7).
+- L4: origin BCLX + phá xuống thật = **Phân phối** — tên đúng.
+- SOW 23:57 neo đúng cây phá: VSA **4.12x**, thân 0.74, đóng dưới biên chính. Nhãn không còn rơi vào nến xác nhận yếu.
+- L10: LPSY[D] 00:05 tại 4169.7 — hồi lên đúng mép biên 4170.5 rồi **giữ được ở ngoài**, sau đó đi tiếp. Đây là CBR sách vở, vẽ chuẩn.
+- L3: không có biên phụ (tỷ lệ 1.00x) — trung thực, đúng tinh thần "có thể không có biên phụ nào".
+- L9: Phase B 145 nến, dài nhất.
+- Chú thích er=0.70 ghi "nhịp HIỆU QUẢ" — đúng dấu.

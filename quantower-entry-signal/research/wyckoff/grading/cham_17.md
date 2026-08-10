@@ -1,37 +1,37 @@
 # Chấm bài #17 — Phân phối (DIST) · 2026-05-14 04:36 → 14:01 (352 nến M1)
 
-**Điểm: 7/10** — Bài tốt nhất trong lô. Vùng đấu giá thật, tỷ lệ phase đúng luật (B dài nhất, C ngắn nhất), SOW neo đúng cây nổ. Chỉ cần sửa vài nhãn và thận trọng với kết luận "Phân phối".
+**Điểm: 5/10** — Bài tốt nhất của lô: khung range, tỉ lệ phase và chuỗi C→D→E đều đọc được. Hỏng ở hai chỗ: nhãn mSOS đặt ở một mức giá mâu thuẫn với chính tên nhãn, và cú upthrust rõ nhất của cả range không được gán nhãn nào.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Kết luận "Phân phối hoàn tất" đóng đúng lúc giá quay lại vào range — luật vi phạm: L10 (Phase E = giá đi tìm vùng giá mới) + cảnh báo Ca #22 nguồn 2.pdf
-- **Thuật toán gắn:** Phase E 7 nến, range đóng `completed`, tên **Phân phối**.
-- **Đúng phải là:** phần cuối ảnh cho thấy ngay sau 14:01 giá bật từ ~4723 lên ~4755, tức **trở lại hẳn TRONG range, vượt cả biên chính trên 4753.0**. Cú SOW này rơi được 20 giá rồi bị mua lại toàn bộ. Với diễn biến đó, đây là một SOW **thất bại**, chưa đủ để chốt tên "Phân phối".
-- **Dấu hiệu quyết định trên chart:** cụm nến 14:08 trên ảnh có đỉnh cao hơn cả đường "biên CHÍNH trên 4753.0"; Phase E chỉ 7 nến, ngắn hơn cả Phase C (14 nến) — Phase E ngắn hơn Phase C là dấu hiệu tự tố cáo cú phá không đi đâu.
-- **Nghi phạm trong thuật toán:** mục 7 cho chốt Phase E khi "hết 25 nến mà đã đi ≥50% chiều cao". SOW xuống 4707 = 28 giá dưới biên = 1.5 lần chiều cao 18.0 → thoả, nhưng máy chốt E xong **đóng range ngay** và không kiểm tiếp. Nên: đã chốt E thì vẫn theo dõi tới khi giá lùi hẳn vào biên (như spec nói) — ở đây điều đó xảy ra chỉ 7 nến sau, đủ để hạ SOW → mSOW.
+### 1. Nhãn mSOS đặt DƯỚI biên chính dưới — mâu thuẫn nghĩa nhãn — luật vi phạm: mục 5.1 (định nghĩa mSOS)
+- **Thuật toán gắn:** `mSOS 09:30 @4732.4, VSA 9.33x` — trong khi biên chính là 4735.0–4753.0.
+- **Đúng phải là:** mSOS = một cú phá **lên** có thật rồi thu lại vào range. Một điểm nằm **thấp hơn biên chính dưới 2.6 giá** không thể mang nhãn "sign of strength"; đó là một cú thăm dò **xuống**, phải là ST[B] hoặc mSOW.
+- **Dấu hiệu quyết định trên chart:** chấm cam mSOS vẽ dưới đường liền 4735.0, ngay đáy một nhịp giảm.
+- **Nghi phạm trong thuật toán:** vá v7 #5 "quét lại lấy nến VSA cao nhất trong đoạn thăm dò" **không lọc theo hướng/theo phía biên** — nó lấy cây VSA 9.33× mạnh nhất của cả đoạn, mà cây đó nằm ở đáy nhịp hồi chứ không ở phía biên bị phá. Vá làm sai thêm so với v6 ở ca này.
 
-### 2. LPSY[D] hồi lên trên biên phụ dưới — retest không "giữ được ngoài biên" — luật vi phạm: L10
-- **Thuật toán gắn:** LPSY[D] tại **4731.4**; biên phụ dưới **4728.8**.
-- **Đúng phải là:** L10 đòi nhịp retest **giữ được ở ngoài biên**. Điểm 4731.4 nằm **trong** biên phụ (dù vẫn dưới biên chính 4735.0). Nếu chấp nhận thì phải nói rõ đang đo với biên chính; còn nếu SOW được công nhận vì bứt biên phụ (L3) thì retest cũng phải đo bằng biên phụ — không thể đổi thước giữa hai bước.
-- **Nghi phạm:** LPS/LPSY[D] tìm bằng swing pivot thuần cấu trúc (mục 7 câu 2), **không kiểm nó có còn ngoài biên hay không**.
+### 2. Cú upthrust 4757.7 lúc ~07:36 không được gán nhãn — luật vi phạm: L3 + L6 (chỉ còn UT/UA/DA cho test nhẹ) + mục 9 (nhãn thiếu)
+- **Thuật toán gắn:** không có sự kiện nào ở đỉnh; chỉ lặng lẽ nới `biên phụ trên = 4757.7`.
+- **Đúng phải là:** đó là cú duy nhất trong cả range vượt hẳn biên chính trên 4753.0 rồi bị đánh sập ngay trong 2 nến — đúng vai **UT[B]** (và nếu nó là cú test đỉnh cuối trước khi cấu trúc sụp thì mới được xét UTAD; ở đây vẫn còn 5 tiếng dao động sau đó nên **UT[B]** mới đúng, theo Ca #1/#4 nguồn 4.pdf).
+- **Dấu hiệu quyết định trên chart:** cây xanh cao vượt hẳn đường liền 4753.0 lúc 07:36, kèm thanh volume vàng cao nhất nửa đầu chart, nến kế tiếp là nến đỏ nuốt lại.
+- **Nghi phạm trong thuật toán:** nhánh "chỉ nới biên phụ, không ghi nhãn" khi cú thăm dò không đạt ngưỡng "mạnh" (≥max(15 tick, 15% chiều cao) hoặc VSA≥2.2×). Với chiều cao range 18.0 giá thì 15% = 2.7 giá; cú này thò ra 4.7 giá nên **đáng lẽ** đủ — cần soi lại vì sao nhánh này im lặng.
 
-### 3. Nhãn SOW rơi vào nến thân 0.38 (< ngưỡng 45% của chính spec) — lỗi nhất quán nội bộ
-- **Thuật toán gắn:** SOW tại 4727.1, **VSA 6.12x, thân/biên độ 0.38**.
-- **Đúng phải là:** spec đặt "thân ≥ 45% mới công nhận SOS/SOW", nhưng nhãn hồi tố chọn theo **VSA cao nhất** nên bỏ qua tiêu chí thân. Cây VSA 6.12x đúng là cây phá thật nên chọn vậy chấp nhận được — chỉ cần thống nhất: tiêu chí thân dùng để **xác nhận cú phá**, không dùng để **chọn nến gắn nhãn**. Hiện tài liệu không nói rõ chỗ này.
+### 3. Nhãn BCLX rơi ra ngoài khung range — luật vi phạm: vá v7 #4
+- **Thuật toán gắn:** range mở 04:36, nhãn `BCLX` đặt tại **04:32** (@4752.0, VSA 2.33×).
+- **Nghi phạm trong thuật toán:** lặp lại y hệt #13 và #15 — nhãn climax không bị kẹp `≥ range_start`. 3/6 bài trong lô mắc lỗi này → chưa vá xong.
 
-### 4. mSOS neo vào nến rỗng (lặp lỗi hệ thống của lô) — luật vi phạm: THEORY §2.2
-- mSOS tại 4757.7, **VSA 0.65x, thân 0.00**. Cùng lỗi với bài #13/#15/#18: mSOS/mSOW neo cực trị giá thay vì cây có nỗ lực.
+### 4. Cây mở range chỉ 4 lot, VSA 0.91× — luật vi phạm: mục 3(1) THUẬT TOÁN
+- **Thuật toán gắn:** climax @4753.0, VSA **0.91×**, biên độ 1.8 giá.
+- **Đúng phải là:** cây thoả ngưỡng thật là 04:32 (VSA 2.33×, 10 lot). Cụm climax dời **mức** sang cây cực trị giá mà không kiểm lại ngưỡng — cùng nghi phạm với bài #14, chỉ nhẹ hơn vì ở đây MOVE trước rất sạch (38.0 giá / 23 nến / hiệu suất **0.86**).
 
-### 5. ST[A] chỉ đi được nửa đường về vùng BCLX — ghi nhận, không trừ điểm
-- ST[A] 4743.3 trên range 4735.0–4753.0 = 46% chiều cao, không thực sự **test lại vùng climax**. Theo THEORY §5, ST ở 1/3 nửa dưới nghĩa "lực bán nhất định" — hợp lệ về lý thuyết cho một cấu trúc phân phối, nên chấp nhận. Ghi ở đây để đối chiếu với bài #18 (nơi ST[A] còn nông hơn nhiều và **là** lỗi).
+### 5. (Nhẹ) LPSY[D] lùi vào trong biên phụ — luật vi phạm: L10
+- `SOW 13:30 @4727.1` (dưới biên phụ dưới 4728.8, tốt) → `LPSY[D] 13:50 @4731.4` nằm **trên** cả biên phụ dưới. Nhịp retest phải giữ được ở ngoài biên; nên bổ sung điều kiện `lpsy_price ≤ biên phụ`.
 
 ## Đạt
-- Điều kiện mở range (L1): MOVE tăng 38.0 giá / 23 nến / **hiệu suất 0.86** — chân tăng thẳng nhất trong lô, climax là đỉnh chặn move. Đạt.
-- Phase A (L2): đủ 3 lần đổi hướng; **AR 4735.0 với VSA 4.17x, thân 1.00** — một cú bật ngược THẬT, không phải râu nhiễu. Kết thúc đúng tại ST[A]. Đạt.
-- Biên (L3): biên chính 4735.0 + 4753.0 cố định; biên phụ đúng mỗi bên 1 cái (4728.8 / 4757.7) và đúng là cực trị xa nhất. Đạt.
-- **Range này là một vùng đấu giá thật:** trên ảnh, từ 05:42 tới 13:13 giá lắc đi lắc lại trong 4728–4753, chạm cả hai biên nhiều lần — đúng nghĩa cân bằng (THEORY §2.3), khác hẳn bài #13/#18 nơi Phase B chứa cả một chân xu hướng.
-- Tỷ lệ phase đúng luật: B 277 nến (dài nhất, L9) · **C 14 nến (ngắn nhất, L8)** · A 30 · D 25. Đây là bài duy nhất trong lô có tỷ lệ phase khớp cả L8 và L9.
-- Phase C gán ngược (case khó): LPSY[C] 4746.4 ngay trước cú sụp, đúng nhịp hồi cuối — kiểu điểm giảng viên gọi "LPSY[C] tiềm năng" (Ca #3 nguồn 4.pdf). Và quan trọng: máy **không** gọi cú vượt biên trên 4757.7 ở Phase B là UTAD — tránh được đúng lỗi kinh điển #1 của 4.pdf.
-- SOW neo đúng cây phá: VSA 6.12x, đóng cửa dưới biên phụ dưới. Lỗi B của v5 đã vá.
-- Tên range (L4): BCLX + phá xuống = Phân phối. Khớp.
-- Chỉ số Phase B: bias +0 (test cả hai biên) — đúng như hình; SOT hai phía "chớm" với volume 0.91 / 0.32 — đo đúng, chưa kết luận quá.
+- Điều kiện mở range (L1): MOVE tăng 38.0 giá / 23 nến / hiệu suất 0.86 — chân move rõ nhất cả lô, climax đúng là đỉnh của cửa sổ.
+- Phase A đủ 3 lần đổi hướng và kết thúc đúng tại ST[A]; AR @4735.0 VSA 4.17× thân 1.00 — một cú bật ngược thật, không phải râu nhiễu.
+- **Tỉ lệ phase đúng lý thuyết:** A 30 · B 277 (dài nhất, L9) · **C 14 (ngắn nhất, L8)** · D 25 · E 7. Đây là bài duy nhất trong lô đạt cả L8 lẫn L9.
+- Phase C gán ngược cho ra `LPSY[C] 13:14 @4746.4` — nằm trong range, đúng **nửa trên**, ngay trước SOW; đúng cách xử lý "case khó" của L8, và tách bạch được LPSY[C] với LPSY[D] (tránh đúng lỗi Ca #3 nguồn 4.pdf).
+- SOW @4727.1 VSA 6.12× đóng cửa vượt **cả biên chính lẫn biên phụ** dưới — đúng yêu cầu L3 "SOS/SOW mạnh phải bứt qua biên phụ".
+- Tên range: BCLX origin + phá xuống = Phân phối, khớp L4.
+- Chú thích nỗ lực/kết quả đúng dấu er (0.25 → "nhịp HIỆU QUẢ") — vá v7 #1 tốt.

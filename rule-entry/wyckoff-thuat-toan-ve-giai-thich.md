@@ -626,13 +626,13 @@ dxFeed chỉ xuất tới 27/7; file footprint export có tới 31/7 nhưng là 
 
 Toàn lịch sử 11/2025 → 27/7/2026 (103.857 nến M1):
 
-| | v2 | v3 (+MOVE, +ST[A]) | v4 (+4 pattern, biên phụ, CBR) | v5 (vòng chấm chart) | **v6 (vá 9 lỗi + SIDEWAYS)** |
-|---|---|---|---|---|---|
-| Range **được mở** | 120 | 41 | 66 | 52 | **53** |
-| Range **được vẽ** | 3 | 1 | 49 | 47 | **53** |
-| Range **bị bỏ** | 117 | 40 | 17 | 5 | **0** |
-| Trong đó **tới Phase E** | — | 1 | 20 | 37 | *(chưa tách riêng, xem ghi chú)* |
-| **Điểm chấm trung vị / trung bình** | — | — | 3/10 · 3.41 | 3/10 · 3.57 | **4/10 · 4.19** |
+| | v2 | v3 (+MOVE, +ST[A]) | v4 (+4 pattern, biên phụ, CBR) | v5 (vòng chấm chart) | v6 (vá 9 lỗi + SIDEWAYS) | **v7 (vá 6 lỗi lặp v6)** |
+|---|---|---|---|---|---|---|
+| Range **được mở** | 120 | 41 | 66 | 52 | 53 | **69** |
+| Range **được vẽ** | 3 | 1 | 49 | 47 | 53 | **55** |
+| Range **bị bỏ** | 117 | 40 | 17 | 5 | 0 | **14** |
+| Trong đó **tới Phase E** | — | 1 | 20 | 37 | *(chưa tách riêng)* | *(chưa tách riêng)* |
+| **Điểm chấm trung vị / trung bình** | — | — | 3/10 · 3.41 | 3/10 · 3.57 | 4/10 · 4.19 | **3/10 · 3.31** |
 
 Bảng v6 đo trên cùng 103.857 nến M1 (11/2025 → 27/7/2026), khớp CHÍNH XÁC Python↔C# sau khi vá lỗi
 `WySpawnSidewaysRange` (đối chiếu bằng harness C# độc lập, xem mục 0c). Số **bị bỏ về 0** không có nghĩa
@@ -658,6 +658,51 @@ viên cho vòng v7):
 
 Các lỗi này KHÔNG được sửa trong phiên này (phạm vi phiên là "implement và test đúng plan v6" đã chốt),
 để lại làm plan v7 nếu cần.
+
+### 13.1b Vòng v7 — vá 6 lỗi lặp lại, ĐIỂM GIẢM (2026-08-10)
+
+Đã sửa cả 6 lỗi liệt kê trên (đổi diễn giải effort/result theo dấu er thật, tăng `STA_MIN_AR_FRAC`
+0.2→0.4, nới cửa sổ gán ngược Phase C 0.5×→0.8×len(B), kẹp nhãn cụm climax vào `climax_anchor_i` cố
+định, `_demote_shock()` quét lại nến VSA cao nhất, đổi `tol`→`fail_tol` (30 tick) cho outside/timed-out
+trong B_brk). Render lại full lịch sử: **69 ứng viên mở, 55 vẽ, 14 bị bỏ** (v6: 53/53/0 — ST[A] chặt
+hơn loại thêm nhiều ca, đánh đổi có chủ đích).
+
+Chấm lại n=55 (10 giảng viên chấm song song, chia lô 5-6 range/giảng viên): **trung vị 3/10, trung
+bình 3.31** — phân bố `1×5 · 2×18 · 3×10 · 4×7 · 5×9 · 6×4 · 7×2`. **GIẢM so với v6** (trung vị 4,
+TB 4.19), đi NGƯỢC mục tiêu ("trung vị ≥6/10"). Đối chiếu 6 lỗi:
+
+- **Chú thích effort/result: SỬA ĐÚNG, gần như mọi lô xác nhận hết hard-code.** Một lô (#01-06) phát
+  hiện lỗi khác: `effort` (VSA, thang 0.2-5) và `result` (biên độ/ATR, thang 5-35) không cùng đơn vị
+  nên er hầu như luôn <1 → nhãn mới lại thiên lệch một chiều theo cách khác.
+- **ST[A] 0.2→0.4: KHÔNG giải quyết được vấn đề, gần như mọi lô đều bắt lại.** Ngưỡng đo "hồi được
+  bao nhiêu % từ AR", trong khi lỗi thật là "còn cách climax bao xa" — hai đại lượng khác nhau. Nhiều
+  ca ST[A] đo đúng 0.40-0.57 (vừa lọt ngưỡng) nhưng vẫn nằm giữa range (40-60% chiều cao).
+- **Phase C 0.5×→0.8×len(B): đổi bệnh, không khỏi.** Vẫn thiếu Phase C ở nhiều ca (nút thắt là ràng
+  buộc "pivot phải đúng nửa range", không phải độ dài cửa sổ) VÀ đẻ thêm ca Phase C phình dài hơn cả
+  Phase B/D (vi phạm L8 theo chiều ngược). Cần trần tuyệt đối `len(C) ≤ min(len(B), len(D))`.
+- **Nhãn cụm climax kẹp theo climax_anchor_i: VẪN LỌT Ở PHẦN LỚN LÔ.** Rất nhiều range vẫn có nhãn
+  SC/BCLX nằm TRƯỚC nến mở range (window hiện tại chỉ kẹp *sau*, không chặn *trước*) và/hoặc rơi vào
+  nến sai màu/sai tính chất climax. Kẹp một phía là chưa đủ.
+- **mSOS/mSOW quét lại nến VSA cao nhất: ĂN KHÔNG ĐỀU.** Đúng ở một số ca, nhưng nhiều lô cho thấy
+  nhánh hạ cấp từ `pending_shock` không đi qua bước quét lại này, hoặc quét đúng cây mạnh nhất nhưng
+  gán nhãn *minor* cho nó rồi lại đặt SOS/SOW thật vào cây yếu hơn.
+- **Biên phụ "tự nới rồi tự vượt" (30 tick): CÒN NGUYÊN Ở NHIỀU CA NẶNG.** Vài lô xác nhận hết (ca
+  đơn giản), nhưng nhiều ca hàng trăm nến đóng cửa ngoài biên chính vẫn không được công nhận là SOS/SOW
+  vì so sánh dùng biên PHỤ (đã bị chính cú phá đó nới ra) — 30 tick không chạm gốc rễ (vấn đề THỨ TỰ:
+  biên bị nới TRƯỚC khi kết luận, không phải ĐỘ LỚN ngưỡng). Ca "SOS cách mSOS đúng 1 tick" tái xuất
+  nguyên vẹn ở bài #45.
+
+Lỗi hệ thống MỚI nổi lên qua vòng này (chưa có ở danh sách v6, ứng viên ưu tiên cho v8):
+- **SIDEWAYS cắt vụn cấu trúc thật** — nhiều range cha/con lẽ ra là MỘT cấu trúc bị tách làm mất tên.
+- **Guard tỷ lệ biên phụ/chính 4.0× quá lỏng** với range hẹp (biên chính vài giá vẫn lách qua 3.8×).
+- **AR/climax volume thấp (VSA <0.5×) không gắn cờ "(yếu)"** dù biến `ar_vsa`/`climax_vsa` đã đo sẵn.
+- **Không có kiểm tra hậu nghiệm tỉ lệ phase** — L8/L9 vẫn chỉ là mô tả, chưa thành điều kiện chặn.
+- **Range con sinh từ SIDEWAYS kế thừa sai index Phase A của range cha** (một ca: Phase A âm nến).
+
+Kết luận: vòng v7 sửa đúng CHỖ CODE mà v6 chỉ ra, nhưng 4/6 bản vá chọn SAI ĐẠI LƯỢNG hoặc chưa chạm
+gốc rễ (ST[A] đo hồi-từ-AR thay vì khoảng-cách-tới-climax; Phase C đổi hệ số cửa sổ thay vì sửa ràng
+buộc nửa-range; nhãn climax chỉ kẹp một phía; biên phụ vẫn nới trước-rồi-so-sau). Không nên chạy thêm
+vòng chấm nữa trên cùng các bản vá này — cần sửa lại đúng gốc rễ 4 điểm trên rồi mới đo lại.
 
 v5 vẽ ít hơn v4 một chút (47 so với 49) nhưng vẽ **đúng hơn**: điểm chấm trung vị của v4 là 3/10 trên
 49 bài (10 agent giảng viên chấm hết, xem mục 0b); tỉ lệ tới Phase E tăng từ 20/49 (41%) lên **37/47

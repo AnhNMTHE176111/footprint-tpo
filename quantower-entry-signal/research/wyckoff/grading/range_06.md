@@ -4,9 +4,9 @@
 - Khung: M1 (GCQ26, gio UTC). Range: **2026-04-02 14:43:00 -> 2026-04-02 20:59:00** = 223 nen.
 - Climax mo range: **BCLX (move TANG bi chan)** tai gia 4762.2, VSA=0.24x, bien do nen=3.7 gia.
 - MOVE truoc climax: dai 95.5 gia, 78 nen, hieu suat huong 0.36.
-- Bien CHINH (net lien, climax+AR): 4720.0 - 4762.2 = 42.2 gia (0.89% gia).
+- Bien CHINH (net lien, climax+AR): 4704.8 - 4762.2 = 57.4 gia (1.21% gia).
 - Bien PHU (net dut, cuc tri xa nhat): 4704.8 - 4762.2 = 57.4 gia.
-- Ty le bien phu/bien chinh: **1.36x** (guard huy range khi > 4.0x).
+- Ty le bien phu/bien chinh: **1.00x** (guard huy range khi > 4.0x).
 - Nhan climax mang VSA=6.61x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
 - Trang thai range: **completed**.
 
@@ -20,17 +20,16 @@
 
 | Phase | Bat dau | Ket thuc | So nen |
 |---|---|---|---|
-| A | 2026-04-02 14:43:00 | 2026-04-02 15:28:00 | 45 |
-| B | 2026-04-02 15:29:00 | 2026-04-02 20:59:00 | 179 |
+| A | 2026-04-02 14:43:00 | 2026-04-02 19:08:00 | 180 |
+| B | 2026-04-02 19:17:00 | 2026-04-02 20:59:00 | 44 |
 
 ## Su kien da gan nhan
 
 | Nhan | Thoi diem | Gia | Phase | Trang thai | VSA nen do | Than/bien do |
 |---|---|---|---|---|---|---|
 | BCLX | 2026-04-02 14:36:00 | 4756.0 | A | - | 6.61x | 0.05 |
-| AR | 2026-04-02 15:25:00 | 4720.0 | A | - | 1.09x | 1.00 |
-| ST[A] | 2026-04-02 15:28:00 | 4737.6 | A | - | 0.45x | 0.00 |
-| mSOW | 2026-04-02 16:20:00 | 4704.8 | B | - | 1.20x | 0.73 |
+| AR | 2026-04-02 16:20:00 | 4704.8 | A | - | 1.20x | 0.73 |
+| ST[A] | 2026-04-02 19:08:00 | 4742.1 | A | - | 2.42x | 1.00 |
 
 ## 12 nen quanh climax (kiem dieu kien mo range)
 

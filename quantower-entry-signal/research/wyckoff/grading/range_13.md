@@ -1,14 +1,14 @@
-# Bai lam #13 — Tích lũy (ACC)
+# Bai lam #13 — Chưa rõ (SC) (ACC?)
 
 - Anh: `range_13.png`
-- Khung: M1 (GCQ26, gio UTC). Range: **2026-05-04 15:22:00 -> 2026-05-05 15:41:00** = 660 nen.
+- Khung: M1 (GCQ26, gio UTC). Range: **2026-05-04 15:22:00 -> 2026-05-05 08:10:00** = 398 nen.
 - Climax mo range: **SC (move GIAM bi chan)** tai gia 4559.8, VSA=1.51x, bien do nen=4.3 gia.
 - MOVE truoc climax: dai 52.1 gia, 32 nen, hieu suat huong 0.70.
 - Bien CHINH (net lien, climax+AR): 4559.8 - 4588.3 = 28.5 gia (0.62% gia).
-- Bien PHU (net dut, cuc tri xa nhat): 4545.6 - 4603.8 = 58.2 gia.
-- Ty le bien phu/bien chinh: **2.04x** (guard huy range khi > 4.0x).
+- Bien PHU (net dut, cuc tri xa nhat): 4545.6 - 4596.1 = 50.5 gia.
+- Ty le bien phu/bien chinh: **1.77x** (guard huy range khi > 4.0x).
 - Nhan climax mang VSA=2.70x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
-- Trang thai range: **completed**.
+- Trang thai range: **superseded** (bi thay the boi mot range moi sinh tu cu pha, khong dat ten 4 mau hinh).
 
 ## Ba chi so Phase B (v6 — CHI DO/HIEN THI, khong dung de loc)
 
@@ -22,9 +22,9 @@
 | Phase | Bat dau | Ket thuc | So nen |
 |---|---|---|---|
 | A | 2026-05-04 15:22:00 | 2026-05-04 15:51:00 | 27 |
-| B | 2026-05-04 15:52:00 | 2026-05-05 12:09:00 | 488 |
-| D | 2026-05-05 12:10:00 | 2026-05-05 12:57:00 | 25 |
-| E | 2026-05-05 12:58:00 | 2026-05-05 15:41:00 | 121 |
+| B | 2026-05-04 15:52:00 | 2026-05-05 04:54:00 | 287 |
+| C | 2026-05-05 04:55:00 | 2026-05-05 07:08:00 | 59 |
+| D | 2026-05-05 07:13:00 | 2026-05-05 08:10:00 | 26 |
 
 ## Su kien da gan nhan
 
@@ -34,9 +34,10 @@
 | AR | 2026-05-04 15:38:00 | 4588.3 | A | - | 2.38x | 0.37 |
 | ST[A] | 2026-05-04 15:51:00 | 4556.0 | A | - | 2.75x | 0.36 |
 | mSOW | 2026-05-04 20:20:00 | 4556.5 | B | - | 2.86x | 1.00 |
-| mSOS | 2026-05-05 09:08:00 | 4603.8 | B | - | 0.51x | 0.00 |
-| SOS | 2026-05-05 12:10:00 | 4607.1 | D | - | 4.36x | 0.85 |
-| LPS[D] | 2026-05-05 12:11:00 | 4603.5 | D | - | 1.40x | 0.86 |
+| LPS[C] | 2026-05-05 04:55:00 | 4575.3 | C | - | 0.59x | 0.00 |
+| mSOS | 2026-05-05 06:01:00 | 4596.1 | B | - | 4.00x | 0.91 |
+| SOS | 2026-05-05 07:13:00 | 4599.6 | D | - | 4.31x | 1.00 |
+| LPS[D] | 2026-05-05 07:56:00 | 4588.2 | D | - | 0.47x | 1.00 |
 
 ## 12 nen quanh climax (kiem dieu kien mo range)
 

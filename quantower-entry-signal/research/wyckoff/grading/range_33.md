@@ -1,55 +1,56 @@
-# Bai lam #33 — Chưa rõ (SC) (ACC?)
+# Bai lam #33 — Tái phân phối (RE-DIST)
 
 - Anh: `range_33.png`
-- Khung: M1 (GCQ26, gio UTC). Range: **2026-06-15 12:18:00 -> 2026-06-15 20:46:00** = 508 nen.
-- Climax mo range: **SC (move GIAM bi chan)** tai gia 4345.3, VSA=1.68x, bien do nen=3.4 gia.
-- MOVE truoc climax: dai 20.2 gia, 36 nen, hieu suat huong 0.51.
-- Bien CHINH (net lien, climax+AR): 4345.3 - 4391.5 = 46.2 gia (1.06% gia).
-- Bien PHU (net dut, cuc tri xa nhat): 4339.1 - 4391.5 = 52.4 gia.
-- Ty le bien phu/bien chinh: **1.13x** (guard huy range khi > 4.0x).
-- Nhan climax mang VSA=3.20x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
-- Trang thai range: **superseded** (bi thay the boi mot range moi sinh tu cu pha, khong dat ten 4 mau hinh).
+- Khung: M1 (GCQ26, gio UTC). Range: **2026-06-08 01:30:00 -> 2026-06-08 05:59:00** = 269 nen.
+- Climax mo range: **SC (move GIAM bi chan)** tai gia 4323.6, VSA=3.55x, bien do nen=14.9 gia.
+- MOVE truoc climax: dai 43.3 gia, 62 nen, hieu suat huong 0.35.
+- Bien CHINH (net lien, climax+AR): 4323.6 - 4354.8 = 31.2 gia (0.72% gia).
+- Bien PHU (net dut, cuc tri xa nhat): 4323.6 - 4354.8 = 31.2 gia.
+- Ty le bien phu/bien chinh: **1.00x** (guard huy range khi > 4.0x).
+- Nhan climax mang VSA=3.55x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
+- Trang thai range: **completed**.
 
 ## Ba chi so Phase B (v6 — CHI DO/HIEN THI, khong dung de loc)
 
-- **Bias bat doi xung test bien**: `+0` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
-- **SOT phia TREN**: trang thai=`chớm`, n=1 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
-- **SOT phia DUOI**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.62, ty le volume nhip cuoi/dau=1.13 (HAP THU (volume >= nhip dau, canh giu vung)).
-- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 63229..63267 (2026-06-15 20:00:00), effort(VSA TB)=1.21x, result(bien do/ATR)=1.15, ty le er=1.05 — vung hap thu NGHI VAN (volume nhieu, ket qua it).
+- **Bias bat doi xung test bien**: `-1` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
+- **SOT phia TREN**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.38, ty le volume nhip cuoi/dau=0.77 (can kiet).
+- **SOT phia DUOI**: trang thai=`chớm`, n=1 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
+- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 55406..55419 (2026-06-08 04:07:00), effort(VSA TB)=1.17x, result(bien do/ATR)=1.85, ty le er=0.63 — nhip HIEU QUA (ket qua nhieu hon no luc, khong phai hap thu).
 
 ## Phase (do dai tinh bang nen M1)
 
 | Phase | Bat dau | Ket thuc | So nen |
 |---|---|---|---|
-| A | 2026-06-15 12:18:00 | 2026-06-15 15:02:00 | 165 |
-| B | 2026-06-15 15:03:00 | 2026-06-15 20:20:00 | 318 |
-| D | 2026-06-15 20:21:00 | 2026-06-15 20:46:00 | 26 |
+| A | 2026-06-08 01:30:00 | 2026-06-08 02:20:00 | 51 |
+| B | 2026-06-08 02:21:00 | 2026-06-08 05:21:00 | 181 |
+| C | 2026-06-08 05:22:00 | 2026-06-08 05:33:00 | 12 |
+| D | 2026-06-08 05:34:00 | 2026-06-08 05:58:00 | 25 |
+| E | 2026-06-08 05:59:00 | 2026-06-08 05:59:00 | 1 |
 
 ## Su kien da gan nhan
 
 | Nhan | Thoi diem | Gia | Phase | Trang thai | VSA nen do | Than/bien do |
 |---|---|---|---|---|---|---|
-| SC | 2026-06-15 12:20:00 | 4345.6 | A | - | 3.20x | 0.24 |
-| AR | 2026-06-15 14:06:00 | 4391.5 | A | - | 1.81x | 0.54 |
-| ST[A] | 2026-06-15 15:02:00 | 4373.0 | A | - | 1.25x | 0.33 |
-| ST[B] | 2026-06-15 17:52:00 | 4341.7 | B | - | 0.60x | 0.52 |
-| mSOW | 2026-06-15 19:22:00 | 4342.4 | B | - | 7.87x | 0.43 |
-| SOW | 2026-06-15 20:21:00 | 4335.2 | D | - | 5.81x | 0.83 |
-| LPSY[D] | 2026-06-15 20:28:00 | 4336.0 | D | - | 0.30x | 0.36 |
+| SC | 2026-06-08 01:30:00 | 4323.6 | A | - | 3.55x | 0.85 |
+| AR | 2026-06-08 02:00:00 | 4354.8 | A | - | 2.61x | 0.61 |
+| ST[A] | 2026-06-08 02:20:00 | 4335.0 | A | - | 0.95x | 0.48 |
+| LPSY[C] | 2026-06-08 05:22:00 | 4339.0 | C | - | 1.29x | 0.12 |
+| SOW | 2026-06-08 05:34:00 | 4311.2 | D | - | 7.36x | 0.93 |
+| LPSY[D] | 2026-06-08 05:40:00 | 4317.6 | D | - | 0.79x | 0.19 |
 
 ## 12 nen quanh climax (kiem dieu kien mo range)
 
 | # | Thoi diem | O | H | L | C | Volume | VSA | than/bien |
 |---|---|---|---|---|---|---|---|---|
-| -6 | 2026-06-15 12:12:00 | 4358.2 | 4358.2 | 4356.3 | 4357.5 | 83 | 1.41x | 0.37 |
-| -5 | 2026-06-15 12:13:00 | 4357.1 | 4357.4 | 4355.4 | 4355.4 | 101 | 1.68x | 0.85 |
-| -4 | 2026-06-15 12:14:00 | 4355.4 | 4355.7 | 4351.6 | 4352.2 | 194 | 2.88x | 0.78 |
-| -3 | 2026-06-15 12:15:00 | 4352.3 | 4354.2 | 4351.1 | 4351.8 | 156 | 2.23x | 0.16 |
-| -2 | 2026-06-15 12:16:00 | 4351.5 | 4351.9 | 4348.7 | 4349.8 | 187 | 2.42x | 0.53 |
-| -1 | 2026-06-15 12:17:00 | 4349.6 | 4349.8 | 4345.5 | 4345.5 | 282 | 3.14x | 0.95 |
-| +0 **<- climax** | 2026-06-15 12:18:00 | 4345.7 | 4348.7 | 4345.3 | 4348.4 | 162 | 1.68x | 0.79 |
-| +1 | 2026-06-15 12:19:00 | 4348.3 | 4348.6 | 4346.8 | 4348.1 | 142 | 1.38x | 0.11 |
-| +2 | 2026-06-15 12:20:00 | 4348.0 | 4348.9 | 4345.6 | 4348.8 | 376 | 3.20x | 0.24 |
-| +3 | 2026-06-15 12:21:00 | 4349.1 | 4350.7 | 4348.6 | 4349.6 | 129 | 1.07x | 0.24 |
-| +4 | 2026-06-15 12:22:00 | 4349.4 | 4351.8 | 4348.9 | 4351.6 | 117 | 0.94x | 0.76 |
-| +5 | 2026-06-15 12:23:00 | 4351.6 | 4352.8 | 4351.1 | 4352.1 | 84 | 0.66x | 0.29 |
+| -6 | 2026-06-08 01:24:00 | 4349.0 | 4349.0 | 4344.5 | 4345.5 | 90 | 0.61x | 0.78 |
+| -5 | 2026-06-08 01:25:00 | 4345.4 | 4346.5 | 4340.8 | 4341.1 | 170 | 1.16x | 0.75 |
+| -4 | 2026-06-08 01:26:00 | 4341.2 | 4343.2 | 4340.7 | 4342.3 | 64 | 0.44x | 0.44 |
+| -3 | 2026-06-08 01:27:00 | 4342.5 | 4346.7 | 4342.5 | 4343.3 | 69 | 0.50x | 0.19 |
+| -2 | 2026-06-08 01:28:00 | 4343.3 | 4343.6 | 4334.9 | 4338.8 | 159 | 1.14x | 0.52 |
+| -1 | 2026-06-08 01:29:00 | 4339.1 | 4339.1 | 4337.0 | 4338.3 | 143 | 1.01x | 0.38 |
+| +0 **<- climax** | 2026-06-08 01:30:00 | 4338.5 | 4338.5 | 4323.6 | 4325.8 | 584 | 3.55x | 0.85 |
+| +1 | 2026-06-08 01:31:00 | 4326.2 | 4341.0 | 4324.5 | 4335.0 | 429 | 2.33x | 0.53 |
+| +2 | 2026-06-08 01:32:00 | 4335.1 | 4340.7 | 4334.7 | 4340.5 | 174 | 0.93x | 0.90 |
+| +3 | 2026-06-08 01:33:00 | 4339.8 | 4341.4 | 4333.7 | 4335.2 | 153 | 0.80x | 0.60 |
+| +4 | 2026-06-08 01:34:00 | 4335.0 | 4340.3 | 4334.4 | 4339.4 | 109 | 0.59x | 0.75 |
+| +5 | 2026-06-08 01:35:00 | 4338.4 | 4340.1 | 4335.5 | 4336.9 | 104 | 0.58x | 0.33 |

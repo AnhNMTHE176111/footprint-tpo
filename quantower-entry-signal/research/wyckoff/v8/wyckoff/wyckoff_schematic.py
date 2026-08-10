@@ -139,13 +139,15 @@ STA_MAX_OVERSHOOT = 1.0    # ST[A] vuot qua muc climax hon x lan chieu cao range
 # DA DO tren du lieu that (103,857 nen M1 GCQ26): mult=1.0/frac=0.4 giet 12/52 range dung; ha xuong
 # 0.5/0.2 chi mat 3/52 ma van siet duoc cac ca AR/ST[A] roi vao nhip hoi 4 nen tren VSA 0.25x. ---
 AR_RETRACE_MULT = 0.5      # AR phai VUOT QUA x% nhip hoi lon nhat DA XAY RA trong long move truoc do
-# v7 muc 13.1 (cham_01 #3): 0.2 la san hoi TU AR, tuc ST[A] duoc chap nhan ngay khi moi hoi 20% ve
-# phia climax — giang vien bat duoc ca roi o 40-70% CHIEU CAO RANGE (tuc chi hoi <=60% tu AR), noi
-# ST[A] "treo lo lung giua khung" thay vi mot cu TEST that su cham lai vung climax. Doi sang do KHOANG
-# CACH TOI climax (khong phai khoang hoi tu AR): ST[A] phai hoi duoc >= 65% khoang AR<->climax, tuc
-# chi con duoc phep dung lai trong 35% gan climax nhat. Chua quet tham so, chon theo de xuat cham_01
-# ("hoi duoc >=70-80%"), lay can duoi 0.65 de tranh loai oan qua nhieu ca bien.
-STA_MIN_AR_FRAC = 0.4      # ST[A] phai hoi toi thieu x% khoang AR<->climax (ngoai san PIVOT_MIN_ATR)
+# v7 muc 13.1b (10 lo cham lai deu bat lai): ban v7 dat 0.4 van la SAN HOI TU AR — tuc ST[A] duoc chap
+# nhan ngay khi con CACH climax toi 60% span, giai thich dung nguyen nhan tai sao van thay ST[A] "treo
+# giua range" o 40-60% chieu cao qua het 10 lo cham. STA_MIN_AR_FRAC va "khoang cach toi climax" la
+# HAI CACH DOC CUNG MOT CONG THUC (distance_to_climax = span - swing = (1-frac)*span) nen tang frac
+# van dung huong, chi la 0.4 chua tang DU: da quet 0.45/0.5/0.55/0.6/0.7 tren toan bo lich su thi
+# 0.55 la diem can bang — con lai 49/66 ung vien (74%), 0.7 (de xuat goc cua cham_01) chi con 41/65
+# (63%), loai oan qua nhieu. Chon 0.55 (con cach climax <=45% span) lam gia tri lam viec, se do lai
+# sau vong cham v8.
+STA_MIN_AR_FRAC = 0.55     # ST[A] phai hoi toi thieu x% khoang AR<->climax (ngoai san PIVOT_MIN_ATR)
 # muc 1.2(c): bien phu / bien chinh > nguong nay -> huy range. DA DO (sau khi fix 1.2b het tu noi):
 # median 1.53x, p90 3.27x, max that 6.45x (chi 2-3 ca) -> 1.8 (chon truoc khi do) qua thap, cat oan
 # ca median; 4.0 giu duoc gan het, chi cat cac ca ngoai le thuc su.
@@ -490,20 +492,24 @@ def _retro_phase_c(B, r, sos_i, up):
     v7 muc 13.1: cua so cu = MOT NUA (// 2) co gan ve 0 khi Phase B ngan (vd B=10n -> win=5n) khien
     Phase C bi thieu oan o rat nhieu ca — trong khi rang buoc THAT can giu chi la "C ngan hon B"
     (L8), khong phai "C ngan hon MOT NUA B". Doi sang 0.8x do dai Phase B (van < B nen khong the
-    vi pham L8, nhung it bo sot pivot xa hon)."""
+    vi pham L8, nhung it bo sot pivot xa hon).
+    v7 muc 13.1b: doi 0.5x->0.8x KHONG cuu duoc phan lon ca thieu Phase C — ca 10 lo cham lai deu chi
+    ra nut that THAT la rang buoc "dung NUA range" (b) o tren, khong phai do dai cua so. Vi khi cau
+    truc doc (climax roi ngay xuong bien doi dien, hoac AR/ST[A] da chiem het mot nua) thi KHONG BAO
+    GIO co pivot nao roi dung vao nua "quy dinh" — bo ham _right_half, chi giu (a) _in_range (pivot
+    phai o GAN bien dang bi kiem, khong can o dung phia hinh hoc cua trung diem range). Rang buoc nay
+    cung giup Phase C ngan lai (nhieu pivot GAN sos_i hon truoc day bi loai oan vi sai nua se duoc
+    xet)."""
     b_start = r.phases[-1][1] if r.phases else r.start_i
     win = min(RETRO_C_LOOKBACK, max(3, int((sos_i - b_start) * 0.8)))
     lo_i = max(b_start + 1, sos_i - win)
     if sos_i - lo_i < 3:
         return
     tol = ST_TOL_TICKS * TICK
-    mid = (r.solid_low + r.solid_high) / 2.0
     def _in_range(k):
         px = B[k]['lo'] if up else B[k]['hi']
         return r.solid_low - tol <= px <= r.solid_high + tol
-    def _right_half(k):
-        return B[k]['lo'] <= mid if up else B[k]['hi'] >= mid
-    cands = [k for k in range(lo_i, sos_i) if _in_range(k) and _right_half(k)]
+    cands = [k for k in range(lo_i, sos_i) if _in_range(k)]
     if not cands:
         return
     piv = _last_pivot(B, lo_i, sos_i, up)
@@ -916,11 +922,16 @@ def detect(B):
             # (climax_price, dung de dung bien chinh/phu) doi theo cuc tri gia nhu cu; rieng VI TRI
             # NHAN (climax_ev) chi doi khi gap cay co VSA CAO HON nhan hien tai — tranh nhan roi vao
             # cay VSA 0.2x-1.5x trong khi cay 4x-14x nam ngay canh (day la loi nang nhat vong cham v5).
-            # v7 muc 13.1: cua so MO RONG cum (moved) van truot theo r.start_i nhu cu (cho phep cum
-            # keo dai qua nhieu dot song gia), nhung cua so CHON NHAN gio KEP THEO climax_anchor_i CO
-            # DINH — truoc day dung chung mot climax_i truot nen sau khi cum troi ve phia truoc, mot
-            # nhan da chon tu truoc bi bo lai PHIA SAU r.start_i moi va roi ra ngoai khung ve (bai #01:
-            # nhan SC 13:42 bi bo lai sau khi start_i troi toi 15:22).
+            # v7 muc 13.1b: da thu DUNG CHUNG mot cua so co dinh climax_anchor_i cho ca gia va nhan
+            # (bo han "cum keo dai qua nhieu dot song gia") de het han "nhan nam truoc nen mo range" —
+            # NHUNG do lai tren toan bo lich su thi so ung vien bi bo vi "climax khong chan duoc move"
+            # tang manh (12+6=18 so voi 4+7=11 truoc do), vi nhieu climax THAT hinh thanh qua hon 8
+            # nen (nhieu dot song) bi cham vao guard som hon truoc khi climax_price kip noi theo. Doi
+            # nay LAM XAU hon vi mat nhieu ung vien dung de doi lay sua mot loi trinh bay — REVERT ve
+            # lai thiet ke tach hai cua so (gia truot tu do, nhan kep co dinh) cua v7. Van con "nhan
+            # nam truoc nen mo range 2-24 nen" o nhieu ca — CHUA GIAI DUOC trong vong nay, de lai v8
+            # voi huong khac: tach RIENG "moc hien thi/Phase A" khoi "cuc tri gia dang theo doi", thay
+            # vi kep chung mot cua so voi nhan.
             if (i - climax_i) <= CLIMAX_EXT_BARS:
                 moved = False
                 if r.origin == 'DOWN' and b['lo'] < r.climax_price:
@@ -1070,23 +1081,28 @@ def detect(B):
             out_edge = max(k['out0'], edge) if up_side else min(k['out0'], edge)
             k['vmax'] = max(k['vmax'], b['vratio'])
             k['n_bars'] += 1
-            # v7 muc 13.1: "bien phu tu noi roi tu vuot" (cham_44 #4, cham_24 #3) — khi k['out0'] da bi
-            # mot cu tham do THAT BAI truoc do noi rong (r.high/r.low), dung dung `tol` (10 tick) de
-            # xet "outside"/timed-out khien cu pha SAU chi can vuot chinh cai bien vua noi 1 tick la
-            # duoc tinh la pha that. Dung `fail_tol` (30 tick, cung san da dung cho `decisive`) cho ca
-            # `outside` de doi hoi mot khoang vuot THAT SU, khong phai nhieu gia do lam tron/tick.
+            # v7 muc 13.1b: doi tol->fail_tol (30 tick) KHONG chua duoc "bien phu tu noi roi tu vuot"
+            # (10 lo cham lai deu con bat, vd bai #41/#43/#44 co hang tram nen dong cua NGOAI bien
+            # chinh ma van khong duoc cong nhan la SOS/SOW) — vi goc re la THU TU: out_edge da bi MOT
+            # CU THAM DO THAT BAI TRUOC DO noi rong (k['out0'] = r.high/r.low tai luc attempt nay bat
+            # dau, ke thua nguyen von tu attempt truoc), roi moi so voi no; doi do lon nguong khong
+            # chua duoc chuyen dong "bien chay theo gia". L5 dinh nghia pha THAT bang dong cua but qua
+            # BIEN CHINH (solid, CO DINH sau Phase A) va giu duoc — dung `edge` (khong phai out_edge)
+            # cho quyet dinh decisive/outside; out_edge (theo k['out0']) chi con dung cho LOI G
+            # (exceeded_outer, phan loai Spring/UTAD manh) va cho _fire_break/VOID phia duoi, khong
+            # con quyet dinh mot cu pha co duoc CONG NHAN la pha hay khong.
             if up_side:
                 if b['hi'] > k['ext']:
                     k['ext'], k['ext_i'] = b['hi'], i
                 back_in = b['c'] < edge - 1e-9
-                outside = b['c'] > out_edge + fail_tol
-                decisive = b['c'] > out_edge + fail_tol and b['brat'] >= SOS_BODY_MIN
+                outside = b['c'] > edge + fail_tol
+                decisive = b['c'] > edge + fail_tol and b['brat'] >= SOS_BODY_MIN
             else:
                 if b['lo'] < k['ext']:
                     k['ext'], k['ext_i'] = b['lo'], i
                 back_in = b['c'] > edge + 1e-9
-                outside = b['c'] < out_edge - fail_tol
-                decisive = b['c'] < out_edge - fail_tol and b['brat'] >= SOS_BODY_MIN
+                outside = b['c'] < edge - fail_tol
+                decisive = b['c'] < edge - fail_tol and b['brat'] >= SOS_BODY_MIN
             if outside:
                 k['n_out'] += 1
             bars_out = i - k['start_i']

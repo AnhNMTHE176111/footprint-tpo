@@ -704,6 +704,35 @@ gốc rễ (ST[A] đo hồi-từ-AR thay vì khoảng-cách-tới-climax; Phase 
 buộc nửa-range; nhãn climax chỉ kẹp một phía; biên phụ vẫn nới trước-rồi-so-sau). Không nên chạy thêm
 vòng chấm nữa trên cùng các bản vá này — cần sửa lại đúng gốc rễ 4 điểm trên rồi mới đo lại.
 
+### 13.1c Vòng sửa gốc rễ ngay sau 13.1b (chưa chấm lại, 2026-08-10)
+
+Sửa tiếp 3/4 điểm gốc rễ (chưa động tới nhãn climax — xem lý do bên dưới), KHÔNG chỉ đổi hệ số:
+
+- **ST[A]:** `STA_MIN_AR_FRAC` không phải sai công thức (retrace-từ-AR và khoảng-cách-tới-climax là
+  HAI CÁCH ĐỌC CÙNG MỘT CÔNG THỨC), chỉ là 0.4 chưa tăng đủ. Đã quét 0.45/0.5/0.55/0.6/0.7 trên toàn
+  lịch sử, chọn **0.55** (điểm cân bằng: còn 74% ứng viên, so với 63% nếu theo đúng đề xuất gốc 0.7
+  của cham_01 — loại oan quá nhiều).
+- **Phase C:** bỏ hẳn ràng buộc "pivot phải đúng nửa range" (`_right_half`) — đây mới là nút thắt
+  THẬT theo cả 10 lô chấm lại, không phải độ dài cửa sổ. Chỉ giữ ràng buộc "pivot phải gần biên đang
+  bị kiểm" (`_in_range`). Đo lại: 50/59 range có Phase C (trước ~45/55), chỉ 8/50 (16%) còn dài hơn
+  Phase B (giảm mạnh so với phổ biến trước đó).
+- **Biên phụ tự nới rồi tự vượt:** sửa đúng gốc rễ THỨ TỰ — quyết định decisive/outside/timed-out
+  trong `B_brk` đổi từ so với `out_edge` (biên PHỤ, có thể đã bị chính một cú thăm dò thất bại trước
+  đó nới rộng) sang so với `edge` (biên CHÍNH, cố định, đúng L3) + `fail_tol` 30 tick. `out_edge`
+  (theo `k['out0']`) giờ chỉ còn dùng cho LOI G (exceeded_outer, phân loại Spring/UTAD) và nhánh
+  VOID/`_fire_break`, không còn quyết định một cú phá có được công nhận hay không.
+- **Nhãn cụm climax — THỬ rồi PHẢI REVERT.** Đã thử dùng chung một cửa sổ cố định
+  `climax_anchor_i` cho cả mức giá (climax_price/r.start_i) và nhãn (bỏ hẳn "cụm kéo dài qua nhiều
+  đợt sóng giá" của v6) để nhãn không bao giờ lệch xa khỏi mốc mở range. Đo lại: số ứng viên bị bỏ vì
+  "climax không chặn được move" tăng từ 11 lên 18 — nhiều climax THẬT hình thành qua hơn 8 nến (nhiều
+  đợt sóng) bị loại oan. Đổi này lỗ nhiều hơn lãi nên đã **revert về nguyên trạng v7** (hai cửa sổ
+  tách nhau: giá trượt tự do, nhãn kẹp cố định) — nhãn climax nằm trước nến mở range 2-24 nến ở nhiều
+  ca **vẫn CHƯA sửa được** trong vòng này; để lại v8 với hướng khác (tách riêng mốc hiển thị/Phase A
+  khỏi biến theo dõi cực trị giá, thay vì kẹp chung cửa sổ với nhãn).
+
+Render lại: **59 range vẽ, 14 bị bỏ** (73 ứng viên mở). Đã render nhưng **CHƯA chấm lại** — chờ xác
+nhận trước khi tung vòng 10 giảng viên tiếp theo.
+
 v5 vẽ ít hơn v4 một chút (47 so với 49) nhưng vẽ **đúng hơn**: điểm chấm trung vị của v4 là 3/10 trên
 49 bài (10 agent giảng viên chấm hết, xem mục 0b); tỉ lệ tới Phase E tăng từ 20/49 (41%) lên **37/47
 (79%)** — không phải vì "dễ đạt E hơn" mà vì Phase D/E giờ đo bằng cấu trúc thật (lỗi J) nên phần lớn

@@ -1,50 +1,59 @@
 # Bai lam #55 — Chưa rõ (BCLX) (DIST?)
 
 - Anh: `range_55.png`
-- Khung: M1 (GCQ26, gio UTC). Range: **2026-07-27 00:14:00 -> 2026-07-27 15:56:00** = 941 nen.
-- Climax mo range: **BCLX (move TANG bi chan)** tai gia 4119.3, VSA=1.98x, bien do nen=1.8 gia.
-- MOVE truoc climax: dai 13.2 gia, 50 nen, hieu suat huong 0.54.
-- Bien CHINH (net lien, climax+AR): 4093.2 - 4119.3 = 26.1 gia (0.63% gia).
-- Bien PHU (net dut, cuc tri xa nhat): 4067.1 - 4119.3 = 52.2 gia.
-- Ty le bien phu/bien chinh: **2.00x** (guard huy range khi > 4.0x).
-- Nhan climax mang VSA=6.36x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
-- Trang thai range: **active**.
+- Khung: M1 (GCQ26, gio UTC). Range: **2026-07-22 13:33:00 -> 2026-07-22 20:04:00** = 391 nen.
+- Climax mo range: **BCLX (move TANG bi chan)** tai gia 4152.1, VSA=3.89x, bien do nen=5.7 gia.
+- MOVE truoc climax: dai 39.0 gia, 37 nen, hieu suat huong 0.72.
+- Bien CHINH (net lien, climax+AR): 4143.2 - 4152.1 = 8.9 gia (0.21% gia).
+- Bien PHU (net dut, cuc tri xa nhat): 4133.9 - 4168.8 = 34.9 gia.
+- Ty le bien phu/bien chinh: **3.92x** (guard huy range khi > 4.0x).
+- Nhan climax mang VSA=3.89x (cay volume cao nhat trong cum, KHONG can trung voi cuc tri gia).
+- Trang thai range: **completed**.
 
 ## Ba chi so Phase B (v6 — CHI DO/HIEN THI, khong dung de loc)
 
 - **Bias bat doi xung test bien**: `+0` (+1 = cham noi bien tren khong voi noi bien duoi, -1 = nguoc lai, 0 = test CA HAI bien — ca THUONG).
-- **SOT phia TREN**: trang thai=`none`, n=0 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
-- **SOT phia DUOI**: trang thai=`none`, n=0 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
+- **SOT phia TREN**: trang thai=`chớm`, n=2 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.06, ty le volume nhip cuoi/dau=0.53 (can kiet).
+- **SOT phia DUOI**: trang thai=`chớm`, n=1 nhip lien tiep rut ngan, ty le thrust cuoi/dau=0.00, ty le volume nhip cuoi/dau=0.00 (-).
+- **Nhip no luc/ket qua cao nhat** trong Phase B: nen 99619..99645 (2026-07-22 14:32:00), effort(VSA TB)=0.72x, result(bien do/ATR)=0.41, ty le er=1.75 — vung hap thu NGHI VAN (volume nhieu, ket qua it).
 
 ## Phase (do dai tinh bang nen M1)
 
 | Phase | Bat dau | Ket thuc | So nen |
 |---|---|---|---|
-| A | 2026-07-27 00:14:00 | 2026-07-27 00:38:00 | 25 |
-| B | 2026-07-27 00:39:00 | 2026-07-27 15:56:00 | 917 |
+| A | 2026-07-22 13:33:00 | 2026-07-22 13:48:00 | 16 |
+| B | 2026-07-22 13:49:00 | 2026-07-22 18:53:00 | 305 |
+| C | 2026-07-22 18:54:00 | 2026-07-22 19:53:00 | 60 |
+| D | 2026-07-22 19:54:00 | 2026-07-22 20:04:00 | 11 |
 
 ## Su kien da gan nhan
 
 | Nhan | Thoi diem | Gia | Phase | Trang thai | VSA nen do | Than/bien do |
 |---|---|---|---|---|---|---|
-| BCLX | 2026-07-27 00:00:00 | 4104.6 | A | - | 6.36x | 0.84 |
-| AR | 2026-07-27 00:28:00 | 4093.2 | A | - | 0.44x | 0.08 |
-| ST[A] | 2026-07-27 00:38:00 | 4104.9 | A | - | 0.22x | 0.74 |
-| mSOW | 2026-07-27 14:43:00 | 4067.1 | B | - | 0.57x | 0.68 |
+| BCLX | 2026-07-22 13:33:00 | 4152.1 | A | - | 3.89x | 0.04 |
+| AR (yếu) | 2026-07-22 13:35:00 | 4143.2 | A | - | 1.32x | 0.42 |
+| ST[A] | 2026-07-22 13:48:00 | 4156.5 | A | - | 1.21x | 0.48 |
+| mSOS | 2026-07-22 15:49:00 | 4170.3 | B | - | 3.07x | 0.79 |
+| mSOS | 2026-07-22 16:06:00 | 4163.6 | B | provisional | 0.31x | 0.33 |
+| mSOW | 2026-07-22 18:34:00 | 4137.5 | B | - | 1.57x | 0.68 |
+| LPSY[C] | 2026-07-22 18:54:00 | 4143.8 | C | - | 0.66x | 0.75 |
+| mSOW | 2026-07-22 19:01:00 | 4138.4 | B | provisional | 3.00x | 0.84 |
+| mSOW | 2026-07-22 19:54:00 | 4135.6 | B | provisional | 3.97x | 0.40 |
+| LPSY[D] | 2026-07-22 20:02:00 | 4140.0 | D | - | 1.40x | 0.33 |
 
 ## 12 nen quanh climax (kiem dieu kien mo range)
 
 | # | Thoi diem | O | H | L | C | Volume | VSA | than/bien |
 |---|---|---|---|---|---|---|---|---|
-| -6 | 2026-07-27 00:08:00 | 4102.9 | 4104.6 | 4102.9 | 4103.2 | 37 | 0.49x | 0.18 |
-| -5 | 2026-07-27 00:09:00 | 4102.8 | 4110.9 | 4102.8 | 4110.7 | 319 | 3.52x | 0.98 |
-| -4 | 2026-07-27 00:10:00 | 4110.9 | 4113.0 | 4109.4 | 4111.8 | 174 | 1.79x | 0.25 |
-| -3 | 2026-07-27 00:11:00 | 4111.8 | 4116.0 | 4111.7 | 4116.0 | 322 | 2.90x | 0.98 |
-| -2 | 2026-07-27 00:12:00 | 4115.9 | 4118.9 | 4115.9 | 4117.7 | 344 | 2.83x | 0.60 |
-| -1 | 2026-07-27 00:13:00 | 4117.8 | 4119.0 | 4117.0 | 4118.0 | 130 | 1.03x | 0.10 |
-| +0 **<- climax** | 2026-07-27 00:14:00 | 4117.9 | 4119.3 | 4117.5 | 4118.5 | 275 | 1.98x | 0.33 |
-| +1 | 2026-07-27 00:15:00 | 4118.3 | 4118.4 | 4115.7 | 4115.7 | 88 | 0.62x | 0.96 |
-| +2 | 2026-07-27 00:16:00 | 4115.4 | 4116.4 | 4112.9 | 4112.9 | 79 | 0.55x | 0.71 |
-| +3 | 2026-07-27 00:17:00 | 4113.6 | 4115.2 | 4113.4 | 4114.7 | 38 | 0.26x | 0.61 |
-| +4 | 2026-07-27 00:18:00 | 4114.9 | 4114.9 | 4111.9 | 4112.5 | 55 | 0.38x | 0.80 |
-| +5 | 2026-07-27 00:19:00 | 4112.1 | 4112.2 | 4109.4 | 4109.9 | 137 | 0.92x | 0.79 |
+| -6 | 2026-07-22 13:27:00 | 4137.6 | 4138.7 | 4137.6 | 4138.4 | 151 | 1.36x | 0.73 |
+| -5 | 2026-07-22 13:28:00 | 4138.6 | 4139.8 | 4136.2 | 4136.8 | 258 | 2.11x | 0.50 |
+| -4 | 2026-07-22 13:29:00 | 4136.9 | 4137.0 | 4135.8 | 4136.5 | 104 | 0.84x | 0.33 |
+| -3 | 2026-07-22 13:30:00 | 4136.8 | 4143.3 | 4136.8 | 4142.0 | 642 | 4.22x | 0.80 |
+| -2 | 2026-07-22 13:31:00 | 4142.1 | 4149.4 | 4141.8 | 4145.7 | 897 | 4.83x | 0.47 |
+| -1 | 2026-07-22 13:32:00 | 4145.8 | 4148.0 | 4144.7 | 4147.9 | 334 | 1.67x | 0.64 |
+| +0 **<- climax** | 2026-07-22 13:33:00 | 4148.0 | 4152.1 | 4146.4 | 4148.2 | 954 | 3.89x | 0.04 |
+| +1 | 2026-07-22 13:34:00 | 4148.2 | 4148.8 | 4146.4 | 4147.3 | 257 | 1.01x | 0.37 |
+| +2 | 2026-07-22 13:35:00 | 4147.5 | 4148.0 | 4143.2 | 4145.5 | 352 | 1.32x | 0.42 |
+| +3 | 2026-07-22 13:36:00 | 4145.9 | 4149.2 | 4144.4 | 4146.9 | 224 | 0.82x | 0.21 |
+| +4 | 2026-07-22 13:37:00 | 4147.2 | 4147.2 | 4144.9 | 4146.7 | 131 | 0.47x | 0.22 |
+| +5 | 2026-07-22 13:38:00 | 4146.8 | 4146.8 | 4144.1 | 4145.6 | 147 | 0.52x | 0.44 |

@@ -5,6 +5,16 @@
 > Đây là file **duy nhất** cần đọc khi bắt tay code. Hai file kia là nguyên văn để đối chiếu.
 >
 > ⚠️ Mọi con số dưới đây là **thiết kế**, chưa có số backtest nào. Không được nhắc lại chúng như thành tích.
+>
+> 🆕 **Bổ sung 2026-08-10 (batch Messenger Aug 7–8, [TRANSCRIPT.md §13](TRANSCRIPT.md)):** SPEC này còn
+> **thiếu tầng BỐI CẢNH**. Cụ thể phải thêm vào trước khi code tiếp:
+> 1. **Chế độ thị trường quyết định BẬT engine nào** — *trong balance* thì chỉ "xác định range rồi vả 2 cạnh"
+>    (KB-B); *sau balance* mới có move để follow (KB-C). Hiện SPEC cho cả 3 KB chạy song song mọi lúc.
+> 2. **Phân kỳ delta là tín hiệu CÓ ĐIỀU KIỆN** (R11+R12): "tăng mà delta âm" ở **đầu sóng sau balance**
+>    = chờ squeeze (thuận); ở **cuối sóng / nhịp hồi** = suy yếu (ngược). Một ngưỡng delta duy nhất là sai.
+> 3. **Vùng khung lớn của CORVEN = TPO gộp 3 TUẦN, period 30 phút** (không phải profile 1 tuần) —
+>    §2 dưới ghi "HVN tuần" là chưa đủ chính xác; phải đo lại HVN trên cửa sổ 3 tuần.
+> 4. Kiểm chất lượng đấu giá bằng **tail / single print** — chưa có trong SPEC.
 
 ---
 

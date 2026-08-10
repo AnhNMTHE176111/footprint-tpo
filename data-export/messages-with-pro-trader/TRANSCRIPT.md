@@ -1,13 +1,15 @@
-# Transcript hội thoại với pro trader "CORVEN" (Telegram)
+# Transcript hội thoại với pro trader "CORVEN" (Telegram + Messenger)
 
 > **NGUỒN CHUẨN — đọc file này thay vì mở lại 36 ảnh.**
 > Trích xuất thủ công (đọc từng ảnh) ngày 2026-07-29 từ
 > `Message with pro trader-20260729T041938Z-1-001/Message with pro trader/IMG_1791..1826`.
 > Ảnh gốc vẫn giữ nguyên trong thư mục đó nếu cần đối chiếu.
+> **Bổ sung 2026-08-10:** batch 7 ảnh Messenger (chat Aug 7–8) đã gộp vào **§13** ở cuối file.
+> 📘 Bản **xâu chuỗi để học**: [BAI_GIANG_CORVEN.md](BAI_GIANG_CORVEN.md).
 >
-> - **CORVEN** = pro trader (avatar "CORVEN — CROW CONCEPT TRADING SYSTEM"), 5 năm kinh nghiệm, scalp order-flow vàng, nền tảng **Sierra Chart (SC)** chạy chart future `GCQ26_FUT_CME`. Gọi người học là "chú".
+> - **CORVEN** = pro trader (avatar "CORVEN — CROW CONCEPT TRADING SYSTEM"), 5 năm kinh nghiệm, scalp order-flow vàng, nền tảng **Sierra Chart (SC)** chạy chart future `GCQ26_FUT_CME`. Gọi người học là "chú". Trên Messenger hiện tên **"Trương Linh"** — cùng một người.
 > - **Benzo** = người dùng (chủ repo này). Xưng "t".
-> - Timeline: Jan 21 → Jan 22 → Jan 29 → Feb 05 → Feb 08/09 → Feb 27 → Apr 13 → May 5 → May 6 (năm 2026).
+> - Timeline: Jan 21 → Jan 22 → Jan 29 → Feb 05 → Feb 08/09 → Feb 27 → Apr 13 → May 5 → May 6 → **Aug 7–8** (năm 2026).
 > - Ghi chú: chat gõ tay, nhiều lỗi chính tả (giữ nguyên nguyên văn). "giá" = 1 USD vàng = 10 tick.
 
 ---
@@ -293,3 +295,108 @@
 | IMG_1817–1818 | Wyckoff phân phối M1 Gold Spot FXCM | "Biên của chú to thế =))" (TR 15 giá = quá rộng) |
 | IMG_1819 | Wyckoff tích luỹ M5 (SC/AR/ST/ST/UT/LPS) | "đừng đánh UT sớm", "sang D mới đánh", "k cần nhãn", "đánh break thôi", "SL 5 giá ổn" |
 | IMG_1822 | Chart short 1:6.5 | "Bóp sl thì mới có cơ sở gồng dài" |
+
+---
+
+# §13. Batch Messenger 2026-08-10 (chat Aug 7–8) — **quan trọng nhất về DELTA**
+
+> Nguồn: 7 ảnh screenshot Messenger chụp 2026-08-10 07:50 + 1 ảnh chart TPO.
+> Mốc thời gian gốc thấy trong ảnh: **AUG 7 AT 8:04 PM**, **AUG 7 AT 8:46 PM**, **AUG 8 ~8:08 PM**.
+> Đây là batch bổ ra **luật điều kiện** cho R1 (xem §13.3–13.5) — trước đó ta hiểu R1 như một luật vô điều kiện.
+
+## 13.1 Mở đầu — TPO chữ D, check tail
+
+> **Benzo:** Nhìn như để biết đang đấu giá và đấu giá xong thế
+> **Benzo:** Tpo thành chữ D à
+> **CORVEN:** Chữ D
+> **CORVEN:** **Check tail các thứ xem ổn hết chưa**
+> **Benzo:** Ngon / =))))))
+
+## 13.2 Quy trình xây hệ: hiểu hết → có signal → theo signal → trade nhiều rồi fix signal
+
+> **Benzo:** Tính ra đợt này t học xong quay vào trade hằng ngày. Thấy nhiều chuyện phết
+> **CORVEN:** **Trade thật mới cảm xúc** / Học có gì đâu
+> **Benzo:** Đúng chú / T thấy cô đọng lại / Thì kiến thức cũng ko còn nhiều
+> **CORVEN:** **Chú phải hiểu hết**
+> **CORVEN:** **Xong có signal**
+> **CORVEN:** **Rồi theo signal thôi**
+> **CORVEN:** **Xong trade nhiều fix signal**
+> **CORVEN:** **Lúc trade k bị phân vân với lưỡng lự**
+> **CORVEN:** **Rồi fix tâm lý đúng theo rule là đc**
+> **Benzo:** Sao / Hồi trước / Chú thế nào 🤣
+> **CORVEN:** Cũng phải thế / **T học nhiều phết đấy** / Nên mới hiểu hết / **Tpo với fp gần như nắm đc hết rồi** / **Chú chỉ hiểu phần ngọn thôi**
+> **Benzo:** T vẫn đang dùng ngọn mà / Mấy cái học với cái chú chỉ, t đưa vào indicator / Rồi fix dần
+> **CORVEN:** **T chỉ signal sơ sơ thôi** / **Nó còn nhiều rule đấy**
+> **Benzo:** Nhưng đến hiện tại thì cũng chưa biết cải tiến gì tiếp vì đ hiểu sâu / Phải trade thêm với backtest thêm
+
+## 13.3 ⭐ Cơ chế gốc: limit chặn sóng — market tạo move
+
+> **CORVEN:** **Chú phải hiểu nguyên nhân với hệ quả của các order**
+> **CORVEN:** Xong chú hiểu đc như nào là đẹp như nào k
+> **CORVEN:** **Ví dụ limit order là chặn đc sóng**
+> **CORVEN:** **Move là nhờ market order**
+> **CORVEN:** **Market buy > sell thì move tăng lên**
+> **CORVEN:** **Limit vẫn làm cho giá tăng đc nhưng nó làm một kĩ thuật khác** ❤️
+> **CORVEN:** **Dí limit sát theo giá**
+
+## 13.4 ⭐ Móc nối trực tiếp với hiện tượng "move tăng mà delta âm"
+
+> **Benzo:** À, thế t hỏi, cả tuần nay t để ý **nhiều move tăng nhưng đường delta thì lại cắm xuống**, kể cả move đấy dài thì đường delta càng âm. **Move giảm thì lại delta dương lên cao**
+> **CORVEN:** **Nó dí sát limit đấy**
+> **Benzo:** Khớp với nhiều limit à
+> **CORVEN:** **Dí sát limit vào giá giữ trend**
+> **CORVEN:** **Giá lên nó nâng limit sát vô giá**
+> **CORVEN:** **Này chú nhìn order book là rõ luôn**
+> **Benzo:** Địt =)))) để làm gì, cản à
+> **CORVEN:** **Tùy mục đích**
+
+## 13.5 ⭐⭐ VỊ TRÍ TRONG SÓNG quyết định ý nghĩa của "tăng mà delta âm"
+
+> **CORVEN:** **Đầu sóng là dự kiến cho move mới**
+> **CORVEN:** **Cuối sóng là suy yếu**
+> **CORVEN:** **Nhịp hồi là suy yếu**
+> **CORVEN:** Chú để ý hôm t bảo lúc nó mới break k
+> **CORVEN:** **T bảo chưa phải squeeze vì tăng delta vẫn âm**
+> **Benzo:** Ủa chỗ đấy delta âm
+> **CORVEN:** **Nó ở đầu sóng** / **Thì dự sau đó sẽ có một nhịp mạnh** / **Thì tối là một nhịp bay mạnh squeeze delta dương**
+> **CORVEN:** **Còn hôm nay** / **Tăng delta đang âm** / **Ở cuối sóng** / **Là suy yếu**
+> **CORVEN:** **Chỉ cần tối delta k dương mạnh mà seller vào mạnh tạo ra nến giảm là rớt**
+> **CORVEN:** **Test lại balance hôm qua**
+
+## 13.6 ⭐⭐ Điều kiện của "đầu sóng squeeze": ngay sau một BALANCE
+
+> **Benzo:** Thế cái move tăng mà delta âm thể hiện đầu sóng squeeze thì điều kiện là move đấy phải nằm ở **ngay sau đấu giá xong** à
+> **CORVEN:** **Uh** / **Sau một balance**
+> **Benzo:** Oke sau 1 balance / Thế **đang trong balance** thì cái move đấy có thể hiện đc gì ko
+> **CORVEN:** **Trong balance thì chop**
+> **CORVEN:** **Trong balance thì xác định range rồi 2 cạnh mà vả thôi**
+> **CORVEN:** **Thì cứ tăng mà delta âm là yếu**
+
+## 13.7 Balance thì nhìn TPO khung nào
+
+> **Benzo:** Balance thì nhìn tpo day hay week chú / Hay cả 2 / Day scalp
+> **CORVEN:** Day thì nhìn d
+> **Benzo:** d gì chú / Hình chữ D à
+> **CORVEN:** **Day scap nhìn tpo daily** :))
+
+## 13.8 Cấu hình TPO của CORVEN: GỘP 3 TUẦN, period 30 phút
+
+> *(AUG 7, 8:04 PM)* **CORVEN:** *[ảnh TPO profile]* — caption: **"Giờ break ra là follow theo"**
+> **Benzo:** lô chú / cái này, các chữ vẫn là 30 phút, tpo build chọn week à / bữa chú nói gộp 3 week hay gì thế
+> *(AUG 7, 8:46 PM)* **CORVEN:** **Gộp 3 week** / **1 preiod vẫn là 30p**
+
+**Ảnh TPO kèm theo:** profile gộp nhiều tuần — khối trái to (xám + đỏ), khối giữa cao dày (đỏ/xanh xen kẽ),
+khối phải nhỏ dần; đường vàng ngang chạy xuyên (POC/VWAP) và nhãn **"Single Print"** ở mép phải.
+
+---
+
+## §13.9 Luật mới rút ra từ batch này (đã đưa vào [RULES.md](RULES.md) thành R11–R14)
+
+1. **Nguyên nhân–hệ quả của order:** limit = chặn sóng (thụ động); market = tạo move. Market buy > market sell ⇒ giá tăng.
+2. **"Move tăng mà delta âm" = kỹ thuật "dí limit sát giá để giữ trend"** — bên mua nâng dần buy-limit sát giá thay vì bơm market buy; thấy rõ trên order book.
+3. **Cùng một hiện tượng, ba ý nghĩa khác nhau tuỳ VỊ TRÍ trong sóng** — đây là mảnh còn thiếu của R1:
+   - **đầu sóng** (ngay sau một balance) ⇒ **dự báo nhịp squeeze mạnh sắp tới**, delta sẽ đảo sang dương;
+   - **cuối sóng** ⇒ suy yếu;
+   - **nhịp hồi** ⇒ suy yếu.
+4. **Trong balance thì không đọc tín hiệu sóng:** chỉ xác định range rồi vả 2 cạnh; trong balance, "tăng mà delta âm" đơn thuần là yếu.
+5. **Khung nhìn:** day scalp ⇒ **TPO daily**; vùng lớn ⇒ **TPO gộp 3 tuần, period 30 phút** — "giờ break ra là follow theo". Kèm luật kiểm tra chất lượng đấu giá: **"check tail các thứ xem ổn hết chưa"**.

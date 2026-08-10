@@ -1,40 +1,38 @@
-# Chấm bài #11 — Tích lũy (ACC) · 2026-04-26 23:41 → 2026-04-27 05:49 (146 nến M1)
+# Chấm bài #11 — Phân phối (DIST) · 2026-04-23 12:06 → 17:40 (240 nến M1)
 
-**Điểm: 2/10** — **Không nên vẽ range ở đây.** Cái được gọi là "SC" là một nến 3 hợp đồng, biên độ 0,6 giá, trong phiên Á chết. Cả cấu trúc là một cú bật chữ V có nghỉ giữa chừng, không phải vùng đấu giá.
+**Điểm: 5/10** — Khung range và Phase C/D/E đọc được, nhưng mắc đúng lỗi kinh điển số 1 của khoá: gọi UTAD ở giữa Phase B.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. "Climax" không phải climax — nến 0,6 giá / 3 lot — luật vi phạm: THEORY §3.3 (SC), L1
-- **Thuật toán gắn:** climax mở range tại 23:41, giá 4724.5, **VSA 1.94x, biên độ nến 0.6 giá**; nhãn SC vẽ ở nến 23:40 (VSA 4.14x, **6 hợp đồng**, biên độ 0.8 giá).
-- **Đúng phải là:** SC theo định nghĩa gốc là "**chênh lệch biên độ giá mở rộng + khối lượng tăng mạnh**, áp lực bán lên đỉnh điểm". Ở đây không có cái nào: 6 lot và 0,8 giá. VSA 4.14x chỉ là ảo giác của mẫu số — 6 nến trước đó đều **1 hợp đồng** (xem bảng 12 nến: volume 1,1,1,1,1). Đây đúng là ca giảng viên các vòng trước đã bắt: "climax chỉ 6–19 hợp đồng ở phiên Á giờ chết".
-- **Dấu hiệu quyết định:** bảng 12 nến quanh climax — volume `1,1,1,1,1,6,3,1,4,1,2,1`. Toàn bộ cụm climax giao dịch **21 hợp đồng**.
-- **Nghi phạm trong thuật toán:** người học đã chốt **không** dùng sàn khối lượng tuyệt đối (quyết định 6, mục 0b). Nhưng ca này cho thấy VSA tương đối vô nghĩa khi mẫu số ≈1. Đề xuất thay thế **không dùng số lot**: yêu cầu biên độ nến climax ≥ k×ATR *và* ≥ một tỷ lệ tối thiểu của **chiều cao range sẽ tạo ra** (0.6 / 34.6 = 1.7% — quá nhỏ để gọi là climax của range đó).
+### 1. UTAD gọi sai chỗ — luật vi phạm: L8 + Ca #1/#4 CHART_CASES
+- **Thuật toán gắn:** `UTAD 12:43 · 4795.6 · Phase C · confirmed`.
+- **Đúng phải là:** UTAD là cú test **cuối cùng** phá đỉnh range **ngay trước khi cấu trúc sụp**. Cú 12:43 nằm cách cú sụp thật (SOW 17:05) tận **262 phút / gần 180 nến**, và sau nó giá còn quay lại đi ngang trong range suốt cả Phase B, còn tạo thêm mSOS 4792.4 lúc 15:19. Theo đúng Ca #4 ("nếu sau đỉnh vẫn còn dao động đi ngang/hồi lại trong range → đó chưa phải UTAD"), nhãn này phải đổi thành **UT** (test biên trên trong Phase B, và là điểm sinh biên phụ trên 4795.6).
+- **Dấu hiệu quyết định trên chart:** trên ảnh, nhãn UTAD nằm sát mốc bắt đầu Phase B, còn khung Phase C (6 nến) nằm tận 16:51 ở phía bên phải — cách nhau gần trọn chiều ngang range.
+- **Nghi phạm trong thuật toán:** điều kiện UTAD chỉ kiểm "vượt biên trên rồi đóng lại trong range", thiếu ràng buộc **hồi tố**: chỉ được gán UTAD nếu SOW/Phase D xảy ra trong vòng N nến sau đó và không còn nhịp hồi nào giữ được trong range.
 
-### 2. Sự kiện có ý nghĩa thật nằm ở nhịp TĂNG, không phải ở "SC" — luật vi phạm: L1 (climax phải chặn move)
-- **Thuật toán gắn:** cả cụm volume lớn nhất chart (các thanh vàng cao vọt quanh 00:50–01:04) rơi vào **nhịp AR**, không phải nhịp climax.
-- **Đúng phải là:** cây có nỗ lực thật là cây đẩy giá từ 4731 lên 4759 trong ~10 nến. Nếu muốn đọc cấu trúc ở đây thì phải neo vào cú bùng nổ đó, không neo vào cái đáy lặng lẽ trước nó.
-- **Dấu hiệu quyết định:** panel volume — cụm 3 thanh vàng cao nhất toàn ảnh nằm đúng dưới nhịp nến xanh dựng đứng lúc 00:57, còn tại SC (23:40–23:41) panel gần như phẳng.
+### 2. Nhãn mang Phase "C" nhưng nằm ngoài khoảng Phase C — lỗi nhất quán nội bộ
+- **Thuật toán gắn:** UTAD ghi cột Phase = **C**, trong khi bảng phase ghi Phase C = 16:51 → 17:04. Cùng một phiếu, hai chỗ mâu thuẫn.
+- **Đúng phải là:** hoặc kéo Phase C về bao UTAD (sai, xem lỗi #1), hoặc sửa nhãn thành UT thuộc Phase B. Phải có assert: `phase(label) == phase_at(time(label))`.
 
-### 3. THIẾU Phase C — luật vi phạm: L8
-- **Thuật toán gắn:** A → B → **D** → E, không có Phase C.
-- **Đúng phải là:** phải gán ngược từ SOS (02:47). Cửa sổ hiện tại min(60, 0.8×44) = 35 nến — vẫn không tìm ra pivot hợp lệ "trong range + đúng nửa dưới". Lỗi lặp lại y hệt bài #09; bản vá #3 (0.5x→0.8x) không giải quyết.
-- **Nghi phạm trong thuật toán:** ràng buộc kép "trong range **và** đúng nửa range" (vá v6 số 5) đang quá chặt — ở đây nhịp test cuối trước SOS nằm quanh 4753–4757, tức **nửa trên** range 4724.5–4759.1, nên bị loại. Nhưng với tích luỹ dốc lên (THEORY §3.4) LPS[C] nằm nửa trên là **bình thường**, thậm chí là dấu hiệu mạnh.
+### 3. Phase C có tới 2 sự kiện nhưng cách nhau 4 giờ — luật vi phạm: L8 (Phase C là phase ngắn nhất)
+- Phase C được vẽ 6 nến (đúng: ngắn nhất), nhưng danh sách sự kiện của Phase C gồm UTAD (12:43) **và** LPSY[C] (16:51). Về hình thì Phase C 6 nến, về nhãn thì Phase C trải 4 giờ. Chỉ **LPSY[C] 16:51 · 4789.8** mới là Phase C thật — nó là cú hồi cuối lên sát biên chính trên 4790.9 rồi rơi, đúng vai.
 
-### 4. Phase B (44 nến) ngắn hơn Phase A (46 nến) — luật vi phạm: L9
-Phase A chiếm 46/146 nến vì AR mất tới 83 phút mới thành hình. Với một range 146 nến thì B phải áp đảo, không phải chia đều.
+### 4. mSOW 4768.9 gán nhầm vai — luật vi phạm: L5
+- **Thuật toán gắn:** `mSOW 16:05 · 4768.9 · Phase B`.
+- **Đúng phải là:** mức 4768.9 thấp hơn biên chính dưới 4779.2 tới **10.3 giá — gần bằng trọn chiều cao range (11.7 giá)**. Đó không phải "minor SOW" trong range, đó là một cú **shakeout xuống thất bại** (giá lùng bùng dưới biên rồi quay lại tận 4789.8). Đặt tên theo L5 phải phân biệt bằng thời gian quay lại, không gộp mọi cú thủng biên thành mSOW.
+- **Nghi phạm trong thuật toán:** phân loại sự kiện dưới biên chưa dùng tiêu chí "số nến ở ngoài biên trước khi quay lại" (Spring ≤3-4 nến vs shakeout lâu hơn).
 
-### 5. ST[A] ở giữa range, VSA 0.29x — luật vi phạm: L2
-- **Thuật toán gắn:** ST[A] 01:16, giá 4741.7.
-- **Đúng phải là:** 4741.7 cách climax 4724.5 tới **17.2 giá = 50% chiều cao range** — chính giữa range, không test được vùng climax. Cùng lỗi với bài #08 và #09: ngưỡng hồi 0.4× (ở đây đạt 0.50) không thay được ràng buộc khoảng cách tới climax.
+### 5. SOW chưa bứt biên phụ — ghi nhận, không trừ nặng
+- `SOW 17:05 · 4774.7` đóng dưới biên chính 4779.2 nhưng **chưa qua biên phụ dưới 4768.9**. Theo L3, đây là SOW hợp lệ nhưng **chưa phải SOW mạnh**. Kết cục giá rơi tới ~4718 nên hướng đúng; chỉ nên hạ cấp nhãn, không xoá.
 
-### 6. Không có LPS[D] trong Phase D 25 nến
-Theo L10, Phase D là "phá biên → hồi retest **giữ được** ngoài biên". Ở đây chỉ có mỗi nhãn SOS. Nhìn ảnh thì giá sau SOS đi thẳng lên 4780 không hồi — đây là ca hợp lệ theo Ca #21 nguồn 7.pdf (Phase D không bắt buộc có BU), nên **không tính là lỗi cấu trúc**, chỉ ghi nhận Phase D trống nhãn suốt 25 nến.
+### 6. Biên chính hẹp bất thường — cảnh báo cấu trúc
+- Biên chính 11.7 giá (0.24%) trong khi biên phụ 26.7 giá → tỷ lệ **2.28x**: range thật rộng gấp hơn hai lần khung biên chính. Nguyên nhân là AR quá nông (bật đúng 11.7 giá trong 10 nến). Không sai luật (L3 buộc biên chính = climax + AR) nhưng phải hiểu: mọi phán quyết "phá biên" ở bài này đều dựa trên một khung rất mỏng.
 
 ## Đạt
-- **Mục 3 (L3):** biên chính 4724.5–4759.1 = climax + AR, cố định; biên phụ 4760.1 đúng cực trị xa nhất, tỷ lệ 1.03x. Sạch, không có ca "biên phụ tự nới rồi tự vượt".
-- **Mục 4 (L4):** climax từ move giảm + phá thật lên ⇒ **Tích luỹ**. Tên khớp bảng 4 pattern (với điều kiện chấp nhận cái climax kia là climax).
-- **Mục 7 (L10) một phần:** SOS 02:47 (VSA 2.33x, thân 1.00) đóng cửa vượt cả biên chính lẫn biên phụ trên — cú phá thật, đúng yêu cầu L3. Phase E 32 nến, giá đi tiếp lên 4780.
-- **Chú thích nỗ lực/kết quả đúng dấu** (er=0.09 → "HIỆU QUẢ").
-
-## Cần hỏi người học
-- Ở phiên Á thanh khoản ~1 hợp đồng/nến, VSA tương đối mất ý nghĩa nhưng anh đã chốt không dùng sàn lot tuyệt đối. Chấp nhận thay bằng ràng buộc **hình học** (biên độ nến climax ≥ x% chiều cao range mà nó tạo ra) chứ?
+- **L1:** MOVE tăng 43.0 giá / 64 nến bị chặn đúng tại BCLX 12:06 (high 4790.9 = cực trị), VSA 3.68x. Nhãn climax đặt đúng nến mở range.
+- **L2:** đủ 3 lần đổi hướng — BCLX 4790.9 → AR 4779.2 (12:16) → ST[A] 4794.1 (12:31), hồi **127%** khoảng AR↔climax, vượt hẳn mức climax → ST[A] test đúng vùng climax, không lửng. Phase A kết thúc đúng tại ST[A].
+- **L3:** biên chính cố định = climax + AR; mỗi bên đúng 1 biên phụ (4795.6 trên, 4768.9 dưới) và cả hai đúng là cực trị xa nhất.
+- **L4:** move tăng → BCLX, phá xuống thật → **DIST**. Tên đúng.
+- **L8/L9:** Phase B 178 nến dài nhất, Phase C 6 nến ngắn nhất — trật tự chuẩn.
+- **L7:** LPSY[C] đánh 1 điểm.
+- **Khối lượng:** SOW 17:05 VSA 3.21x, LPSY[C] VSA 2.92x thân 0.00 (nến chối bỏ ở biên trên) — đọc effort/result ở Phase C/D đúng.

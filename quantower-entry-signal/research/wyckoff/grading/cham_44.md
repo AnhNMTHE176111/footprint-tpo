@@ -1,39 +1,38 @@
-# Chấm bài #44 — Tích luỹ (ACC) · 2026-07-09 00:54 → 06:22 (328 nến M1)
+# Chấm bài #44 — Tích lũy (ACC) · 2026-07-06 00:01 → 01:57 (116 nến M1)
 
-**Điểm: 2/10** — cú SOS cuối cùng đọc rất đúng, nhưng **biên range vẽ sai vùng**: hai biên chính chỉ bao 9 giá trong khi vùng đấu giá thật rộng 26 giá, nên gần một nửa range nằm ngoài biên mà máy coi như không có chuyện gì. Phải vẽ lại range, không chỉ sửa nhãn.
+**Điểm: 5/10** — Phase A đẹp nhất trong cả lô; hỏng ở nhóm nhãn phá vỡ (mSOS nến rác, SOS thấp hơn chính mSOS).
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Biên chính neo trên một dao động 14 nến, không bao được vùng đấu giá — luật vi phạm: L2, L3
-- **Thuật toán gắn:** Phase A dài **14 nến** (00:54→01:07), biên chính 4079.2–4088.2 = **9.0 giá (0.22%)**; biên phụ 4065.9–4092.3 = 26.4 giá, tỷ lệ **2.93x**.
-- **Đúng phải là:** vùng cân bằng thật của phiên này là **4066–4092**. AR bị chốt ngay ở nến **01:01** — chỉ 7 nến sau nhãn SC (01:00) — nên biên trên bị đóng đinh ở 4088.2 quá sớm. Phase A cần chờ nhịp bật thật (đỉnh 4091.7 lúc 02:14 trên ảnh).
-- **Dấu hiệu quyết định trên chart:** tỷ lệ biên phụ/biên chính 2.93x tự nó đã tố cáo — biên phụ hai bên đều xa hơn biên chính, tức "cực trị mà một thế lực tạo ra" lớn gần gấp 3 vùng được coi là range. Nhìn ảnh, hai đường liền cam nằm gọn ở giữa đám nến chứ không ôm lấy nó.
-- **Nghi phạm trong thuật toán:** AR = "swing pivot ngược đầu tiên xác nhận sau 5 nến, nhịp bật ≥1.5× ATR". Trên M1 phiên Á volume 3–45 lot, 1.5× ATR là ngưỡng gần như vô nghĩa → AR chốt ngay nhịp nảy đầu tiên. Cần thêm ràng buộc tương đối: AR phải ≥ một tỷ lệ độ dài MOVE, hoặc phải là pivot còn đứng vững sau N nến kế tiếp.
+### 1. SOS đóng cửa THẤP HƠN đỉnh mSOS trước đó — luật vi phạm: L3 ("SOS mạnh phải bứt qua biên PHỤ")
+- **Thuật toán gắn:** mSOS 01:16 tại **4204.8** (= biên phụ trên), rồi SOS 01:32 tại **4203.7** — thấp hơn 1.1 giá.
+- **Đúng phải là:** cú phá thật là nhịp 01:33–01:45 đi tới ~4214.5; nhãn SOS phải neo vào cây bùng của nhịp đó, và chỉ được công nhận khi đóng cửa **vượt 4204.8**.
+- **Dấu hiệu quyết định:** biên phụ trên ghi rõ 4204.8, do chính mSOS nới ra. Nhãn "phá thật" lại nằm dưới nhãn "phá hụt" — mâu thuẫn nội tại đọc thẳng trên bảng sự kiện.
+- **Nghi phạm:** v7.1 đã đổi mốc quyết định decisive/outside sang **biên CHÍNH** (`edge`) để chữa vòng lặp tự thua. Nhưng L3 vẫn đòi biên PHỤ cho việc **xếp hạng mạnh/yếu**. Hai việc này bị gộp làm một → mất luôn ràng buộc L3.
 
-### 2. 130/130 nến đóng dưới biên chính dưới chỉ được ghi 1 nhãn mSOW — luật vi phạm: L5
-- **Thuật toán gắn:** mSOW 04:44 tại 4065.9, toàn bộ đoạn nằm trong Phase B.
-- **Đúng phải là:** giá đóng cửa dưới biên suốt hơn 2 giờ thì đó là cú phá **xuống** thật (hoặc chí ít là Shakeout lớn kéo dài), không phải một cú thăm dò lẻ.
-- **Dấu hiệu quyết định trên chart:** đếm trên dữ liệu gốc, từ 02:50 đến 05:00 có **130/130 nến đóng cửa DƯỚI 4079.2**. Trên ảnh cả một mảng nến nằm hẳn dưới đường liền dưới.
-- **Nghi phạm trong thuật toán:** lại là biên phụ tự nới (4065.9 do chính cú này tạo) + hệ quả của lỗi #1 (biên chính đặt quá cao nên giá "ngoài biên" là chuyện thường xuyên). Lỗi #6 của vòng v7 **chưa hết**.
+### 2. Nhãn mSOS neo vào nến rác — luật vi phạm: định nghĩa mSOS (mục 5.1 spec: "một cú phá CÓ THẬT")
+- **Thuật toán gắn:** mSOS 01:16, **VSA 0.72x**, **thân 0.04** (thân bằng 4% biên độ).
+- **Đúng phải là:** một cú phá có thật phải neo vào cây có nỗ lực; nến thân 4% volume dưới trung bình là một cây râu, không phải cú phá.
+- **Dấu hiệu quyết định:** nhịp đẩy lên đó, theo phiếu, có `effort` trung bình 2.72x (01:00) — cây mạnh nằm sớm hơn hẳn nến được gắn nhãn.
+- **Nghi phạm:** `_demote_shock()` quét lại cây VSA cao nhất, nhưng nhánh hạ cấp này rõ ràng không đi qua bước đó (đúng như 13.1b ghi "ăn không đều").
 
-### 3. mSOS 05:51 sai vai — luật vi phạm: mục 5.1 (định nghĩa mSOS)
-- **Thuật toán gắn:** mSOS tại 4092.3 (05:51, VSA 2.07x), rồi SOS 06:00.
-- **Đúng phải là:** mSOS nghĩa là "phá được rồi **thu hẳn vào trong range** rồi hướng sang biên đối diện". Trong 9 nến giữa 05:51 và 06:00 giá không hề thu vào trong range — nó chỉ đi ngang 4089–4092 rồi bung. Nến 05:51 là một phần của **chính cú phá SOS**, không phải cú phá thất bại.
-- **Dấu hiệu quyết định trên chart:** hai nhãn mSOS và SOS dính sát nhau ở góc phải ảnh, cùng một đoạn tăng liền mạch.
-- **Nghi phạm trong thuật toán:** hạ cấp mSOS chạy trước khi biết kết cục; điều kiện hạ cấp phải là "đóng cửa lùi hẳn qua **biên chính**", đúng như mốc 30 tick đã chốt cho Phase D.
+### 3. Nhãn SOS không thoả chính ngưỡng thân của spec — luật vi phạm: tham số "thân ≥ 45% để công nhận SOS/SOW"
+- **Thuật toán gắn:** SOS 01:32, VSA 2.33x, **thân 0.26**.
+- **Dấu hiệu quyết định:** 0.26 < 0.45. Bước chốt cú phá có kiểm thân, nhưng bước **đặt nhãn hồi tố** chỉ chọn "VSA cao nhất trong đoạn" mà bỏ kiểm thân.
+- **Nghi phạm:** hàm đặt nhãn hồi tố trong `_fire_break` thiếu điều kiện `body_ratio ≥ 0.45` khi chọn cây.
 
-### 4. Phase C (37 nến) dài hơn Phase D (12) và E (11) — luật vi phạm: L8
-LPS[C] 05:23 tại 4078.3 (VSA 0.11x — test cạn cung, chọn điểm đúng tinh thần) nhưng đoạn C kéo 37 nến, thành phase dài thứ nhì. Hệ quả cửa sổ gán ngược 0.8× Phase B = 204 nến, máy lấy pivot xa thay vì nhịp test cuối.
+### 4. LPS[D] cao hơn cả điểm phá — luật vi phạm: L10 (retest phải là nhịp HỒI)
+- **Thuật toán gắn:** LPS[D] 01:37 tại **4206.6**, cao hơn SOS 4203.7.
+- **Đúng phải là:** nhịp retest thật là nhịp lùi về vùng 4204–4205 ở 01:50–01:55 (nhìn trên ảnh, giá lùi về sát nét đứt biên phụ rồi mới rơi).
+- **Nghi phạm:** LPS[D] lấy "swing pivot ngược hướng đầu tiên xác nhận" — pivot đầu tiên rơi vào một nhịp thở trong lúc giá còn đang chạy lên, không phải nhịp retest biên.
 
-### 5. MOVE trước climax sát sàn — luật vi phạm: L1 (biên)
-17.4 giá / 39 nến / hiệu suất **0.37** (sàn 0.35). Nhìn ảnh, đoạn "move" này thực chất là giá lắc 4084–4099 rồi trôi xuống, không phải một đợt giảm dứt khoát. Ca này nằm đúng ranh giới "climax nổ khi giá đang đi ngang" mà L1 muốn loại. Ghi nhận là ca biên, chưa đủ chắc để bảo phải bỏ range.
+### 5. Phase E dài đúng 1 nến — luật vi phạm: L10 / lỗi J của vòng v5 tái xuất
+- **Dấu hiệu quyết định:** A 26 · B 56 · C 9 · D 25 · **E 1**. Trên ảnh giá đạt đỉnh 01:45 rồi rơi thẳng về 4184 — thực chất cấu trúc **không** đi tìm được vùng giá mới.
+- **Đúng phải là:** hoặc kéo Phase E cho đủ, hoặc thừa nhận cú phá không giữ được và đóng range ở trạng thái "chưa rõ hướng" thay vì đặt tên "Tích luỹ".
 
 ## Đạt
-- Nhãn SOS 06:00 neo **rất đúng**: VSA **8.08x**, thân 0.93, volume 989 — cây phá mạnh nhất cả range. Đây là bằng chứng vá "nhãn hồi tố về cây phá thật" hoạt động tốt.
-- L4: origin SC + phá lên thật = **Tích luỹ** — tên đúng.
-- L10: LPS[D] 06:07 tại 4097.8 hồi về giữ trên biên rồi đi tiếp lên 4120 — CBR đúng.
-- L9: Phase B 255 nến, dài nhất.
-- Chú thích er=0.94 "nhịp HIỆU QUẢ, không phải hấp thụ" — đúng dấu.
-
-## Cần hỏi người học
-- Khi biên phụ rộng gấp ~3 lần biên chính (như ca này) thì nên **vẽ lại biên chính theo cực trị thật**, hay giữ nguyên climax+AR và chấp nhận range mỏng? Guard hiện tại chỉ huỷ khi tỷ lệ >4.0x, nên ca 2.93x này lọt qua nhưng hình thì rõ ràng sai.
+- **Phase A (L2):** đẹp nhất lô. SC 00:01 VSA 3.72x biên độ 11.1 giá (cây chặn move thật) → AR 00:17 → ST[A] 00:26 tại 4183.0, tức **hồi 95% khoảng AR↔climax**, test đúng vùng climax. Đây là cách ST[A] phải nằm.
+- **Mở range (L1):** MOVE giảm 24.3 giá / 33 nến / hiệu suất 0.45, climax là đáy của cả cửa sổ.
+- **Biên (L3):** biên chính 4182.4–4193.9 cố định; đúng 1 biên phụ trên 4204.8; tỷ lệ 1.95x hợp lý.
+- **Phase B dài nhất (L9)** 56 nến; **Phase C ngắn** 9 nến (L8).
+- Chú thích nỗ lực/kết quả đọc đúng dấu (`er=0.46 — nhịp HIỆU QUẢ`), không còn hard-code "hấp thụ nghi vấn".

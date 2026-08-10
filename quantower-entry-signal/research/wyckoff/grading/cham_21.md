@@ -1,38 +1,36 @@
-# Chấm bài #21 — Tích luỹ (ACC) · 2026-05-26 08:34 → 11:21 (165 nến M1)
+# Chấm bài #21 — "Chưa rõ (BCLX) (DIST?)" · 2026-05-24 23:42 → 2026-05-25 02:14 (137 nến M1)
 
-**Điểm: 2/10** — tỉ lệ phase lộn ngược (B ngắn nhất, C dài nhất), và nặng nhất: một cú thủng ~6 giá dưới biên bị bỏ qua hoàn toàn, biên phụ dưới đứng yên. Cấu trúc phải vẽ lại từ Phase B.
+**Điểm: 5.5/10** — Khung range chấp nhận được, nhưng nhãn BCLX đặt sai chỗ và range không dám đặt tên.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Biên phụ dưới đóng băng ở 4551.5 trong khi giá xuống tới ~4547 — luật vi phạm: L3
-- **Thuật toán gắn:** biên phụ dưới **4551.5** (đúng bằng đáy của cây "Spring" 09:16).
-- **Đúng phải là:** biên phụ = **cực trị xa nhất**. Sau LPS[C] (09:31) giá rơi tiếp xuống ~4547, tức **6.4 giá dưới biên chính 4553.4** và 4.5 giá dưới biên phụ đang vẽ, rồi lùng bùng ngoài đó tới ~10:00. Biên phụ phải nới xuống ~4547 và cú rũ thật phải là cú này.
-- **Dấu hiệu quyết định trên chart:** cụm nến đỏ vùng 09:40–09:55 nằm hẳn dưới cả hai đường cam (liền và đứt) — đọc trên trục giá ≈ 4547, thấp hơn nhãn "bien phu duoi 4551.5" rõ rệt.
-- **Nghi phạm trong thuật toán:** đúng cái vá v6 #2 — trong trạng thái `C_pending` phía đang test **ngừng nới biên phụ**. Kết quả: cú sâu hơn xảy ra *trong lúc* chờ Phase C thì vô hình. Vá v7 #6 (đổi 10 → 30 tick) không chạm tới nhánh này.
+### 1. Nhãn BCLX đặt giữa move tăng, không phải đỉnh chặn move — luật vi phạm: L1
+- **Thuật toán gắn:** BCLX tại **23:07, giá 4607.9**, VSA 3.84x. Nhưng nến mở range là 23:42 tại **4615.4**.
+- **Đúng phải là:** climax phải là cây **chặn** move, tức nằm ở cực trị. 4607.9 thấp hơn đỉnh 4615.4 tới 7.5 giá — nó nằm giữa dốc lên.
+- **Dấu hiệu quyết định trên chart:** trên ảnh, nhãn BCLX đỏ nằm lưng chừng đoạn dốc lên, còn đỉnh thật (nơi biên chính trên 4615.4 cắt qua) ở xa bên phải. Nến mở range thật (23:42) chỉ có VSA **1.16x**, volume 13.
+- **Nghi phạm trong thuật toán:** lỗi **nhãn cụm climax chưa vá** (đã biết, bị revert). Nhãn lấy "cây volume cao nhất trong cụm" nên nhảy về 23:07; đề bài ghi rõ mục này chưa sửa. Đây là ca minh hoạ điển hình: chênh 35 nến và 7.5 giá.
 
-### 2. "Spring" gán sai loại và sai chỗ — luật vi phạm: L5 + THEORY §9
-- **Thuật toán gắn:** Spring 09:16 tại 4551.5, trạng thái `confirmed`.
-- **Đúng phải là:** cú rũ thật là đáy ~4547, và giá **ở ngoài range hơn 20 nến** trước khi quay lại → theo L5 đó là **Shakeout**, không phải Spring. Ngoài ra trạng thái `confirmed` là sai: sau "Spring" giá không đi về biên đối diện mà đi **sâu hơn nữa** — theo THEORY §9 đây là cấu trúc thất bại tại thời điểm đó.
-- **Nghi phạm trong thuật toán:** luật "mỗi range chỉ MỘT cú rũ, cú sâu hơn hạ cấp cú trước" không chạy được vì cú sâu hơn không bao giờ được nhận diện (lỗi 1).
+### 2. Range không được đặt tên — luật vi phạm: L4
+- **Thuật toán gắn:** tiêu đề "Chưa rõ (BCLX) (DIST?)", trạng thái `superseded`, ghi chú "khong dat ten 4 mau hinh".
+- **Đúng phải là:** L4 nói rõ đủ **4 pattern**, hướng MOVE quyết định loại climax, hướng phá thật quyết định tên. MOVE tăng + phá **xuống** (SOW 01:46 tại 4594.9, dưới biên chính dưới 4601.5 tới 6.6 giá = 66 tick) → **DIST**, không có gì "chưa rõ".
+- **Dấu hiệu quyết định trên chart:** SOW và LPSY[D] đều nằm dưới biên chính dưới; giá sau đó bò quanh 4592-4600, không lấy lại range.
+- **Nghi phạm trong thuật toán:** trạng thái `superseded` đang **chặn** bước đặt tên. Việc bị range sau thay thế không xoá đi sự thật là range này đã phá xuống — nên tách "đặt tên" khỏi "trạng thái vòng đời".
 
-### 3. Phase B (15 nến) ngắn hơn Phase A (26) và Phase C (56) — luật vi phạm: L8 + L9
-- **Thuật toán gắn:** A 26 · B 15 · C 56 · D 16 · E 53.
-- **Đúng phải là:** B dài nhất, C ngắn nhất. Ở đây đảo ngược hoàn toàn cả hai luật cùng lúc.
-- **Nghi phạm trong thuật toán:** Phase C mở ngay tại cú rũ 09:16 rồi treo tới 10:11 vì cú rũ được đánh `confirmed` sai (lỗi 2) — đoạn 40 nến giá lang thang ngoài range đáng lẽ vẫn là Phase B.
+### 3. mSOW ở Phase B phá biên sâu hơn cả SOW ở Phase D — luật vi phạm: L3 / L8
+- **Thuật toán gắn:** mSOW 01:10 tại **4596.3** (Phase B) → tạo biên phụ dưới 4595.2; SOW 01:46 tại **4594.9** (Phase D).
+- **Đúng phải là:** SOW của Phase D chỉ hơn mSOW của Phase B đúng **1.4 giá**, và chỉ vượt biên phụ 4595.2 đúng **0.3 giá = 3 tick**. Theo L3, "phá thật" phải bứt qua **biên phụ** — 3 tick không phải bứt. Cú ở Phase D này thực chất là lần chạm lại đúng vùng mSOW, tức vẫn là test biên, chưa phải MSOW.
+- **Dấu hiệu quyết định trên chart:** hai điểm mSOW và SOW nằm gần như cùng độ cao, đều dính vào đường đứt 4595.2.
+- **Nghi phạm trong thuật toán:** ngưỡng +30 tick mới áp cho biên **chính**; qua biên **phụ** vẫn không có ngưỡng → vẫn còn ca "phá biên vài tick" đúng như câu hỏi số 3 của đề.
 
-### 4. Nhãn SC nằm ngoài khung range — luật vi phạm: L3 (trình bày + mốc)
-- **Thuật toán gắn:** SC tại 08:29 giá 4554.1; range bắt đầu 08:34; biên chính dưới 4553.4 lấy từ nến 08:34.
-- **Đúng phải là:** mốc bắt đầu range = nến climax. Trên ảnh, nhãn SC đứng **bên trái vạch Phase A**, tức climax nằm ngoài range của chính nó, và nhãn treo ở 4554.1 — cao hơn biên chính dưới.
-- **Nghi phạm trong thuật toán:** vá v7 #4 kẹp nhãn theo nến mở range, nhưng ở đây mốc mở range **dời tiến** theo cực trị cụm còn nhãn giữ tại cây VSA cao (08:29) → hai mốc tách nhau 5 nến. Phải kẹp cả hai: nếu nhãn nằm trước nến mở range thì kéo mốc mở range lùi về nhãn.
-
-### 5. Biên phụ trên 4566.1 do chính Phase E tạo ra — luật vi phạm: L3
-- 4566.1 chỉ đạt được sau 10:28 (trong Phase E). Biên phụ theo định nghĩa là mức mà một thế lực **cố phá mà không được**; giá đã phá thành công và đi tiếp thì đó là Phase E, không phải biên phụ. Hệ quả: SOS 4563.6 bị hiển thị như chưa vượt biên phụ, sai lệch phép đánh giá "SOS mạnh" của L3.
-
-### 6. Range quá vụn — cảnh báo khung
-- Chiều cao biên chính **7.3 giá (0.16%)**, MOVE trước climax chỉ 16.6 giá, climax thật là nến 15 hợp đồng VSA 0.67×. Đủ 5 phase trên một dải 7 giá của vàng M1 là dấu hiệu đang gắn nhãn cho nhiễu.
+### 4. Không có Phase E dù range đóng bằng một cú phá — luật vi phạm: L10
+- **Thuật toán gắn:** Phase D = 01:46 → 02:14 (26 nến), hết range, không có E.
+- **Đúng phải là:** hoặc có Phase E (giá rời range đi tìm vùng mới), hoặc phải kết luận cấu trúc **thất bại** (THEORY §9) vì giá không đi được về phía đối diện.
+- **Dấu hiệu quyết định trên chart:** sau LPSY[D] 01:54, giá chỉ dao động 4592–4606 tới 02:56 — chưa hề rời vùng. Đây đúng nghĩa "cấu trúc thất bại", không phải Phase E.
 
 ## Đạt
-- L4: SC + phá lên = Tích luỹ — tên đúng.
-- L7: LPS[C], LPS[D] mỗi cái một điểm.
-- **Vá v7 #1 chạy đúng:** er=0.49 → "nhịp HIỆU QUẢ".
-- SOT phía dưới ghi "cạn kiệt" (tỷ lệ volume 0.51) — đọc đúng dấu.
+- **L1 (phần MOVE) đạt:** MOVE tăng 36.1 giá / 99 nến, hiệu suất 0.47, mũi xám vẽ đúng chân move từ 4562.7.
+- **L2 đạt:** AR 23:59 (4601.5) là cú bật ngược thật; ST[A] 00:11 tại 4610.6 hồi **(4610.6−4601.5)/13.9 = 65%** khoảng AR↔climax → qua ngưỡng 55% mới, và nó test đúng vùng đỉnh chứ không lửng giữa range. Vá v7.1 hiệu quả ở đây.
+- **L8 đạt về độ dài:** A 30n, B 69n, C **13n** (ngắn nhất), D 26n — tỷ lệ đúng chuẩn, Phase C không phình.
+- **L9 đạt:** Phase B 69 nến, dài nhất.
+- **L7 đạt:** LPSY[C] và LPSY[D] mỗi cái đúng 1 điểm, không vẽ vùng, tách vai đúng trước/sau SOW.
+- **L6 đạt:** không dùng nhãn ST[B] trong bài này.

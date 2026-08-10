@@ -1,42 +1,44 @@
-# Chấm bài #14 — Tái tích luỹ (RE-ACC) · 2026-05-06 03:20 → 08:12 (159 nến M1)
+# Chấm bài #14 — Tái tích lũy (RE-ACC) · 2026-05-05 07:36 → 13:35 (188 nến M1)
 
-**Điểm: 1/10** — Không nên vẽ range ở đây. Đây là một đoạn xu hướng tăng bị cắt ngang bằng một cây doji 3 lot ở phiên Á chết, không phải vùng đấu giá.
+**Điểm: 2/10** — Không nên vẽ range ở đây: 12.4 giá bề rộng, phiên Á volume 1-7 hợp đồng, không có climax thật. Và Phase C nuốt trọn đoạn giá đã bùng ra ngoài biên.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Cây mở range không phải climax — luật vi phạm: L1 + mục 3(1) THUẬT TOÁN
-- **Thuật toán gắn:** `climax BCLX @4695.2, VSA 0.58x, biên độ nến 1.0 giá, volume = 3 hợp đồng`.
-- **Đúng phải là:** ngưỡng mở range của chính thuật toán là biên độ ≥1.4× TB và VSA ≥2.2×. Cây này **trượt cả hai**. Không có cao trào nào chặn move cả — giá chỉ khựng lại vài phút rồi đi tiếp lên 4728.
-- **Dấu hiệu quyết định trên chart:** 6 nến quanh climax có volume 1–3 lot, ba nến liền có `thân/biên độ = 0.00` (giá không nhúc nhích); dữ liệu còn thiếu hẳn các phút 03:16, 03:21, 03:22, 03:24–03:26.
-- **Nghi phạm trong thuật toán:** cụm climax dời **mức** theo cực trị giá 8 nến nhưng **không kiểm lại** cây được chọn có còn thoả ngưỡng VSA/biên độ hay không. Cây thoả ngưỡng thật (VSA 10.10× lúc 02:56) nằm ngoài cụm.
+### 1. Phase C (60 nến) trùm lên cả đoạn giá đã phá biên và chạy 20 giá — luật vi phạm: L8 + L10
+- **Thuật toán gắn:** Phase C = 11:20 → 13:06; Phase D chỉ bắt đầu 13:08 với SOS tại 4625.3.
+- **Đúng phải là:** trên ảnh giá đóng cửa vượt biên phụ trên (4603.6) từ khoảng **11:42** và leo liên tục lên 4624 trong khoảng 12:16-13:00. Cú phá thật đã xác nhận từ ~11:45 → **Phase D phải bắt đầu ở đó**, Phase C chỉ được dài vài nến quanh LPS[C].
+- **Dấu hiệu quyết định trên chart:** SOS gán ở 4625.3, tức **cao hơn biên chính trên 24.7 giá = gấp 2 lần chiều cao cả range (12.4 giá)**. Một nhãn "phá vỡ" không bao giờ được đặt sau khi giá đã đi hết 2 lần chiều cao range.
+- **Nghi phạm:** Phase C không được thoát sớm khi giá đã đóng cửa ngoài biên nhiều nến liên tiếp; điều kiện thoát vẫn là "3 nến liên tiếp + 30 tick" đo tại thời điểm muộn, cộng với trần 120 nến chưa bị chạm nên C cứ kéo dài.
 
-### 2. Nhãn BCLX nằm ngoài khung range VÀ dưới đáy range — luật vi phạm: L3 + vá v7 #4
-- **Thuật toán gắn:** nhãn `BCLX 02:56 @4684.5` trong khi range bắt đầu 03:20 và biên chính dưới là 4687.7.
-- **Đúng phải là:** climax phải là **cực trị trên** của range phân phối/tái tích luỹ; ở đây nhãn nằm **thấp hơn cả đáy range 3.2 giá** và lệch 24 phút về bên trái khung.
-- **Dấu hiệu quyết định trên chart:** chấm BCLX đỏ nằm hẳn dưới-trái hình chữ nhật range.
-- **Nghi phạm trong thuật toán:** vá v7 #4 chỉ kẹp trong "cửa sổ cụm 8 nến" nhưng không kẹp theo `range_start` và **không kẹp theo giá** (nhãn climax phải nằm ở phía biên mà nó tạo ra). Đây là ca nặng nhất của lỗi này trong lô.
+### 2. Không đủ điều kiện mở range — luật vi phạm: L1
+- **Thuật toán gắn:** BCLX? tại nến 07:36, VSA **1.59x**, biên độ nến **1.1 giá**; phiếu ghi thẳng "SINH TU CU PHA, khong co cao trao thuc su"; **không có dòng MOVE trước climax**.
+- **Đúng phải là:** L1 đòi một MOVE xu hướng bị climax chặn lại. Ở đây không có move nào được đo, và cây "climax" dưới cả ngưỡng 2.2x.
+- **Dấu hiệu quyết định:** 12 nến quanh climax có volume 1, 3, 2, 1, 30, 2, **7**, 1, 1, 2, 1, 1 — mười một trên mười hai nến dưới 4 hợp đồng. Cả range chỉ rộng 12.4 giá (0.27%). Đây là dải nhiễu phiên Á, không phải vùng đấu giá.
+- **Nghi phạm:** cơ chế SIDEWAYS cho phép mở range mà **miễn hoàn toàn** điều kiện L1. Nếu miễn climax thì tối thiểu phải giữ một sàn về bề rộng dải và về thanh khoản.
 
-### 3. Range chỉ cao 7.5 giá (0.16%) và giá rời khỏi nó ngay sau Phase A — luật vi phạm: L1 (không phải vùng đấu giá) + L9
-- **Thuật toán gắn:** Phase B dài 139 nến.
-- **Đúng phải là:** nhìn ảnh, từ ~04:05 trở đi toàn bộ nến nằm **trên** biên phụ trên 4699.2 và đi một mạch lên 4728. "Phase B" ở đây là một chân xu hướng nằm ngoài range, không phải giai đoạn cân bằng xây nguyên nhân.
-- **Dấu hiệu quyết định trên chart:** biên chính 4687.7–4695.2 chỉ dày bằng ~1/4 chiều cao một nến của đợt tăng ngay sau đó; SOS đặt tại 4728.0, tức **4.4 lần chiều cao range** phía trên biên.
-- **Nghi phạm trong thuật toán:** không có sàn chiều cao range tối thiểu (người học đã chốt không đặt sàn **độ dài**, nhưng chiều cao 0.16% ở phiên 1–3 lot là nhiễu thuần tuý). Guard "biên phụ/biên chính > 4.0×" cũng vô dụng vì biên phụ không được nới (lỗi 4).
+### 3. mSOS gán cho nến CHƯA phá biên chính — luật vi phạm: mục 5.1 (định nghĩa mSOS ở v6)
+- **Thuật toán gắn:** mSOS 10:34 tại **4599.1**, VSA 5.11x.
+- **Đúng phải là:** biên chính trên là **4600.6** — nến này nằm DƯỚI biên, chưa phá gì cả. Định nghĩa v6 nói rõ mSOS là cú "đã bứt hẳn ra ngoài biên chính nhưng không giữ được". Nến chưa chạm biên thì cùng lắm là UT[B].
+- **Nghi phạm:** bước quét hồi tố "cây VSA cao nhất trong đoạn" không kiểm lại điều kiện `close > edge` cho chính cây được chọn.
 
-### 4. Biên phụ trên không được nới bởi cú thăm dò thất bại — luật vi phạm: L3
-- **Thuật toán gắn:** `biên phụ trên 4699.2`, trong khi có `mSOS 06:42 @4709.3 (VSA 11.27x)`.
-- **Đúng phải là:** biên phụ = cực trị **xa nhất** một thế lực đã đẩy tới; 4709.3 > 4699.2 nên biên phụ trên phải là 4709.3 (thực tế giá còn lên cao hơn nữa).
-- **Nghi phạm trong thuật toán:** nhánh đóng băng biên phụ trong `C_pending` (vá v6 #2) đang chặn nhầm — phía đang test chỉ được nới "một lần sau khi biết kết cục", và lần nới đó không xảy ra.
+### 4. Nhãn BCLX? nằm trước nến mở range và dưới biên nó tạo ra — lỗi cụm climax (chưa sửa)
+- **Thuật toán gắn:** nhãn ở 07:34, giá **4597.2**; biên chính trên là **4600.6**.
+- Trên ảnh nhãn BCLX? treo lơ lửng dưới đường biên liền màu cam — người đọc chart không hiểu cây nào tạo ra biên.
 
-### 5. Phase C thiếu; ST[A] không test được vùng climax — luật vi phạm: L8, L2
-- `ST[A] 03:44 @4692.4` cách climax 4695.2 tới 2.8 giá = 37% chiều cao range — không phải một cú test vùng cao trào. Vá v7 #2 (ngưỡng hồi 0.4) cho qua vì tính theo tỷ lệ AR↔climax (0.63) chứ **không** ràng buộc khoảng cách còn lại tới climax — đúng đầu mục "ST[A] vẫn thiếu ràng buộc khoảng cách đáy tới climax" ghi ở 13.1, chưa vá.
-- Không có Phase C (A→B→D→E), vi phạm L8 giống bài #13.
+### 5. Cả Phase A chạy trên volume rác — luật vi phạm: mục 2.2 THEORY (Effort vs Result)
+- AR gắn cờ "(yếu)" VSA 0.47x, ST[A] VSA **0.30x**, climax 1.59x. Ba mốc dựng nên toàn bộ khung range đều không có nỗ lực nào phía sau.
+- Ghi nhận đúng: máy CÓ gắn cờ "(yếu)" cho AR. Nhưng không gắn cho ST[A] và climax dù cùng mức tệ.
 
-### 6. (Trình bày) Dải phase hở nến
-- A kết thúc 03:44 nhưng B bắt đầu 03:48; B kết thúc 07:57 nhưng D bắt đầu 07:59. Do dữ liệu khuyết nến, nhưng nên kẹp liền mạch để dải phase không có khe.
+### 6. Phase E dài 2 nến — luật vi phạm: L10
+- Phase E phải là "giá rời range đi tìm vùng giá mới". Hai nến không mô tả được gì; range đóng ở 13:35 trong khi trên ảnh giá còn dao động mạnh 4615-4634 sau đó.
+
+### 7. LPS[C] ở giữa range — L8
+- LPS[C] 11:20 tại 4595.5 = **60% chiều cao** (4588.2-4600.6). Lặp đúng lỗi ở bài #13: bỏ ràng buộc nửa range làm pivot rơi vào giữa.
 
 ## Đạt
-- Tên range: BCLX origin + phá lên = Tái tích luỹ, khớp L4 (đây là điều đúng duy nhất về mặt đặt tên).
-- Chú thích nỗ lực/kết quả đọc đúng dấu er (er=0.18 → "nhịp HIỆU QUẢ") — vá v7 #1 chạy tốt.
+- **Tên range (L4): ĐẠT về hình thức.** Origin BCLX (dù là giả) + phá lên = Tái tích luỹ, đúng bảng 4 pattern.
+- **ST[A] (L2):** hồi 64% khoảng AR↔climax, lọt ngưỡng 0.55 mới — về mặt số thì đúng luật (nhưng 64% của 12.4 giá = 7.9 giá, không có ý nghĩa cấu trúc).
+- **Tỉ lệ B dài nhất (L9): ĐẠT** (B = 92 nến).
 
 ## Cần hỏi người học
-- Có chấp nhận đặt **sàn chiều cao range tuyệt đối** (ví dụ ≥ 1.0× ATR20 hoặc ≥ 0.3% giá) không? Người học đã chốt không đặt sàn *độ dài*, nhưng ca này chết vì *chiều cao*, và nó lặp lại ở mọi range phiên Á thanh khoản 1–3 lot.
+- Range sinh từ cú phá (SIDEWAYS) hiện được **miễn hoàn toàn** L1. Có nên đặt sàn tối thiểu cho nó không — ví dụ bề rộng dải ≥ 0.5× chiều cao range cha, hoặc volume trung bình đoạn ≥ một tỷ lệ nào đó so với TB ngày? Bài này (12.4 giá, 1-7 hợp đồng) là ca cho thấy miễn hết là quá lỏng.

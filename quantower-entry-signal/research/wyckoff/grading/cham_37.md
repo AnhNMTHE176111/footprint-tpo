@@ -1,41 +1,39 @@
-# Chấm bài #37 — Tái phân phối (RE-DIST) · 2026-06-30 00:09 → 00:56 (47 nến M1)
+# Chấm bài #37 — Chưa rõ (BCLX) (DIST?) · 2026-06-12 15:27 → 20:59 (332 nến M1)
 
-**Điểm: 2/10** — không nên vẽ range ở đây: 47 nến, biên chính 10.4 giá, mà nhét đủ A→E. Đây là nhiễu, không phải một vùng đấu giá.
+**Điểm: 5/10** — Khung range vẽ đúng chỗ, Phase A sạch; nhưng nhãn climax neo sai cây, mSOW gán sai vai, và 283 nến Phase B bỏ trống chỉ một nhãn.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Range quá vụn — 47 nến đủ 5 phase — luật vi phạm: "khung quá thô / range quá vụn" (CHART_CASES), L9
-- **Thuật toán gắn:** A=10 · B=6 · C=12 · D=14 · E=6 nến. Biên chính 4017.1–4027.5 = **10.4 giá (0.26% giá)**.
-- **Đúng phải là:** không vẽ range. Một vùng cân bằng cần thời gian đàm phán; 6 nến Phase B không đủ để "xây nguyên nhân" cho bất cứ thứ gì. Giảng viên đã nhiều lần bắt học viên đổi khung để cấu trúc ra hình — ở đây ngược lại: M1 quá mịn nên một nhịp nghỉ 8 phút bị đọc thành cả một schematic.
-- **Dấu hiệu quyết định trên chart:** nhìn toàn cảnh, đoạn 00:09–00:56 chỉ là một cái **gờ ngang giữa hai chân giảm** của cùng một đợt rơi 4041 → 3955. Move trước và Phase E sau nối liền nhau thành một xu hướng duy nhất.
-- **Nghi phạm trong thuật toán:** người học đã chốt "không đặt sàn độ dài tối thiểu cho range". Quyết định đó đang trả giá ở đây. Nếu không đặt sàn nến thì tối thiểu phải đặt **sàn theo cấu trúc**: Phase B phải là phase dài nhất (đang bị vi phạm) mới cho đóng range và đặt tên.
+### 1. Nhãn BCLX neo vào nến TRƯỚC nến mở range, thấp hơn biên chính 5.2 giá — luật vi phạm: L3 (biên chính = mức climax)
+- **Thuật toán gắn:** BCLX tại 15:24, giá 4251.6, VSA 2.82x.
+- **Đúng phải là:** nhãn phải nằm trên cây tạo ra biên chính trên 4256.8 — tức nến 15:27 (hoặc 15:26, high 4256.4).
+- **Dấu hiệu quyết định trên chart:** phiếu ghi range bắt đầu 15:27 nhưng nhãn ở 15:24; trên ảnh chấm BCLX nằm hẳn **dưới** đường "biên CHÍNH trên 4256.8" — người đọc chart không thể hiểu vì sao biên trên lại ở một mức không có nhãn nào.
+- **Nghi phạm trong thuật toán:** cửa sổ "cụm climax" 8 nến tách riêng mốc giá và mốc nhãn — đúng chỗ mục 13.1c ghi là **đã thử sửa rồi revert**.
 
-### 2. Thứ tự độ dài phase đảo ngược hoàn toàn — luật vi phạm: L9 + L8
-- **Thuật toán gắn:** B = 6 nến (ngắn nhất), C = 12 nến, D = 14 nến (dài nhất).
-- **Đúng phải là:** B dài nhất, C ngắn nhất. Ở đây C **gấp đôi** B, D gấp hơn hai lần B.
-- **Dấu hiệu quyết định trên chart:** bảng phase trong phiếu số liệu, đọc thẳng.
-- **Nghi phạm trong thuật toán:** không có kiểm tra hậu nghiệm nào về tỉ lệ phase trước khi chốt range. Hai luật tỉ lệ (L8, L9) đang là mô tả trong tài liệu chứ chưa là điều kiện trong code.
+### 2. Cây neo biên chính trên chỉ có VSA 1.06x — không phải climax — luật vi phạm: mục 3(1) THEORY / L1
+- **Thuật toán gắn:** nến mở range 15:27 (VSA 1.06x, thân 0.40) làm mức climax 4256.8.
+- **Đúng phải là:** nếu cây đỉnh chỉ 1.06x thì đây là **climax dạng cạn kiệt** (THEORY §6.2), không phải BCLX nổ volume — và không được đồng thời dán nhãn BCLX của cây 2.82x cách đó 3 nến vào nó.
+- **Dấu hiệu quyết định trên chart:** bảng 12 nến — cụm volume thật là −3/−2/−1 (2.82x / 2.48x / 1.91x), nến climax +0 chỉ 232 lot (1.06x), thấp hơn cả 3 nến trước nó.
+- **Nghi phạm trong thuật toán:** mốc giá climax được phép trượt tự do theo cực trị trong 8 nến, không kiểm lại VSA của cây đích.
 
-### 3. Nhãn SC nằm NGOÀI range, trước cả nến mở range — luật vi phạm: L3 (biên chính = mức climax), mục 9 (nhãn sai vị trí)
-- **Thuật toán gắn:** SC dán tại **00:06** giá 4018.2 (VSA 4.47x), trong khi range bắt đầu **00:09** và mức climax = **4017.1** (nến 00:09).
-- **Đúng phải là:** nhãn climax phải nằm trong cụm climax kể từ nến mở range. 00:06 là **3 nến trước** khi range tồn tại — trên ảnh thấy rõ chấm SC nằm bên trái vạch tím "Phase A".
-- **Dấu hiệu quyết định trên chart:** 00:06 có low 4018.2, cao hơn mức biên chính dưới 4017.1 đúng 1.1 giá; nhãn treo lơ lửng phía trên đường biên nó lẽ ra phải đánh dấu.
-- **Nghi phạm trong thuật toán:** sửa #4 của v7 ("kẹp nhãn cụm climax theo nến mở range cố định") **chưa kín cạnh dưới** — mới kẹp trần (start+8) mà chưa kẹp sàn (không được nhỏ hơn start).
+### 3. mSOW gán sai vai — phải là ST[B] — luật vi phạm: mục 5.1 bảng phân loại (ngưỡng "cú thăm dò mạnh")
+- **Thuật toán gắn:** mSOW tại 19:35, giá 4223.2, VSA 1.11x.
+- **Đúng phải là:** **ST[B]** (test nhẹ biên dưới). mSOW theo định nghĩa v6 là cú **đã phá được** nhưng không giữ được — cú này không phá được gì.
+- **Dấu hiệu quyết định trên chart:** độ sâu = 4227.4 − 4223.2 = **4.2 giá**, ngưỡng "mạnh" = max(1.5 giá, 15% × 29.4 = **4.41 giá**) → **không đạt**; VSA 1.11x cũng dưới 2.2x. Trượt cả hai điều kiện mà vẫn được nhãn mSOW.
+- **Nghi phạm trong thuật toán:** nhánh phân loại kết cục A đo độ sâu bằng **biên phụ đã bị chính cú đó nới ra** (4223.2 = đúng mức mSOW), nên phép so "sâu ≥ 15%" thành so chính nó với chính nó — lỗi thứ tự nới-biên mà 13.1c nói đã sửa, ở đây **còn dấu vết**.
 
-### 4. LPSY[C] nằm giữa range, không phải test biên — luật vi phạm: L8
-- **Thuật toán gắn:** LPSY[C] 00:25 @ 4022.6, VSA 0.51x. Trung điểm range = 4022.3.
-- **Đúng phải là:** Phase C là tín hiệu **đầu tiên** cho thấy giá ở biên này bắt đầu phá biên kia — nó phải sinh ra ở một biên. Một pivot đúng giữa range không nói được điều gì về ai đang thắng.
-- **Nghi phạm trong thuật toán:** điều kiện "pivot phải trong range + đúng nửa range" chỉ chặn nửa sai, không đòi pivot **tiệm cận biên**. Nên thêm ràng buộc: pivot cách biên tương ứng ≤ 25-30% chiều cao range.
-
-### 5. Phase E cắt sớm ngay trước cú rơi thật — luật vi phạm: L10
-- **Thuật toán gắn:** E = 6 nến, range đóng 00:56 tại ~4005.
-- **Đúng phải là:** Phase E là lúc giá **rời range đi tìm vùng giá mới**. Cú rơi thật xảy ra ngay sau đó: 01:00–01:05 giá sụp thẳng xuống 3955 kèm cây volume lớn nhất toàn ảnh.
-- **Dấu hiệu quyết định trên chart:** cột volume vàng khổng lồ ở ~01:03 nằm **ngoài** khung range đã đóng.
-- **Nghi phạm trong thuật toán:** đích Phase E = 1.0× chiều cao biên chính. Biên chính chỉ 10.4 giá nên đích đạt được chỉ sau vài nến. Đích Phase E nên có sàn tuyệt đối theo ATR khi range quá hẹp.
+### 4. Phase B 283 nến chỉ có đúng 1 nhãn — luật vi phạm: L9
+- **Thuật toán gắn:** không UT[B] nào, SOT trên/dưới đều `none`, phiếu không có cả dòng nỗ lực↔kết quả.
+- **Đúng phải là:** bias ghi `0` (test cả hai biên) thì phải có ít nhất **1 UT[B] + 1 ST[B]**. Trên ảnh, quanh 18:30 giá đẩy sát biên trên 4256.8 rồi dội — đó là UT[B] bị bỏ.
+- **Dấu hiệu quyết định trên chart:** 283/332 nến (85% range) không có sự kiện nào; panel volume có ít nhất 4 thanh vàng (VSA ≥2.2x) trong Phase B không được đọc.
+- **Nghi phạm trong thuật toán:** nhãn nhẹ chỉ sinh khi giá **thò ra ngoài biên chính quá 10 tick**; cú test dội **ngay dưới** biên không bao giờ được ghi.
 
 ## Đạt
-- **ST[A] chuẩn nhất trong cả lô này:** 4018.3 so climax 4017.1 — test lại **đúng vùng climax**, hồi 0.88 khoảng AR↔climax (L2).
-- **Nhãn SOW đặt đúng cây phá thật:** 00:37, VSA 6.90x, đóng cửa 4010.1 vượt hẳn biên phụ dưới 4016.1 (L3, mục 8).
-- **Tên range đúng:** SC + phá xuống thật = Tái phân phối (L4).
-- **Chú thích nỗ lực/kết quả đọc đúng dấu** (er=0.31 → "HIỆU QUẢ") — lỗi hard-code v6 đã hết.
-- **LPSY[D] đúng vai:** đỉnh nhịp hồi sau SOW, vẫn nằm dưới biên đã phá (L10).
+- L1: MOVE tăng 42.5 giá / 40 nến / hiệu suất 0.39, chân move đọc được trên ảnh (~4200 → 4256) — climax đúng là cực trị chặn move, không nằm giữa move.
+- L2: đủ 3 lần đổi hướng; **ST[A] 4254.1 chỉ cách mức climax 2.7 giá** (91% khoảng AR↔climax) — đây là ST[A] đúng nghĩa nhất trong cả lô, ngưỡng 0.55 mới ăn đúng ở ca này.
+- L3: biên chính cố định suốt 332 nến; đúng 1 biên phụ dưới, tỷ lệ 1.14x.
+- L4: không đặt tên khi range bị khe cuối tuần cắt — trung thực, không gò tên (đúng tinh thần Ca #20 nguồn 7.pdf).
+- Range này **đáng vẽ**: 332 nến lùng bùng trong 29.4 giá là một vùng đấu giá thật, không phải nhiễu.
+
+## Kết luận cấu trúc
+Tôi vẫn vẽ range ở đây, cùng hai biên này. Sửa: dời nhãn BCLX về đúng cây đỉnh, hạ mSOW → ST[B], bổ sung UT[B] ở nhịp chạm biên trên quanh 18:30.

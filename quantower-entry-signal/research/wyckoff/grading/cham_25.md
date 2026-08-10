@@ -1,37 +1,35 @@
-# Chấm bài #25 — Chưa rõ (SC) / mã nội bộ "ACC?" · 2026-06-04 14:53 → 06-05 02:56 (663 nến)
+# Chấm bài #25 — Tích lũy (ACC) · 2026-05-26 11:43 → 13:52 (129 nến M1)
 
-**Điểm: 4/10** — khung range mở đúng chỗ, nhưng ST[A] rơi giữa range làm Phase A phình lên 224 nến, mất hẳn Phase C, và nhãn SOW neo vào một cây doji. Sửa nhãn, không phải vẽ lại từ đầu.
+**Điểm: 7/10** — Khung range vẽ đúng, chỉ cần sửa nhãn Phase C và cách dựng biên phụ trên.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. ST[A] không phải test vùng climax — nó là một cái ngọ nguậy giữa range — luật vi phạm: L2
-- **Thuật toán gắn:** ST[A] 18:36 tại 4500.0, chốt Phase A dài **224 nến**.
-- **Đúng phải là:** ST[A] phải là nhịp quay về **phía climax** bị chặn lại, tức nằm ở 1/3 dưới của range (vùng 4483.8–4493.6). 4500.0 nằm ở **55% chiều cao** (biên chính 4483.8–4513.2, cao 29.4). Đây là một đáy giữa range, không phải test SC. Nhìn ảnh: chấm ST[A] nằm gần chính giữa hai đường liền cam.
-- **Dấu hiệu quyết định trên chart:** hồi từ AR 4513.2 xuống 4500.0 = 13.2/29.4 = **45%** khoảng AR↔climax — vừa đủ vượt ngưỡng mới 0.4, tức ngưỡng v7 **không** chặn được ca này. Hệ quả dây chuyền: Phase A 224 nến so với Phase B 414 nến — Phase A gần bằng nửa Phase B, sai tỷ lệ mà L2/L9 hàm ý.
-- **Nghi phạm trong thuật toán:** `STA_MIN_AR_FRAC` đo **từ AR xuống**, không đo **khoảng cách còn lại tới climax**. Cần thêm ràng buộc thứ hai: `|st_a − climax| ≤ ~0.35 × chiều cao range`. Đây đúng là lỗi đã ghi trong mục 13.1 ("ST[A] vẫn thiếu ràng buộc khoảng cách đáy tới climax") — nâng 0.2→0.4 **chưa** chạm tới nó.
+### 1. Gọi "Spring" cho một cú phá lùng bùng ngoài biên hơn chục nến — luật vi phạm: L5
+- **Thuật toán gắn:** `Spring` tại 12:31, giá 4533.1, trạng thái confirmed, mở Phase C dài 18 nến.
+- **Đúng phải là:** **Shakeout** (một SOW thất bại), không phải Spring.
+- **Dấu hiệu quyết định trên chart:** biên chính dưới = 4538.0. Trên ảnh, cụm nến từ khoảng 12:29 đến 12:42 nằm trọn **dưới** đường 4538.0 — tức giá ở ngoài biên khoảng 13 nến trước khi hồi vào. L5 nói rõ: Spring = quay vào trong ≈3-4 nến hoặc ít hơn; lùng bùng ngoài một lúc = Shakeout. Chính Phase C dài 18 nến đã tự tố cáo điều này.
+- **Bằng chứng đối chiếu nội bộ:** bài #30 có cú phá tương tự (dưới biên ~15 nến) lại được gán **Shakeout**. Cùng một hiện tượng, hai tên gọi → tiêu chí phân loại đang không nhất quán.
+- **Nghi phạm trong thuật toán:** bộ đếm "số nến quay lại" nhiều khả năng tính từ **nến cực trị** (nến tạo đáy 4533.1) chứ không tính từ **nến đầu tiên đóng cửa ngoài biên**. Phải đổi mốc đếm về nến phá biên đầu tiên.
 
-### 2. Mất hẳn Phase C — luật vi phạm: L8
-- **Thuật toán gắn:** timeline A(224) → B(414) → D(26). Không có Phase C.
-- **Đúng phải là:** phá xuống thì trước đó phải có **LPSY[C]** — nhịp hồi cuối cùng lên phía biên trên trước cú sụp. Trên ảnh, nhịp hồi cuối ở khoảng 06-05 01:30 (đỉnh ~4482) là ứng viên LPSY[C] rõ ràng.
-- **Dấu hiệu quyết định trên chart:** giá rời biên chính dưới 4483.8 từ khoảng 00:14, sau đó lùng bùng dưới biên suốt hơn 2 tiếng rồi mới có SOW — cả đoạn đó là Phase C + D chứ không phải Phase B.
-- **Nghi phạm trong thuật toán:** cửa sổ gán ngược nới lên 0.8×B (=60 nến trần) **không cứu được**, vì ràng buộc v6 "pivot phải nằm **trong range** và đúng **nửa trên**" loại sạch mọi ứng viên — 60 nến trước SOW giá đã nằm hẳn **dưới** biên chính. Phải cho phép pivot nằm ngoài biên khi cú phá đã bắt đầu, hoặc đo nửa range theo **biên phụ**.
+### 2. Biên phụ trên do chính cú phá THÀNH CÔNG sinh ra — luật vi phạm: L3
+- **Thuật toán gắn:** biên phụ trên 4556.8, vẽ đường đứt kéo ngược về tận đầu Phase A.
+- **Đúng phải là:** phía trên **không có biên phụ**. Định nghĩa L3: biên phụ = cực trị xa nhất mà một thế lực **cố phá range gốc** tạo ra (UA/UT/DA, ST[A] vượt climax) — tức một nỗ lực bị đẩy về. 4556.8 là đỉnh đạt được **sau khi** SOS đã phá thật và giá đã sang Phase D/E; đó là kết quả của cú phá, không phải một nỗ lực bị chặn.
+- **Dấu hiệu quyết định trên chart:** trong toàn bộ Phase A→C giá chưa từng chạm 4556.8 (đỉnh Phase B chỉ ~4549). Đường đứt 4556.8 vắt ngang một vùng thời gian mà giá chưa bao giờ tới → vô nghĩa về mặt đọc chart.
+- **Hệ quả kèm theo:** SOS ở 4552.5 bị so với một biên phụ 4556.8 mà chính nó sinh ra → không bao giờ "đủ mạnh" theo L3. Đây đúng là vòng lặp "biên phụ tự nới rồi tự vượt" mà v7.1 nói đã sửa cho SOS/SOW; nhưng phần **vẽ** biên phụ vẫn chưa được sửa theo.
+- **Nghi phạm trong thuật toán:** hàm cập nhật biên phụ vẫn chạy trên toàn bộ range (kể cả sau khi Phase D được chốt). Phải khoá cập nhật biên phụ tại thời điểm SOS/SOW được xác nhận.
 
-### 3. Nhãn SOW neo vào cây doji — luật vi phạm: THEORY §4.1 (SOW = spread + volume tăng), tham số "thân ≥ 45%"
-- **Thuật toán gắn:** SOW 02:31 tại 4470.7, VSA 5.11× nhưng **thân/biên độ = 0.04**.
-- **Đúng phải là:** cây phá thật phải có thân dứt khoát. Thân 4% = một cây rút chân/doji — nỗ lực lớn, kết quả không có, đây là dấu hiệu **hấp thụ**, ngược hẳn với ý nghĩa SOW.
-- **Dấu hiệu quyết định trên chart:** cùng lỗi ở mSOW 01:00 (VSA 6.50×, thân 0.21).
-- **Nghi phạm trong thuật toán:** khâu neo hồi tố chỉ chọn `argmax(VSA)` trong đoạn; điều kiện thân 45% đang áp cho nến **xác nhận** chứ không áp cho nến **được neo nhãn**. Bổ sung `body_ratio ≥ 0.45` vào bộ lọc argmax.
+### 3. Phase C (18 nến) dài hơn Phase D (13 nến) — luật vi phạm: L8
+- **Thuật toán gắn:** A 16 / B 32 / C 18 / D 13.
+- **Đúng phải là:** C phải là phase ngắn nhất. Nếu sửa lỗi #1 (Shakeout thay Spring) thì mốc kết thúc Phase C nên là nến đầu tiên đóng cửa trở lại **trên** 4538.0 (~12:42), tức C ≈ 11-12 nến, ngắn hơn D — cấu trúc lập tức hợp lệ.
+- **Nghi phạm:** Phase C đang kết thúc tại thời điểm phát hiện SOS trừ đi một offset cố định, thay vì kết thúc tại nến hồi về trong biên.
 
-### 4. Nhãn SC nằm ngoài khung range — luật vi phạm: trình bày + L3 (mốc climax)
-- **Thuật toán gắn:** SC tại 14:51, giá 4487.0 — **2 nến trước** mốc mở range (14:53) và **cao hơn** biên chính dưới 4483.8.
-- **Đúng phải là:** nhãn climax phải nằm trong khung, tại đúng nến tạo mức 4483.8 (14:53, VSA 2.31×).
-- **Nghi phạm trong thuật toán:** vá #4 vòng này ("kẹp theo nến mở range cố định") kẹp theo nến **ứng viên gốc**, trong khi mốc range đã dời sang cực trị mới → nhãn tụt lại phía sau. Phải kẹp theo `range.start_idx` **sau khi** cụm climax chốt xong.
-
-### 5. (trình bày) Tiêu đề hiển thị mã "ACC?" cho một range đã có SOW
-- Range đang ở trạng thái `superseded`, không đặt tên là đúng (L4 chưa đủ dữ kiện). Nhưng in mã nội bộ **"ACC?"** lên tiêu đề gây hiểu nhầm là tích luỹ trong khi trên chart có mSOW + SOW phá xuống. Đổi thành "Chưa rõ" trơn.
+### 4. Nhãn SC nằm trước nến mở range (lỗi đã biết, chưa sửa)
+- SC ghi 11:35 giá 4540.4 (VSA 5.62x) trong khi range mở tại 11:43 (low 4538.0, VSA 2.71x). Nhãn climax đứng **ngoài** khung range, và giá nhãn 4540.4 **không** trùng biên chính dưới 4538.0 → người đọc chart không hiểu đường biên dưới lấy từ đâu. Ghi nhận theo yêu cầu, không tính vào điểm.
 
 ## Đạt
-- L1: MOVE 50.6 giá / 68 nến / hiệu suất 0.46 là một đợt giảm thật, và cây climax là **đáy** của đợt đó — mở range đúng chỗ.
-- L3: biên chính 4483.8–4513.2 cố định suốt range, biên phụ dưới 4477.5 đúng một cái, tỷ lệ 1.21× — không bị kéo theo giá.
-- Chú thích nỗ lực/kết quả er=0.71 ghi đúng là "nhịp HIỆU QUẢ, không phải hấp thụ" — vá #1 vòng này **có tác dụng**.
-- Phase B (414) là phase dài nhất — đúng L9.
+- **Mục 1 (L1):** MOVE giảm 23.0 giá / 52 nến / hiệu suất 0.60, bị nến 11:43 (VSA 2.71x, biên độ 5.6 giá) chặn tại cực trị — điều kiện mở range thoả rõ.
+- **Mục 2 (L2):** đủ 3 lần đổi hướng, ST[A] 11:58 tại 4536.0 hồi trọn khoảng AR↔climax (>100%, thừa ngưỡng 55%), Phase A kết thúc đúng tại ST[A]. Ngưỡng 0.55 hoạt động tốt ở bài này.
+- **Mục 4 (L4):** move giảm + SC + phá lên thật = Tích luỹ. Tên đúng.
+- **Mục 5 (L9):** Phase B 32 nến, dài nhất trong A–D. Bias test biên = 0 (chạm cả hai biên) — range cân, đọc đúng.
+- **Mục 7 (L10):** SOS 12:49 đóng cửa vượt biên chính trên; Phase E 51 nến đi tìm vùng giá mới lên 4561. Không có LPS[D] nhưng theo Ca #21 (7.pdf) Phase D **không bắt buộc** có BU — không trừ điểm.
+- **Mục 8:** climax VSA 2.71x, SOS VSA 2.15x có volume tăng, Shakeout VSA 3.31x — đọc effort/result hợp lý.

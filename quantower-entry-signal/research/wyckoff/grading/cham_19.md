@@ -1,41 +1,40 @@
-# Chấm bài #19 — Chưa rõ (BCLX) (DIST?) · 2026-05-20 15:16 → 2026-05-21 01:56 (421 nến M1)
+# Chấm bài #19 — Tái phân phối (RE-DIST) · 2026-05-14 19:48 → 22:18 (49 nến M1)
 
-**Điểm: 3/10** — khung range và Phase A/B đọc được, nhưng ST[A] rơi giữa range, Phase C dài hơn cả A lẫn D, nhãn SOS neo vào cây 0.97× và cuối cùng range bị bỏ tên trong khi thực tế nó là một cấu trúc **Phân phối** rõ.
+**Điểm: 2/10** — Không nên vẽ range ở đây. Đây là một đoạn nghỉ giữa xu hướng giảm M1, không phải vùng đấu giá.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. ST[A] không test lại vùng climax — luật vi phạm: L2
-- **Thuật toán gắn:** ST[A] 15:40 tại 4576.4.
-- **Đúng phải là:** ST[A] phải là cú quay về **phía climax 4591.2** rồi bị chặn. 4576.4 nằm ở (4576.4−4565.6)/25.6 = **42% chiều cao range** — đúng giữa vùng, đây là một cái ngọ nguậy, không phải test.
-- **Dấu hiệu quyết định trên chart:** khoảng cách từ ST[A] tới climax (14.8 giá) **lớn hơn** khoảng cách tới AR (10.8 giá) — test mà xa mức cần test hơn xa mức xuất phát thì không phải test.
-- **Nghi phạm trong thuật toán:** `STA_MIN_AR_FRAC` vừa nâng 0.2 → 0.4 (vá v7 #2) nhưng ca này đo được **0.42** — lọt qua sát ngưỡng. Ngưỡng đặt sai chiều: phải ràng buộc **khoảng cách còn lại tới climax** (vd ≤ 0.35× chiều cao), không phải "hồi được bao nhiêu từ AR".
+### 1. Phase A dài đúng 1 nến — không có CHoCH nào cả — luật vi phạm: L2
+- **Thuật toán gắn:** Phase A = 19:48 → 19:48 = **1 nến**. Trong đó AR (yếu) ở 19:34, SC? ở 19:38, ST[A] ở 19:48.
+- **Đúng phải là:** Phase A = một CHoCH = đúng 3 lần đổi hướng, kết thúc tại ST[A]. Một nến không chứa nổi 3 lần đổi hướng.
+- **Dấu hiệu quyết định trên chart:** thứ tự thời gian là **AR (19:34) → SC? (19:38) → climax mở range (19:48)**. AR đứng **trước** climax 14 phút. Cả 3 nhãn nằm trên cùng một đợt giảm liên tục 4704.8 → 4699.3 → 4693.1, đọc từ bảng sự kiện. Đó là ba mức giá thấp dần trong một move, không phải bật ngược → quay lại.
+- **Nghi phạm trong thuật toán:** nhánh chọn nến mở range đang lấy **ST[A]** làm nến mở (climax mở range 4693.1 tại 19:48 trùng đúng nhãn ST[A]), đẩy AR/SC ra ngoài range. Kết hợp với lỗi nhãn cụm climax chưa vá (nhãn được phép nằm trước nến mở range) → toàn bộ Phase A rơi ra ngoài khung.
 
-### 2. Phase C dài 53 nến — dài hơn cả Phase A (25) và Phase D (26) — luật vi phạm: L8
-- **Thuật toán gắn:** Phase C 00:27 → 01:24, neo bằng LPS[C] gán ngược.
-- **Đúng phải là:** Phase C là phase NGẮN NHẤT. Nếu LPS[C] gán ngược cách cú phá 53 nến thì nó không phải "tín hiệu đầu tiên cho thấy giá sắp phá biên kia" — đó chỉ là một đáy bất kỳ trong Phase B.
-- **Dấu hiệu quyết định trên chart:** nhìn dải phase — Phase C (53n) rộng gấp đôi Phase D (26n).
-- **Nghi phạm trong thuật toán:** vá v7 #3 nới cửa sổ gán ngược 0.5× → 0.8× độ dài Phase B (318 nến → trần 60 nến) đã **quá tay**: giờ luôn lấy được pivot ở tận đầu cửa sổ 60 nến. Phải thêm trần tuyệt đối kiểu `len(C) ≤ min(len(A), len(D))`.
+### 2. Không có MOVE hợp lệ trước climax — luật vi phạm: L1
+- **Thuật toán gắn:** mở range, nhưng phiếu số liệu **không có dòng "MOVE truoc climax"** (so với bài #20, #21, #23, #24 đều có).
+- **Đúng phải là:** không đủ điều kiện CẦN thì không mở range. Chính thuật toán cũng tự thú trong tiêu đề: *"SINH TU CHINH MOT CU PHA, khong co cao trao thuc su"*.
+- **Dấu hiệu quyết định trên chart:** 12 nến quanh climax cho thấy giá bò từ 4697.9 xuống 4694.0 với volume 2-9 lot, VSA 0.49x–2.17x. Nến climax volume 18, VSA 3.50x nhưng biên độ chỉ **1.2 giá**. Đó là một nhịp trượt nhỏ trong downtrend, không phải cao trào chặn move.
+- **Nghi phạm trong thuật toán:** guard L1 không chặn được khi dòng MOVE trống — cần biến điều kiện MOVE thành **bắt buộc cứng**, thiếu MOVE thì huỷ range.
 
-### 3. Nhãn SOS rơi vào cây VSA 0.97× trong khi cây phá thật 4.29× nằm ngay trước — luật vi phạm: mục 5.1 (nhãn hồi tố)
-- **Thuật toán gắn:** SOS 01:25 tại 4600.3, VSA **0.97×**; cây 01:15 VSA **4.29×** lại mang nhãn mSOS.
-- **Đúng phải là:** SOS neo hồi tố vào cây 01:15 (4.29×) — đó là cây bứt thật, đúng hướng, đóng cửa vượt biên chính 4591.2.
-- **Dấu hiệu quyết định trên chart:** trên panel khối lượng, thanh vàng cao nhất của cả đoạn phá nằm ở 01:15, không phải 01:25.
-- **Nghi phạm trong thuật toán:** cửa sổ quét hồi tố bắt đầu **sau** khi cú mSOS trước đó đã bị chốt/hạ cấp, nên cây thật bị "khoá" vào nhãn mSOS và không còn ứng viên cho SOS.
+### 3. Range 49 nến chứa đủ Phase A→E — luật vi phạm: "khung quá thô / range quá vụn" (CHART_CASES, Ca #4/#6/#19)
+- **Thuật toán gắn:** A=1n, B=12n, C=11n, D=25n, E=1n trên tổng 49 nến; biên chính rộng 11.7 giá (0.25%).
+- **Đúng phải là:** một TR M1 chỉ 49 nến mà đủ 5 phase phải nghi ngay là nhiễu. Nhìn ảnh: giá đi liền một mạch từ 4713 (18:49) xuống 4678 (23:23) — đoạn 19:48–22:18 chỉ là chỗ nghỉ giữa dốc.
+- **Dấu hiệu quyết định trên chart:** panel volume gần như phẳng suốt range (thanh 1-4 lot), cây volume lớn nhất toàn ảnh nằm ở **23:42**, tức **ngoài** range hoàn toàn.
+- **Nghi phạm trong thuật toán:** thiếu ngưỡng tối thiểu số nến / tối thiểu số lần chạm biên trước khi cho phép đóng đủ 5 phase.
 
-### 4. mSOS ghi Phase = B trong khi mốc thời gian nằm giữa Phase C — lỗi nhất quán bảng
-- mSOS 01:15 nằm trong khoảng Phase C (00:27–01:24) nhưng cột Phase ghi `B`. Trường phase của sự kiện không được cập nhật khi dải phase bị vẽ lại.
+### 4. Biên phụ dưới vô nghĩa (rộng hơn biên chính 4 tick) — luật vi phạm: L3
+- **Thuật toán gắn:** biên chính dưới 4693.1, biên phụ dưới 4692.7. Tỷ lệ biên phụ/chính = **1.03x**.
+- **Đúng phải là:** biên phụ chỉ có ý nghĩa khi ghi nhận một nỗ lực phá range **thật sự**. Chênh 0.4 giá = 4 tick là nhiễu tick, đúng ca "phá biên vài tick" mà vòng này muốn dẹp.
+- **Dấu hiệu quyết định trên chart:** hai đường cam (liền 4693.1 và đứt 4692.7) sát nhau tới mức đè lên nhau trên ảnh.
+- **Nghi phạm trong thuật toán:** điều kiện tạo biên phụ chưa áp ngưỡng tối thiểu (đề bài nói đã có +30 tick cho SOS/SOW nhưng chưa áp cho **việc sinh biên phụ**).
 
-### 5. Range không được đặt tên (superseded) trong khi cấu trúc thật là Phân phối — luật vi phạm: L4
-- **Thuật toán gắn:** `superseded`, tiêu đề "Chưa rõ (BCLX) (DIST?)".
-- **Đúng phải là:** BCLX chặn move tăng 81.5 giá → cú vượt lên 4600–4605 chỉ giữ được ~45 nến rồi giá xuyên thẳng cả range xuống 4564 (xem chart bài #20) → đó là **UTAD**, range là **PHÂN PHỐI**. Máy đọc thành SOS + Phase D + LPS[D] (tức tái tích luỹ) rồi né việc đặt tên bằng cách chuyển sang range con.
-- **Nghi phạm trong thuật toán:** cơ chế SIDEWAYS (mục 5.4) cắt cấu trúc làm hai, range cha mất tên vĩnh viễn — chính là ca "range con bị chết/không kết luận thì cha treo `superseded`" đã ghi ở mục 5.4 nhưng chưa xử lý.
-
-### 6. Nhãn climax bỏ sót cây nỗ lực lớn nhất — nhẹ
-- Cây 15:15 có VSA **7.69×**, biên độ 22.2 giá, thân 0.84 — chính nó mới là cây cao trào; cây 15:16 (4.45×) chỉ là cây làm đỉnh. Cửa sổ cụm climax chỉ quét **tiến**, không quét lùi, nên không thấy cây mạnh hơn liền trước.
+### 5. ST[A] trùng đúng nến climax — luật vi phạm: L2
+- **Thuật toán gắn:** ST[A] 19:48 giá 4693.1 = đúng nến và đúng giá climax mở range.
+- **Đúng phải là:** ST[A] là lần **quay lại** vùng climax sau khi đã bật lên AR. Nó không thể là chính cây climax.
+- **Dấu hiệu quyết định trên chart:** cả hai cùng ghi 4693.1 / 19:48:00 trong phiếu.
+- **Nghi phạm trong thuật toán:** ngưỡng STA_MIN_AR_FRAC=0.55 mới không cứu được ca này vì AR bị xác định **trước** climax → phép đo hồi bao nhiêu % khoảng AR↔climax bị vô nghĩa. Cần chặn cứng: `idx(AR) > idx(climax)`.
 
 ## Đạt
-- L1: MOVE 81.5 giá / 63 nến, hiệu suất 0.44, climax là đỉnh cao nhất cửa sổ — mở range hợp lệ.
-- L3: biên chính 4565.6–4591.2 đúng bằng AR + climax, không trượt theo giá; tỷ lệ biên phụ 1.36× hợp lý.
-- L9: Phase B 318/421 nến — đúng là phase dài nhất.
-- **Vá v7 #1 chạy đúng:** er=1.32 ≥ 1 → ghi "vùng hấp thụ NGHI VẤN"; không còn hard-code.
-- Phase D có LPS[D] một điểm duy nhất (L7).
+- Tên range RE-DIST khớp L4 (climax dạng SC + phá xuống thật) — nếu range này tồn tại thì tên đúng.
+- Không spam nhãn: mỗi nhãn xuất hiện đúng 1 lần, LPSY[C]/LPSY[D] tách vai đúng trước/sau SOW (đúng bài học Ca #3 nguồn 4.pdf).
+- SOW 20:14 VSA 2.65x, thân/biên 1.00 — chọn đúng cây phá có nỗ lực.

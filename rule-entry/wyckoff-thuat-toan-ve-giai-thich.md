@@ -817,6 +817,57 @@ với `ScanWyckoff()` bên C#. Hai bên được sửa cùng lúc theo cùng m�
 
 Script dựng lại trang: `quantower-entry-signal/research/wyckoff/v8/wyckoff/render_wyckoff_html.py`.
 
+### 13.1d Chấm lại v7.1 (n=59, 10 giảng viên, 2026-08-10)
+
+**Trung vị 3.5/10, trung bình 3.81** — phân bố `1×5 · 2×13 · 2.5×1 · 3×10 · 3.5×1 · 4×6 · 5×10 · 5.5×1
+· 6×7 · 7×4 · 8×1`. Nhích lên so với v7 (3/10 · 3.31) nhưng **vẫn dưới v6** (4/10 · 4.19) và xa mục
+tiêu (≥6/10). 59 vẽ / 14 bỏ (73 ứng viên mở).
+
+Qua 10 lô chấm lại, ba bản vá gốc rễ đều **"sửa đúng chiều, chưa đủ liều" hoặc "đẻ lỗi mới ở đầu kia"**:
+
+- **ST[A] 0.55:** cứu được ca xấu nhất (retrace &lt;50%) nhưng cụm 0.55-0.70 vẫn lọt lửng giữa range
+  ở RẤT NHIỀU bài (09,12,16,18,21,24,33,34,37,38,40,43,45,47 …) — retrace-từ-AR và khoảng-cách-tới-
+  climax chỉ trùng nhau khi AR/climax được nhận đúng; khi AR sai (case dài/hẹp) hai đại lượng tách hẳn
+  (bài #18: AR là cả một xu hướng 7 tiếng). Đồng thời sinh **ca ngược mới**: range dài thì 0.55 kéo
+  Phase A lên hàng trăm nến (#06: 180n, #29: 430n) nuốt cả Phase B; range hẹp thì trần overshoot 1.0×
+  chiều cao quá rộng, ST[A] xuyên hẳn qua climax vẫn lọt (#39, #46, #48, #55: overshoot 58-149%).
+  → cần **ràng buộc tuyệt đối kép**: `|ST[A] − climax| ≤ ~0.25×chiều cao` VÀ trần số nến cho Phase A.
+- **Phase C bỏ ràng buộc nửa range:** đúng là nút thắt thật (nhiều bài Phase C xuất hiện đúng chỗ hơn
+  hẳn), nhưng bỏ hoàn toàn khiến ràng buộc còn lại ("gần biên", không phân biệt biên nào) quá lỏng —
+  pivot rơi sai phía (#18, #20: sát biên KHÔNG bị phá) hoặc giữa range (#41: 53%, #42: 67%). Và trần
+  độ dài vẫn thiếu: **~10-12 bài trên 59 (nhiều lô nhất trong tất cả các mục)** có Phase C dài hơn
+  Phase B hoặc Phase D. → cần đổi "gần biên" thành "gần biên ĐANG BỊ PHÁ" (không phải biên đối diện)
+  + trần cứng `len(C) ≤ min(len(B), len(D))` áp dụng HỒI TỐ sau khi D đã biết (không chỉ tại lúc gán).
+- **Biên phụ tự nới/phá vài tick:** đổi decisive/outside/timed-out sang biên CHÍNH đã dập được phần
+  lớn ca "hàng trăm nến ngoài biên không công nhận" — nhưng **không đều**: vài lô (#17,#23,#28,#56,
+  #59) vẫn thấy y nguyên, tức còn một nhánh khác (khả năng: điều kiện "mạnh" L3 hoặc bước chọn nhãn
+  hồi tố) vẫn đang so với biên phụ mà chưa được sửa cùng lúc. Đồng thời sinh lỗi ngược: SOS/SOW được
+  công nhận khi chỉ vượt biên phụ vài tick hoặc thấp hơn chính mSOS trước nó (#39, #44, bài 40 "mSOS
+  và SOS là cùng một cú phá tách làm hai") — vì bỏ biên phụ khỏi việc RA QUYẾT ĐỊNH đồng thời làm mất
+  luôn vai trò XẾP HẠNG MẠNH/YẾU của nó (L3). → **phải tách rõ hai vai**: biên CHÍNH quyết định "có
+  phá không" (không đổi), biên PHỤ quyết định "phá có MẠNH không" (khôi phục lại, nhưng không dùng để
+  vô hiệu/trì hoãn việc công nhận cú phá).
+- **Nhãn cụm climax (chưa sửa từ v7):** vẫn xuất hiện đều ở phần lớn lô (thường 3-5/6 bài mỗi lô),
+  đúng như đã báo trước.
+
+Bốn lỗi hệ thống MỚI nổi lên qua vòng này, có vẻ ảnh hưởng điểm nhiều hơn cả 6 lỗi gốc:
+- **SIDEWAYS cắt vụn cấu trúc hoàn chỉnh** — nhiều cặp range cha/con đáng lẽ là MỘT cấu trúc đã hoàn
+  tất CBR (SOS mạnh + LPS[D] giữ ngoài biên) nhưng cha vẫn bị tước tên (`superseded`) chỉ vì có spawn
+  con — xuất hiện lặp lại ở ít nhất 4 cặp riêng biệt (45→46, 47→48, 49→50 dạng khác, 52→53).
+- **`ar_vsa`/`climax_vsa` đã đo nhưng không dùng để gắn cờ "(yếu)"** — AR/climax trên nến VSA
+  &lt;0.5× vẫn được nhận như climax/AR mạnh, lặp lại ở nhiều lô.
+- **Nhãn hồi tố (mSOS/mSOW quét lại VSA cao nhất) không kiểm lại điều kiện đóng cửa vượt biên** —
+  nhiều ca nhãn phá được gán cho nến CHƯA thực sự vượt biên chính (#14, #16, #18, #39).
+- **Guard "climax không chặn được move" chỉ chạy trong Phase A/A_st, tắt hẳn sau đó** — khiến biên
+  chính có thể hoá thành một sợi chỉ mảnh giữa vùng giá rộng hơn nhiều mà không ai kiểm lại (#48, #54).
+
+**Khuyến nghị: dừng vòng chấm-sửa mù ở đây.** Ba vòng liên tiếp (v6→v7→v7.1) cho thấy mẫu chung: sửa
+đúng HƯỚNG nhưng mỗi lần chỉ đóng một nửa khe hở, và việc đóng một khe thường hé một khe khác (biên
+phụ là ví dụ rõ nhất: gỡ vai "công nhận" khỏi nó vô tình gỡ luôn vai "xếp hạng mạnh/yếu"). Đây là dấu
+hiệu cần **thiết kế lại có chủ đích** (đặc biệt: tách rõ vai trò biên chính/biên phụ; định nghĩa lại
+ST[A] bằng ràng buộc tuyệt đối kép; quyết định Phase C bằng nhìn-về-sau khi D đã biết) thay vì tiếp
+tục vá từng điểm rồi đo lại — nên hỏi người học chốt hướng thiết kế trước khi làm vòng tiếp theo.
+
 ---
 
 ## 14. Liên quan

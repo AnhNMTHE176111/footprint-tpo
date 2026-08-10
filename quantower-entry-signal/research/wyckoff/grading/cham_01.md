@@ -1,43 +1,36 @@
 # Chấm bài #01 — Chưa rõ (SC) (ACC?) · 2025-12-29 15:22 → 2025-12-31 21:55 (118 nến M1)
 
-**Điểm: 1/10** — không nên vẽ range ở đây; và kể cả có vẽ thì nhãn SC đang nằm sai chỗ tới 134 giá.
+**Điểm: 1/10** — Không nên vẽ range ở đây. Đây là phiên lễ cuối năm gần như không có giao dịch, không phải một vùng đấu giá.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Nhãn SC nằm NGOÀI range, cao hơn cả AR — luật vi phạm: L3 + THEORY §3.3 (SC = đáy)
-- **Thuật toán gắn:** SC tại 2025-12-29 **13:42**, giá **4545.6**, VSA 3.64x.
-- **Đúng phải là:** nến mở range là 15:22, đáy **4411.4** — đó mới là mức climax và là chỗ phải đặt nhãn SC.
-- **Dấu hiệu quyết định trên chart:** nhãn SC vẽ **bên trái hẳn khung range**, ở giữa thân move giảm 107.8 giá, và ở giá **4545.6 > AR 4511.7**. Một "cao trào bán" nằm cao hơn đỉnh của cú bật ngược là mâu thuẫn logic hoàn toàn. Lệch **134.2 giá** so với biên chính dưới mà chính nó tạo ra.
-- **Nghi phạm trong thuật toán:** nhánh "nhãn climax dời theo cây VSA cao nhất trong cụm" (v6 lỗi #1) — phiếu tự thú: *"Nhan climax mang VSA=3.64x ... KHONG can trung voi cuc tri gia"*. Cửa sổ cụm 8 nến đáng lẽ chỉ chạy **xuôi** từ nến mở range, ở đây nó quét **ngược** về quá khứ 100 phút. Đây đúng là lỗi #4 mà v7 tuyên bố đã kẹp cố định — **chưa vá được**.
+### 1. Vẽ range trên vùng không có thanh khoản — luật vi phạm: L1 + mục "khung quá thô / range quá vụn"
+- **Thuật toán gắn:** một TR đủ Phase A→C, biên chính 4411.4–4511.7.
+- **Đúng phải là:** không mở range. 118 nến trải **2,5 ngày lịch** (29/12 → 31/12) = trung bình một nến mỗi 30 phút; bảng 12 nến quanh climax cho volume **1–7 hợp đồng/nến**, cây climax 7 lot, AR 1.00x (1–2 lot), Spring 0.50x. Không có hai phe nào đang đàm phán ở đây — chỉ là khe giá trong kỳ nghỉ.
+- **Dấu hiệu quyết định trên chart:** cả nửa trái panel volume gần như phẳng sát 0; cột volume thật chỉ xuất hiện lại từ 01-02 16:41, tức là **sau khi range đã đóng**.
+- **Nghi phạm trong thuật toán:** VSA là tỷ lệ tương đối nên 7 lot / TB 2 lot = 3.33x vẫn qua cửa. Người học đã chốt "không dùng sàn khối lượng tuyệt đối" — nhưng ca này cho thấy cần ít nhất một guard **mật độ nến theo thời gian** (số nến/giờ), không phải sàn lot: 118 nến/54 giờ tự nó đã đủ để loại.
 
-### 2. Range không phải vùng đấu giá thật — chỉ là khe nghỉ lễ cuối năm — luật vi phạm: L1
-- **Thuật toán gắn:** range 118 nến, cao 100.3 giá (2.27%), mở bằng nến volume **7 hợp đồng** (VSA 3.33x).
-- **Đúng phải là:** không mở range. 118 nến M1 nhưng trải **2 ngày 6 giờ lịch** (29/12 → 31/12) — mật độ ~1 nến/28 phút, phần lớn nến volume 1-2 lot, biên độ 0. Bảng 12 nến quanh climax: volume 1,2,1,1,2,1 / climax 7 / rồi 1,1,1,1,1.
-- **Dấu hiệu quyết định trên chart:** panel volume gần như phẳng suốt cả range, chỉ nổ vàng ở phần **sau khi range đã đóng** (01-02, 01-05). Một "cao trào" 7 lot không phải cao trào.
-- **Nghi phạm:** người học đã chốt không dùng sàn khối lượng tuyệt đối (mục 12.1). Nhưng ở đây điều kiện **khe > 4 giờ cắt range** cũng không bắn dù range trải 2 ngày rưỡi — nên kiểm lại phép đo khe (có thể do dữ liệu có nến rải rác nên khe từng cặp < 4h).
+### 2. Nhãn SC nằm giữa move, cách biên chính nó tạo ra 134 giá — luật vi phạm: L3 (biên chính = mức climax)
+- **Thuật toán gắn:** SC tại 2025-12-29 13:42, giá **4545.6**, VSA 3.64x — **trước** nến mở range 1h40.
+- **Đúng phải là:** SC phải nằm tại 4411.4 (mức đang được vẽ làm biên chính dưới), hoặc nếu 4545.6 mới là cây cao trào thật thì cây đó **không chặn được move** (giá đi tiếp xuống 134 giá nữa) → huỷ ứng viên.
+- **Dấu hiệu quyết định trên chart:** chấm SC nằm lơ lửng giữa đoạn dốc trắng "chân MOVE", còn xa phía trên khung range; đường "biên CHINH duoi 4411.4" không có nhãn climax nào bám vào.
+- **Nghi phạm trong thuật toán:** lỗi cụm climax đã biết (mục 13.1c — thử sửa rồi revert). Ở ca này nó lộ nặng nhất vì hai cửa sổ (giá trượt tự do / nhãn kẹp) trôi ngược chiều nhau **134 giá**.
 
-### 3. Phase C (25n) DÀI HƠN Phase B (21n), Phase A (73n) dài nhất — luật vi phạm: L8 + L9
-- **Thuật toán gắn:** A=73 · B=21 · C=25.
-- **Đúng phải là:** B phải là phase dài nhất, C ngắn nhất. Ở đây A chiếm 62% cả range và C > B.
-- **Dấu hiệu quyết định trên chart:** vạch tím Phase B nằm mãi tận 12-30 23:25, tức 3/4 chiều ngang khung là Phase A.
-- **Nghi phạm:** AR chốt ở 12-30 12:22 (21 giờ sau climax) vì cơ chế swing pivot 5 nến trên dữ liệu thưa; không có trần độ dài Phase A tương đối so với Phase B.
+### 3. Phase A dài nhất, Phase C dài hơn Phase B — luật vi phạm: L9 và L8
+- **Thuật toán gắn:** A = **73** nến · B = **21** nến · C = **25** nến.
+- **Đúng phải là:** B phải là phase dài nhất, C phải ngắn nhất. Ở đây A gấp 3,5 lần B và C vẫn phình hơn B.
+- **Dấu hiệu quyết định trên chart:** vạch tím Phase B và Phase C nằm sát nhau ở mép phải khung, còn Phase A chiếm gần trọn khung.
+- **Nghi phạm trong thuật toán:** ST[A] chốt tại 4450.2 = hồi **61%** khoảng AR↔climax (đã qua ngưỡng 0.55 mới) nhưng vẫn còn cách mức climax 39 giá; nó rơi vào nhịp lùi ngày 30/12 chứ không phải cú test lại vùng climax. Vẫn chưa có **trần tuyệt đối** `len(C) ≤ min(len(B), len(D))`.
 
-### 4. ST[A] rơi lửng giữa range — luật vi phạm: L2
-- **Thuật toán gắn:** ST[A] 4450.2, VSA 0.78x.
-- **Đúng phải là:** ST[A] phải test lại **vùng climax 4411.4**. 4450.2 nằm ở **38.7% chiều cao** tính từ đáy, còn cách climax 38.8 giá.
-- **Dấu hiệu quyết định:** hồi từ AR = 61.5/100.3 = 0.61× — **qua** ngưỡng mới 0.4 nhưng vẫn dừng giữa range. Ngưỡng mới siết sai chiều: nó ràng buộc khoảng cách tới **AR**, trong khi cái cần ràng buộc là khoảng cách tới **climax**.
-- **Nghi phạm:** `STA_MIN_AR_FRAC` 0.2→0.4. Cần thêm điều kiện ngược: ST[A] phải nằm trong ~25-30% chiều cao tính từ mức climax.
+### 4. Range đóng "completed" với một Spring còn treo `pending` — luật vi phạm: L8 / mục 6 tài liệu thuật toán
+- **Thuật toán gắn:** Spring 2025-12-31 06:01 tại 4383.6, trạng thái `pending`, và Phase C kéo tới hết range.
+- **Đúng phải là:** shock hết hạn phải hạ cấp thành mSOW/ST[B] và **xoá đoạn C** (đúng cách vá lỗi C ở v5). Ở đây đoạn C 25 nến vẫn nằm lại, range vẫn ghi `completed` dù không có SOS/SOW nào.
+- **Dấu hiệu quyết định trên chart:** cột Spring VSA **0.50x** (1 hợp đồng) — một cú "rũ" bằng một lệnh lẻ.
 
-### 5. Spring gán trên nến 1 lot, để pending rồi đóng range — luật vi phạm: L5 + L8
-- **Thuật toán gắn:** Spring 4383.6, VSA **0.50x**, thân 0.00, trạng thái `pending`; range vẫn ghi `completed`.
-- **Đúng phải là:** một cú rũ phải có dấu vết nỗ lực. VSA 0.50x (volume 1) không rũ được ai. Và một shock chưa xác nhận thì range chưa xong — không được đóng ở trạng thái "completed".
-- **Dấu hiệu quyết định trên chart:** chấm Spring nằm ngay trên biên phụ nét đứt 4383.6, cây nến đó là một vạch đỏ mảnh không thân.
+### 5. Biên chính cao 100.3 giá (2.27%) cho một "vùng cân bằng" — luật vi phạm: THEORY §2.3 (vùng cân bằng hẹp)
+- Guard 3.5% không bắn, nhưng 100 giá là cả một chân xu hướng, không phải TR. Guard nên đo theo **ATR của chính đoạn đó**, không theo % giá tuyệt đối.
 
 ## Đạt
-- Chú thích nỗ lực/kết quả: bài này không in dòng đó (Phase B không đủ pivot) — không sai.
-- Biên phụ dưới 4383.6 do đúng cực trị xa nhất tạo ra, tỷ lệ 1.28x, mỗi bên đúng 1 cái (L3 đạt về hình thức).
-- Cú phá tạo biên phụ vượt biên chính 27.8 giá (278 tick) — không còn ca "phá vài tick" như v6.
-- Không đặt tên ép: giữ "Chưa rõ (SC)" khi chưa có SOS/SOW — trung thực (L4).
-
-## Cần hỏi người học
-- Có nên đặt sàn **mật độ dữ liệu** (số nến/giờ lịch) để chặn hẳn các range dựng trên phiên nghỉ lễ? Luật hiện có chỉ chặn khe > 4 giờ, không chặn được chuỗi nến thưa đều.
+- Tên range để "Chưa rõ (SC)" thay vì ép đặt tên khi chưa có cú phá — đúng L4.
+- Biên phụ dưới 4383.6 đúng là cực trị xa nhất, chỉ một cái mỗi bên — đúng L3.
+- ST[B] tại 4404.5 nằm đúng dưới biên chính dưới, không bị gọi nhầm thành Spring — đúng L5/L6.

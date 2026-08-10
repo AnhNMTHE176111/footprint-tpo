@@ -1,43 +1,38 @@
-# Chấm bài #34 — Tích luỹ (ACC) · 2026-06-15 20:44 → 2026-06-16 04:16 (390 nến M1, sinh từ cú phá)
+# Chấm bài #34 — Phân phối (DIST) · 2026-06-10 06:08 → 08:02 (114 nến M1)
 
-**Điểm: 2/10** — Bài hỏng từ gốc: **Phase A dài âm 7 nến** (AR và ST[A] xảy ra TRƯỚC climax), và hai biên chính cao 5.8 giá nằm lọt thỏm giữa một vùng dao động 20 giá.
+**Điểm: 4/10** — hướng đọc đúng (phân phối sau cú tăng, rồi sụp thật), nhưng ranh giới Phase B/C đảo ngược hoàn toàn và cú SOW chỉ phá biên phụ 3 tick.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Phase A = **−7 nến**, thứ tự sự kiện đảo ngược — vi phạm L2 tận gốc
-- **Thuật toán gắn:** Phase A "bắt đầu 20:44, kết thúc 20:36" → −7 nến. Bảng sự kiện: **AR (yếu) 20:28 → ST[A] 20:36 → SC? 20:44**.
-- **Đúng phải là:** L2 quy định đúng 3 lần đổi hướng theo thứ tự climax → AR → ST[A]. Ở đây climax đứng **cuối**. Hai nhãn AR/ST[A] thực chất là **di sản của range cha #33** (AR 20:28 tại 4336.0 chính là LPSY[D] của bài #33, cùng nến, cùng giá, cùng VSA 0.30x).
-- **Dấu hiệu quyết định:** VSA của "AR" = **0.30x** và của "ST[A]" = **0.55x** — hai cây chết, không cây nào là phản ứng thật.
-- **Nghi phạm trong thuật toán:** `WySpawnSidewaysRange` (mục 5.4) tạo range con neo tại cực trị cú phá nhưng **không reset con trỏ sự kiện/nến bắt đầu**, để máy đi tìm AR/ST[A] trong đoạn nến **trước** nến climax của range con. Phải chặn cứng: mọi sự kiện Phase A của range con phải có index > index climax.
+### 1. Phase C dài nhất, Phase B ngắn thứ nhì — luật vi phạm: L8 + L9
+- **Thuật toán gắn:** A=20n, **B=9n**, **C=33n**, D=25n, E=28n.
+- **Đúng phải là:** B dài nhất, C ngắn nhất. Ở đây C dài gấp gần 4 lần B — đảo ngược hẳn. Thực chất 33 nến 06:37→07:09 là giai đoạn xây nguyên nhân (giá trôi ngang 4228-4236 với đỉnh thấp dần) = **Phase B**; Phase C thật chỉ là nhịp hồi nhỏ cuối cùng quanh 07:05-07:09 ngay trước SOW.
+- **Dấu hiệu quyết định trên chart:** trong "Phase C" 33 nến đó có tới 25 nến đi ngang bám biên phụ dưới 4228.6 — không có cú shock nào, mà Phase C theo L8 phải là **tín hiệu đầu tiên** chứ không phải một vùng lê thê.
+- **Nghi phạm trong thuật toán:** Phase C = [nến LPSY[C] … nến trước SOS/SOW], và LPSY[C] lấy ứng viên **đầu tiên** sau ST[A] (06:37, ngay sát ST[A] 06:27). Sửa: lấy ứng viên C **cuối cùng** trước break (đúng L8 "có Phase D rồi mới xác định được Phase C"), phần còn lại trả về Phase B.
 
-### 2. Biên chính 5.8 giá nằm giữa vùng dao động 20 giá — vi phạm L3
-- **Thuật toán gắn:** biên chính 4330.2-4336.0 (**0.13% giá**), biên phụ 4327.4-4346.8 (19.4 giá), tỷ lệ **3.34x**.
-- **Đúng phải là:** hai biên chính phải **bao** vùng đấu giá. Nhìn ảnh, hai đường nét liền chạy xuyên **giữa** đám nến; suốt 390 nến giá ra vào hai đường đó liên tục. Vùng đấu giá thật là 4327-4347, tức chính hai đường **nét đứt**.
-- **Hệ quả dây chuyền:** chiều cao range 5.8 giá làm mọi ngưỡng tỷ lệ vô nghĩa — đích Phase E ("đi thêm 1× chiều cao") chỉ còn **5.8 giá**, nên một nhịp nhích nhẹ cũng chốt được Phase E (xem lỗi 5).
-- **Nghi phạm:** cơ chế SIDEWAYS neo biên chính bằng cực trị cú phá + AR tìm sai (lỗi 1). Guard "tỷ lệ biên phụ/chính ≤ 4.0x" bắt hụt ca 3.34x này — ngưỡng quá lỏng.
+### 2. SOW chỉ đóng cửa qua biên phụ 3 tick — luật vi phạm: L3
+- **Thuật toán gắn:** SOW 07:10 @**4228.3**, biên phụ dưới **4228.6** → vượt đúng **0.3 giá**.
+- **Đúng phải là:** "SOS/SOW muốn thực sự mạnh phải đóng cửa bứt qua biên PHỤ". Vượt 3 tick trên một biên phụ rộng 16.9 giá là vượt trong sai số, không phải bứt phá. Cây SOW này còn chỉ có VSA 1.69x — thấp hơn cả mSOW 06:44 (2.42x).
+- **Dấu hiệu quyết định trên chart:** đường đứt cam 4228.6 và marker SOW gần như chồng lên nhau; phải tới 07:35 (Phase E) giá mới thực sự rời vùng.
+- **Nghi phạm trong thuật toán:** đệm "biên chính ± 30 tick" được áp cho biên **chính** (4231.1 − 3.0 = 4228.1) nên 4228.3 lọt qua, nhưng lại **không** áp đệm khi so với biên **phụ** đã nới (4228.6). Phải áp cùng một đệm cho mốc thực tế xa nhất, tức max(biên chính+đệm, biên phụ+đệm).
 
-### 3. mSOW gán ở **biên TRÊN** — sai bên
-- **Thuật toán gắn:** mSOW 23:11 tại **4335.9**, đúng bằng biên chính **trên** 4336.0; trên ảnh chấm nằm phía trên đường nét liền trên.
-- **Đúng phải là:** thăm dò phía trên là **UT[B] / mSOS**. mSOW chỉ dành cho cạnh dưới (mục 5.1, v6 đã chốt "chỉ còn phân biệt THEO BÊN").
-- **Nghi phạm:** với range con, quan hệ "climax = cạnh dưới, AR = cạnh trên" bị đảo (climax 4330.2 dưới, AR 4336.0 trên) nhưng nhánh chọn bên hình như vẫn suy từ `origin` (SC ⇒ mặc định cạnh climax là cạnh bị phá) thay vì so giá thực với hai mức.
+### 3. mSOW ghi Phase B nhưng thời điểm nằm trong Phase C — lỗi nhất quán nội bộ
+- **Thuật toán gắn:** `mSOW | 06:44 | 4228.6 | **Phase B**` trong khi bảng phase ghi Phase C = 06:37→07:09.
+- **Đúng phải là:** trường phase của sự kiện phải suy ra từ mốc thời gian, không được gán độc lập.
+- **Nghi phạm trong thuật toán:** nhãn mSOW được gán trong lượt quét Phase B rồi ranh giới phase bị dịch về sau (do lỗi #1) mà không gán lại phase cho các nhãn đã tạo. Cần một bước re-assign phase cho toàn bộ event sau khi chốt ranh giới.
 
-### 4. mSOS nằm trong lòng Phase C nhưng khai là Phase B — timeline tự mâu thuẫn
-- **Thuật toán gắn:** Phase C = 02:42 → 03:41; sự kiện **mSOS 03:34 ghi Phase B**.
-- **Đúng phải là:** một sự kiện không thể thuộc Phase B khi dải Phase C đang trùm lên nó. Ngoài ra mSOS này có **VSA 1.08x, thân 0.15** — cây rác, không đủ tư cách "cú phá có thật rồi thu vào" theo định nghĩa v6.
-- **Nghi phạm:** vá v7 #5 (quét lại cây VSA cao nhất trong đoạn thăm dò) **không chạy** cho nhánh hạ cấp này; và trường `phase` của sự kiện được ghi tại thời điểm phát sinh, không cập nhật lại khi Phase C được gán ngược.
+### 4. ST[A] vừa đủ qua ngưỡng nhưng không test vùng climax — luật vi phạm: L2
+- **Thuật toán gắn:** ST[A] 06:27 @4239.2; BCLX 4245.5, AR 4231.1, biên 14.4 giá → hồi **56%**, sát mép ngưỡng 0.55.
+- **Đúng phải là:** ST[A] phải quay lại **vùng BCLX**. 4239.2 còn cách đỉnh climax 6.3 giá = 44% biên độ range — chưa chạm vùng climax.
+- **Nghi phạm trong thuật toán:** cùng gốc với bài #33 — `STA_MIN_AR_FRAC=0.55` quá lỏng. Đề nghị đổi sang điều kiện tuyệt đối "cách mức climax ≤ k tick".
 
-### 5. Phase E không phải "đi tìm vùng giá mới" — vi phạm L10
-- **Thuật toán gắn:** SOS 03:42 (4352.7) → Phase E 28 nến, đóng range 04:16 "completed".
-- **Đúng phải là:** ngay sau mốc đóng, giá rơi lại về 4343-4345, tức **lùi qua cả biên phụ trên 4346.8** (thấy rõ ở phần bên phải ảnh). Cú phá này là một **UT/mSOS**, không phải SOS hoàn tất.
-- **Nghi phạm:** đích Phase E đo bằng chiều cao **biên chính** (5.8 giá) — hệ quả trực tiếp của lỗi 2. Nên đo bằng chiều cao **biên phụ** hoặc đặt sàn tuyệt đối theo ATR.
-
-### 6. Phase C dài 60 nến = đúng trần cửa sổ — vi phạm L8
-- Phase C 60 nến trong khi Phase D chỉ 7 và Phase E 28 → C **không** phải phase ngắn nhất.
-- **Nghi phạm:** vá v7 #3 nới cửa sổ gán ngược lên 0.8× Phase B; với B = 303 nến thì `min(60, 242) = 60` → LPS[C] luôn bị đẩy về **mép xa nhất** của cửa sổ, Phase C dính trần. Nới cửa sổ đã đổi lỗi "thiếu Phase C" thành lỗi "Phase C dài bằng trần". Phải chọn **nhịp test cuối cùng gần cú phá nhất**, không phải pivot xa nhất trong cửa sổ.
+### 5. LPSY[C] đặt ở nửa DƯỚI range trong một cấu trúc phân phối — luật vi phạm: L8 (vai trò nhãn)
+- **Thuật toán gắn:** LPSY[C] 06:37 @4235.2, gần biên dưới hơn biên trên.
+- **Đúng phải là:** trong phân phối, tín hiệu Phase C là cú test **nguồn cầu ở biên trên** (UTAD hoặc một nhịp hồi thất bại sát kháng cự). Một điểm nằm dưới trung điểm range thì đó là hành vi SOW, không phải LPSY[C].
 
 ## Đạt
-- **Mục 4 (L4):** origin SC? + phá lên = Tích luỹ — đúng bảng L4 (dù climax là giả, đã khai rõ "SINH TỪ CÚ PHÁ, không có cao trào thật").
-- **Mục 5 (L9):** Phase B 303/390 nến, dài nhất.
-- **Mục 7:** SOS 03:42 đặt đúng cây mạnh (VSA 3.69x, thân 0.77) và có LPS[D] ngay sau — phần đặt nhãn cú phá làm đúng.
-- **Mục 8:** chú thích er=0.67 gọi "nhịp HIỆU QUẢ, không phải hấp thụ" — **đúng dấu**, lỗi hard-code v6 đã hết.
-- **Mục 9:** LPS[C] và LPS[D] mỗi cái đúng **một điểm**, không vẽ vùng, không spam — đúng L7.
+- Điều kiện mở range (L1) đạt: MOVE tăng 38.0 giá / 83 nến bị chặn tại 06:08 với VSA **2.77x** — và nến climax **chính là nến neo range**, high 4245.5 đúng là cực trị của cả đợt tăng. Nhãn cụm climax không lệch ở bài này.
+- Tên range đúng L4: MOVE tăng → BCLX → phá xuống = Phân phối.
+- Biên chính = climax + AR, cố định, không kéo theo giá; biên phụ dưới 4228.6 đúng là cực trị xa nhất phe bán tạo ra, mỗi bên tối đa 1 (tỷ lệ 1.17x hợp lý).
+- LPSY[D] 07:16 @4225.9 nằm **ngoài** biên và giữ được → đúng L10, và Phase E sau đó giá rơi thẳng về 4180: cấu trúc CBR thành công thật.
+- Có ghi nhận mSOW ở Phase B (dấu hiệu yếu kém sớm) — đúng §5 THEORY (test ở đáy trong phân phối = dấu hiệu yếu kém).

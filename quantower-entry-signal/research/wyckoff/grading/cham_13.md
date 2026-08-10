@@ -1,41 +1,39 @@
-# Chấm bài #13 — Tích luỹ (ACC) · 2026-05-04 15:22 → 2026-05-05 15:41 (660 nến M1)
+# Chấm bài #13 — Chưa rõ (SC) (ACC?) · 2026-05-04 15:22 → 2026-05-05 08:10 (398 nến M1)
 
-**Điểm: 3/10** — Range mở đúng chỗ, nhưng nửa sau bài hỏng: giá đã rời hẳn biên trên từ 05-05 05:13 mà máy vẫn ghi "Phase B" thêm gần 7 tiếng, và bài thiếu hẳn Phase C.
+**Điểm: 5/10** — Khung range vẽ ĐÚNG (mở range chuẩn, Phase A đẹp), nhưng phần đuôi hỏng: không chịu đặt tên dù đã có SOS + Phase D, và Phase C phình dài hơn Phase D.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Giá ở ngoài biên chính trên ~350 nến mà vẫn tính là Phase B — luật vi phạm: L10 + mục 5.1 (Kết cục B)
-- **Thuật toán gắn:** Phase B kéo từ 15:52 (04/05) tới 12:09 (05/05) = 488 nến; SOS mãi tới 05-05 12:10.
-- **Đúng phải là:** trên ảnh, giá cắt lên biên CHÍNH trên 4588.3 quanh 05-05 04:30–05:13 và giao dịch liên tục **phía trên** nó tới tận 11:00 (chỉ chạm hụt xuống một lần). Đó là SOS thật; Phase D/E phải bắt đầu ở đó, không phải 7 tiếng sau.
-- **Dấu hiệu quyết định trên chart:** toàn bộ cụm nến từ `05-05 05:13` tới `05-05 09:39` nằm trên đường liền 4588.3; biên phụ trên lại chỉ là 4603.8 — tức là nó **được nới dần bởi chính đợt tăng đang xét**, rồi lại trở thành mốc mà đợt tăng đó phải vượt.
-- **Nghi phạm trong thuật toán:** điều kiện "Kết cục B" so với **biên phụ** (3 nến đóng vượt biên phụ ≥30 tick). Vá v7 mục 6 mới nâng ngưỡng outside/timed-out lên 30 tick chứ **chưa** đổi mốc so sánh; vòng lặp "biên phụ tự nới rồi tự vượt" **vẫn còn** ở đúng ca này. Nhánh dự phòng "ngoài >40 nến và ≥60% đóng ngoài" cũng không bắn.
+### 1. Đã có SOS + Phase D mà vẫn để "Chưa rõ (SC)" — luật vi phạm: L4
+- **Thuật toán gắn:** tiêu đề "Chưa rõ (SC) (ACC?)", trạng thái `superseded`, không đặt tên 4 mẫu hình.
+- **Đúng phải là:** **Tích luỹ (ACC)**. Origin = SC (move giảm 52.1 giá bị chặn) + hướng phá thật = LÊN (SOS 4599.6 đóng cửa trên cả biên phụ 4596.1, giá sau đó ở lại 4599-4603).
+- **Dấu hiệu quyết định trên chart:** phiếu ghi đủ SOS (07:13, VSA 4.31x, thân 1.00) và LPS[D] (07:56, 4588.2 — retest đúng biên chính trên rồi giữ được). Đủ cả cặp CBR của L10 mà vẫn không dám gọi tên.
+- **Nghi phạm trong thuật toán:** nhánh `superseded` chặn việc đặt tên. Trạng thái `superseded` chỉ nên chặn tên khi Phase E CHƯA hoàn tất; ở đây Phase D đã trọn vẹn nên phải đặt tên rồi mới nhường chỗ cho range con.
 
-### 2. Thiếu hoàn toàn Phase C — luật vi phạm: L8
-- **Thuật toán gắn:** dải phase A → B → D → E, không có C.
-- **Đúng phải là:** Phase B dài 488 nến thì cửa sổ gán ngược = min(60, 0.8×488) = 60 nến, thừa chỗ. Nhịp test cuối trước cú bứt là đáy quanh `05-05 11:00` (giá lùi về ~4583, sát biên chính trên) — đó là LPS[C].
-- **Dấu hiệu quyết định trên chart:** ngay trước SOS 12:10 có một nhịp lùi rõ về vùng 4583–4588 rồi bật lên.
-- **Nghi phạm trong thuật toán:** ràng buộc v6 "pivot phải nằm **trong range** và đúng **nửa dưới** range" — nhịp test này nằm **ngoài** biên chính trên nên bị loại sạch. Nới cửa sổ lên 0.8×len(B) (vá v7 #3) không cứu được vì lỗi nằm ở ràng buộc vị trí, không ở độ dài cửa sổ.
+### 2. Phase C (59 nến) dài hơn Phase D (26 nến) — luật vi phạm: L8
+- **Thuật toán gắn:** C = 04:55 → 07:08 (59 nến), D = 07:13 → 08:10 (26 nến).
+- **Đúng phải là:** Phase C là phase NGẮN NHẤT. Ở đây điểm chuyển thật là cú mSOS 06:01 (4596.1, VSA 4.00x) — Phase C nên co lại quanh nhịp test cuối trước cú đó, khoảng 10-15 nến.
+- **Dấu hiệu quyết định:** LPS[C] đặt tại 4575.3 = **55% chiều cao biên chính** (4559.8-4588.3) — chính giữa range, không gần biên nào. Trên ảnh nó nằm lơ lửng giữa khung.
+- **Nghi phạm:** đây là tác dụng phụ của việc **bỏ ràng buộc "đúng nửa range"** (13.1c). Ràng buộc nửa range bị gỡ hẳn nên pivot gán ngược rơi vào giữa. Cần thay bằng: pivot phải nằm ở nửa ĐỐI DIỆN hướng phá + trần tuyệt đối `len(C) ≤ min(len(B), len(D))`.
 
-### 3. Nhãn mSOS neo vào cây doji VSA 0.51× — luật vi phạm: mục 8 (Effort vs Result), vá v7 #5
-- **Thuật toán gắn:** `mSOS 05-05 09:08 @ 4603.8, VSA 0.51x, thân/biên độ 0.00`.
-- **Đúng phải là:** nến đại diện cho một cú thăm dò phải là cây có nỗ lực; trong đoạn đó có nhiều cây vàng (VSA ≥2.2×) trên panel khối lượng.
-- **Dấu hiệu quyết định trên chart:** thân/biên độ = 0.00 → đó là một cây doji 1 tick, đúng bằng cực trị giá 4603.8.
-- **Nghi phạm trong thuật toán:** vá v7 #5 ("quét lại lấy nến VSA cao nhất trong đoạn thăm dò") **không chạy** cho nhánh mSOS/mSOW sinh từ nới biên phụ — nhãn vẫn neo theo **cực trị giá**.
+### 3. Phase B 287 nến chỉ có đúng 1 nhãn — luật vi phạm: L9
+- **Thuật toán gắn:** một mSOW duy nhất ở 20:20.
+- **Đúng phải là:** trên ảnh Phase B chạm biên dưới ~4556 ít nhất 4 lần (16:35, 17:29, 18:43, 20:08) và chạm biên trên một lần quanh 4588 (02:05). Tối thiểu phải có 1 ST[B] và 1 UT[B].
+- **Dấu hiệu quyết định:** phiếu ghi SOT-dn = SOT thật (n=4, thrust cuối/đầu 0.09, volume 0.86 = cạn kiệt) — máy ĐÃ đo được chuỗi 4 nhịp đẩy xuống rút ngắn dần nhưng không gắn nhãn nào cho chúng.
+- **Nghi phạm:** nhãn UT[B]/ST[B] chỉ sinh ra từ nhánh "thò ra ngoài biên chính rồi rút về"; các nhịp chạm biên mà không thò ra thì không được ghi gì.
 
-### 4. Nhãn SC rơi ra ngoài khung range — luật vi phạm: vá v7 #4 (kẹp nhãn theo nến mở range)
-- **Thuật toán gắn:** range bắt đầu 15:22, nhưng nhãn `SC` đặt tại **15:21** (4560.8, VSA 2.70×).
-- **Đúng phải là:** nhãn climax phải nằm trong khung range; hoặc mốc mở range dời về 15:21 cho khớp.
-- **Dấu hiệu quyết định trên chart:** chấm SC nằm bên trái vạch tím "Phase A".
-- **Nghi phạm trong thuật toán:** kẹp `climax_ev ≥ range_start` chưa áp; cây VSA cao nhất của cụm nằm **trước** cây cực trị giá nên nhãn lùi ra ngoài. (Lặp lại y hệt ở bài #15, #17 → lỗi hệ thống, không phải ca lẻ.)
+### 4. Nhãn SC nằm trước nến mở range — luật vi phạm: mục 3(3) THEORY / lỗi cụm climax
+- **Thuật toán gắn:** nhãn SC ở 15:21 (giá 4560.8, VSA 2.70x); nến mở range là 15:22 (giá 4559.8, VSA 1.51x).
+- **Đúng phải là:** nhãn và mốc mở range phải trùng nến, hoặc ít nhất nhãn không được nằm TRƯỚC nến mở range.
+- **Ghi nhận:** lệch 1 nến / 1.0 giá — nhẹ nhất trong lô, chấp nhận được về mặt đọc chart. Lỗi đã biết, chưa sửa.
 
-### 5. LPS[D] chỉ cách SOS đúng 1 nến và lùi vào trong biên phụ — luật vi phạm: L10
-- **Thuật toán gắn:** `SOS 12:10 @4607.1` → `LPS[D] 12:11 @4603.5`.
-- **Đúng phải là:** LPS[D] là nhịp retest **giữ được ngoài** biên; 4603.5 < biên phụ 4603.8 tức đã tụt lại vào trong.
-- **Nghi phạm trong thuật toán:** swing pivot 5 nến + sàn 1.5× ATR quá lỏng khi nến sau SOS biến động mạnh; nên thêm điều kiện "đáy retest phải ≥ biên phụ".
+### 5. Range bị cắt vụn với bài #14 (trình bày + cấu trúc)
+- Bài #14 mở lúc 07:36 trong khi bài này còn chạy tới 08:10 — hai range chồng lấn 34 nến, cùng mô tả một cú bứt lên. Cơ chế SIDEWAYS tách một cấu trúc thành hai.
 
 ## Đạt
-- Điều kiện mở range (L1): MOVE 52.1 giá / 32 nến / hiệu suất 0.70, cây climax là **đáy** của cửa sổ — đúng chuẩn "chặn move".
-- Phase A đủ 3 lần đổi hướng, kết thúc đúng tại ST[A] (27 nến), ST[A] 4556.0 thủng xuống dưới climax 4559.8 nên sinh biên phụ dưới — đúng L3.
-- Tên range: SC origin + phá lên = Tích luỹ, khớp L4.
-- Phase B là phase dài nhất (488n) — đúng L9.
-- Chú thích nỗ lực/kết quả đã đọc **đúng dấu** (er=0.50 → "nhịp HIỆU QUẢ", không còn hard-code "hấp thụ nghi vấn") — vá v7 #1 chạy tốt.
+- **Mở range (L1): ĐẠT tốt.** MOVE giảm 52.1 giá / 32 nến / hiệu suất 0.70 — move xu hướng rõ, climax chặn đúng đáy.
+- **Phase A (L2): ĐẠT.** SC → AR (4588.3) → ST[A] (4556.0) đủ 3 lần đổi hướng; ST[A] hồi **113%** khoảng AR↔climax, tức test đúng vùng climax (thủng nhẹ 3.8 giá = 13% chiều cao) chứ không lửng giữa range. Ngưỡng `STA_MIN_AR_FRAC=0.55` chạy đúng ở ca này.
+- **Biên chính (L3): ĐẠT.** 4559.8 (climax) + 4588.3 (AR), cố định suốt range, không bị kéo theo giá.
+- **Biên phụ + thứ tự SOS (L3): ĐẠT — điểm sửa v7.1 ăn đúng ở đây.** mSOS 06:01 thất bại nới biên phụ lên 4596.1; SOS 07:13 sau đó phải vượt qua đúng mức đó (4599.6, +35 tick). Không còn cảnh "tự nới rồi tự vượt".
+- **Tỉ lệ phase (L9): ĐẠT.** B = 287 nến, dài nhất tuyệt đối.
+- **Khối lượng:** SOS VSA 4.31x thân 1.00, LPS[D] VSA 0.47x (test co lại) — đọc đúng effort↔result ở đoạn phá.

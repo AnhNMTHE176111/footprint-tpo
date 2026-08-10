@@ -1,31 +1,36 @@
-# Chấm bài #28 — Tái phân phối (RE-DIST) · 2026-06-05 14:06 → 14:50 (44 nến)
+# Chấm bài #28 — Tái phân phối (RE-DIST) · 2026-06-03 05:31 → 09:13 (222 nến M1)
 
-**Điểm: 1/10** — **không được vẽ range ở đây.** 44 nến mà nhét đủ A→E, trong đó Phase C dài đúng 1 nến, giữa một đợt giảm liên tục. Đây là nhiễu, không phải vùng đấu giá.
+**Điểm: 5/10** — Phase B phình 176 nến vì ôm trọn cả một đoạn giá đã sống hẳn ngoài biên; SOW thật bị bỏ lỡ, SOW được gán là cú thứ hai.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Cây mở range không phải climax — luật vi phạm: mục 3 THUẬT TOÁN (VSA ≥ 2.2×), L1
-- **Thuật toán gắn:** climax mở range tại 14:06, mức 4388.1, **VSA = 0.98×**.
-- **Đúng phải là:** 0.98× là khối lượng **dưới trung bình**. Không có cao trào nào ở đây. Nhãn "SC" lại được đặt ở nến 13:59 (VSA 4.07×, giá 4390.0) — **7 nến trước** khi range bắt đầu, tức nằm hẳn ngoài khung.
-- **Dấu hiệu quyết định trên chart:** bảng 12 nến quanh climax cho thấy đáy các nến −6…−1 là 4388.8 / 4388.3 / 4392.1 / 4399.0 / 4391.0 / 4394.4 — cây "climax" chỉ thấp hơn đáy liền trước **0.2 giá**. Nó không chặn gì cả, nó chỉ là một nến trong chuỗi đi xuống.
-- **Nghi phạm trong thuật toán:** cụm climax dời mốc **mức giá** sang cực trị mới (14:06) nhưng giữ nhãn ở nến gốc (13:59) → mức biên và cây climax là **hai nến khác nhau, cách 7 nến**, và cây tạo biên không thoả ngưỡng VSA. Sau khi dời mốc phải **kiểm lại** điều kiện climax trên nến mới, hoặc bỏ ứng viên.
+### 1. ~50 nến đóng cửa dưới biên chính vẫn bị tính là Phase B — luật vi phạm: L5, L9, L10
+- **Thuật toán gắn:** Phase B kéo từ 05:46 đến **08:41** (176 nến), trong đó có nhãn `mSOW` 08:24 tại 4478.8. SOW chỉ được công nhận ở 08:51 (4472.0, VSA 9.63x).
+- **Đúng phải là:** SOW thật xảy ra quanh **07:45**, khi giá đóng cửa hẳn dưới 4486.9 và các nến sau đủ mạnh giữ nó ở ngoài. Phase B phải kết thúc ở đó; đoạn 07:45→08:35 là Phase D (giá thuận lực đi xuống), cú hồi 08:42 chạm lại 4487 là **LPSY[D]**, rồi Phase E.
+- **Dấu hiệu quyết định trên chart:** biên chính dưới 4486.9. Từ khoảng 07:45 đến 08:35 **không một nến nào** đóng cửa trở lại trên đường đó — giá lê từ 4486 xuống 4478.8 rồi mới hồi. L5 nói rõ: "đóng cửa hẳn ngoài biên và các nến sau đủ mạnh giữ nó ở ngoài → đó là phá THẬT". 50 nến ngoài biên không thể là một cú test trong Phase B. Điểm thấp nhất của đoạn này (4478.8) còn được chính thuật toán lấy làm **biên phụ dưới** — tức nó thừa nhận đó là một nỗ lực phá đáng kể, nhưng vẫn không nâng cấp thành SOW.
+- **Nghi phạm trong thuật toán:** đây đúng là ca "hàng chục nến ngoài biên không công nhận" mà v7.1 định chữa. Bản vá mới chỉ đổi mốc so sánh (biên chính + 30 tick) chứ **chưa thêm luật timed-out theo số nến**: cần luật "nếu ≥N nến liên tiếp đóng cửa ngoài biên chính (N ≈ 10-15) thì chốt SOW/SOS tại nến đầu tiên của chuỗi", chạy song song với luật ngưỡng giá.
 
-### 2. Range 44 nến với đủ 5 phase, Phase C = 1 nến — luật vi phạm: L8, L9, và bài học "khung quá thô / range quá vụn" (CHART_CASES Ca #4, #6, #19)
-- **Thuật toán gắn:** A(10) → B(**5**) → C(**1**) → D(14) → E(15).
-- **Đúng phải là:** Phase B phải dài nhất; ở đây nó ngắn hơn A, D và E. "Phase C ngắn nhất" không có nghĩa là 1 nến — 1 nến thì không có test nào để đọc. Toàn bộ cấu trúc là **gò ép** đúng kiểu Ca #20 nguồn 7.pdf ("hình này gượng ép").
-- **Dấu hiệu quyết định trên chart:** nhìn ảnh, khung range là một ô nhỏ xíu nằm trên một dốc giảm dài 101.8 giá không đứt đoạn. Không có bất kỳ đoạn đi ngang nào xứng đáng gọi là vùng cân bằng.
+### 2. LPSY[D] hồi trở lại vào TRONG range — luật vi phạm: L10
+- **Thuật toán gắn:** LPSY[D] 09:08 tại 4487.5.
+- **Đúng phải là:** LPSY[D] phải **giữ được ở ngoài biên**. 4487.5 nằm **trên** biên chính dưới 4486.9 → cú hồi đã ăn trọn vào lại range, không còn là retest giữ vùng.
+- **Dấu hiệu quyết định trên chart:** marker LPSY[D] nằm đúng trên đường liền cam 4486.9, cùng mức với LPSY[C] (4487.2) — hai nhãn khác vai mà cùng một giá, dấu hiệu tiêu chí phân biệt đang trống.
+- **Nghi phạm:** điều kiện chọn LPSY[D] chỉ kiểm "là đỉnh cục bộ sau SOW", chưa kiểm "đóng cửa vẫn ngoài biên".
 
-### 3. Phase E không hề "đi tìm vùng giá mới" — giá quay ngược vào lại range — luật vi phạm: L10, THEORY §9 (cấu trúc thất bại)
-- **Thuật toán gắn:** trạng thái `completed`, Phase E 15 nến, đặt tên RE-DIST.
-- **Đúng phải là:** trên ảnh, sau SOW (14:22, 4382.1) giá xuống ~4370 rồi **bật ngược lên trên 4400** khoảng 14:55–15:00 — tức trở lại **trong** biên chính (4388.1–4402.3) và cao hơn. Cú phá đã bị vô hiệu, range phải đóng ở trạng thái "chưa rõ hướng", tuyệt đối không được đặt tên Tái phân phối.
-- **Nghi phạm trong thuật toán:** Phase E chốt khi "đi thêm ≥0.5× chiều cao range" — với chiều cao 14.2 giá thì chỉ cần 7 giá là đạt, quá dễ trên M1. Điều kiện chốt E nên yêu cầu giá **không quay lại trong biên chính** trong suốt cửa sổ E, chứ không chỉ chạm mốc khoảng cách một lần.
+### 3. Phase E chỉ 1 nến — luật vi phạm: L10
+- **Thuật toán gắn:** E = 09:13 → 09:13, đúng 1 nến, rồi range đóng `completed`.
+- **Đúng phải là:** Phase E là giai đoạn giá rời range đi tìm vùng giá mới — 1 nến thì chưa có Phase E. Trên chart giá tiếp tục xuống 4466 sau 09:13, nghĩa là Phase E có thật nhưng range bị cắt cụt trước khi nó thành hình.
+- **Nghi phạm:** điều kiện đóng range (hết cửa sổ tối đa / range mới sinh) chạy trước điều kiện phát triển Phase E. Nếu E < ~5 nến thì nên gộp vào D thay vì in ra một phase 1 nến.
 
-### 4. LPSY[C] neo trên một nến vô nghĩa — luật vi phạm: L7/L8
-- LPSY[C] 14:21 tại 4395.6, VSA 1.12×, và Phase C = đúng nến đó. Một "test cuối cùng ở biên trên" mà nằm ở 53% chiều cao range và chỉ tồn tại 1 nến thì không mang thông tin gì.
+### 4. Nhãn SC nằm trước nến mở range (lỗi đã biết, chưa sửa)
+- SC ghi 05:30 giá 4488.6, VSA **11.08x**; nến mở range là 05:31 (low 4486.9, VSA chỉ 2.09x). Bài này lỗi đó gây hậu quả thấy rõ: tiêu đề chart ghi `VSA_nhan=11.08x` nhưng cây thực sự mở range chỉ 2.09x — người đọc bị dẫn sai về cường độ climax. Ghi nhận theo yêu cầu, không tính điểm.
 
-### 5. AR và ST[A] đều là nến chết
-- AR 14:09 VSA **0.81×** thân 0.08; ST[A] 14:15 VSA **0.42×** thân 0.25. Cả ba mốc Phase A (climax 0.98×, AR 0.81×, ST[A] 0.42×) đều dưới trung bình khối lượng — không có một bằng chứng nỗ lực nào cho thấy có ai đang đấu giá ở đây (THEORY §2.2, Nỗ lực–Kết quả).
+### 5. MOVE trước climax hiệu suất thấp (trình bày/cảnh báo)
+- 22.2 giá trong **76 nến**, hiệu suất hướng **0.37** — move lê thê nhiều nhịp hồi, không phải một cú đẩy dứt khoát bị chặn. Đây là ca biên của L1: chưa đến mức bác range, nhưng nên hiện cảnh báo như bài #30 đã làm.
 
 ## Đạt
-- L4: nếu chấp nhận range này thì tên "Tái phân phối" khớp origin SC + phá xuống. (Chỉ đúng về quy tắc đặt tên, không đúng về thực tế vì cú phá sau đó hỏng.)
-- Chú thích nỗ lực/kết quả er=0.72 ghi đúng "HIỆU QUẢ" — vá #1 chạy đúng dấu.
+- **Mục 2 (L2):** đủ 3 lần đổi hướng, và ST[A] 05:45 tại 4489.3 hồi **76%** khoảng AR↔climax — vượt ngưỡng 55% mới, không còn rơi lửng giữa range. Phase A gọn 15 nến, kết đúng tại ST[A].
+- **Mục 3 (L3) — biên phụ dưới:** 4478.8 = cực trị xa nhất, mỗi bên 1 biên, không kéo theo giá. Đúng luật (dù nó lẽ ra phải kích hoạt SOW, xem lỗi #1).
+- **Mục 4 (L4):** move giảm + SC + phá xuống = Tái phân phối. Tên đúng.
+- **Mục 6 (L8):** Phase C 9 nến — ngắn nhất, đúng L8.
+- **Mục 8:** SOW 08:51 VSA 9.63x, thân/biên 0.80 — nỗ lực và kết quả khớp nhau, đọc đúng. Chỉ số nỗ lực/kết quả Phase B (er=1.24, "hấp thụ nghi vấn") cũng đúng chiều với một cấu trúc sắp gãy xuống.
+- **Mục 9:** không lẫn vai LPSY[C]/LPSY[D] về mặt tên gọi, không có nhãn spam.

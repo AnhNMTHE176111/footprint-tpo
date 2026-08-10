@@ -1,34 +1,43 @@
-# Chấm bài #45 — Tích luỹ (ACC) · 2026-07-12 22:48 → 07-13 00:22 (93 nến M1)
+# Chấm bài #45 — Chưa rõ (SC) (ACC?) · 2026-07-06 12:43 → 17:15 (272 nến M1) · superseded
 
-**Điểm: 2/10** — cả range chỉ 93 nến mà nhét đủ A→E, trong đó Phase B chỉ 14 nến còn Phase C tới 37: hai luật tỷ lệ phase bị vi phạm cùng lúc. Đây là **nhiễu phiên mở cửa Chủ nhật**, không phải một vùng đấu giá thật — tôi sẽ không vẽ range ở đây.
+**Điểm: 3/10** — Range đáng vẽ, nhưng Phase C đặt sai chỗ hoàn toàn: cú rũ đẹp nhất của cả cấu trúc bị vứt xuống làm mSOW ở Phase B.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Phase B (14 nến) ngắn hơn Phase C (37 nến) — luật vi phạm: L9 **và** L8 cùng lúc
-- **Thuật toán gắn:** A=17 · B=14 · C=37 · D=25 · E=1.
-- **Đúng phải là:** B phải dài nhất, C phải ngắn nhất. Ở đây C dài **gấp 2.6 lần** B, và B là phase ngắn thứ nhì cả range.
-- **Dấu hiệu quyết định trên chart:** trên ảnh, ba vạch tím "Phase A / Phase B / Phase C" chen nhau trong chưa đầy 40 phút; đoạn được gọi Phase C (23:20→23:56) chính là đoạn giá bò lên từ 4077 tới 4088 — đó là hành vi xây nguyên nhân (Phase B), không phải một cú test cuối.
-- **Nghi phạm trong thuật toán:** cửa sổ gán ngược Phase C nới lên 0.8× Phase B; nhưng khi Phase B ngắn (14 nến) thì cửa sổ vẫn cho phép LPS[C] ở 23:20 — cách SOS tới 37 nến, tức máy **không** kẹp Phase C vào cửa sổ đã tính. Cần trần cứng: Phase C ≤ min(Phase B, Phase D).
+### 1. Cú rũ thật bị gán mSOW, Phase C dời đi chỗ khác — luật vi phạm: L5, L8
+- **Thuật toán gắn:** mSOW 14:44 tại 4140.6, VSA **5.13x**, xếp vào Phase B. Phase C bị đẩy tới 16:29 với LPS[C] VSA 0.57x.
+- **Đúng phải là:** 14:44 chính là **Spring/Shakeout** — thủng biên chính dưới 4143.3 xuống 4140.6, rồi bật ngược. Phase C phải bắt đầu tại đó.
+- **Dấu hiệu quyết định:** ba con số cùng chỉ về một chỗ. (a) VSA 5.13x là **cây volume cao nhất toàn range** — trên panel volume đó là thanh vàng cao vọt duy nhất. (b) Độ sâu 2.7 giá = 27 tick, so ngưỡng rũ max(15 tick, 15%×17.4 giá = 26 tick) → **đạt**. (c) Sau cú đó giá đi thẳng lên 4164.0, tức **vượt hẳn biên đối diện** = 134% quãng đường — thừa mức 50% để xác nhận cú rũ theo mục 6 spec.
+- **Nghi phạm:** cú này đi vào nhánh "outside → SOW → lùi vào trong → hạ cấp mSOW" thay vì nhánh phân loại cú rũ. Với v7.1, quyết định outside giờ so với **biên CHÍNH** nên một cú thủng 2.7 giá dễ bị coi là "đã ra ngoài" rồi hạ cấp, thay vì được xét làm Spring trước. Thứ tự xét sai: **phải phân loại cú rũ TRƯỚC khi kết luận outside**.
 
-### 2. mSOS và SOS cách nhau 5 nến và **1 tick** — luật vi phạm: mục 5.1, L5
-- **Thuật toán gắn:** mSOS 23:52 tại **4091.4** (VSA 1.08x), SOS 23:57 tại **4091.5** (VSA 2.79x).
-- **Đúng phải là:** chỉ một nhãn SOS tại 23:57. Nến 23:52 là nến **đỏ** (O=4090.0 C=4089.3, volume 38 lot) chỉ chạm 4091.4 bằng bóng rồi đóng cửa xuống — không đủ tư cách gọi là một cú phá "có thật" theo định nghĩa mSOS ở v6.
-- **Dấu hiệu quyết định trên chart:** hai nhãn dính vào nhau ở góc phải ảnh; chênh lệch giá 0.1 = **1 tick**. Đúng ca mà vòng chấm v6 đã bắt (bài cham_44 cũ) — **lỗi chưa được sửa**, ngưỡng 30 tick không chặn được vì nó áp cho việc "lùi hẳn qua biên", không áp cho khoảng cách mSOS↔SOS.
-- **Nghi phạm trong thuật toán:** biên phụ trên bị nới bởi chính bóng nến 23:52 (4091.4), khiến nến đó bị hạ cấp mSOS rồi ngay sau đó cây thật vượt qua. Phải: (a) chỉ nới biên phụ bằng **giá đóng cửa** chứ không bằng bóng, hoặc (b) không phát nhãn mSOS/mSOW khi cú phá kế tiếp thành công trong vòng < 10 nến.
+### 2. Nhãn SC nằm TRƯỚC nến mở range và lệch khỏi biên chính — luật vi phạm: L3 (biên chính = mức climax)
+- **Thuật toán gắn:** nhãn SC tại **12:41**, giá 4145.8; range mở tại 12:43; biên chính dưới 4143.3.
+- **Dấu hiệu quyết định:** nhãn nằm ngoài khung range 2 nến về thời gian và cao hơn chính biên nó tạo ra **2.5 giá** — trên ảnh thấy rõ chấm SC treo lơ lửng phía trên đường liền cam.
+- **Nghi phạm:** đúng lỗi 13.1c đã tự ghi nhận "thử sửa rồi revert". Cửa sổ nhãn chỉ kẹp một phía (sau), không chặn phía trước.
 
-### 3. Range 93 nến với đủ 5 phase = nhiễu, không phải vùng đấu giá — luật vi phạm: tiêu chí "range quá vụn" (CHART_CASES, góp ý đổi khung)
-- **Thuật toán gắn:** ACC hoàn chỉnh A→E, Phase E dài **1 nến**.
-- **Đúng phải là:** đây là 1,5 giờ đầu phiên mở cửa Chủ nhật với volume 12–47 lot/nến. Một cấu trúc Wyckoff đủ 5 phase trong 93 nến M1 phải bị nghi ngay. Nếu muốn đọc vùng này thì phải lên M5/M15.
-- **Dấu hiệu quyết định trên chart:** Phase E dài đúng **1 nến** — giá không hề "rời range đi tìm vùng giá mới": ngay sau 00:22 giá quay đầu rơi về 4071 (thấy rõ nửa phải ảnh), tức cú phá lên **thất bại** chỉ vài phút sau khi range được đặt tên ACC.
-- **Nghi phạm trong thuật toán:** đích Phase E = 1.0× chiều cao range, mà chiều cao chỉ **12.0 giá** → chỉ cần đi 12 giá là "xong cấu trúc". Với range mỏng, mốc này quá dễ đạt. Nên đặt sàn tuyệt đối (vd ≥ 1.5× ATR ngày) cho đích Phase E, hoặc sàn độ dài range.
+### 3. ST[A] lơ lửng 42% chiều cao range — luật vi phạm: L2
+- **Thuật toán gắn:** ST[A] 13:15 tại 4150.7.
+- **Dấu hiệu quyết định:** (4150.7−4143.3)/17.4 = **42.5% chiều cao**; retrace từ AR = 0.575, lại **vừa lọt 0.55**. Lỗi giống hệt bài #43 và #47 — ba bài liên tiếp rơi vào đúng dải 42–44%.
+- **Đúng phải là:** không có nhịp nào về sát 4143.3 trước 14:44, nên hoặc phải chờ lâu hơn, hoặc thừa nhận Phase A chưa đóng.
 
-### 4. AR chốt trên nến volume 20 lot — luật vi phạm: L2 (AR phải là cú bật ngược thật)
-AR 22:52 tại 4088.8 với **VSA 0.36x** — nhịp bật không có nỗ lực nào đứng sau, chỉ 4 nến sau climax. Phiếu không gắn cảnh báo "AR (yếu)" dù đúng ca đó. Effort ↔ Result: climax bán 359 lot mà cú hồi chỉ 20 lot — biên trên dựng trên hư không.
+### 4. Nến mở range không đủ tính chất climax — luật vi phạm: mục 3(1) spec
+- **Dấu hiệu quyết định:** nến 12:43 có **VSA 1.28x** (ngưỡng 2.2x) và biên độ chỉ **1.9 giá**, thân 0.16. Nó chỉ được chọn vì là đáy cụm. Cây climax thật là 12:41 (VSA 3.27x, biên độ 5.6 giá).
+- Hệ quả: mức biên chính dưới và nhãn climax tách rời nhau (lỗi #2).
+
+### 5. LPS[C] nằm ở nửa TRÊN range — hệ quả tiêu cực của bản vá v7.1
+- **Thuật toán gắn:** LPS[C] 16:29 tại 4155.8 = **72% chiều cao**, VSA 0.57x.
+- **Nghi phạm:** v7.1 bỏ hẳn ràng buộc `_right_half` để chữa "thiếu Phase C". Đổi bệnh: giờ LPS[C] của một range phá LÊN lại nằm ở nửa trên, không còn là "điểm hỗ trợ cuối".
+
+### 6. Range không được đặt tên dù cấu trúc đã rõ — luật vi phạm: L4, L10
+- **Dấu hiệu quyết định:** có SOS 16:50 VSA **3.42x** thân 0.85, có LPS[D] 17:01 giữ trên biên phụ 4164.0, giá sau đó lên 4175. Đủ mọi bằng chứng của một **Tích luỹ** phá lên. Nhưng range bị đóng `superseded` vì range #46 sinh ra tại 16:58 — **trước cả khi range này kết thúc (17:15)**.
+- **Nghi phạm:** cơ chế SIDEWAYS cắt vụn cấu trúc thật (đã liệt ở 13.1b, chưa sửa). Range con không được phép sinh khi range cha đang ở Phase D và cú phá của cha còn chưa kết thúc.
 
 ## Đạt
-- L1: MOVE giảm 24.2 giá / 47 nến, hiệu suất 0.37; kiểm dữ liệu gốc: phiên trước nghỉ từ 07-10 21:00 tới 07-12 22:00 (49 giờ) và cửa sổ đo **dừng đúng tại khe**, không bắc qua cuối tuần — vá #7 của v6 hoạt động.
-- Climax SC 22:48 là cây thật đẹp: VSA **7.19x**, biên độ 7.9 giá, đúng đáy cửa sổ, nến đỏ chặn move. Nhãn neo đúng nến, không lệch.
-- **L2 — ST[A] lần này ĐÚNG:** 23:04 tại 4075.8, thấp hơn mức climax 4076.8 → test đúng vùng SC và tạo biên phụ dưới hợp lệ. Đây là bài duy nhất trong lô 41–45 đặt ST[A] đúng chỗ.
-- L3: biên phụ mỗi bên 1 cái, tỷ lệ 1.30x — sạch.
-- L4: origin SC + phá lên = **Tích luỹ**, tên khớp hướng phá.
-- Chú thích er=0.37 ghi "nhịp HIỆU QUẢ, không phải hấp thụ" — đúng dấu.
+- **Mở range (L1):** MOVE giảm 21.8 giá / 76 nến / hiệu suất 0.36 — có move thật, climax chặn được.
+- **Phase B dài nhất (L9):** 193/272 nến. Đúng tỉ lệ.
+- **Biên phụ (L3):** đúng mỗi bên 1 cái (4140.6 dưới / 4164.0 trên), đều là cực trị xa nhất thật.
+- **SOS:** neo đúng cây mạnh (3.42x, thân 0.85), khác hẳn bài #44/#46.
+- SOT phía dưới đo được `n=3` = SOT thật, khớp với việc đáy sau cao dần trước khi bung — đọc effort/result đúng dấu.
+
+## Cần hỏi người học
+- Khi range cha còn đang chạy Phase D và cú phá của nó **thành công** (SOS + LPS[D] giữ được), có nên cấm hẳn việc sinh range con từ cú phá đó không? Ở bài này việc sinh con làm mất tên của một cấu trúc đã hoàn chỉnh.

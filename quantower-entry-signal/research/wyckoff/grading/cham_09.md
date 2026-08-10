@@ -1,41 +1,37 @@
-# Chấm bài #09 — Tích lũy (ACC) · 2026-04-19 23:43 → 2026-04-20 01:12 (59 nến M1)
+# Chấm bài #09 — Chưa rõ (SC) (ACC?) · 2026-04-19 23:43 → 2026-04-21 16:59 (1288 nến M1)
 
-**Điểm: 2/10** — **Không nên vẽ range ở đây.** 59 nến mà nhét đủ A→E, Phase B chỉ 13 nến, không có Phase C: đây là một cú đảo chiều chữ V, không phải một vùng đấu giá.
+**Điểm: 2/10** — Không nên vẽ range như thế này. AR bắt trễ 23 tiếng làm biên trên và Phase A sai hẳn, kéo theo toàn bộ cấu trúc phía sau.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Range quá vụn — 59 nến M1 với "đủ" 4 phase — luật vi phạm: THEORY §2.3 (TR = giai đoạn đi ngang, đàm phán), lỗi kinh điển "range quá vụn"
-- **Thuật toán gắn:** A=17 · B=13 · D=18 · E=12, tổng 59 nến, gọi là Tích luỹ hoàn chỉnh.
-- **Đúng phải là:** không có "giai đoạn đàm phán" nào ở đây. Đọc lại chuỗi: SC nổ 22 giá xuống 4793 lúc 23:43, giá bật lên liên tục và tới 00:20 đã phá lên trên rồi chạy thẳng tới 4868. Toàn bộ "range" chỉ là **nhịp nghỉ 30 phút giữa một cú V-reversal**. Giá dành rất ít thời gian ở đây — theo THEORY §2.3 đó là dấu hiệu vùng **không cân bằng**, tức không phải TR.
-- **Dấu hiệu quyết định:** chiều cao biên chính 16.8 giá / 59 nến, trong khi ngay sau Phase E giá đi tiếp 55 giá lên 4868 mà không hề dừng.
-- **Nghi phạm trong thuật toán:** người học đã chốt "không đặt sàn độ dài tối thiểu cho range" (quyết định 1, mục 0b) — nhưng ca này cho thấy cần một điều kiện **cấu trúc** thay thế: ví dụ Phase B phải có ≥2 lượt chạm biên (ở đây bias=+1, chỉ chạm được biên trên).
+### 1. AR bắt trễ 23 giờ → Phase A 881 nến, biên chính trên bị kéo theo giá — luật vi phạm: L2, L3
+- **Thuật toán gắn:** `SC 04-19 23:43 · 4793.0` → `AR (yếu) 04-20 22:21 · 4890.7`. Phase A = 881 nến.
+- **Đúng phải là:** AR là **cú bật ngược đầu tiên** bị chặn ngay sau climax. Trên ảnh, ngay sau SC giá bật một mạch lên vùng ~4866 trong khoảng 04-20 01:00–02:00 rồi bị chặn — **đó** mới là AR, biên chính trên phải là mức đó. Mức 4890.7 lúc 22:21 là đỉnh của cả một ngày dao động, lấy nó làm AR = kéo biên chính chạy theo giá, đúng cái L3 cấm.
+- **Dấu hiệu quyết định trên chart:** giữa SC và "AR" có ít nhất 4-5 chu kỳ lên-xuống đầy đủ (đọc trên ảnh vùng 04-20 01:00 → 04-20 18:00), tức đã có nhiều hơn 3 lần đổi hướng từ lâu.
+- **Nghi phạm trong thuật toán:** AR đang lấy **cực trị ngược hướng trong cửa sổ tìm kiếm**, không lấy **swing đầu tiên bị chặn**. Cần chốt AR tại đảo chiều đầu tiên vượt ngưỡng biên độ tối thiểu, và đóng cửa sổ AR sau N nến.
 
-### 2. THIẾU HẲN Phase C — luật vi phạm: L8
-- **Thuật toán gắn:** timeline nhảy thẳng A → B → **D** → E.
-- **Đúng phải là:** L8 nói rõ, khi không có Spring/UTAD thì phải **chờ SOS rồi quay lại gán ngược Phase C**. Không có Phase C = không có "tín hiệu đầu tiên cho thấy giá sắp phá biên kia", cấu trúc đọc không ra chuyện gì.
-- **Dấu hiệu quyết định:** Phase B chỉ 13 nến ⇒ cửa sổ gán ngược = min(60, 0.8×13) = **10 nến**. Nới từ 0.5x lên 0.8x **không cứu được ca này**, vì vấn đề là mẫu số (Phase B) quá ngắn chứ không phải hệ số.
-- **Nghi phạm trong thuật toán:** công thức `min(60, k×len(B))`. Đề xuất: bỏ hẳn phụ thuộc vào len(B), dùng sàn cứng (ví dụ tối thiểu 15–20 nến hoặc tới mốc bắt đầu Phase B, lấy cái nào gần hơn).
+### 2. Phase A (881) dài gấp gần 3 lần Phase B (322) — luật vi phạm: L2, L9
+- Phase B **phải là phase dài nhất**; ở đây Phase A nuốt 68% range. Hệ quả trực tiếp của lỗi #1.
 
-### 3. Phase B (13 nến) ngắn hơn cả Phase A (17) và Phase D (18) — luật vi phạm: L9
-- **Thuật toán gắn:** B là phase **ngắn nhì** toàn range.
-- **Đúng phải là:** B dài nhất. Ở đây "xây dựng nguyên nhân" chỉ diễn ra trong 13 nến — theo luật Nhân-Quả (THEORY §2.2), nguyên nhân bằng 0 thì không có cơ sở gọi đây là tích luỹ.
+### 3. ST[A] rơi lửng giữa range — luật vi phạm: L2 (ngưỡng 55% chưa cứu được ca này)
+- **Thuật toán gắn:** `ST[A] 04-21 06:02 · 4830.8`.
+- **Đúng phải là:** ST[A] là cú quay lại **test vùng climax**. Climax 4793.0, AR 4890.7 → 4830.8 nằm cách đáy 37.8 giá, tức ở **39% chiều cao range** — giữa range, không phải vùng climax. Nó thoả 61% ngưỡng hồi mới (≥55%) nhưng vẫn sai bản chất.
+- **Dấu hiệu quyết định trên chart:** nhãn ST[A] trên ảnh nằm ngang tầm 4830, cách xa hẳn đường biên chính dưới 4793.0.
+- **Nghi phạm trong thuật toán:** `STA_MIN_AR_FRAC` đo hồi **từ phía AR**, nên range càng cao thì ST[A] càng dễ dừng giữa đường. Phải thêm ràng buộc tuyệt đối phía climax: ST[A] chỉ hợp lệ khi nằm trong ~25–30% chiều cao range tính từ mức climax (hoặc trong K×ATR quanh climax).
 
-### 4. ST[A] là một nến doji volume 1 lot nằm giữa range — luật vi phạm: L2
-- **Thuật toán gắn:** ST[A] 00:01, giá 4802.1, **VSA 0.15x**, thân 0.00.
-- **Đúng phải là:** ST[A] phải là cú quay lại **vùng climax** rồi bị chặn. 4802.1 cách SC 4793.0 tới 9.1 giá = **54% chiều cao range** — giữa range, không phải test biên. Và một nến doji 1 hợp đồng thì không "bị chặn" bởi ai cả.
-- **Dấu hiệu quyết định:** phiếu số liệu: `ST[A] … 4802.1 … VSA 0.15x … thân 0.00`; biên chính 4793.0–4809.8.
-- **Nghi phạm trong thuật toán:** giống bài #08 — ngưỡng mới 0.4× khoảng AR↔climax đo **độ hồi từ AR**, ở đây đạt 0.46 nên lọt, nhưng không đo **khoảng cách còn lại tới climax**. Cần thêm ràng buộc này; đồng thời nên loại ứng viên ST[A] có VSA quá thấp (0.15x là nhiễu thuần).
+### 4. Không đặt tên range dù đã phá xuống rõ — luật vi phạm: L4
+- **Thuật toán gắn:** tên = "Chưa rõ (SC) (ACC?)", trạng thái `superseded` — "không đặt tên 4 mẫu hình".
+- **Đúng phải là:** L4 nói rõ phá sai hướng **không huỷ range, chỉ đổi tên**. Move trước là giảm → SC; phá **xuống** thật (SOW 4776.8, dưới cả biên phụ 4777.6) → range này là **Tái phân phối (RE-DIST)**. Việc một range con mới sinh ra từ cú phá không xoá tên của range mẹ.
+- **Nghi phạm trong thuật toán:** nhánh `superseded` đang bỏ qua bước đặt tên. Đặt tên và "bị thay thế" là hai thuộc tính độc lập.
 
-### 5. mSOS rồi SOS cách nhau 4 nến, cùng một cú phá — luật vi phạm: mục 5.1 spec (nhãn dư)
-- **Thuật toán gắn:** mSOS 00:16 (4813.0, VSA 1.67x, Phase B) → SOS 00:20 (4815.9, VSA 3.88x, Phase D).
-- **Đúng phải là:** một nhãn duy nhất. mSOS theo định nghĩa v6 là cú phá **thu hẳn vào trong range rồi hướng sang biên đối diện** — ở đây giá không hề thu vào, nó đi thẳng lên và 4 nến sau thành SOS. Nhãn mSOS phải bị xoá hồi tố khi SOS cùng hướng xác nhận ngay sau đó.
-- **Nghi phạm trong thuật toán:** bản vá #5 (quét lại lấy nến VSA cao nhất trong đoạn thăm dò) chọn 1.67x trong khi cây thật 3.88x nằm chỉ 4 nến sau, ngoài cửa sổ quét. Cửa sổ hạ cấp mSOS/mSOW đang đóng quá sớm.
+### 5. Nhãn mSOW gắn sai Phase — luật vi phạm: tính nhất quán phase (THEORY §4.2)
+- `mSOW 04-21 16:03` ghi Phase **B**, nhưng bảng Phase cho thấy Phase B kết thúc 15:23 và 16:03 nằm trong **Phase C** (15:24–16:32). Nhãn và khung phase mâu thuẫn nhau trong cùng một phiếu.
 
-### 6. AR gắn cờ "(yếu)" nhưng nó lại là AR hợp lệ nhất trong range
-- AR 23:58 giá 4809.8 (VSA 0.44x) là đỉnh nhịp bật ngược thật, cách climax 16.8 giá. Cờ "(yếu)" ở đây gây hiểu nhầm; trong khi ST[A] (0.15x) đáng bị cảnh báo hơn thì lại không có cờ nào.
+### 6. Range 1288 nến không phải một vùng đấu giá — cảnh báo cấu trúc (Ca #20 CHART_CASES)
+- Nhìn ảnh: giá đi từ 4793 lên 4890 rồi xuống 4776 — đó là **một sóng tăng rồi một sóng giảm**, không phải một vùng cân bằng. Vẽ TR bao trọn 21 giờ như thế là gò dữ liệu cho khớp mô hình. Nếu là tôi: không vẽ range ở đây, hoặc chỉ vẽ TR nhỏ quanh vùng 04-21 05:00–17:00.
 
 ## Đạt
-- **Mục 1 (L1):** SC 23:43 là climax mẫu mực — biên độ nến **22.0 giá**, **VSA 11.74x**, đúng đáy của move giảm 34.1 giá / 43 nến (hiệu suất 0.37). Cây climax chặn move, không nằm giữa move. Nhãn neo đúng cây, đúng đáy 4793.0.
-- **Mục 3 (L3):** biên chính = climax + AR, cố định; một biên phụ trên 4813.0 do mSOS tạo, tỷ lệ 1.19x — sạch.
-- **Mục 8 một phần:** SOS neo đúng cây VSA 3.88x (cao nhất đoạn phá) — bản vá "nhãn hồi tố về cây phá thật" chạy đúng ở đây.
-- **Chú thích nỗ lực/kết quả đúng dấu:** er=0.10 ghi "nhịp HIỆU QUẢ" — không còn hard-code "hấp thụ NGHI VẤN".
+- **L1:** có move giảm 34.1 giá / 43 nến bị chặn đúng tại cây SC (low 4793.0, VSA 11.74x, biên độ 22 giá) — cây climax này là climax thật, rất rõ.
+- **L8:** Phase C 60 nến < Phase B 322 nến; LPSY[C] 4804.8 nằm cách biên chính dưới 11.8 giá (12% chiều cao range) — đúng "gần biên", đây là điểm sáng của bản vá bỏ ràng buộc nửa range.
+- **L7:** LPSY[C] chỉ đánh 1 điểm, không vẽ vùng.
+- **L6:** không còn ST[B].

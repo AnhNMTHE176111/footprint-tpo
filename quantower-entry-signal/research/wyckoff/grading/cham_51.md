@@ -1,30 +1,32 @@
-# Chấm bài #51 — Chưa rõ (SC) (ACC?) · 2026-07-16 13:05 → 2026-07-17 20:59 (1853 nến M1)
+# Chấm bài #51 — Tích lũy (ACC) · 2026-07-12 22:48 → 2026-07-13 00:22 (93 nến M1)
 
-**Điểm: 4/10** — Phase A vẽ đúng và biên chính đặt đúng chỗ, nhưng cả 1819 nến còn lại bị nhét hết vào Phase B: cú rũ sâu nhất của range không có nhãn, cú phá lên không được kết luận, range đóng ở trạng thái "chưa rõ".
+**Điểm: 5/10** — bài tốt nhất trong lô: Phase A đúng khuôn, tỉ lệ phase đúng, biên chính ôm đúng vùng giá. Trừ điểm vì mSOS/SOS chồng nhau 1 tick và Phase E chỉ 1 nến rồi cấu trúc sập ngược.
 
 ## Lỗi (nặng → nhẹ)
 
-### 1. Cực trị sâu nhất của range không được gắn nhãn — luật vi phạm: L3 + L8
-- **Thuật toán gắn:** mSOW tại 07-17 13:39, giá **3994.4** (VSA 4.61x).
-- **Đúng phải là:** nhãn phải neo tại **3963.0** (đáy của chính nhịp đó, ngày 07-17 quanh 13:10-13:25) — đó là mức đã tạo ra **biên phụ dưới 3963.0** mà chính phiếu số liệu ghi. Đó là cú rũ (Shakeout) sâu nhất toàn range, ứng viên Phase C số một.
-- **Dấu hiệu quyết định trên chart:** biên phụ dưới = 3963.0; nhãn mSOW đứng ở 3994.4, tức **cách đáy thật 31.4 giá**, gần đúng giữa biên chính (3977.1–4012.6). Một mSOW nằm giữa range là vô nghĩa: theo định nghĩa nó phải là một cú thò ra ngoài biên.
-- **Nghi phạm trong thuật toán:** đúng chỗ vừa vá ở v7 (#5) — "quét lại lấy nến VSA cao nhất trong đoạn thăm dò". Lấy VSA cao nhất mà **không ràng buộc nến đó phải nằm ngoài biên / gần cực trị của nhịp** thì nhãn trôi vào giữa range. Phải giao hai điều kiện: VSA cao nhất **trong số các nến đóng/chạm ngoài biên**.
+### 1. mSOS và SOS là cùng MỘT cú phá, đặt hai nhãn cách nhau 0.1 giá — luật vi phạm: mục 9 (nhãn sai vai) + L3
+- **Thuật toán gắn:** mSOS 23:52 tại **4091.4** (VSA 1.08x, Phase B) — SOS 23:57 tại **4091.5** (VSA 2.79x, Phase D). Cách nhau 5 nến, **0.1 giá**.
+- **Đúng phải là:** một cú phá, một nhãn. Cây 23:52 chỉ là nến thò đầu ra; cây phá thật là 23:57. Không có nhịp "thu hẳn vào trong range rồi hướng sang biên đối diện" giữa hai nhãn — tức không thoả định nghĩa mSOS của chính tài liệu.
+- **Dấu hiệu quyết định trên chart:** hai nhãn mSOS (cam) và SOS (xanh) dính sát nhau ngay trên biên chính trên 4088.8; giá giữa 23:52 và 23:57 không hề lùi về dưới 4088.8.
+- **Nghi phạm:** đúng ca "SOS cách mSOS 1 tick" đã báo ở bài #45 vòng v7 — mSOS tự nới biên phụ lên 4091.4 rồi cú phá thật chỉ cần vượt 0.1 giá là qua. Bản vá 13.1c đổi mốc quyết định sang biên CHÍNH nhưng **nhánh gán nhãn mSOS vẫn chạy trước**, nên vẫn đẻ nhãn thừa.
 
-### 2. Không kết luận cấu trúc dù đã có đủ chuỗi rũ → phá — luật vi phạm: L8, L10
-- **Thuật toán gắn:** Phase A (35n) → Phase B (1819n), hết. Tên range "Chưa rõ (SC)".
-- **Đúng phải là:** rũ xuống 3963.0 (07-17 ~13:20) rồi quay lên **rất nhanh** → Phase C; cú lên đóng cửa vượt biên chính trên và chạm 4028.9 (mSOS, VSA 2.41x, thân 0.90) → ứng viên SOS/Phase D. L8 nói rõ: case khó thì **chờ SOS xuất hiện rồi quay lại vẽ Phase C**. Ở đây SOS đã xuất hiện mà máy vẫn không quay lại vẽ.
-- **Dấu hiệu quyết định trên chart:** sau mSOS, giá dao động 4012–4028, tức **quanh và trên** biên chính trên 4012.6 suốt phần còn lại; chỉ có một nhịp thụt xuống ~4003 gần cuối. Đây là hành vi "giữ được ngoài biên" chứ không phải phá hụt.
-- **Nghi phạm trong thuật toán:** điều kiện SOS bắt buộc đóng cửa vượt **biên phụ trên**, mà biên phụ trên 4028.9 lại do **chính cây mSOS đó** tạo ra → không bao giờ vượt được chính mình. Đúng lỗi "biên phụ tự nới rồi tự vượt"; ngưỡng 30 tick (fix #6) không cứu được ca này vì cây phá dừng đúng tại mức nó vừa nới.
+### 2. Phase E = 1 nến, và cấu trúc sập ngay sau đó — luật vi phạm: L10
+- **Thuật toán gắn:** Phase E 00:22 → 00:22 = **1 nến**, range đóng `completed`, tên "Tích luỹ".
+- **Đúng phải là:** L10 đòi Phase E là "giá rời range đi tìm vùng giá mới". Trên ảnh, sau đỉnh ~4099 lúc 00:10 giá quay đầu, **thủng cả biên chính dưới 4076.8** xuống ~4070 lúc 00:30. Cấu trúc thất bại (§9 THEORY) chứ không phải tích luỹ hoàn tất.
+- **Dấu hiệu quyết định:** khoảng cách từ SOS (4091.5) tới đỉnh thật 4099 = 7.5 giá, chỉ 0.6× chiều cao range 12.0 — vừa đủ mốc "0.5× khi hết giờ" rồi đóng ngay, đúng nghĩa gò cho đủ điều kiện.
+- **Nghi phạm:** mốc Phase E tối thiểu 0.5× chiều cao quá rẻ với range 12 giá; và không có kiểm tra hậu nghiệm "giá có lùi lại vào range trong N nến sau khi chốt E hay không".
 
-### 3. Phase B chiếm 98% range, không có Phase C/D/E — luật vi phạm: L9 (hệ quả của lỗi 1-2)
-- **Thuật toán gắn:** B = 1819/1853 nến.
-- **Đúng phải là:** B dài nhất là đúng tinh thần L9, nhưng "dài nhất" không có nghĩa "nuốt hết". Một range 1853 nến M1 (hơn 30 giờ) mà không sinh nổi một phase nào sau B thì đó là dấu hiệu máy đang **không đọc được** chứ không phải thị trường không cho tín hiệu.
+### 3. AR volume 0.36x mà không gắn cờ "(yếu)" — luật vi phạm: mục 8 (Effort vs Result)
+- **Thuật toán gắn:** AR 22:52 tại 4088.8, **VSA 0.36x** — thấp hơn 1/3 trung bình.
+- **Đúng phải là:** biên chính trên của cả range được dựng bởi một cây gần như không có ai giao dịch. Bài #50 có cờ "AR (yếu)" cho VSA 1.86x, còn ca 0.36x này lại không có cờ — tiêu chuẩn không nhất quán.
+- **Nghi phạm:** cờ "(yếu)" đang xét theo *khoảng cách nến tới climax* chứ không theo `ar_vsa` (biến đã đo sẵn nhưng chưa dùng — đúng như 13.1b đã ghi).
 
-### 4. (Trình bày) Thiếu hẳn dòng nỗ lực ↔ kết quả
-- Phiếu #52 và #53 đều có dòng "Nhịp nỗ lực/kết quả cao nhất"; #51 — bài có Phase B **dài nhất cả lô** — lại không có dòng nào. Mục 8 (Effort vs Result) không chấm được. Nghi phạm: nhánh tính er bị bỏ qua khi Phase B quá dài hoặc khi range không có Phase C.
+### 4. LPS[C] rơi giữa range — luật vi phạm: L8 (Phase C là tín hiệu ở biên)
+- LPS[C] 23:45 tại **4083.7**, tức 58% chiều cao range (4076.8–4088.8), không gần biên nào. Sau khi v7.1 bỏ ràng buộc "đúng nửa range", pivot gán ngược trôi vào giữa. Ràng buộc "gần biên đang bị kiểm" rõ ràng chưa siết đủ.
 
 ## Đạt
-- **Mục 1 (L1):** MOVE trước climax thật — 67.7 giá / 61 nến, hiệu suất 0.45, bị cụm nến 13:02 (VSA 2.91x) + 13:04 (2.34x) chặn lại. Mở range hợp lệ.
-- **Mục 2 (L2):** đủ 3 lần đổi hướng. AR 4012.6 là cú bật thật (35.5 giá). ST[A] 3985.5 = hồi **76%** khoảng AR↔climax, tức quay về sát vùng SC — đây là ST[A] đúng nghĩa, không phải ngọ nguậy giữa range. Ngưỡng 0.4 mới (fix #2) không bị lạm dụng ở bài này.
-- **Mục 3 (L3):** biên chính = climax 3977.1 + AR 4012.6, cố định, không kéo theo giá. Biên phụ mỗi bên đúng 1 (3963.0 / 4028.9), đều là cực trị xa nhất thật.
-- **Nhãn cụm climax (fix #4):** SC neo tại 13:04, lệch đúng 1 nến so với nến mở range, giá 3979.1 vs mức climax 3977.1 — chấp nhận được.
+- Điều kiện mở range (L1): MOVE giảm 24.2 giá / 47 nến, climax 22:48 **VSA 7.19x**, biên độ 7.9 giá, là đáy thật của cửa sổ — climax chặn move rõ ràng. Nhãn SC nằm đúng nến mở range (khác #49/#52).
+- Phase A (L2) chuẩn: SC → AR (22:52) → ST[A] (23:04 tại 4075.8, hồi hết 108% khoảng AR↔climax, test đúng vùng climax và nới biên phụ dưới xuống 4075.8). Đây là ST[A] đúng nhất trong cả lô — mốc 0.55 mới ăn đúng ở đây.
+- Biên chính 12.0 giá / biên phụ 15.6 giá = **1.30×** — hai nét liền ôm đúng vùng dao động, không bị kéo theo giá (L3).
+- Tỉ lệ phase đúng: B (39n) dài nhất, C (12n) ngắn nhất trong B/C/D (L8, L9).
+- Tên range khớp origin SC + phá lên = Tích luỹ (L4).

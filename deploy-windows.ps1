@@ -24,6 +24,15 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+trap {
+    Write-Host ""
+    Write-Host "LOI KHONG BAT DUOC: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host $_.ScriptStackTrace -ForegroundColor DarkGray
+    try { Stop-Transcript | Out-Null } catch { }
+    if (-not $env:CI) { Write-Host ""; Write-Host "Nhan Enter de dong cua so nay..." -ForegroundColor DarkGray; [void][System.Console]::ReadLine() }
+    exit 1
+}
+
 # Bản đồ: DLL trong repo  →  thư mục con dưới Indicators ("" = đặt ngay gốc).
 # Giữ ĐÚNG cách bày hiện tại trên máy Windows (ảnh chụp 2026-08-11).
 $map = @(
@@ -94,7 +103,7 @@ if ($Verify) {
     if ($diff -eq 0 -and $miss -eq 0) { Write-Host "=> Tat ca dang la ban moi nhat." -ForegroundColor Green }
     else { Write-Host "=> Dong Optimus Flow roi chay lai deploy-windows.bat" -ForegroundColor Red }
     try { Stop-Transcript | Out-Null } catch { }
-    if ($Host.Name -eq "ConsoleHost" -and -not $env:CI) { Read-Host "Enter de dong" | Out-Null }
+    if (-not $env:CI) { Write-Host ""; Write-Host "Nhan Enter de dong cua so nay..." -ForegroundColor DarkGray; [void][System.Console]::ReadLine() }
     exit 0
 }
 
@@ -131,7 +140,7 @@ if ($proc) {
     if ($ans -ne "y") {
         Write-Host "  DA HUY — chua copy file nao. Dong Optimus Flow roi chay lai." -ForegroundColor Red
         try { Stop-Transcript | Out-Null } catch { }
-        if ($Host.Name -eq "ConsoleHost" -and -not $env:CI) { Read-Host "Enter de dong" | Out-Null }
+        if (-not $env:CI) { Write-Host ""; Write-Host "Nhan Enter de dong cua so nay..." -ForegroundColor DarkGray; [void][System.Console]::ReadLine() }
         exit 1
     }
 } else {
@@ -184,4 +193,4 @@ Write-Host "Mo lai Optimus Flow, indicator se dung ban moi (Quantower doc DLL lu
 Write-Host "Nhat ky day du: deploy-log.txt (gui file nay khi can soi loi)."
 Write-Host ""
 try { Stop-Transcript | Out-Null } catch { }
-if ($Host.Name -eq "ConsoleHost" -and -not $env:CI) { Read-Host "Enter de dong" | Out-Null }
+if (-not $env:CI) { Write-Host ""; Write-Host "Nhan Enter de dong cua so nay..." -ForegroundColor DarkGray; [void][System.Console]::ReadLine() }

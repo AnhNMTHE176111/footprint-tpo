@@ -116,6 +116,8 @@ namespace SessionZonesNs
         // bình thường, chỉ không tự gửi tin.
         [InputParameter("TG · Tab này ĐƯỢC gửi (chỉ bật 1 tab/chart)", 60)]
         public bool TeleIsSender { get; set; } = false;
+        [InputParameter("TG · Kèm lịch tin Forex Factory", 61)]
+        public bool TeleShowNews { get; set; } = true;
 
         private bool _vaLoaded;
         private readonly object _sync = new();
@@ -332,6 +334,7 @@ namespace SessionZonesNs
             _tele.Enabled = TeleEnabled;
             _tele.TestNow = TeleTestNow;
             _tele.IsSender = TeleIsSender;
+            _tele.ShowNews = TeleShowNews;
             _tele.BotToken = TeleBotToken?.Trim() ?? "";
             _tele.ChatId = TeleChatId?.Trim() ?? "";
             _tele.ShareDir = TeleShareDir ?? "";

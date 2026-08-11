@@ -499,6 +499,202 @@ namespace TpoSuite
         }
     }
 
+    // ---- Lịch tin Forex Factory (né tin khi trade vàng) ------------------------------------
+    //  Tải feed JSON công khai của Forex Factory (lịch tuần), lọc tin USD (High+Medium) và tin
+    //  đỏ EUR/GBP, quy về giờ VN. Tải NỀN + cache ra đĩa (1 giờ) vì feed trả 429 nếu gọi dày;
+    //  Compose() chỉ ĐỌC cache nên không bao giờ chặn luồng vẽ chart. Bản Python đối chiếu:
+    //  news-calendar/ff_news.py (cùng nguồn, cùng bộ lọc).
+    internal static class NewsCalendar
+    {
+        private const string Url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
+        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+        private static readonly object Gate = new object();
+        private static List<Ev> _cache;
+        private static DateTime _cacheUtc = DateTime.MinValue;
+        private static bool _loading;
+
+        internal sealed class Ev
+        {
+            public string Title = "", Ccy = "", Impact = "", Forecast = "", Previous = "";
+            public DateTime WhenVn;      // giờ Việt Nam
+            public bool AllDay;
+        }
+
+        // Tin nào cũng "đỏ" nhưng mức nguy hiểm khác nhau → tách riêng nhóm giật mạnh nhất.
+        private static readonly string[] TopTier =
+        {
+            "non-farm", "federal funds", "fomc statement", "core cpi", "cpi m/m", "cpi y/y",
+            "fomc press conference", "fed chair"
+        };
+
+        // Gọi mỗi vòng Process — trả về ngay, chỉ tải khi cache quá hạn.
+        public static void Refresh(string dir, int tzOffset, Action<string> log)
+        {
+            lock (Gate)
+            {
+                if (_loading) return;
+                if ((DateTime.UtcNow - _cacheUtc).TotalMinutes < 60 && _cache != null) return;
+                if (_cache == null && TryLoadDisk(dir, tzOffset)) return;   // khởi động: dùng file cũ trước
+                _loading = true;
+            }
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var req = new HttpRequestMessage(HttpMethod.Get, Url);
+                    req.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0");
+                    var resp = await Http.SendAsync(req).ConfigureAwait(false);
+                    string body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    if (!resp.IsSuccessStatusCode) { log?.Invoke($"lịch tin HTTP {(int)resp.StatusCode} — giữ cache cũ"); return; }
+                    var evs = Parse(body, tzOffset);
+                    if (evs.Count == 0) { log?.Invoke("lịch tin: feed rỗng — giữ cache cũ"); return; }
+                    lock (Gate) { _cache = evs; _cacheUtc = DateTime.UtcNow; }
+                    try { File.WriteAllText(Path.Combine(dir, "news_cache.json"), body); } catch { }
+                    log?.Invoke($"lịch tin: tải OK, {evs.Count} tin liên quan");
+                }
+                catch (Exception ex) { log?.Invoke("lịch tin LỖI: " + ex.Message); }
+                finally { lock (Gate) { _loading = false; } }
+            });
+        }
+
+        private static bool TryLoadDisk(string dir, int tzOffset)
+        {
+            try
+            {
+                string p = Path.Combine(dir, "news_cache.json");
+                if (!File.Exists(p)) return false;
+                var evs = Parse(File.ReadAllText(p), tzOffset);
+                if (evs.Count == 0) return false;
+                _cache = evs;
+                _cacheUtc = File.GetLastWriteTimeUtc(p);   // vẫn quá hạn thì vòng sau tự tải mới
+                return (DateTime.UtcNow - _cacheUtc).TotalMinutes < 60;
+            }
+            catch { return false; }
+        }
+
+        // ---- Parser JSON tối giản: feed là mảng object, mọi giá trị đều là chuỗi ----
+        private static List<Ev> Parse(string json, int tzOffset)
+        {
+            var res = new List<Ev>();
+            if (string.IsNullOrEmpty(json)) return res;
+            int i = 0;
+            while (true)
+            {
+                int s = json.IndexOf('{', i);
+                if (s < 0) break;
+                int e = json.IndexOf('}', s);
+                if (e < 0) break;
+                var fields = ReadFields(json.Substring(s + 1, e - s - 1));
+                i = e + 1;
+                string ccy = Get(fields, "country"), imp = Get(fields, "impact");
+                bool keep = (ccy == "USD" && (imp == "High" || imp == "Medium"))
+                         || ((ccy == "EUR" || ccy == "GBP") && imp == "High");
+                if (!keep) continue;
+                string date = Get(fields, "date");
+                var ev = new Ev
+                {
+                    Title = Get(fields, "title"), Ccy = ccy, Impact = imp,
+                    Forecast = Get(fields, "forecast"), Previous = Get(fields, "previous")
+                };
+                if (DateTimeOffset.TryParse(date, out var dto))
+                    ev.WhenVn = dto.UtcDateTime.AddHours(tzOffset);
+                else if (DateTime.TryParse(date.Length >= 10 ? date.Substring(0, 10) : date, out var d0))
+                { ev.WhenVn = d0; ev.AllDay = true; }
+                else continue;
+                res.Add(ev);
+            }
+            res.Sort((a, b) => a.WhenVn.CompareTo(b.WhenVn));
+            return res;
+        }
+
+        private static Dictionary<string, string> ReadFields(string obj)
+        {
+            var d = new Dictionary<string, string>();
+            int i = 0;
+            while (i < obj.Length)
+            {
+                string k = NextString(obj, ref i); if (k == null) break;
+                int c = obj.IndexOf(':', i); if (c < 0) break;
+                i = c + 1;
+                string v = NextString(obj, ref i);
+                d[k] = v ?? "";
+                if (v == null) break;
+            }
+            return d;
+        }
+
+        // Đọc chuỗi JSON kế tiếp (bỏ qua escape \" và \/ mà feed hay dùng).
+        private static string NextString(string s, ref int i)
+        {
+            while (i < s.Length && s[i] != '"') i++;
+            if (i >= s.Length) return null;
+            i++;
+            var sb = new StringBuilder();
+            while (i < s.Length && s[i] != '"')
+            {
+                if (s[i] == '\\' && i + 1 < s.Length)
+                {
+                    char n = s[++i];
+                    sb.Append(n == 'n' ? '\n' : n == 't' ? '\t' : n);
+                }
+                else sb.Append(s[i]);
+                i++;
+            }
+            i++;
+            return sb.ToString();
+        }
+
+        private static string Get(Dictionary<string, string> d, string k) => d.TryGetValue(k, out var v) ? v : "";
+
+        private static string Label(Ev e)
+        {
+            if (e.Impact == "High")
+            {
+                if (e.Ccy == "USD")
+                {
+                    string t = e.Title.ToLowerInvariant();
+                    foreach (var k in TopTier) if (t.Contains(k)) return "🔴🔴";
+                    return "🔴";
+                }
+                return "🔴(" + e.Ccy + ")";
+            }
+            return "🟠";
+        }
+
+        // Dòng lịch tin chèn vào tin Telegram. preUsOnly = chỉ tin còn LẠI từ giờ trở đi.
+        public static List<string> Lines(DateTime nowVn, bool preUsOnly)
+        {
+            var outp = new List<string>();
+            List<Ev> src;
+            lock (Gate) src = _cache;
+            if (src == null) return outp;
+            var day = nowVn.Date;
+            var sel = new List<Ev>();
+            foreach (var e in src)
+            {
+                if (e.WhenVn.Date != day) continue;
+                if (preUsOnly && !e.AllDay && e.WhenVn < nowVn) continue;
+                sel.Add(e);
+            }
+            if (sel.Count == 0)
+            {
+                outp.Add(preUsOnly ? "📅 TIN: không còn tin Mỹ nào hôm nay → chạy theo dòng lệnh."
+                                   : "📅 TIN HÔM NAY: không có tin USD đáng kể.");
+                return outp;
+            }
+            outp.Add(preUsOnly ? "📅 TIN CÒN LẠI HÔM NAY:" : "📅 TIN HÔM NAY:");
+            foreach (var e in sel)
+            {
+                string hhmm = e.AllDay ? "cả ngày" : e.WhenVn.ToString("HH:mm");
+                string fc = string.IsNullOrEmpty(e.Forecast) ? "-" : e.Forecast;
+                string pv = string.IsNullOrEmpty(e.Previous) ? "-" : e.Previous;
+                outp.Add($"  {hhmm} {Label(e)} {e.Title} (dự báo {fc} / trước {pv})");
+            }
+            outp.Add("  ⚠ Né 15' trước–sau mốc tin: không vào lệnh mới, siết SL.");
+            return outp;
+        }
+    }
+
     // ---- Gửi "tổng hợp" lên Telegram (dùng chung cho DailyTpoBias + M30SessionZones) --------
     //  Mỗi indicator GHI phần của mình ra file chung (sec_<symbol>_<kind>.txt). Indicator nào
     //  có bot token + chat id sẽ GỘP các phần (bias + zone) thành 1 tin và bắn tại 3 mốc/ngày:
@@ -527,6 +723,7 @@ namespace TpoSuite
         public int IbBars = 2;
         public int GapMinutes = 75;
         public int FreshMinutes = 15;      // section/nến cũ hơn ngần này coi như KHÔNG live
+        public bool ShowNews = true;       // kèm lịch tin Forex Factory (đầu ngày + trước phiên Mỹ)
 
         private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
         private long _lastPubTicks, _lastCheckTicks;
@@ -540,6 +737,7 @@ namespace TpoSuite
             {
                 PublishSection(symbol, kind, lines);
                 if (!IsSender) return;
+                if (ShowNews) NewsCalendar.Refresh(Dir(), TzOffset, Log);   // tải nền, có cache 1h
                 if (string.IsNullOrWhiteSpace(BotToken) || string.IsNullOrWhiteSpace(ChatId)) return;
 
                 long now = DateTime.UtcNow.Ticks;
@@ -561,7 +759,7 @@ namespace TpoSuite
             if (!Enabled) { Log("BỎ QUA: chưa bật 'Gửi Telegram'"); return; }
             if (string.IsNullOrWhiteSpace(BotToken) || string.IsNullOrWhiteSpace(ChatId)) { Log("BỎ QUA: thiếu token hoặc chat_id"); return; }
             Log("TEST → đang gửi HTTP...");
-            SendAsync(Compose(symbol, "🔔 TEST — bot TPO chạy OK"), null);
+            SendAsync(Compose(symbol, "🔔 TEST — bot TPO chạy OK", "MORNING"), null);
         }
 
         // ===== Dùng cho indicator KHÁC (vd RunnerSignal): gửi 1 tin THÔ, KHÔNG đụng section/lock TPO =====
@@ -659,10 +857,10 @@ namespace TpoSuite
             try { using (new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { } }
             catch { return; }   // ai đó đã chiếm mốc này
             Log($"{slot} → đang gửi (ngày {dayKey})");
-            SendAsync(Compose(symbol, header), lockPath);   // gửi lỗi → xoá khoá để lần sau thử lại
+            SendAsync(Compose(symbol, header, slot), lockPath);   // gửi lỗi → xoá khoá để lần sau thử lại
         }
 
-        private string Compose(string symbol, string header)
+        private string Compose(string symbol, string header, string slot)
         {
             var sb = new StringBuilder();
             sb.Append(header).Append(" · ").Append(symbol ?? "").Append(" · ")
@@ -686,6 +884,18 @@ namespace TpoSuite
                 catch { }
             }
             if (!any) sb.Append("(chưa có dữ liệu bias/vùng — mở indicator lên chart)");
+
+            // Lịch tin: đầu ngày liệt kê cả ngày; trước phiên Mỹ chỉ nhắc tin CÒN LẠI.
+            // Mốc buổi chiều bỏ qua cho tin gọn.
+            if (ShowNews && (slot == "MORNING" || slot == "PREUS"))
+            {
+                var news = NewsCalendar.Lines(DateTime.UtcNow.AddHours(TzOffset), slot == "PREUS");
+                if (news.Count > 0)
+                {
+                    sb.Append("\n————————————\n");
+                    foreach (var l in news) sb.Append(l).Append('\n');
+                }
+            }
             return sb.ToString().TrimEnd();
         }
 

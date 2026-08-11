@@ -33,6 +33,8 @@ Hai indicator tự **gộp bias + vùng thành 1 tin** và bắn về Telegram t
 2. Trên chart: bật **"Gửi Telegram"** ở CẢ HAI indicator; điền **Bot token + Chat ID** vào MỘT indicator (khuyến nghị SessionZones — giàu dữ liệu vùng hơn). Cái còn lại chỉ cần bật để ghi phần của nó.
 3. Bấm **"TG · Gửi thử ngay"** (bật rồi tắt) để test — nếu nhận được tin là xong.
 
+**Lịch tin Forex Factory** (input `TG · Kèm lịch tin Forex Factory`, mặc định BẬT): tin **đầu ngày** liệt kê toàn bộ tin của ngày (giờ VN), tin **trước phiên Mỹ** chỉ nhắc những tin **còn lại** từ giờ đó trở đi; mốc buổi chiều không kèm cho gọn. Lọc: USD mức cao + trung bình, EUR/GBP mức cao; 🔴🔴 = nhóm giật mạnh nhất (CPI, NFP, FOMC). Feed tải nền, cache 1 giờ ra `news_cache.json` (feed trả 429 nếu gọi dày) → mất mạng vẫn dùng bản cache. Bản Python đối chiếu/chạy tay: [news-calendar/ff_news.py](../news-calendar/ff_news.py).
+
 **Lưu ý:** mốc "trước phiên Mỹ" dùng giờ tường (wall-clock) + `Lệch giờ` (giả định `bar.TimeLeft` là UTC). Mùa đông Mỹ (EST) mốc 19:20 lùi thành 20:20 VN → chỉnh lại ô **"TG · Phiên Mỹ mở"** (=1220) khi đổi mùa. Mốc "đầu ngày" tính theo số nến sau IB nên KHÔNG lệ thuộc DST.
 
 ## Cần kiểm khi chạy live (xem PLAN.md §8)

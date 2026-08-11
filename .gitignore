@@ -21,3 +21,4 @@ data-export/wyckoff/extracted/images/
 # Rac build cua parity harness (chi commit source .cs + .csproj)
 quantower-entry-signal/research/wyckoff/parity/bin/
 quantower-entry-signal/research/wyckoff/parity/obj/
+deploy-log.txt

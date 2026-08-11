@@ -45,6 +45,24 @@ Write-Host "Repo : $repo"
 Write-Host "Dich : $Dest"
 Write-Host ""
 
+# Ghi toan bo man hinh ra deploy-log.txt de gui lai khi co su co.
+try { Start-Transcript -Path (Join-Path $repo "deploy-log.txt") -Force | Out-Null } catch { }
+
+# Chan doan nhanh: commit dang dung + thu muc dich co that + no dang chua gi.
+try {
+    Push-Location $repo
+    $head = (git log --oneline -1 2>&1 | Out-String).Trim()
+    Pop-Location
+    Write-Host "Commit hien tai: $head" -ForegroundColor DarkGray
+} catch { }
+if (Test-Path $Dest) {
+    $n = @(Get-ChildItem $Dest -Recurse -Filter *.dll -ErrorAction SilentlyContinue).Count
+    Write-Host "Thu muc dich CO THAT, dang chua $n file .dll" -ForegroundColor DarkGray
+} else {
+    Write-Host "CANH BAO: khong thay thu muc dich $Dest" -ForegroundColor Red
+}
+Write-Host ""
+
 # ---- Che do KIEM TRA: so hash tung file, khong dong toi gi ----
 if ($Verify) {
     Write-Host "CHE DO KIEM TRA (khong copy) — so ma hash repo vs Optimus Flow:" -ForegroundColor Yellow
@@ -75,6 +93,7 @@ if ($Verify) {
     Write-Host "Ket qua: $same khop, $diff khac, $miss thieu." -ForegroundColor Cyan
     if ($diff -eq 0 -and $miss -eq 0) { Write-Host "=> Tat ca dang la ban moi nhat." -ForegroundColor Green }
     else { Write-Host "=> Dong Optimus Flow roi chay lai deploy-windows.bat" -ForegroundColor Red }
+    try { Stop-Transcript | Out-Null } catch { }
     if ($Host.Name -eq "ConsoleHost" -and -not $env:CI) { Read-Host "Enter de dong" | Out-Null }
     exit 0
 }
@@ -98,6 +117,7 @@ if (-not $NoPull) {
 if (-not (Test-Path $Dest)) {
     Write-Host "KHONG thay thu muc dich: $Dest" -ForegroundColor Red
     Write-Host "Chay lai voi: -Dest ""duong\dan\Indicators""" -ForegroundColor Red
+    try { Stop-Transcript | Out-Null } catch { }
     exit 1
 }
 
@@ -110,6 +130,7 @@ if ($proc) {
     $ans = Read-Host "  Van thu copy? (y/N)"
     if ($ans -ne "y") {
         Write-Host "  DA HUY — chua copy file nao. Dong Optimus Flow roi chay lai." -ForegroundColor Red
+        try { Stop-Transcript | Out-Null } catch { }
         if ($Host.Name -eq "ConsoleHost" -and -not $env:CI) { Read-Host "Enter de dong" | Out-Null }
         exit 1
     }
@@ -160,5 +181,7 @@ if ($failCount -gt 0) {
     Write-Host "File loi thuong do Optimus Flow dang mo giu file — dong phan mem roi chay lai." -ForegroundColor Red
 }
 Write-Host "Mo lai Optimus Flow, indicator se dung ban moi (Quantower doc DLL luc khoi dong)."
+Write-Host "Nhat ky day du: deploy-log.txt (gui file nay khi can soi loi)."
 Write-Host ""
+try { Stop-Transcript | Out-Null } catch { }
 if ($Host.Name -eq "ConsoleHost" -and -not $env:CI) { Read-Host "Enter de dong" | Out-Null }

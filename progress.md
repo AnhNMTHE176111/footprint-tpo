@@ -74,6 +74,41 @@
 - **Tích lũy/Phân phối:** giá đi ngang + Delta dồn một phía = tổ chức gom (dương) / xả (âm) âm thầm → chờ bùng phát.
 - **Cây nến kể chuyện:** nến thường = chụp kết quả; Delta = diễn biến bên trong. **1 nến = ảnh chụp, cộng dồn nhiều nến = cuốn phim** (Cumulative Delta, học sâu ở Bài 3). Footprint = bảng chi tiết KL theo giá; Delta = con số ròng tóm tắt.
 
+## 🔴 2026-08-11 — SOẠN LẠI SYLLABUS TPO (v2)
+
+Người học nêu: *"TPO tôi chưa được học kỹ lắm"* + yêu cầu hợp nhất TPO của CORVEN với các tài liệu TPO.
+→ Đã soạn **[`tpo/SYLLABUS-TPO.md`](tpo/SYLLABUS-TPO.md)** — 9 buổi, trục = **chuỗi 6 câu hỏi CORVEN
+thực chạy** (hình dạng → tail → single print → HVN → chế độ balance → break/reject → entry M1).
+
+**Bối cảnh câu hỏi khởi phát:** người học upload chart TPO ngày MGC 10–11/08 và tự mô tả chuỗi tiến hoá
+`D nhỏ → chạy xuống thành P → đấu giá 2 vùng thành chữ B (P trên + b dưới, giữa mỏng) → lấp nốt vùng
+giữa → thành CHỮ NHẬT`, hỏi "xu hướng đấu giá có phải thế không, sau đó hành vi thế nào". Chuỗi này
+**đúng về cơ chế** (đấu giá lan dần rồi lấp đầy) — không sách nào viết thành công thức.
+
+**3 phát hiện khi rà lại:**
+1. **Lỗ hổng lớn nhất — HÌNH DẠNG profile áp lên TPO chưa hề dạy.** Bản cũ CẮT P/b với lý do "chỉ là hình
+   dạng, không phải loại ngày" (đúng theo Keppler) — nhưng **sai về THỨ TỰ DÙNG**: câu đầu tiên CORVEN nói
+   khi mở chart là *"Tpo thành chữ D"*. D/P/b/thin từng học 2026-06-22 nhưng **chỉ bên Volume Profile**,
+   chưa bao giờ áp lên TPO; chữ B/chữ nhật thì chưa học.
+2. **Lỗ hổng lớn thứ hai — BALANCE vs SAU BALANCE.** Không buổi nào dạy, mà nó là công tắc gốc: trong
+   balance thì "2 cạnh mà vả", sau balance mới follow; cùng một phân kỳ delta mang nghĩa **trái ngược**.
+3. **Nguồn `TPO.pdf` (17tr note thực chiến vàng) CHƯA HỀ DÙNG** — chứa ~30 luật hành vi cụ thể chưa dạy:
+   2 nguyên tắc *fixer profile* (tuần tự + tôn trọng trend hiện hữu), *"trend mạnh chỉ diễn ra khi profile
+   được sửa xong và sửa SẠCH"*, **tail-scam theo volume** (tail vol dày = scam, chỉ tin tail ở LVN),
+   **LVN⇒kỳ vọng trend / HVN⇒kỳ vọng sideway**, accept breakout (= dựng được VA mới), TPO breakout tiêu
+   chuẩn 2 điều kiện, *"sau break giá về POC session trước"*, chuỗi **Á build range cho Âu, Âu cho CME**,
+   IB range ≤1% ⇒ session sau breakout, fake break hay xảy ra 18h–19h.
+   ⚠️ Không rõ tác giả, **chưa luật nào backtest** → học để đọc chart, chưa được code thành signal.
+
+**5 mâu thuẫn sách ↔ CORVEN đã phân xử** (bảng cuối file syllabus), đáng chú ý:
+- *giá MỞ vs VA* (Dalton) ↔ *giá ĐÓNG ngoài balance ⇒ VA không hợp lệ, "không quan tâm giá mở"* (note)
+  → **hai vai khác nhau**: giá đóng chốt sổ VA hôm nay, giá mở đọc mất cân bằng sáng mai. Giữ cả hai.
+- *VAH/VAL/POC + 80% rule là xương sống* ↔ CORVEN *"chỉ quan tâm HVN thôi"* → CORVEN thắng ở **chọn vùng
+  canh lệnh**; 80% rule hạ xuống thành read độc lập. Cần đo số trước khi tin bên nào.
+
+**Thứ tự dạy đã chốt: 2 → 3 → 6 → 4 → 5 → 7 → 8 → 9** (hai lỗ hổng lớn trước, vì là input của mọi thứ còn lại).
+**Bước tiếp theo:** dạy Buổi 2 (hình dạng profile), load ảnh TraderViet tr.21–23 + tr.58–65 và Keppler DD.
+
 ## ❓ Câu hỏi mở / điểm cần làm rõ
 - **Hỏi tiếp bạn trader về IB break (còn lại từ bộ câu hỏi 2026-07-13):** (b) xác nhận "đấu giá thật/uy tín" bằng gì — delta/volume follow-through trên footprint, hay chỉ cần giá trụ ngoài biên ~30′? (c) phá hụt (failed break): fade ngược về mép kia hay đứng ngoài? *(Câu (a) đã chốt: "Phá biên rồi chờ test" → entry = retest biên vừa phá.)*
 - ✅ **ĐÃ KHÓA (2026-06-09):** chiều công thức Delta. Khởi động Bài 2 trả lời đúng hoàn toàn: `Delta = (mua chủ động) − (bán chủ động)`, Delta −320 → phe bán áp đảo. Không còn là điểm yếu.

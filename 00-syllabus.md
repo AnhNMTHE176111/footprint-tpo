@@ -62,10 +62,25 @@ Các chủ đề chính (mục lục đầy đủ ở `ebook/text/00-muc-luc.md`
 
 ---
 
-## 📕 Phụ lục TPO — Market Profile *(cô đọng thực chiến 2026-07-13 theo mindset trader kỳ cựu)*
-> Nguồn: sách Keppler *Profit With the Market Profile* bản dịch + tuyển tập TraderViet + note thực chiến vàng 17tr. Ảnh chart `tpo/images/{keppler,tv,note}/` (tên file = trang PDF).
+## 📕 Phụ lục TPO — Market Profile
+
+> ## 🔴 **2026-08-11: DẠY LẠI TPO THEO BẢN V2 → [`tpo/SYLLABUS-TPO.md`](tpo/SYLLABUS-TPO.md)**
+> Người học tự đánh giá "TPO chưa được học kỹ". Rà lại thì phát hiện **2 lỗ hổng lớn** và **1 nguồn chưa
+> hề dùng**:
+> - **Lỗ hổng 1 — HÌNH DẠNG profile (D/P/b/B/chữ nhật/thin) áp lên TPO:** bản cũ CẮT vì "P/b chỉ là hình
+>   dạng", nhưng câu đầu tiên CORVEN nói khi mở chart là *"Tpo thành chữ D"* → hình dạng là **input số 1**.
+> - **Lỗ hổng 2 — BALANCE vs SAU BALANCE:** công tắc quyết định bật play nào; cùng một phân kỳ delta mang
+>   nghĩa **trái ngược** tuỳ chế độ. Chưa có buổi nào dạy.
+> - **Nguồn chưa dùng — `TPO.pdf` (17tr note thực chiến vàng):** ~30 luật hành vi cụ thể (fixer profile,
+>   tail-scam theo volume, LVN⇒trend/HVN⇒sideway, accept breakout, chuỗi Á→Âu→CME…). ⚠️ chưa backtest.
 >
-> **⭐ DẠY THEO LÕI, KHÔNG DẠY TUẦN TỰ 3 BUỔI NỮA.** Bộ lọc thực chiến: chỉ xoay quanh **IB + giá mở vs VA + chất lượng đấu giá (acceptance/RE) + đọc số trên chart**. Đã kiểm chứng chéo (workflow 4 agent 2026-07-13) và cắt phần bội thực.
+> V2 gồm **9 buổi** theo chuỗi 6 câu hỏi CORVEN thực chạy (hình dạng → tail → single print → HVN → chế độ
+> balance → break/reject → entry M1), kèm bảng **5 mâu thuẫn giữa sách và CORVEN** đã phân xử.
+> Thứ tự dạy: **2 → 3 → 6 → 4 → 5 → 7 → 8 → 9**.
+
+> Nguồn: sách Keppler *Profit With the Market Profile* bản dịch + tuyển tập TraderViet (`Market Profile _Vn.pdf`) + **note thực chiến vàng `TPO.pdf` 17tr** + chat CORVEN. Ảnh chart `tpo/images/{keppler,tv,note}/` (tên file = trang PDF).
+>
+> *(Bản cũ 2026-07-13 giữ làm tham chiếu — trục là IB + giá mở vs VA theo Dalton/Keppler.)*
 - [~] **🎯 Lõi thực chiến — `tpo/text/00-tpo-loi-thuc-chien.md`** (dạy từ đây): chu kỳ TPO đặt đúng (Daily→30′, IB=2 bracket đầu=60′; M30→M1 chỉ là micro-profile, soi 1′ thì dùng footprint/delta) · **3 câu hỏi mỗi phiên** (mở vs VA · IB có đấu giá/RE không · niềm tin mở: Drive/Rotation/Rejection-Reverse) · 6 setup giữ lại (80% rule · tái nhập VA thất bại · single print retest · bear trap · kỷ luật trend day · tails/poor high-low) · checklist 2′ + phiên tin. **[2026-07-14: §1 — cả 3 câu KHÓA (giá mở ✅ · IB break ✅ · niềm tin mở ✅) → đang dạy §2 6 setup.]** **[2026-07-22: Batch A (80% rule + tái nhập VA thất bại) — người học TỰ XÁC NHẬN đã hiểu (kèm 3 diagram Pillow + trang note riêng `batch-A-80-rule-va-tai-nhap.md`) → đang dạy Batch B = 4 setup còn lại (single print retest · bear trap · kỷ luật trend day · tails/poor high-low).]**
 - [x] 📎 **Buổi 1** *(người học tự xác nhận đã nắm — 2026-07-13)* — chart TPO, TPO-POC vs VPOC, IB/RE/failed auction, tails, single print. `tpo/text/buoi-1-nen-tpo-ban-do-phien.md`
 - [ ] 📎 **Buổi 2** *(tham chiếu)* — 3 kịch bản mở vs VA (chart ES thật), 80% rule, day types actionable. *(§2.2 "4 kiểu mở cửa" đã gọn còn 3 nhánh niềm tin; giữ nugget cực trị bracket A + Rejection-Reverse.)* `tpo/text/buoi-2-day-types-mo-cua-80.md`

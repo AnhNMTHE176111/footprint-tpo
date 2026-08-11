@@ -126,3 +126,15 @@ gộp**, đừng nối 2 file thành một chuỗi liên tục nếu chưa đố
 
 ## ✅ Trạng thái hiện tại
 Xem `00-syllabus.md`. Khi bắt đầu phiên mới: đọc syllabus + progress để biết đang ở đâu, rồi tiếp tục.
+
+## 🔔 Người học nói "dạy tôi TPO" → VÀO THẲNG `tpo/SYLLABUS-TPO.md` (chốt 2026-08-11)
+Nguyên văn yêu cầu: *"khi nào tôi bảo dạy tôi tpo thì nhớ là bắt đầu sylabus này nhé."*
+- Trục là **`tpo/SYLLABUS-TPO.md`** (v2, 9 buổi, hợp nhất CORVEN + Keppler + TraderViet + note `TPO.pdf`).
+  **KHÔNG** lấy `tpo/text/00-tpo-loi-thuc-chien.md` làm trục nữa, **KHÔNG** dạy tuần tự buoi-1/2/3 —
+  hai thứ đó giờ chỉ để **tra khi cần đào sâu**.
+- **Thứ tự dạy: 2 → 3 → 6 → 4 → 5 → 7 → 8 → 9** (Buổi 1 ôn lồng vào Buổi 2).
+  Chưa dạy gì thì **bắt đầu Buổi 2 — HÌNH DẠNG PROFILE** (lỗ hổng lớn nhất).
+- **Luôn kèm bài săn bằng chứng** từ `tpo/EVIDENCE-DRILLS.md` (quy tắc #5b ở trên).
+- ⚠️ **Nhắc BÀI SỐ 0 nếu chưa xong:** chart TPO daily đang neo **Globex ~05:00 VN** (mốc không nhất quán
+  23:00/05:00/07:00) thay vì **pit COMEX ~19:20** ⇒ IB sai hoàn toàn, mọi luật dính IB vô nghĩa; và mới
+  có n=22 profile. Phải sửa session anchor + export ≥3 tháng trước khi chạy bài ĐẾM nào.

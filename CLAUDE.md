@@ -33,6 +33,20 @@
      làm) → `git push origin main` tường minh → **báo lại hash + kết quả push**. Repo có hook `post-commit`
      tự push, nhưng vẫn `git push` tường minh để chắc chắn, và báo nếu push lỗi.
 5. Liên hệ kiến thức với cái người học đã biết (nến, S/R) để dễ tiếp thu.
+5b. **⭐ MỌI BÀI GIẢNG/BÀI TẬP PHẢI KÈM "SĂN BẰNG CHỨNG" TRÊN OPTIMUS FLOW (người học chốt 2026-08-11).**
+   Nguyên văn yêu cầu: *"nghĩ cách ra cho tôi luyện mắt với các khái niệm bài giảng, để biết được rằng
+   các kiến thức ko chỉ là khái niệm đơn thuần mà nó có thật."* → Dạy khái niệm xong **không được dừng ở
+   khái niệm**: giao bài bắt người học **tự mở Optimus Flow tìm ca thật, chụp ảnh, ghi số**.
+   Cơ chế đầy đủ + bài từng buổi: **`tpo/EVIDENCE-DRILLS.md`** (đọc khi soạn bài tập).
+   Ba mức bắt buộc cho mỗi khái niệm: **(1) NHẬN DẠNG** tìm 1 ca thật → **(2) ĐẾM** duyệt N phiên liên
+   tiếp không chọn lọc, đếm khớp/không khớp (người học đếm bằng MẮT, Claude đếm bằng SỐ từ CSV export,
+   **lệch nhau = một trong hai hiểu sai định nghĩa** → chỗ học được nhiều nhất) → **(3) PHẢN CHỨNG** tìm
+   1 ca luật SAI (bắt buộc, vì chỉ tìm ca khớp thì luôn tìm được = thiên kiến xác nhận).
+   Quy tắc chấm: người học **ghi phán đoán TRƯỚC**, Claude chấm SAU — không được nói trước rồi để họ gật.
+   Ảnh phải đọc được **mã · khung · ngày+giờ · con số**; ảnh thiếu số thì không chấm. Lưu `tpo/evidence/buoi-N/`.
+   "Không tìm được" là câu trả lời HỢP LỆ và là thông tin tốt — đừng bắt nặn ca cho đủ bài.
+   ⚠️ Luật nào chưa đo được bằng số thì **được dùng đọc chart, KHÔNG được code thành signal**, và Claude
+   **không được nói như thể đã kiểm định** (bảng theo dõi ở cuối `EVIDENCE-DRILLS.md`).
 6. **Quy trình giảng một bài — LOAD TRƯỚC, GIẢNG SAU (bắt buộc, rút từ sự cố 2026-06-11):**
    - **Bước 1 — Load im lặng:** mở TOÀN BỘ tài liệu cần cho phần định dạy (text + mọi ảnh slide/chart + ảnh phóng to vùng số nếu cần) bằng tool call liên tiếp. Trong lúc load chỉ báo ngắn gọn "đang mở tài liệu", KHÔNG viết nội dung giảng.
    - **Bước 2 — Giảng một mạch:** toàn bộ bài giảng (định nghĩa → đọc số trên chart → ứng dụng → câu hỏi kiểm tra) nằm trong **tin nhắn cuối lượt, sau tool call cuối cùng**. Lý do: text viết xen giữa các tool call có thể KHÔNG hiển thị đến người học (đã từng mất nguyên một setup), và người học thấy lệnh kỹ thuật chen giữa bài giảng là kém chuyên nghiệp.

@@ -5,3 +5,5 @@
 2026-07-29 19:19,CBR,SHORT,4077.4,4082.2,4.8,4058.2,4,2.67,tim,1,B,0.1R,LOSS,2026-07-29 19:56,"phá 4084.6 · hồi 61% · leg 6.7giá · VSA vào 2.7x tím · VSA phá 5.4x · TP vướng vùng ↧0.1R"
 2026-07-30 06:58,QUAY_DAU,LONG,4143.5,4141.24,2.3,4146.891,1.5,2.45,tim,0,B,0.7R,LOSS,2026-07-30 07:01,"đảo chiều VWAP 4141.44 · rút râu dưới · VSA 2.5x tím · hấp thụ ✓ · TP vướng vùng ↧0.7R"
 2026-07-31 02:25,CBR,LONG,4171.8,4167.8,4.0,4187.8,4,2.81,tim,0,B,1.3R,LOSS,2026-07-31 03:31,"phá 4168.0 · hồi 100% · leg 4.1giá · VSA vào 2.8x tím · VSA phá 2.6x · TP vướng vùng ↧1.3R"
+2026-08-10 08:03,QUAY_DAU,SHORT,4393.9,4400.2,6.3,4384.45,1.5,2.79,tim,1,B,0.1R,WIN,2026-08-10 08:05,"đảo chiều VWAP 4398.811 · rút râu trên · VSA 2.8x tím · hấp thụ ✓ · TP vướng vùng ↧0.1R"
+2026-08-11 07:02,QUAY_DAU,LONG,4457.7,4455.8,1.9,4460.55,1.5,4.51,tim,0,B,-,WIN,2026-08-11 07:03,"đảo chiều VWAP 4456.672 · rút râu dưới · VSA 4.5x tím · hấp thụ ✓"

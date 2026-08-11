@@ -17,6 +17,7 @@
 param(
     [string]$Dest = "C:\OptimusFLOW\Settings\Scripts\Indicators",
     [switch]$NoPull,
+    [switch]$Verify,          # chi KIEM TRA (so hash repo vs dich), khong copy gi
     [string]$Only = ""
 )
 
@@ -43,6 +44,40 @@ Write-Host "=== Cap nhat indicator vao Optimus Flow ===" -ForegroundColor Cyan
 Write-Host "Repo : $repo"
 Write-Host "Dich : $Dest"
 Write-Host ""
+
+# ---- Che do KIEM TRA: so hash tung file, khong dong toi gi ----
+if ($Verify) {
+    Write-Host "CHE DO KIEM TRA (khong copy) — so ma hash repo vs Optimus Flow:" -ForegroundColor Yellow
+    Write-Host ""
+    $same = 0; $diff = 0; $miss = 0
+    foreach ($m in $map) {
+        $srcPath = Join-Path $repo $m.src
+        $name = Split-Path $m.src -Leaf
+        if (-not (Test-Path $srcPath)) { continue }
+        $dstPath = if ($m.dir) { Join-Path (Join-Path $Dest $m.dir) $name } else { Join-Path $Dest $name }
+        if (-not (Test-Path $dstPath)) {
+            Write-Host ("  ! {0,-22} CHUA CO ben Optimus Flow" -f $name) -ForegroundColor Red
+            $miss++
+            continue
+        }
+        $hs = (Get-FileHash $srcPath -Algorithm SHA256).Hash
+        $hd = (Get-FileHash $dstPath -Algorithm SHA256).Hash
+        $t = (Get-Item $dstPath).LastWriteTime.ToString("dd/MM HH:mm")
+        if ($hs -eq $hd) {
+            Write-Host ("  = {0,-22} KHOP ban repo   (copy luc {1})" -f $name, $t) -ForegroundColor Green
+            $same++
+        } else {
+            Write-Host ("  ! {0,-22} KHAC ban repo — can chay lai deploy (ban dich {1})" -f $name, $t) -ForegroundColor Red
+            $diff++
+        }
+    }
+    Write-Host ""
+    Write-Host "Ket qua: $same khop, $diff khac, $miss thieu." -ForegroundColor Cyan
+    if ($diff -eq 0 -and $miss -eq 0) { Write-Host "=> Tat ca dang la ban moi nhat." -ForegroundColor Green }
+    else { Write-Host "=> Dong Optimus Flow roi chay lai deploy-windows.bat" -ForegroundColor Red }
+    if ($Host.Name -eq "ConsoleHost" -and -not $env:CI) { Read-Host "Enter de dong" | Out-Null }
+    exit 0
+}
 
 # ---- 1. Kéo code mới ----
 if (-not $NoPull) {
@@ -73,7 +108,11 @@ if ($proc) {
     Write-Host "  Optimus Flow/Quantower DANG CHAY — file .dll co the bi khoa." -ForegroundColor Red
     Write-Host "  Nen dong han phan mem roi chay lai script nay." -ForegroundColor Red
     $ans = Read-Host "  Van thu copy? (y/N)"
-    if ($ans -ne "y") { exit 1 }
+    if ($ans -ne "y") {
+        Write-Host "  DA HUY — chua copy file nao. Dong Optimus Flow roi chay lai." -ForegroundColor Red
+        if ($Host.Name -eq "ConsoleHost" -and -not $env:CI) { Read-Host "Enter de dong" | Out-Null }
+        exit 1
+    }
 } else {
     Write-Host "  OK, khong thay tien trinh nao dang mo." -ForegroundColor Green
 }

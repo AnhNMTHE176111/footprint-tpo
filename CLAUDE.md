@@ -124,6 +124,14 @@ Các file lớn hiện có (per-level M1, tính đến 2026-08-02): `data-export
 ⚠️ Giá trong các file khác nhau có thể là symbol khác nhau (5086 vs 4041) → **kiểm giá/symbol trước khi
 gộp**, đừng nối 2 file thành một chuỗi liên tục nếu chưa đối chiếu.
 
+## 📈 Quy ước đọc chart TPO trên Optimus Flow (chốt 2026-08-12)
+- **Màu CHỮ TPO (A,B,C,D…) = BRACKET/thời gian** (tím→đỏ→cam→vàng→xanh lá→xanh biển = bracket sớm→muộn
+  trong phiên), **KHÔNG phải khối lượng** — dù nút "VOLUME ANALYSIS" đang bật.
+- **Khối lượng nằm ở CỘT SỐ RIÊNG bên phải** (histogram xanh + số), tách biệt hoàn toàn với cột chữ TPO
+  bên trái. Nút "VOLUME ANALYSIS" chỉ bật/tắt hiển thị cột volume phụ này, không đổi ý nghĩa màu chữ.
+- Ứng dụng: nhìn màu chữ theo GIÁ có thể đọc **trình tự thời gian giá đã đi qua** (vd bracket đầu ở giá
+  cao, bracket cuối ở giá thấp ⇒ phiên mở cao rồi trôi dần xuống) mà không cần xem lại nến.
+
 ## ✅ Trạng thái hiện tại
 Xem `00-syllabus.md`. Khi bắt đầu phiên mới: đọc syllabus + progress để biết đang ở đâu, rồi tiếp tục.
 

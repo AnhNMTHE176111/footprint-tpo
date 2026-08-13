@@ -118,7 +118,16 @@ liquidity sweep tạo đuôi outlier hơn double distribution thật. Chi tiết
 **Phát hiện phương pháp quan trọng:** màu chữ TPO trên Optimus Flow = **bracket/thời gian** (không phải
 volume dù nút "VOLUME ANALYSIS" đang bật) — đã ghi vào CLAUDE.md; dùng màu để đọc trình tự hình thành
 profile theo thời gian, phân biệt được 2 cơ chế tạo ra cùng 1 hình P.
-**▶️ ĐANG DẠY Buổi 3 — Check tail** (tail xịn vs scam theo volume, poor high/poor low).
+**✅ Buổi 3 XONG phần lý thuyết + Mức 1/1b/3 (2026-08-13):** tail = ĐÚNG 1 TPO ở cực trị (poor high/low
+= ≥2 TPO — người học ban đầu ghi "tail 1-2 TPO", đã siết lại ranh giới: 2 TPO đã là poor, hai khái niệm
+loại trừ nhau). Luật lọc: **tail volume THẤP = tail thật (fade được) / tail volume DÀY = SCAM ⇒ giá sẽ
+quay lại đấu giá tại đó HOẶC xuyên qua = tiếp diễn, không đảo chiều**. Người học tự suy đúng cả 2 kịch bản
+scam trước khi được dạy. Bằng chứng thật (GCZ26): real tail 8/3 vol **45–200** vs tail scam 8/4 vol
+**150–889** (dày ~4x); poor high 7/30 tại 4176. **Mức 3 phản chứng: KHÔNG tìm được ca tail-scam nào đảo
+chiều thật** ⇒ luật đứng vững vòng này. ⚠️ Còn mở: Mức 2 (bảng 15 phiên poor⇒có bị test lại không) chưa
+làm; ca poor high 7/30 người học nói "hôm sau VA đấu giá ở vùng này" nhưng số không khớp (7/31 VAH chỉ
+4132 < 4176) — chưa xác minh vế "poor ⇒ bị test lại". Chi tiết: `tpo/evidence/buoi-3/README.md`.
+**▶️ ĐANG DẠY Buổi 6 — BALANCE vs SAU BALANCE** (công tắc chế độ thị trường, mục đòn bẩy cao nhất syllabus).
 
 ## ❓ Câu hỏi mở / điểm cần làm rõ
 - **Hỏi tiếp bạn trader về IB break (còn lại từ bộ câu hỏi 2026-07-13):** (b) xác nhận "đấu giá thật/uy tín" bằng gì — delta/volume follow-through trên footprint, hay chỉ cần giá trụ ngoài biên ~30′? (c) phá hụt (failed break): fade ngược về mép kia hay đứng ngoài? *(Câu (a) đã chốt: "Phá biên rồi chờ test" → entry = retest biên vừa phá.)*

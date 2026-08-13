@@ -109,6 +109,17 @@ giữa → thành CHỮ NHẬT`, hỏi "xu hướng đấu giá có phải thế
 **Thứ tự dạy đã chốt: 2 → 3 → 6 → 4 → 5 → 7 → 8 → 9** (hai lỗ hổng lớn trước, vì là input của mọi thứ còn lại).
 **Bước tiếp theo:** dạy Buổi 2 (hình dạng profile), load ảnh TraderViet tr.21–23 + tr.58–65 và Keppler DD.
 
+**✅ Buổi 2 XONG (2026-08-12), kèm đầy đủ săn bằng chứng thật trên Optimus Flow (symbol GCZ26:XCEC):**
+Mức 1 — 5 phiên liên tiếp 8/3→8/7/2026 tự gắn nhãn trước, Claude chấm sau: 8/3=P, 8/4=B, 8/5=P (biến
+thể "cân bằng trên trước rồi chạy dài xuống"), 8/6=D, 8/7=P — cả 5 đúng. Mức 1b — ca B thật 8/4 tìm được
+vệt mỏng (LVN) ở **4126–4132** bằng cột volume. Mức 3 — ca biên 7/13+7/14/2026 (thân chính + 1 cụm nhỏ
+tách rời): phân xử bằng cơ chế = KHÔNG phải B thật (cụm quá nhỏ/cô lập để coi là "đấu giá xong"), giống
+liquidity sweep tạo đuôi outlier hơn double distribution thật. Chi tiết: `tpo/evidence/buoi-2/README.md`.
+**Phát hiện phương pháp quan trọng:** màu chữ TPO trên Optimus Flow = **bracket/thời gian** (không phải
+volume dù nút "VOLUME ANALYSIS" đang bật) — đã ghi vào CLAUDE.md; dùng màu để đọc trình tự hình thành
+profile theo thời gian, phân biệt được 2 cơ chế tạo ra cùng 1 hình P.
+**▶️ ĐANG DẠY Buổi 3 — Check tail** (tail xịn vs scam theo volume, poor high/poor low).
+
 ## ❓ Câu hỏi mở / điểm cần làm rõ
 - **Hỏi tiếp bạn trader về IB break (còn lại từ bộ câu hỏi 2026-07-13):** (b) xác nhận "đấu giá thật/uy tín" bằng gì — delta/volume follow-through trên footprint, hay chỉ cần giá trụ ngoài biên ~30′? (c) phá hụt (failed break): fade ngược về mép kia hay đứng ngoài? *(Câu (a) đã chốt: "Phá biên rồi chờ test" → entry = retest biên vừa phá.)*
 - ✅ **ĐÃ KHÓA (2026-06-09):** chiều công thức Delta. Khởi động Bài 2 trả lời đúng hoàn toàn: `Delta = (mua chủ động) − (bán chủ động)`, Delta −320 → phe bán áp đảo. Không còn là điểm yếu.

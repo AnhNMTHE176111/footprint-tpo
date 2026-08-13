@@ -124,9 +124,12 @@ loại trừ nhau). Luật lọc: **tail volume THẤP = tail thật (fade đư�
 quay lại đấu giá tại đó HOẶC xuyên qua = tiếp diễn, không đảo chiều**. Người học tự suy đúng cả 2 kịch bản
 scam trước khi được dạy. Bằng chứng thật (GCZ26): real tail 8/3 vol **45–200** vs tail scam 8/4 vol
 **150–889** (dày ~4x); poor high 7/30 tại 4176. **Mức 3 phản chứng: KHÔNG tìm được ca tail-scam nào đảo
-chiều thật** ⇒ luật đứng vững vòng này. ⚠️ Còn mở: Mức 2 (bảng 15 phiên poor⇒có bị test lại không) chưa
-làm; ca poor high 7/30 người học nói "hôm sau VA đấu giá ở vùng này" nhưng số không khớp (7/31 VAH chỉ
-4132 < 4176) — chưa xác minh vế "poor ⇒ bị test lại". Chi tiết: `tpo/evidence/buoi-3/README.md`.
+chiều thật** ⇒ luật đứng vững vòng này. **Mức 1b poor high ĐẠT TRỌN:** poor high phiên **7/29**
+(VAH 4125, cực trị vươn lên vùng 4148–4178) → hôm sau **7/30 dựng hẳn VA 4124–4176, POC 4166 ngay trong
+vùng poor high đó** ⇒ xác nhận luật *poor = đấu giá chưa xong, phải quay lại làm nốt*. ⚠️ **Claude đọc sai
+1 lần ở đây** (nhầm mũi tên chú thích trỏ 7/29 thành 7/30 → so nhầm "hôm sau" thành 7/31 → kết luận sai
+rằng số không khớp); người học bắt đúng. Rút kinh nghiệm: xác minh chú thích trỏ vào cột nào TRƯỚC khi đọc
+số. Còn mở: Mức 2 (bảng 15 phiên) chưa làm. Chi tiết: `tpo/evidence/buoi-3/README.md`.
 **▶️ ĐANG DẠY Buổi 6 — BALANCE vs SAU BALANCE** (công tắc chế độ thị trường, mục đòn bẩy cao nhất syllabus).
 
 ## ❓ Câu hỏi mở / điểm cần làm rõ

@@ -13,17 +13,19 @@ Symbol: **GCZ26:XCEC** (dxFeed) · Chart TPO Daily + Volume Analysis.
 Ghi chú: 2 dải hơi chồng ở đoạn 150–200 — không sai, chỉ phản ánh đây là luật xác suất, không phải ranh
 giới cứng.
 
-## Mức 1b — Poor High (`image copy 2.png`)
+## Mức 1b — Poor High (`image copy 2.png`) — ✅ ĐẠT TRỌN
 
-Phiên **7/30/2026** (TPO 681, VAH 4176, VAL 4124, POC 4166). Đỉnh ~4176 có **nhiều hơn 1 TPO**
-⇒ đúng là **Poor High** (không phải tail đơn). ✅ Phân loại ĐÚNG.
+Ca poor high nằm ở phiên **7/29/2026** (TPO 677, VAH 4125, VAL 4061, POC 4090). Vùng 4148–4178 hiển thị
+trên ảnh nằm **cao hơn hẳn VAH 4125** ⇒ đó là phần vươn lên cực trị của 7/29, poor high ở đó (≥2 bracket TPO).
 
-⚠️ **Hai điểm chưa khớp, để mở:**
-1. Người học ghi "có 2 bracket TPO" — đọc trên ảnh ở mức 4176 thấy tới **4 chữ (c, g, h, o)**. Không đổi
-   kết luận (≥2 vẫn là Poor High) nhưng số đếm cần kiểm lại.
-2. Người học ghi "ngày hôm sau VA tập trung đấu giá ở vùng này" — **số liệu KHÔNG khớp**: phiên 7/31/2026
-   có VAH chỉ **4132**, thấp hơn nhiều so với đỉnh poor high 4176 ⇒ hôm sau **KHÔNG quay lại** vùng đó.
-   Chưa xác minh được vế "poor ⇒ bị test lại" từ ca này.
+**Vế "sẽ quay lại đấu giá" — KHỚP SỐ:** phiên hôm sau **7/30/2026** có VAH 4176, VAL 4124, **POC 4166**
+⇒ vùng giá trị hôm sau nằm **trọn trong vùng poor high** của 7/29. Không chỉ "bị test lại" mà market dựng
+hẳn vùng giá trị mới tại đó — đúng cơ chế *poor = đấu giá chưa xong ⇒ phải quay lại làm nốt*.
+
+> ⚠️ Ghi lại lỗi của Claude để không lặp: lượt đầu Claude **đọc nhầm mũi tên chú thích trỏ vào profile nào**
+> (lấy 7/30 làm ca poor high thay vì 7/29), kéo theo so nhầm "hôm sau" thành 7/31, rồi kết luận sai rằng
+> số liệu không khớp. Người học bắt đúng lỗi. Bài học: xác minh mũi tên/chú thích trỏ vào cột nào **trước**
+> khi đọc số.
 
 ## Mức 3 — PHẢN CHỨNG: không tìm được (kết quả hợp lệ)
 

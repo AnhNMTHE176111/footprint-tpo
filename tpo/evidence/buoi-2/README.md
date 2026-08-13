@@ -37,4 +37,11 @@ Claude không lưu được ảnh dán trong chat trực tiếp xuống file. C�
 
 ## Mức 3 — ca không gọi được tên hình dạng
 
-Chưa làm — cần tìm thêm 1 phiên khác không rơi vào 6 loại rõ ràng.
+Phiên 7/13/2026 (TPO 537, VAH 4156, VAL 4079, POC 4126) và 7/14/2026 (TPO 516, VAH 4128, VAL 4053, POC 4088):
+thân chính phình 1 vùng (giống P/D) nhưng có thêm **1 cụm nhỏ tách rời hẳn** ở đầu kia (7/13: cụm nhỏ dưới
+đáy; 7/14: cụm nhỏ trên đỉnh), nối với thân chính bằng đoạn gần như trống trơn.
+
+**Phân xử bằng cơ chế:** double distribution (B) đòi hỏi CẢ HAI cụm đủ thời gian+volume để "đấu giá xong".
+Cụm nhỏ ở đây quá bé/cô lập → nhiều khả năng là 1 cú quét giá nhanh (liquidity sweep), không đủ thời gian
+tạo vòm thật. Kết luận: **không phải B thật**, mà là P/D biến dạng có 1 đuôi outlier bị kéo dài bất thường
+— giống "poor high/poor low phóng đại" hơn double distribution.

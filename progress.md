@@ -132,6 +132,18 @@ rằng số không khớp); người học bắt đúng. Rút kinh nghiệm: xá
 số. Còn mở: Mức 2 (bảng 15 phiên) chưa làm. Chi tiết: `tpo/evidence/buoi-3/README.md`.
 **▶️ ĐANG DẠY Buổi 6 — BALANCE vs SAU BALANCE** (công tắc chế độ thị trường, mục đòn bẩy cao nhất syllabus).
 
+**📱 ĐÃ DEPLOY TRANG HỌC ONLINE (2026-08-14):** người học học 100% trên iPhone → đã dựng trang web
+**Buổi 6 + 4 + 5 + 7 + 8 + 9** (đúng thứ tự dạy) và deploy lên GitHub Pages:
+**https://anhnmthe176111.github.io/so-tay-vang-mgc/tpo/**
+Nguồn nội dung: `tpo/SYLLABUS-TPO.md` + `tpo/EVIDENCE-DRILLS.md`. Kèm **20 ảnh** trích từ `TPO.pdf`
+(note/p002–p017) + diagram `ib-break-4-nhip.png`, mỗi ảnh có caption **đọc số thật trên chart**
+(IBH 42274.5 · IBH 42129.5/IBL 41900 · SP 44812.5–45462.5 (27) · GCQ23 21/7 Tokyo POC 1965.6 ·
+GCQ23 26/7 cây 12:30 V:1004→5857, delta −186/−275/−158 mà giá không xuống…). Mỗi buổi có sẵn khối
+**săn bằng chứng 3 mức**, bảng **luật nào đã đo/chưa đo**, bảng **5 mâu thuẫn đã phân xử**, và
+**Bài số 0** (sửa neo phiên 19:20). Trang mobile-first: mục lục bottom-sheet, bảng tự xếp thành thẻ
+dưới 680px, chạm ảnh để phóng to, tiến độ từng buổi lưu bằng localStorage.
+⚠️ Deploy từ repo RIÊNG `so-tay-vang-mgc` (thư mục `/tpo/`) — **push repo học KHÔNG tự cập nhật trang này**.
+
 ## ❓ Câu hỏi mở / điểm cần làm rõ
 - **Hỏi tiếp bạn trader về IB break (còn lại từ bộ câu hỏi 2026-07-13):** (b) xác nhận "đấu giá thật/uy tín" bằng gì — delta/volume follow-through trên footprint, hay chỉ cần giá trụ ngoài biên ~30′? (c) phá hụt (failed break): fade ngược về mép kia hay đứng ngoài? *(Câu (a) đã chốt: "Phá biên rồi chờ test" → entry = retest biên vừa phá.)*
 - ✅ **ĐÃ KHÓA (2026-06-09):** chiều công thức Delta. Khởi động Bài 2 trả lời đúng hoàn toàn: `Delta = (mua chủ động) − (bán chủ động)`, Delta −320 → phe bán áp đảo. Không còn là điểm yếu.

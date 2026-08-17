@@ -144,7 +144,25 @@ dùng luật màu=bracket của Buổi 2 để xác định cú phá xảy ra cu
 **RF = -2 · -1 · +24** — chữ ký "sau balance ⇒ trend" bằng con số. ⚠️ Còn thiếu nửa sau: chưa kiểm được
 vế delta (leg đầu có tăng-mà-delta-âm rồi squeeze không) vì ảnh TPO không hiện delta từng phiên → cần chart
 delta/footprint phiên 8/5. Chi tiết: `tpo/evidence/buoi-6/README.md`.
-**▶️ ĐANG DẠY Buổi 4 — SINGLE PRINT & FIXER** (cơ chế dự đoán market buộc phải quay lại đâu, theo thứ tự nào).
+**✅ Buổi 4 — SINGLE PRINT & FIXER (dạy 2026-08-17):** SP = IMB = vùng thiếu mở rộng TPO; lý do vật lý
+market phải quay lại = còn **limit chưa khớp (liquidation)** trong SP + SP hay nằm ở vùng thanh khoản vừa
+break. **KHÔNG phải SP nào cũng được fix** (trend quá mạnh, hoặc SP ít liquidation). Fix cần đủ **VOL +
+TIME** — lấp dở = "thợ lởm, giá không move". **2 nguyên tắc fixer:** ① tuần tự (cái xuất hiện trước fix
+trước) ② tôn trọng trend (trend tăng fix phía TRÊN, giảm fix phía DƯỚI; sửa IB thì lấy trend Daily).
+Câu chốt nối Buổi 6: *"trend mạnh diễn ra khi profile được sửa XONG và sửa SẠCH"*. Absorption đọc bằng TPO:
+lấp bằng nhiều vol mà giá không nhúc nhích ⇒ phe ngược đang thắng.
+**KT: câu 2 ĐÚNG** (vol lớn mà giá đứng im = hấp thụ = xấu cho kèo mua). **Câu 1 SAI do lộn niên đại** —
+người học đọc "vùng dưới (hôm qua) xuất hiện sớm hơn vùng trên (tuần trước)", trong khi tuần trước mới là
+cũ hơn; đáp án đúng = fix **vùng TRÊN** trước và **hai nguyên tắc KHÔNG đá nhau** ở ca này (cả hai đều chỉ
+lên trên). ⚠️ **Lỗi của Claude:** câu hỏi tự cài mệnh đề sai ("vì sao hai nguyên tắc có thể đá nhau ở đây")
+trong khi chính đề bài mình dựng lại không hề mâu thuẫn → đẩy người học đi nặn ra xung đột không có thật.
+Rút kinh nghiệm: kiểm mệnh đề của câu hỏi trước khi ra đề. Cũng ghi nhận: **thứ tự ưu tiên giữa 2 nguyên
+tắc KHÔNG có trong nguồn** — không được khẳng định "tuần tự thắng trend" như một luật.
+**Bằng chứng Mức 1 ĐẠT** (GCZ26): SP phiên 7/13 ≈ **4084–4108** (thân thắt còn 1 cột chữ) → phiên 7/14 fix
+ngay, **POC 4088** nằm gọn trong vùng, VA 4053–4128 phủ trọn ⇒ fix nhanh 1 phiên và sạch; đồng thời khớp
+nguyên tắc #2 (value dịch xuống 4126→4088 = trend giảm, fix phía dưới). Còn thiếu: ca ≥2 SP để kiểm nguyên
+tắc tuần tự, và ca SP KHÔNG được fix làm phản chứng. Chi tiết: `tpo/evidence/buoi-4/README.md`.
+**▶️ Kế tiếp: Buổi 5 — LVN vs HVN** (bản đồ kỳ vọng + vùng canh lệnh thật của CORVEN).
 
 **📱 ĐÃ DEPLOY TRANG HỌC ONLINE (2026-08-14):** người học học 100% trên iPhone → đã dựng trang web
 **Buổi 6 + 4 + 5 + 7 + 8 + 9** (đúng thứ tự dạy) và deploy lên GitHub Pages:

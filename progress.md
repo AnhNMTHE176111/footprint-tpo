@@ -130,7 +130,20 @@ vùng poor high đó** ⇒ xác nhận luật *poor = đấu giá chưa xong, ph
 1 lần ở đây** (nhầm mũi tên chú thích trỏ 7/29 thành 7/30 → so nhầm "hôm sau" thành 7/31 → kết luận sai
 rằng số không khớp); người học bắt đúng. Rút kinh nghiệm: xác minh chú thích trỏ vào cột nào TRƯỚC khi đọc
 số. Còn mở: Mức 2 (bảng 15 phiên) chưa làm. Chi tiết: `tpo/evidence/buoi-3/README.md`.
-**▶️ ĐANG DẠY Buổi 6 — BALANCE vs SAU BALANCE** (công tắc chế độ thị trường, mục đòn bẩy cao nhất syllabus).
+**▶️ Buổi 6 — BALANCE vs SAU BALANCE (dạy 2026-08-17, mục đòn bẩy cao nhất syllabus):** 3 chế độ —
+TRONG balance (mean-revert, "2 cạnh mà vả", tăng-delta-âm = yếu) / SAU balance = leg đầu ngay sau khi
+đấu giá xong (follow, tăng-delta-âm = **chờ SQUEEZE**, tín hiệu THUẬN) / cuối sóng-nhịp hồi (thoát).
+Cơ chế: limit CHẶN sóng, market TẠO move; tăng mà delta âm = bên bán dí limit sát giá — ở đầu sóng đám
+limit đó sắp bị nuốt ⇒ squeeze, ở cuối sóng là lực mua cạn thật. **KT: người học trả lời đúng cả 2 câu**
+(câu 1 đúng trọn — cần biết vị trí trong sóng; đã siết thêm: "break" chưa đủ, phải là break RA KHỎI MỘT
+BALANCE. Câu 2 kết luận đúng nhưng **lẫn cơ chế**: lấy luật "session đẹp chỉ có day trader" (§6.2, dùng để
+dự phiên sau) làm lý do cho việc squeeze không áp dụng — lý do thật là trong balance KHÔNG CÓ SÓNG nào
+đang chạy để mà squeeze). **Bằng chứng Mức 1 ĐẠT** (GCZ26 8/3→8/5): balance kéo dài 2 phiên đọc bằng VA
+chồng nhau (8/3 4102–4125 ∩ 8/4 4104–4137) → 8/5 VA rời hẳn range (4221–4340, gap 84 điểm); người học tự
+dùng luật màu=bracket của Buổi 2 để xác định cú phá xảy ra cuối ngày. Claude bổ sung số xác nhận:
+**RF = -2 · -1 · +24** — chữ ký "sau balance ⇒ trend" bằng con số. ⚠️ Còn thiếu nửa sau: chưa kiểm được
+vế delta (leg đầu có tăng-mà-delta-âm rồi squeeze không) vì ảnh TPO không hiện delta từng phiên → cần chart
+delta/footprint phiên 8/5. Chi tiết: `tpo/evidence/buoi-6/README.md`.
 
 **📱 ĐÃ DEPLOY TRANG HỌC ONLINE (2026-08-14):** người học học 100% trên iPhone → đã dựng trang web
 **Buổi 6 + 4 + 5 + 7 + 8 + 9** (đúng thứ tự dạy) và deploy lên GitHub Pages:

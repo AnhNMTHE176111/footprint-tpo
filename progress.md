@@ -144,6 +144,7 @@ dùng luật màu=bracket của Buổi 2 để xác định cú phá xảy ra cu
 **RF = -2 · -1 · +24** — chữ ký "sau balance ⇒ trend" bằng con số. ⚠️ Còn thiếu nửa sau: chưa kiểm được
 vế delta (leg đầu có tăng-mà-delta-âm rồi squeeze không) vì ảnh TPO không hiện delta từng phiên → cần chart
 delta/footprint phiên 8/5. Chi tiết: `tpo/evidence/buoi-6/README.md`.
+**▶️ ĐANG DẠY Buổi 4 — SINGLE PRINT & FIXER** (cơ chế dự đoán market buộc phải quay lại đâu, theo thứ tự nào).
 
 **📱 ĐÃ DEPLOY TRANG HỌC ONLINE (2026-08-14):** người học học 100% trên iPhone → đã dựng trang web
 **Buổi 6 + 4 + 5 + 7 + 8 + 9** (đúng thứ tự dạy) và deploy lên GitHub Pages:

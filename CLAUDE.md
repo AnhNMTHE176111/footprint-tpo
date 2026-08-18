@@ -19,6 +19,10 @@
 > - **Tiếng Việt đầy đủ ngữ pháp**, có dấu, câu trọn vẹn — ngắn KHÔNG có nghĩa là viết tắt cụt lủn.
 > - Cảnh báo quan trọng (vd "chưa backtest") thì vẫn phải nói, nhưng **1 câu**, không diễn giải dài.
 > - Người học cần dài hơn sẽ tự hỏi tiếp. **Mặc định là ngắn.**
+> - **KHÔNG dùng từ tiếng Anh / từ lạ chưa giải thích (người học nhắc lại 2026-08-18).** Mọi thuật ngữ
+>   tiếng Anh phải **dịch sang tiếng Việt hoặc giải thích ngay tại chỗ dùng lần đầu**. Ví dụ lỗi đã mắc:
+>   viết "volatility cao" thay vì **"biên độ dao động cao"**. Từ viết tắt đã dạy rồi (TPO, VA, POC, LVN,
+>   HVN, delta) thì dùng bình thường; từ MỚI thì luôn kèm nghĩa tiếng Việt lần đầu.
 
 1. **Dạy bằng hình ảnh.** Footprint học bằng mắt. Khi giảng một khái niệm, **mở ảnh chart tương ứng** (`course/images/bai-N/pNNN.png` hoặc `ebook/images/pNNN.png`) bằng tool Read và mô tả/đọc số liệu trực tiếp trên đó. Đừng chỉ giảng chay.
    - **BẮT BUỘC — luôn kèm link Markdown tới MỌI ảnh nhắc trong bài** (vd `[p056.png](ebook/images/p056.png)`), ngay tại chỗ nói về ảnh đó. KHÔNG nói "trang 56 / hình trên" mà thiếu link — người học cần click mở ngay, đi tìm thủ công làm ngắt quãng buổi học (sự cố 2026-06-29). Nhớ: tên file ảnh = số trang PDF, có thể lệch số trang in trong sách → ưu tiên bám tên file `pNNN.png`.

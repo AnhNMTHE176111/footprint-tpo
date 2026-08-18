@@ -195,3 +195,31 @@ dưới 680px, chạm ảnh để phóng to, tiến độ từng buổi lưu b�
 | XN#1 Large Limit | 2026-06-30 | ✅ Đạt (3/3) | Bid=Buy limit→Long, Ask=Sell limit→Short; xác nhận phải đi cùng vùng S/R. Hỏi rất sắc: "có y hệt Absorption không?" → đã gỡ: cùng họ nhưng Large Limit số to 1 cột + vào sớm, Absorption 2 cột + vào muộn/chắc hơn. |
 | XN#3+#4 Flow&Delta + Cum.Delta Div | 2026-07-01 | ✅ Đạt (4/4) | Flow=phe chủ động (ngược #1/#2); Cum.Delta Div = Effort vs Result Wyckoff. Câu bẫy "Bid to là Long hay Short?" trả lời xuất sắc bằng vị trí+hành vi giá (giá có đi không) — chính xác hơn cách giảng. Tự nối Wyckoff. Nhắc nhỏ: kháng cự+Bid to=Short cần thêm điều kiện giá thực sự thủng xuống. |
 | 4 (tổng hợp) | 2026-06-20 | ✅ Đạt | Kiểm tra 7 setup. Vững: Surge, Divergence, Flip/Transition, Reversal(1 nến). Cần khóa: HƯỚNG của Tail (đảo nhầm 2 lần — đuôi bán = BÁN) + cơ chế Bulge = absorption. Sau khi vá lý thuyết, vế Bulge/Reversal trả lời đúng. |
+
+---
+
+## Buổi 5 — LVN vs HVN (2026-08-18)
+
+Đã giảng: HVN/LVN đọc bằng cột khối lượng · luật kỳ vọng (LVN⇒trend, HVN⇒sideway; LVN+biên độ dao động
+cao⇒trend; đỉnh có LVN bị phá⇒trend up, không phá⇒trend down) · cấu hình canh lệnh thật của CORVEN
+(**chỉ HVN + VWAP**, 2 tầng: TPO daily cho scalp + TPO gộp 3 tuần period 30p cho vùng lớn; VWAP ngày +
+VWAP tuần neo đầu tuần).
+
+⚠️ Nhắc lại: luật "HVN là vùng canh lệnh tốt" đã đo n=4-6 → ngang mức ngẫu nhiên. Chỉ dùng đọc chart.
+
+**Câu kiểm tra — cả 2 ĐÚNG:**
+1. HVN dày phía trước + vừa break khỏi balance → người học: *chờ break qua luôn HVN mới vào, vì vào ngay
+   sau nhịp hồi thì TP chỉ tới HVN gần đó, ăn quá ngắn không đáng.* → Đúng, và lập luận theo **khoảng
+   chạy còn lại** (HVN = trần TP) sắc hơn mức đề yêu cầu.
+2. Đỉnh có LVN không phá nổi ⇒ trend down → người học: *LVN là nơi yếu, không phá nổi tức lực đã yếu.*
+   → Đúng cơ chế. Chỉnh cách nói: LVN không phải "nơi yếu" mà là **nơi ÍT lực cản**; thất bại ở chỗ
+   không có gì cản mới là bằng chứng phe mua cạn lực.
+
+**Lỗi của Claude trong buổi:** (a) dùng nguyên từ "volatility" không dịch — người học bắt đúng, đã thêm
+luật cấm từ lạ vào CLAUDE.md; (b) **nói "đã ghi vào CLAUDE.md" trước khi thực sự sửa file** — phải sửa
+file XONG mới được báo đã sửa.
+
+**Bài săn bằng chứng — CHƯA làm:** Mức 1 dựng chart TPO gộp 3 tuần period 30p, khoanh 2-3 HVN lớn nhất ·
+Mức 1b so Range phiên vào LVN vs phiên dừng ở HVN · Mức 3 phản chứng (vào LVN mà không trend).
+
+▶️ Kế tiếp: Buổi 7 — VA rời range: break hay reject.

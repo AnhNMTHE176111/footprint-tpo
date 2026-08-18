@@ -152,7 +152,14 @@ Trader pro xếp VWAP **ngang hàng** với TPO tuần/ngày. `M30SessionZones` 
 - (a) Thêm VWAP vào M30SessionZones → hai indicator vẽ trùng VWAP trên cùng chart.
 - (b) Chỉ dùng VWAP làm **mốc hợp lưu** (cộng điểm cho vùng gần VWAP), không vẽ đường.
 
-**Đề xuất (b)** — được lợi ích hợp lưu mà không vẽ trùng. Cần người dùng chốt.
+**Đề xuất (b)** — được lợi ích hợp lưu mà không vẽ trùng.
+
+**✅ CHỐT 2026-08-18 — (c) KHÔNG làm gì cả trong M30SessionZones.** Người học dùng **indicator VWAP
+có sẵn của Optimus Flow, đặt trên chart M1**. Lý do hợp với phân tầng đã chốt: TPO = tầng **BIAS**
+(vùng ở đâu), VWAP + M1 = tầng **ENTRY** (bấm nút ở đâu) — trộn VWAP vào lớp bias không thêm thông tin
+mà chỉ làm rối. Hệ quả chấp nhận: bảng xếp hạng vùng KHÔNG biết VWAP, nên khi HVN trùng VWAP thì
+indicator không tự nâng điểm — người trade tự nhìn thấy trên M1. Nếu sau này thấy thiếu thật thì mở
+lại phương án (b) (chỉ cộng điểm, vẫn không vẽ đường).
 
 ---
 

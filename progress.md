@@ -223,3 +223,22 @@ file XONG mới được báo đã sửa.
 Mức 1b so Range phiên vào LVN vs phiên dừng ở HVN · Mức 3 phản chứng (vào LVN mà không trend).
 
 ▶️ Kế tiếp: Buổi 7 — VA rời range: break hay reject.
+
+## Buổi 5 (tiếp) — đo mốc HVN & lên plan sửa indicator (2026-08-18)
+
+Người học đề xuất **quy HVN thành MỐC** (vd 4410, 4110) thay vì vùng, vì dừng lỗ của họ chỉ 3 giá.
+Đã đo trên `Data_Footprint_Export.csv` (128 phiên, 02→07/2026):
+
+- **Đề xuất của người học ĐÚNG, Claude sai một điểm:** Claude nói "HVN bản chất là cái bướu" — sai.
+  Ở bin 1 giá, **108/128 phiên (84%)** có đỉnh khối lượng tách hẳn (nền 90% rộng ≤4 giá, trung vị 0).
+  Cái bướu 50 giá là do chart Optimus Flow gom hàng 10 giá. Ưu điểm nữa của mốc: **đo được**, còn
+  vùng 50 giá thì không (giá sống bên trong nên "có phản ứng" thành vô nghĩa).
+- **Nhưng mốc gộp 15 phiên trôi**: trung vị 20 giá mỗi 5 phiên, có lần nhảy 807 giá ⇒ chỉ là nam châm.
+- **Nền ngẫu nhiên** (SL3/TP4.5/60 nến M1): thắng 40,1% mua · 44,1% bán (n=6.526). Hoà vốn = 40%.
+- **Mốc HVN ngày chạm trơn: 41,2% (n=51)** — trong nền. Đối chứng mức ngẫu nhiên 48,7%, giá đóng
+  cửa hôm trước 41,9%. ⇒ Lần thứ hai HVN ra "ngang mức ngẫu nhiên" (lần trước n=4-6).
+- Ba chỗ phép đo còn thiếu: chưa lọc chế độ balance/sau-balance (Buổi 6), chưa có xác nhận M1,
+  hướng giao dịch do Claude tự đặt.
+
+**Đã soạn plan chi tiết: `quantower-tpo-suite/PLAN-MOC-PHAN-UNG.md`** (chưa code gì).
+Người học sẽ đổi model rồi tự implement.

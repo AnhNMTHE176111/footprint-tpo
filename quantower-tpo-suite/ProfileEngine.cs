@@ -409,6 +409,30 @@ namespace TpoSuite
             return sumV > 0 ? sumPv / sumV : lastClose;
         }
 
+        // ---- Độ nhọn của một đỉnh khối lượng — PLAN-MOC-PHAN-UNG.md §A3/B4 ----
+        //  Nới từ đỉnh ra 2 bên, LIÊN TỤC (dừng ngay khi gặp mức dưới ngưỡng —
+        //  không nhảy qua khe trống), tới khi khối lượng tụt dưới frac*đỉnh.
+        //  Trả (lo, hi) bằng GIÁ THẬT (không phải tick) — dùng để:
+        //   (a) B3: Lo/Hi thật cho lớp NỀN (HVN tuần/LVN — đây là chỗ DUY NHẤT
+        //       cần vùng thật, khác lớp MỐC vẫn giữ Lo=Hi=đỉnh);
+        //   (b) B4: đo "nền rộng bao nhiêu giá" để quyết định có cho làm mốc
+        //       (mỏng) hay phải hạ xuống lớp nền (bẹt).
+        //  Đối chiếu Python: measure_levels.py::sharpness_width (cùng công thức).
+        //  `rows` khoá theo rowStep (KHÔNG PHẢI tick — xem RowsOver/rowStep trong
+        //  SessionZones), nên bước nới cũng phải đi theo rowStep.
+        public static (double lo, double hi) PeakSharpness(
+            SortedDictionary<double, double> rows, double peakPrice, double rowStep, double frac = 0.90)
+        {
+            if (rows == null || !rows.ContainsKey(peakPrice)) return (peakPrice, peakPrice);
+            double thr = frac * rows[peakPrice];
+            double lo = peakPrice, hi = peakPrice;
+            while (rows.TryGetValue(Math.Round((lo - rowStep) / rowStep) * rowStep, out var vLo) && vLo >= thr)
+                lo -= rowStep;
+            while (rows.TryGetValue(Math.Round((hi + rowStep) / rowStep) * rowStep, out var vHi) && vHi >= thr)
+                hi += rowStep;
+            return (lo, hi);
+        }
+
         // ---- HVN (High Volume Node) — nút khối lượng cao ---------------------
         //  KHÁC POC: POC chỉ có MỘT (đỉnh cao nhất của phân bố). HVN có thể có
         //  NHIỀU — mỗi nơi khối lượng tụ thành "nút". Sách (ebook §HVN, §Setup 2

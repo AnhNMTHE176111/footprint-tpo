@@ -242,3 +242,30 @@ Người học đề xuất **quy HVN thành MỐC** (vd 4410, 4110) thay vì v�
 
 **Đã soạn plan chi tiết: `quantower-tpo-suite/PLAN-MOC-PHAN-UNG.md`** (chưa code gì).
 Người học sẽ đổi model rồi tự implement.
+
+## Implement giai đoạn 1+2 của PLAN-MOC-PHAN-UNG.md (2026-08-18, model sonnet)
+
+**Nhánh A (đo, Python) — XONG:** viết `quantower-tpo-suite/measure_levels.py`, chạy A0/A2/A0.5/A1/A3/A4
+trên 128 phiên GCQ26. Kết quả ghi `MEASURE-LEVELS-RESULTS.md`, 21 rổ đã thử:
+- **Không loại mốc nào (HVN ngày, POC-theo-thời-gian, naked POC, đỉnh/đáy phiên, số tròn $10/$50,
+  S/R thực nghiệm) vượt ngưỡng 40%** — khớp cảnh báo trong plan.
+- A1 (điều kiện hoá theo balance/sau-balance): **chưa đo được**, chỉ 6 ca "sau_balance" trong 128 phiên,
+  ghép với HVN chỉ còn n=1 — cần export dài hơn (~≥500 phiên) hoặc nới ngưỡng overlap.
+- A3 (độ nhọn): **không đo được ý nghĩa** — 84% phiên đã nhọn sẵn (đã biết từ trước) nên rổ "vừa/bẹt"
+  gần trống.
+- Lưu ý phát hiện phụ: "Bán ngẫu nhiên" tự ra >40% (n lớn nên CI hẹp) — không phải edge, chỉ là
+  cảnh báo phải luôn đọc CI chứ không chỉ %.
+
+**Nhánh B (C#, indicator) — B1-B4 XONG, build sạch 0 lỗi:**
+- B1: thêm `ZoneRadiusPrices` (mặc định 12 giá) thay bán kính ×ATR (từng ra ~50 giá).
+- B2: mọi nhãn mốc kèm "· cách X giá"; bảng panel "VÙNG CANH" sắp theo khoảng cách gần→xa.
+- B3: thêm `Zone.IsMarker` — HVN tuần chuyển sang **lớp NỀN** với Lo/Hi THẬT (hàm mới
+  `ProfileEngine.PeakSharpness`, nới từ đỉnh tới khi volume tụt <90%), tách khỏi HVN ngày (vẫn là
+  MỐC, Lo=Hi=đỉnh). LVN cũng đánh dấu IsMarker=false. Vẽ 2 lớp riêng trong `OnPaintChart`.
+- B4: thêm `SharpnessGate` (mặc định TẮT — A3 không đủ bằng chứng bật) + `MaxLevelThicknessPrices`
+  (mặc định 4 giá = SL người dùng); nhãn HVN ngày luôn ghi kèm "· nền X giá".
+- Đối soát Python↔C#: hàm nới biên chạy đúng cơ chế (nen_90=0 cho 3 phiên cuối, khớp 84% đã đo).
+
+**Còn lại theo plan:** B5 (cảnh báo tiếp cận Telegram), B6 (gộp 3 tuần cho lớp nền, ưu tiên thấp),
+A1 cần dữ liệu dài hơn mới đo được. Build DLL đã sẵn ở `dist/SessionZones.dll`, CHƯA deploy/test live
+trên Windows.

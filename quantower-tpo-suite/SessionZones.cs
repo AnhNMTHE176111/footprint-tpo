@@ -59,6 +59,12 @@ namespace SessionZonesNs
         //  tháng 7 êm) — hằng số tick cứng sẽ sai ở giai đoạn còn lại.
         [InputParameter("Bán kính lọc vùng (×ATR20)", 28, 1, 10, 0.5, 1)]
         public double ZoneRangeAtr { get; set; } = 3.0;
+        // ---- B1 (PLAN-MOC-PHAN-UNG.md): bán kính ×ATR20(M30) ra ~50 giá — với
+        //  người dừng lỗ 3 giá thì mức cách xa vậy là chuyện tuần sau, không phải
+        //  hôm nay. Ưu tiên bán kính CỐ ĐỊNH theo "giá" (đơn vị người dùng nghĩ
+        //  bằng, không phải tick); 0 = quay lại cách cũ ×ATR.
+        [InputParameter("Bán kính lọc vùng (giá, 0=dùng ×ATR)", 38, 0, 60, 1, 0)]
+        public double ZoneRadiusPrices { get; set; } = 12.0;
         // ---- D5: trần số vùng hiển thị — tài liệu khuyến nghị 3-5 vùng/chart ----
         [InputParameter("Số vùng tối đa hiển thị", 29, 3, 12, 1, 0)]
         public int MaxZones { get; set; } = 5;
@@ -68,6 +74,22 @@ namespace SessionZonesNs
         // giữa 2 nến M30 liên tiếp (cuối tuần CME nghỉ ~46h).
         [InputParameter("Gap tách TUẦN cho HVN tuần (giờ)", 34, 20, 60, 1, 0)]
         public int WeekGapHours { get; set; } = 30;
+        // ---- B3/B4 (PLAN-MOC-PHAN-UNG.md) — đo 2026-08-18: 84% phiên có đỉnh
+        //  volume tách hẳn (nền 90% rộng <=4 giá), nhưng HVN tuần trên chart lại
+        //  hiện ra như "cái bướu 50 giá" — vì Optimus Flow gom hàng 10 giá, KHÔNG
+        //  phải vì HVN thật sự rộng. Sửa: HVN tuần lấy Lo/Hi THẬT (lớp nền, để
+        //  đọc chế độ sideway/trend), HVN ngày vẫn là MỐC 1 giá (để canh lệnh),
+        //  và mốc nào bẹt hơn MaxLevelThicknessPrices thì tự hạ xuống lớp nền.
+        [InputParameter("Hiện dải nền HVN tuần (Lo/Hi thật)", 35)]
+        public bool ShowContextBands { get; set; } = true;
+        // ⚠️ Đo A3 (MEASURE-LEVELS-RESULTS.md, 2026-08-18): mẫu 128 phiên KHÔNG đủ
+        //  để kết luận "mốc nhọn phản ứng tốt hơn mốc bẹt" (84% phiên đã nhọn sẵn
+        //  nên rổ "vừa/bẹt" gần trống). MẶC ĐỊNH TẮT — chỉ hiện con số độ nhọn
+        //  trên nhãn, KHÔNG tự hạ cấp mốc, cho tới khi có bằng chứng đủ mạnh.
+        [InputParameter("Bật cổng độ nhọn (hạ mốc bẹt xuống lớp nền)", 36)]
+        public bool SharpnessGate { get; set; } = false;
+        [InputParameter("Độ dày tối đa của MỐC (giá) — bằng SL của bạn", 37, 1, 20, 0.5, 1)]
+        public double MaxLevelThicknessPrices { get; set; } = 4.0;
 
         // ---------- hiển thị ----------
         [InputParameter("Hiện bảng phiên", 30)]
@@ -282,18 +304,25 @@ namespace SessionZonesNs
                 // biên VA/đỉnh-đáy phiên đều lùi về bối cảnh, TRỪ KHI đã hợp lưu (merge)
                 // với một HVN — khi đó z.Label còn giữ chữ "HVN" sau MergeZones.
                 bool IsHvn(Zone z) => z.Label.Contains("HVN");
-                var canhLenh = zones.Where(z => z.Type != "lvn" && IsHvn(z)).ToList();
-                var boiCanh = zones.Where(z => z.Type != "lvn" && !IsHvn(z)).ToList();
+                // B3/B4: chỉ zone còn là MỐC (IsMarker) mới vào "VÙNG CANH" — HVN tuần
+                // (luôn là nền) và HVN ngày bị B4 hạ cấp vì bẹt đều rơi xuống nenList.
+                var canhLenh = zones.Where(z => z.IsMarker && z.Type != "lvn" && IsHvn(z)).ToList();
+                var boiCanh = zones.Where(z => z.IsMarker && z.Type != "lvn" && !IsHvn(z)).ToList();
                 var lvnList = zones.Where(z => z.Type == "lvn").ToList();
+                var nenList = zones.Where(z => !z.IsMarker && z.Type != "lvn").ToList();
                 if (canhLenh.Count > 0)
                 {
-                    panel.Add(("VÙNG CANH (tuần/ngày, mạnh→yếu):", Color.Silver));
-                    foreach (var z in canhLenh.Take(MaxZones))
+                    // B2: sắp theo KHOẢNG CÁCH gần→xa (không theo điểm mạnh) — người
+                    // dừng lỗ 3 giá cần biết mốc GẦN NHẤT trước, mốc mạnh mà xa cả
+                    // trăm giá không giúp được gì hôm nay.
+                    panel.Add(("VÙNG CANH (gần→xa):", Color.Silver));
+                    foreach (var z in canhLenh.OrderBy(z => Math.Abs(z.Center - nowPrice)).Take(MaxZones))
                     {
                         string sd = z.Side > 0 ? "S " : z.Side < 0 ? "R " : "· ";
                         string pr = Math.Abs(z.Hi - z.Lo) < tick ? Fmt(z.Center) : $"{Fmt(z.Lo)}–{Fmt(z.Hi)}";
                         Color zc = z.Side > 0 ? SupColor : z.Side < 0 ? ResColor : Color.Gainsboro;
-                        panel.Add(($"  {sd}{pr}  {z.Label} [{z.Strength:0}]", zc));
+                        double distGia = Math.Abs(z.Center - nowPrice) / (10.0 * tick);
+                        panel.Add(($"  {sd}{pr}  {z.Label} · cách {distGia:0.0} giá [{z.Strength:0}]", zc));
                     }
                     var above = canhLenh.Where(z => z.Center > nowPrice).OrderBy(z => z.Center).Take(2).ToList();
                     var below = canhLenh.Where(z => z.Center < nowPrice).OrderByDescending(z => z.Center).Take(2).ToList();
@@ -302,10 +331,14 @@ namespace SessionZonesNs
                 }
                 if (boiCanh.Count > 0)
                     panel.Add(($"Bối cảnh phiên (chỉ tham khảo): {string.Join(" · ", boiCanh.Select(z => $"{z.Label} {Fmt(z.Center)}"))}", Color.Gray));
+                // B3: lớp NỀN — HVN tuần (Lo/Hi thật, gộp nhiều phiên, trôi ~20 giá/tuần
+                // nên KHÔNG dùng làm điểm vào) + mốc bị B4 hạ cấp vì bẹt hơn dừng lỗ.
+                if (nenList.Count > 0)
+                    panel.Add(($"Nền/bối cảnh (KHÔNG đặt lệnh): {string.Join(" · ", nenList.Select(z => $"{z.Label} {Fmt(z.Lo)}–{Fmt(z.Hi)}"))}", Color.FromArgb(0x90, 0x90, 0x90)));
                 if (lvnList.Count > 0)
                     panel.Add(($"LVN (xuyên nhanh, đặt SL sau): {string.Join(" · ", lvnList.Select(z => Fmt(z.Center)))}", Color.FromArgb(0x90, 0x90, 0x90)));
 
-                lock (_sync) _render = new ZoneRenderState { Zones = zones, Panel = panel, NowPrice = nowPrice };
+                lock (_sync) _render = new ZoneRenderState { Zones = zones, Panel = panel, NowPrice = nowPrice, Tick = tick };
 
                 // ---- tổng hợp GỌN cho Telegram ----
                 var tele = new List<string>();
@@ -484,21 +517,44 @@ namespace SessionZonesNs
                 if (dFrom >= 0)
                     dyRows = ProfileEngine.RowsOver(hd, dFrom, blocks[blocks.Count - 2].to, rowStep, UseVolume);
             }
+            // B3: HVN tuần = LỚP NỀN — Lo/Hi THẬT (nới từ đỉnh tới khi volume tụt
+            // dưới 90% đỉnh), không phải điểm. Đây là chỗ DUY NHẤT trong nhóm HVN
+            // cần vùng thật; nó gộp nhiều phiên nên vốn dĩ là bối cảnh, không phải
+            // mốc vào lệnh chính xác (PLAN §0.4: mốc 3 tuần trôi ~20 giá/tuần).
             if (ShowHvn && wkRows != null)
                 foreach (var (p, ratio) in ProfileEngine.FindHvn(wkRows, tick).Take(MaxHvn))
-                    zones.Add(new Zone { Center = p, Lo = p, Hi = p, Type = "hvn_week",
-                        Side = SideOf(p), Strength = Math.Min(95, 70 + ratio * 6),
+                {
+                    var (lo, hi) = ShowContextBands ? ProfileEngine.PeakSharpness(wkRows, p, rowStep) : (p, p);
+                    zones.Add(new Zone { Center = p, Lo = lo, Hi = hi, Type = "hvn_week",
+                        Side = SideOf(p), Strength = Math.Min(95, 70 + ratio * 6), IsMarker = false,
                         Label = $"HVN tuần ×{ratio:0.0}" });
+                }
+            // B4: HVN ngày = MỐC — giữ Lo=Hi=đỉnh (điểm, để canh lệnh chính xác),
+            // nhưng đo kèm độ nhọn (nền 90%) để (a) ghi lên nhãn, (b) hạ cấp xuống
+            // lớp nền nếu bẹt hơn dừng lỗ của người dùng VÀ đã bật SharpnessGate.
             if (ShowHvn && dyRows != null)
                 foreach (var (p, ratio) in ProfileEngine.FindHvn(dyRows, tick).Take(MaxHvn))
-                    zones.Add(new Zone { Center = p, Lo = p, Hi = p, Type = "hvn_day",
-                        Side = SideOf(p), Strength = Math.Min(88, 64 + ratio * 6),
-                        Label = $"HVN ngày ×{ratio:0.0}" });
+                {
+                    var (lo, hi) = ProfileEngine.PeakSharpness(dyRows, p, rowStep);
+                    double widthGia = (hi - lo) / (10.0 * tick);
+                    bool tooFlat = SharpnessGate && widthGia > MaxLevelThicknessPrices;
+                    zones.Add(new Zone
+                    {
+                        Center = p,
+                        Lo = tooFlat ? lo : p, Hi = tooFlat ? hi : p,
+                        Type = "hvn_day", Side = SideOf(p),
+                        Strength = Math.Min(88, 64 + ratio * 6),
+                        IsMarker = !tooFlat,
+                        Label = tooFlat
+                            ? $"HVN ngày ×{ratio:0.0} · nền {widthGia:0} giá (bẹt, xem là bối cảnh)"
+                            : $"HVN ngày ×{ratio:0.0} · nền {widthGia:0} giá",
+                    });
+                }
             // LVN: KHÔNG phải vùng canh lệnh — nơi giá xuyên nhanh, dùng để đặt SL /
             // biết chỗ không nên kỳ vọng phản ứng. Xét riêng khỏi trần MaxZones (D3).
             if (ShowLvn && wkRows != null)
                 foreach (var (p, ratio) in ProfileEngine.FindLvn(wkRows, tick).Take(MaxLvn))
-                    lvnZones.Add(new Zone { Center = p, Lo = p, Hi = p, Type = "lvn",
+                    lvnZones.Add(new Zone { Center = p, Lo = p, Hi = p, Type = "lvn", IsMarker = false,
                         Side = SideOf(p), Strength = 30, Label = $"LVN tuần ×{ratio:0.0} (xuyên nhanh)" });
 
             // naked POC
@@ -538,11 +594,15 @@ namespace SessionZonesNs
             double mergeTol = Math.Clamp(atr * 0.15, 0.7, 3.0);
             zones = MergeZones(zones, mergeTol);
 
-            // ---- D1: lọc theo TẦM VỚI trước khi xếp hạng ---------------------
+            // ---- D1/B1: lọc theo TẦM VỚI trước khi xếp hạng -------------------
             //  Vùng mạnh nhất về cấu trúc có thể cách giá 70-80 giá (đã đo: HVN
             //  tuần #1 cách 777 tick = 78 giá khi ATR20 ≈ 16.7 giá) — ngoài tầm
             //  giao dịch trong ngày. "Mạnh" phải kết hợp "gần" mới đáng vẽ.
-            double radius = ZoneRangeAtr * Math.Max(atr, tick);
+            //  B1: mặc định dùng bán kính CỐ ĐỊNH theo giá (ZoneRadiusPrices), vì
+            //  ×ATR20 ra ~50 giá — quá xa so với dừng lỗ 3-4 giá của người dùng.
+            double radius = ZoneRadiusPrices > 0
+                ? ZoneRadiusPrices * 10.0 * tick
+                : ZoneRangeAtr * Math.Max(atr, tick);
             zones = zones.Where(z => Math.Abs(z.Center - nowPrice) <= radius).ToList();
 
             // ---- D5: trần số vùng + cân đối 2 phía ---------------------------
@@ -587,6 +647,7 @@ namespace SessionZonesNs
                     near.Center = (near.Lo + near.Hi) / 2;
                     near.Strength = Math.Min(100, Math.Max(near.Strength, z.Strength) + 0.5 * Math.Min(near.Strength, z.Strength) + 8);
                     near.Frames += z.Frames;
+                    near.IsMarker = near.IsMarker || z.IsMarker;   // hợp lưu với 1 mốc thật -> vẫn là mốc
                     if (!near.Label.Contains(z.Label.Split(' ')[0])) near.Label += " + " + z.Label;
                 }
                 else res.Add(z);
@@ -615,39 +676,49 @@ namespace SessionZonesNs
 
             if (ShowZones && rs.Zones != null)
             {
-                foreach (var z in rs.Zones.OrderBy(z => z.Strength))   // yếu vẽ trước
+                // B3 (PLAN-MOC-PHAN-UNG.md): vẽ LỚP NỀN trước (dải mờ, không phải
+                // chỗ đặt lệnh — HVN tuần gộp nhiều phiên + LVN + mốc bị B4 hạ
+                // cấp vì quá bẹt), rồi vẽ LỚP MỐC sau đè lên (đường mảnh + nhãn +
+                // khoảng cách tới giá — đây mới là chỗ đặt lệnh).
+                foreach (var z in rs.Zones.Where(z => !z.IsMarker).OrderBy(z => z.Strength))
                 {
-                    bool isHvn = z.Type == "hvn_week" || z.Type == "hvn_day";
                     bool isLvn = z.Type == "lvn";
-                    // LVN: KHÁC HẲN HVN — xám nhạt, không tô nền, không phải vùng
-                    // canh lệnh (xem D3). Không lẫn với vùng hỗ trợ/kháng cự.
-                    Color col = isLvn ? Color.FromArgb(0x90, 0x90, 0x90)
-                              : z.Type == "naked_poc" ? NakedColor
-                              : isHvn ? HvnColor
-                              : z.Side > 0 ? SupColor : z.Side < 0 ? ResColor : Color.Gray;
+                    Color col = isLvn ? Color.FromArgb(0x90, 0x90, 0x90) : HvnColor;
                     float yLo = (float)conv.GetChartY(z.Lo), yHi = (float)conv.GetChartY(z.Hi);
                     float yTop = Math.Min(yLo, yHi), yBot = Math.Max(yLo, yHi);
-                    int alpha = (int)Math.Clamp(30 + z.Strength * 0.8, 30, 120);
-                    if (!isLvn && yBot - yTop >= 2)
+                    // nền mờ hơn hẳn mốc — đây chỉ là bối cảnh, không phải điểm bấm nút
+                    if (!isLvn && yBot - yTop >= 1)
                     {
-                        using var fill = new SolidBrush(Color.FromArgb(alpha / 3, col));
-                        gr.FillRectangle(fill, clip.Left, yTop, clip.Width, yBot - yTop);
+                        using var fill = new SolidBrush(Color.FromArgb(28, col));
+                        gr.FillRectangle(fill, clip.Left, yTop, clip.Width, Math.Max(1, yBot - yTop));
                     }
                     float ym = (yTop + yBot) / 2;
                     if (ym < clip.Top || ym > clip.Bottom) continue;
-                    // HVN tuần đậm nhất (vùng canh lệnh chính), HVN ngày vừa,
-                    // naked POC nét đứt, LVN mảnh-đứt-nhạt (không phải vùng canh
-                    // lệnh, chỉ để biết chỗ giá xuyên nhanh), còn lại nét mảnh.
-                    float pw = isLvn ? 1f
-                             : z.Type == "hvn_week" ? 2.4f
-                             : z.Type == "hvn_day" ? 1.8f
-                             : z.Type == "naked_poc" ? 2f : 1.2f;
-                    using var pen = new Pen(col, pw)
-                    { DashStyle = (z.Type == "naked_poc" || isLvn) ? DashStyle.Dash : DashStyle.Solid };
+                    using var pen = new Pen(Color.FromArgb(140, col), 1f) { DashStyle = DashStyle.Dash };
                     gr.DrawLine(pen, clip.Left, ym, clip.Right, ym);
-                    using var f = new Font("Arial", 8, isLvn ? FontStyle.Italic : FontStyle.Bold);
+                    // nhãn nhạt, không kèm khoảng cách — đây là bối cảnh, không phải mốc vào lệnh
+                    using var f = new Font("Arial", 7, FontStyle.Italic);
+                    using var br = new SolidBrush(Color.FromArgb(170, col));
+                    gr.DrawString(z.Label, f, br, clip.Right - 190, ym - 10);
+                }
+                foreach (var z in rs.Zones.Where(z => z.IsMarker).OrderBy(z => z.Strength))   // yếu vẽ trước
+                {
+                    Color col = z.Type == "naked_poc" ? NakedColor
+                              : z.Type == "hvn_day" ? HvnColor
+                              : z.Side > 0 ? SupColor : z.Side < 0 ? ResColor : Color.Gray;
+                    float ym = (float)conv.GetChartY(z.Center);
+                    if (ym < clip.Top || ym > clip.Bottom) continue;
+                    // HVN ngày đậm nhất trong nhóm mốc, naked POC nét đứt, còn lại nét mảnh.
+                    float pw = z.Type == "hvn_day" ? 2f : z.Type == "naked_poc" ? 2f : 1.2f;
+                    using var pen = new Pen(col, pw)
+                    { DashStyle = z.Type == "naked_poc" ? DashStyle.Dash : DashStyle.Solid };
+                    gr.DrawLine(pen, clip.Left, ym, clip.Right, ym);
+                    // B2: nhãn LUÔN kèm khoảng cách tới giá hiện tại (giá, không phải tick) —
+                    // người dừng lỗ 3 giá cần biết ngay có với tới trong ngày không.
+                    double distGia = Math.Abs(z.Center - rs.NowPrice) / (10.0 * rs.Tick);
+                    using var f = new Font("Arial", 8, FontStyle.Bold);
                     using var br = new SolidBrush(col);
-                    gr.DrawString(z.Label, f, br, clip.Right - 160, ym - 12);
+                    gr.DrawString($"{z.Label} · cách {distGia:0.0} giá", f, br, clip.Right - 190, ym - 12);
                 }
             }
             if (ShowPanel && rs.Panel != null && rs.Panel.Count > 0)
@@ -666,6 +737,10 @@ namespace SessionZonesNs
         public double Strength;
         public string Label = "";
         public int Frames = 1;   // số khung thời gian đồng ý (hợp lưu đa khung) — xem D2
+        // B3/B4 (PLAN-MOC-PHAN-UNG.md): true = lớp MỐC (đường mảnh, đặt lệnh được),
+        // false = lớp NỀN/bối cảnh (dải mờ, KHÔNG đặt lệnh — hoặc vì bản chất là
+        // vùng gộp nhiều phiên [hvn_week], hoặc vì bị B4 hạ cấp do quá bẹt).
+        public bool IsMarker = true;
     }
 
     internal sealed class ZoneRenderState
@@ -673,5 +748,6 @@ namespace SessionZonesNs
         public List<Zone> Zones;
         public List<(string text, Color col)> Panel;
         public double NowPrice;
+        public double Tick;   // B2: cần để quy đổi khoảng cách ra "giá" khi vẽ nhãn
     }
 }

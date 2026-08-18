@@ -179,9 +179,9 @@ File: `quantower-tpo-suite/SessionZones.cs` (677 dòng) + `ProfileEngine.cs` (92
 
 | Giai đoạn | Việc | Điều kiện xong |
 |---|---|---|
-| **1** | B1, B2, B3, B4 (phần hiển thị số nhọn, cổng còn tắt) | Build sạch; chart chỉ còn mốc trong 12 giá; mọi nhãn có khoảng cách; nền và mốc phân biệt được bằng mắt |
-| **2** | A0 → A1 → A2 (song song được với việc deploy giai đoạn 1) | `MEASURE-LEVELS-RESULTS.md` có bảng đủ Wilson + số rổ đã thử |
-| **3** | A3, A4 | Biết mốc nhọn/ổn định có tốt hơn không ⇒ quyết bật `SharpnessGate` hay bỏ |
+| **1** | ✅ **XONG 2026-08-18** — B1, B2, B3, B4 (cổng còn tắt) | Build sạch (0 lỗi); chart chỉ còn mốc trong 12 giá; mọi nhãn mốc có "· cách X giá"; lớp nền (HVN tuần Lo/Hi thật + LVN) tách khỏi lớp mốc bằng field `Zone.IsMarker` |
+| **2** | ✅ **XONG 2026-08-18** — A0 → A1 → A2 | `MEASURE-LEVELS-RESULTS.md`: 21 rổ đã thử, KHÔNG loại mốc nào vượt nền 40%; A1 (chế độ balance) chưa đủ ca (n=1-9) |
+| **3** | A3, A4 — **KHÔNG ĐO ĐƯỢC Ý NGHĨA** (84% phiên đã nhọn sẵn nên rổ "vừa/bẹt" gần trống) | `SharpnessGate` giữ mặc định TẮT — không đủ bằng chứng để bật |
 | **4** | Theo kết quả: nâng/hạ loại mốc trong `FindZones`; B5 cảnh báo | Loại nào không ĐẠT thì xuống lớp nền, không được làm mốc |
 | **5** | A5, B6 | — |
 

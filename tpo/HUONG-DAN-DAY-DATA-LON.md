@@ -21,6 +21,47 @@ Lưu ý: commit vẫn nằm ở máy, chỉ có **push** bị chặn. Phải g�
 
 Cả hai đều lọt dưới ngưỡng 100 MB.
 
+## ⛔ Lỗi hay gặp: chạy nhầm trong PowerShell
+
+```
+gzip : The term 'gzip' is not recognized as the name of a cmdlet...
+```
+
+PowerShell **không có** `gzip`, `ls -lh`, `split`. Các lệnh dưới đây chỉ chạy trong
+**Git Bash** (cài kèm Git for Windows). Mở bằng: Start menu → gõ **"Git Bash"** → Enter,
+hoặc chuột phải vào thư mục repo → **"Git Bash Here"**.
+
+Nguy hiểm ở chỗ lỗi này **không làm hỏng gì cả**: `gzip` fail lặng lẽ, rồi `git add -A`
+vẫn chạy và commit những file khác đang có sẵn trên đĩa → nhìn vào thấy "commit thành công"
+mà file lớn thì chưa hề được nén và cũng chưa lên GitHub.
+
+**Kiểm tra file lớn còn trên đĩa không** (lệnh này chạy được trong PowerShell):
+```powershell
+Get-ChildItem data-export\data-footprint\ | Select-Object Name, @{n='MB';e={[math]::Round($_.Length/1MB,1)}}
+```
+
+## Cách 2 — làm thẳng trong PowerShell (nếu ngại mở Git Bash)
+
+PowerShell nén được bằng `Compress-Archive` (ra file `.zip`, máy Linux giải nén bình thường):
+
+```powershell
+cd data-export\data-footprint
+Compress-Archive -Path fp_GC_XCEC_Time_20240801-20260819_748d9h.csv,fp_GC_XCEC_Time_20240801-20260819_748d9h_bars.csv `
+                 -DestinationPath fp_GC_XCEC_748d9h.zip -CompressionLevel Optimal
+Get-ChildItem *.zip | Select-Object Name, @{n='MB';e={[math]::Round($_.Length/1MB,1)}}
+```
+
+Nén 556 MB mất vài phút và ăn khá nhiều RAM. Nếu PowerShell treo hoặc báo hết bộ nhớ thì
+quay lại dùng Git Bash — `gzip` nhẹ hơn nhiều.
+
+Xong thì:
+```powershell
+cd ..\..
+git add -A
+git commit -m "Them export GC:XCEC 748 ngay (ban nen)"
+git push origin main
+```
+
 ## Các bước làm trên máy Windows (mở **Git Bash**, không dùng CMD)
 
 ```bash

@@ -22,3 +22,8 @@ data-export/wyckoff/extracted/images/
 quantower-entry-signal/research/wyckoff/parity/bin/
 quantower-entry-signal/research/wyckoff/parity/obj/
 deploy-log.txt
+
+# ⛔ Export per-level nhiều năm: file .csv thô vượt 100MB → GitHub TỪ CHỐI push.
+# Chỉ commit bản nén .csv.gz (gzip -9 nén ~9,5x). Xem tpo/HUONG-DAN-DAY-DATA-LON.md
+data-export/data-footprint/fp_GC_XCEC_Time_20240801-20260819_748d9h.csv
+data-export/data-footprint/fp_GC_XCEC_Time_20240801-20260819_748d9h_bars.csv

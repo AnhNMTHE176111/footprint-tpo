@@ -98,6 +98,20 @@ Ebook bổ trợ: thành phần thị trường (chủ động/thụ động), F
 - **Nến/thanh (bar)** ← đôi chỗ ghi "quán bar"
 
 ## 📊 DỮ LIỆU ĐỂ TEST — TỰ ĐI TÌM, ĐỪNG HỎI (chốt 2026-08-02)
+
+> ### ⭐ ĐỌC `data-export/README.md` TRƯỚC — có NGUỒN CHUẨN rồi (chốt 2026-08-19)
+> Người học yêu cầu đánh dấu nổi bật kho dữ liệu dày mới xuất để **mọi lần nâng cấp
+> indicator / signal về sau đều tập trung vào nó**. Nguyên văn: *"đây là nguồn data khổng lồ.
+> Sau này khi triển khai upgrade các indicator hoặc signal thì có thể tập trung nguồn data này"*.
+> - **Nguồn chuẩn: `data-export/data-footprint/fp_GC_XCEC_Time_*.csv`** (+ `_bars.csv` cùng tên).
+>   Đo được **101.366 hợp đồng/phiên**, 1.373 nến M1/phiên.
+> - ⛔ **Các file cũ mỏng hơn 28-154 lần** (`Data_Footprint_Export.csv` chỉ **657 hợp đồng/phiên**).
+>   Mọi kết luận volume trước 2026-08-19 đều chạy trên file mỏng đó ⇒ **chưa đáng tin, phải
+>   chạy lại trên nguồn chuẩn** trước khi dùng để quyết định.
+> - ⚠️ `/GC:XCEC` là mã liên tục **nối thô không bù giá**: đã đo bước nhảy giả **+61,2 giá**
+>   tại 2026-07-29 20:59→22:00. Cửa sổ nhiều phiên vắt qua chỗ nối là rác — lọc bỏ trước khi đo.
+> - Bảng đầy đủ (ngày, mật độ, bẫy, múi giờ UTC) nằm trong **`data-export/README.md`**.
+
 Mọi dữ liệu xuất từ Quantower/Optimus Flow đều nằm trong **`data-export/`**. Khi cần backtest / kiểm tra
 signal: **tự tìm file phù hợp rồi chạy luôn**, chỉ hỏi người học khi THẬT SỰ không có file cần thiết
 (vd cần symbol/khung chưa từng xuất) — không hỏi "anh cho em đường dẫn file" nữa.

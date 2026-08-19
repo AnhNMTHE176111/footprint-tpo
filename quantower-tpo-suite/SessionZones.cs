@@ -91,10 +91,18 @@ namespace SessionZonesNs
         //    phang bi thuat toan goi ten -> bo han cho do roi mat.
         //  - Muc xa KHONG bo (yeu cau nguoi hoc): muc xa ma DU MANH van ve, nhung
         //    doi vai tro thanh MUC TIEU CHOT LOI, khong phai cho vao lenh.
+        // B9 (2026-08-19): hiệu chỉnh lại NGƯỠNG trên DỮ LIỆU DÀY (/GC:XCEC
+        //  2026-07-20..08-19, ~101k hợp đồng/phiên — gấp 5 lần file mỏng dùng ở B8).
+        //  Dữ liệu dày tìm ra NHIỀU bướu hơn (2,93 so với 2,12 mốc/phiên trước cổng),
+        //  nên giữ nguyên ×2,0 thì số mốc vẽ lên chart tăng 1,31 -> 2,11/phiên, tức
+        //  rối hơn đúng cái người học muốn tránh. ×2,5 kéo về 1,30 mốc/phiên (78%
+        //  phiên có ít nhất 1 mốc). Xem CALIB-HVN-DENSE.md.
+        //  ⚠️ Hiệu chỉnh trên 27 phiên — đây là chọn ngưỡng cho ĐỠ RỐI MẮT, KHÔNG
+        //  phải bằng chứng mốc tỉ lệ cao ăn tiền hơn (chưa đo được điều đó).
         [InputParameter("Cổng: tỉ lệ HVN tối thiểu (×TB)", 38, 1.0, 10.0, 0.1, 1)]
-        public double MinHvnRatio { get; set; } = 2.0;
+        public double MinHvnRatio { get; set; } = 2.5;
         [InputParameter("Mục tiêu chốt lời: tỉ lệ tối thiểu cho mức NGOÀI tầm với", 39, 1.0, 10.0, 0.1, 1)]
-        public double TargetMinRatio { get; set; } = 2.5;
+        public double TargetMinRatio { get; set; } = 3.0;
         [InputParameter("Hiện mức xa đủ mạnh làm mục tiêu chốt lời", 40)]
         public bool ShowTargets { get; set; } = true;
         [InputParameter("Hiện viền mờ nền quanh mốc HVN ngày", 37)]

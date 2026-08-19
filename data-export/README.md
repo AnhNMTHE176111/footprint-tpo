@@ -54,10 +54,24 @@ Export mới ghi **UTC** (`Lệch giờ ghi vào CSV = 0`). Kiểm chứng: gi�
 rơi đúng **21:00 → 22:00** trong file. Các indicator C# lại chạy `TzOffset = 7` (UTC+7) —
 khi đối chiếu Python ↔ C# phải cộng bù, đừng so thẳng chuỗi giờ.
 
-## 📥 Còn thiếu — việc cần làm
-Export dày **2024-08-01 → 2026-08-19 (748 ngày, 556 MB)** đã xuất xong ở máy Windows nhưng
-**chưa đẩy lên được** (GitHub chặn file > 100 MB). Cách nén rồi đẩy: `tpo/HUONG-DAN-DAY-DATA-LON.md`.
-Có file đó mới đủ số phiên để kiểm định (cần n≈235 phiên để phát hiện tỉ lệ thắng 48%).
+## 📥 Export dày 2 năm — ĐÃ CÓ
+
+`fp_GC_XCEC_Time_20240801-20260819_748d9h.csv.gz` (60 MB nén / 557 MB thô) +
+`_bars.csv.gz` (23 MB / 88 MB). Giải nén trước khi dùng:
+
+```bash
+cd data-export/data-footprint
+gunzip -k fp_GC_XCEC_Time_20240801-20260819_748d9h.csv.gz
+gunzip -k fp_GC_XCEC_Time_20240801-20260819_748d9h_bars.csv.gz
+```
+
+Bản `.csv` giải nén đã được `.gitignore` chặn nên không lo commit nhầm.
+
+Đo được: **529 phiên**, trung vị **143.142 hợp đồng/phiên**, 1.377 nến M1/phiên,
+640 ngày lịch có dữ liệu. Sau khi loại ±2 phiên quanh 11 chỗ đổi hợp đồng còn
+**474 phiên sạch** — đủ n để kết luận (ngưỡng cần khoảng 235 phiên).
+
+Kết quả đã chạy trên nguồn này: `quantower-tpo-suite/MEASURE-DENSE-RESULTS.md`.
 
 ## 🧭 Phân loại file bằng HEADER
 | Header bắt đầu bằng | Loại | Dùng cho |

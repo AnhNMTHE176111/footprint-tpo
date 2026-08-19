@@ -391,6 +391,55 @@ namespace TpoSuite
             return spans;
         }
 
+        // ---- Chỗ NỐI HỢP ĐỒNG của mã liên tục (B10) --------------------------
+        //  Mã liên tục (/GC:XCEC, GC1!, GC=F…) khi hợp đồng cũ hết vòng đời thì NHẢY
+        //  sang hợp đồng mới mà KHÔNG bù chênh lệch giá. Đo trên 2 năm GC (529 phiên,
+        //  ~143k hợp đồng/phiên): 8 chỗ nối, bước nhảy tới +61,2 giá, và LUÔN rơi
+        //  đúng vào GIỜ NGHỈ 1 TIẾNG của sàn — trong khi bước nhảy bình thường tại
+        //  giờ nghỉ đó có trung vị 0,7 giá, phân vị 90 là 8,4 giá.
+        //  Vì sao phải chặn: profile gộp nhiều phiên mà vắt qua chỗ nối thì dựng trên
+        //  HAI thang giá cách nhau ~60 giá ⇒ HVN sinh ra từ đó vô nghĩa. Vàng đổi hợp
+        //  đồng ~2 tháng/lần nên chuyện này lặp lại đều đặn.
+        //  Chỉ xét khoảng nghỉ trong [minGapMin, maxGapMin] để LOẠI nghỉ cuối tuần
+        //  (~46h): khoảng trống cuối tuần thật có thể tới 41,8 giá, to gần bằng chỗ
+        //  nối, nên gộp chung sẽ cắt nhầm tuần lành.
+        //  Trả CHỈ SỐ nến đầu tiên NGAY SAU chỗ nối gần nhất trong [from..to]; -1 = sạch.
+        public static int LastSpliceIndex(
+            IList<DateTime> times, IList<double> opens, IList<double> closes,
+            int from, int to, double minJump, double minGapMin = 30, double maxGapMin = 150)
+        {
+            if (times == null || opens == null || closes == null) return -1;
+            int n = Math.Min(times.Count, Math.Min(opens.Count, closes.Count));
+            if (n == 0 || minJump <= 0) return -1;
+            int lo = Math.Max(1, from), hi = Math.Min(to, n - 1);
+            int res = -1;
+            for (int i = lo; i <= hi; i++)
+            {
+                double gap = (times[i] - times[i - 1]).TotalMinutes;
+                if (gap < minGapMin || gap > maxGapMin) continue;
+                if (Math.Abs(opens[i] - closes[i - 1]) >= minJump) res = i;
+            }
+            return res;
+        }
+
+        // Bản dùng thẳng trên HistoricalData của Quantower.
+        public static int LastSpliceIndex(HistoricalData hd, int from, int to, double minJump,
+                                          double minGapMin = 30, double maxGapMin = 150)
+        {
+            if (hd == null || minJump <= 0) return -1;
+            int lo = Math.Max(1, from), hi = Math.Min(to, hd.Count - 1);
+            int res = -1;
+            for (int i = lo; i <= hi; i++)
+            {
+                if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b) continue;
+                if (hd[i - 1, SeekOriginHistory.Begin] is not HistoryItemBar a) continue;
+                double gap = (b.TimeLeft - a.TimeLeft).TotalMinutes;
+                if (gap < minGapMin || gap > maxGapMin) continue;
+                if (Math.Abs(b.Open - a.Close) >= minJump) res = i;
+            }
+            return res;
+        }
+
         // VWAP neo từ nến `from`, cộng dồn tới nến `to`, trả giá trị TẠI `to` (giống
         // vwap_series trong zones_corven.py, đã kiểm chứng offline — §2). Dùng typical
         // price (H+L+C)/3 × volume; fallback = Close nếu chưa có volume.

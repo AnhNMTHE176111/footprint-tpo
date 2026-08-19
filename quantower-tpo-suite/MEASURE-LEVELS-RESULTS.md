@@ -1,5 +1,14 @@
 # Kết quả đo — mốc nào đáng vẽ (2026-08-18)
 
+> ## ⛔ FILE NÀY ĐÃ LỖI THỜI — ĐỌC `MEASURE-DENSE-RESULTS.md` THAY THẾ (2026-08-19)
+> Toàn bộ số liệu dưới đây chạy trên `Data_Footprint_Export.csv`, file này chỉ có
+> **657 hợp đồng/phiên** — mỏng hơn dữ liệu thật **218 lần**. Profile dựng từ đó gần
+> như là nhiễu, nên mọi kết luận ở dưới không đáng tin.
+> Bản đo lại trên **474 phiên dày (143k hợp đồng/phiên)** nằm ở
+> `MEASURE-DENSE-RESULTS.md`. Kết luận mới mạnh hơn và rõ hơn: HVN **không** phải mốc
+> phản ứng, kiểm bằng 5 cách đo độc lập. Giữ file này chỉ để đối chiếu phương pháp.
+
+
 Chạy `measure_levels.py` trên `data-export/Data_Footprint_Export.csv` +
 `Data_Footprint_Export_bars.csv` (GCQ26, 128 phiên, 2026-02-03 → 07-31).
 Giao thức cố định: **SL 3 giá / TP 4,5 giá / tối đa 60 nến M1** (PLAN §A0.3).

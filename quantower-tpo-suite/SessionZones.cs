@@ -101,10 +101,21 @@ namespace SessionZonesNs
         //  phải bằng chứng mốc tỉ lệ cao ăn tiền hơn (chưa đo được điều đó).
         [InputParameter("Cổng: tỉ lệ HVN tối thiểu (×TB)", 38, 1.0, 10.0, 0.1, 1)]
         public double MinHvnRatio { get; set; } = 2.5;
+        private bool _weekSpliced, _daySpliced;      // B10: profile vua bi cat vi cho noi
         [InputParameter("Mục tiêu chốt lời: tỉ lệ tối thiểu cho mức NGOÀI tầm với", 39, 1.0, 10.0, 0.1, 1)]
         public double TargetMinRatio { get; set; } = 3.0;
         [InputParameter("Hiện mức xa đủ mạnh làm mục tiêu chốt lời", 40)]
         public bool ShowTargets { get; set; } = true;
+        // B10 (2026-08-19): chặn chỗ NỐI HỢP ĐỒNG của mã liên tục. Xem
+        //  ProfileEngine.LastSpliceIndex — đo trên 2 năm GC: 8 chỗ nối, nhảy tới
+        //  +61,2 giá. Nếu profile TUẦN (hoặc 24h) vắt qua chỗ nối thì cắt bỏ phần
+        //  trước chỗ nối, chỉ dựng từ dữ liệu cùng một hợp đồng.
+        [InputParameter("Hiện dòng nhắc mức bằng chứng của HVN", 43)]
+        public bool ShowEvidenceNote { get; set; } = true;
+        [InputParameter("Chặn chỗ nối hợp đồng của mã liên tục", 41)]
+        public bool SpliceGuard { get; set; } = true;
+        [InputParameter("Coi là chỗ nối khi giá nhảy quá (giá)", 42, 5.0, 200.0, 1.0, 1)]
+        public double MinSpliceJumpPrices { get; set; } = 20.0;
         [InputParameter("Hiện viền mờ nền quanh mốc HVN ngày", 37)]
         public bool ShowMarkerBand { get; set; } = true;
         [InputParameter("Bật cổng độ nhọn (hạ mốc bẹt xuống lớp nền)", 36)]
@@ -304,6 +315,13 @@ namespace SessionZonesNs
 
                 var panel = new List<(string, Color)>();
                 panel.Add(("PHIÊN HÔM NAY", Color.White));
+                // B10: báo ngay khi vừa cắt profile vì mã liên tục đổi hợp đồng —
+                // profile ngắn hơn bình thường nên HVN có thể thưa/lệch, người dùng
+                // cần biết lý do thay vì tưởng indicator hỏng.
+                if (_weekSpliced || _daySpliced)
+                    panel.Add(($"⚠ Mã liên tục vừa đổi hợp đồng — đã cắt bỏ phần trước chỗ nối" +
+                               $"{(_weekSpliced ? " (tuần)" : "")}{(_daySpliced ? " (ngày)" : "")}. " +
+                               $"Mốc dựng trên ít dữ liệu hơn thường lệ.", Color.Orange));
                 AddSentence(panel, asia, null, tick);
                 AddSentence(panel, europe, asia, tick);
                 AddSentence(panel, us, europe, tick, devTag: last.Label == "MY");
@@ -372,6 +390,12 @@ namespace SessionZonesNs
                     panel.Add(($"Nền/bối cảnh (KHÔNG đặt lệnh): {string.Join(" · ", nenList.Select(z => $"{z.Label} {Fmt(z.Lo)}–{Fmt(z.Hi)}"))}", Color.FromArgb(0x90, 0x90, 0x90)));
                 if (lvnList.Count > 0)
                     panel.Add(($"LVN (xuyên nhanh, đặt SL sau): {string.Join(" · ", lvnList.Select(z => Fmt(z.Center)))}", Color.FromArgb(0x90, 0x90, 0x90)));
+                // B10: dòng cuối nói thẳng mức bằng chứng, để không ai (kể cả tác giả)
+                // đọc nhầm mốc HVN thành tín hiệu vào lệnh. Số liệu: MEASURE-DENSE-RESULTS.md
+                // — 474 phiên dày, 4 cách đo khác nhau, HVN đều KHÔNG hơn mức bốc ngẫu nhiên.
+                if (ShowEvidenceNote)
+                    panel.Add(("HVN: đã đo 474 phiên — ngang mức bốc ngẫu nhiên. Dùng làm bối cảnh/mục tiêu, KHÔNG phải tín hiệu vào lệnh.",
+                               Color.FromArgb(0x80, 0x80, 0x80)));
 
                 lock (_sync) _render = new ZoneRenderState { Zones = zones, Panel = panel, NowPrice = nowPrice, Tick = tick };
 
@@ -532,16 +556,21 @@ namespace SessionZonesNs
                 // "tuần" = TUẦN CME ĐÃ ĐÓNG gần nhất (không phải ZoneLookbackSessions
                 // trượt) — xem WeekGapHours ở trên. Cần ít nhất 2 tuần trong hd mới có
                 // 1 tuần đã đóng để dùng; nếu chưa đủ thì tạm dùng tuần đang chạy.
+                double spliceJump = SpliceGuard ? MinSpliceJumpPrices * 10.0 * tick : 0;
+                _weekSpliced = _daySpliced = false;
                 var weekSpans = ProfileEngine.WeekSpans(hd, WeekGapHours);
-                if (weekSpans.Count >= 2)
+                var pwOpt = weekSpans.Count >= 2 ? weekSpans[weekSpans.Count - 2]
+                          : weekSpans.Count == 1 ? weekSpans[0]
+                          : ((int fr, int to)?)null;
+                if (pwOpt.HasValue)
                 {
-                    var pw = weekSpans[weekSpans.Count - 2];
-                    wkRows = ProfileEngine.RowsOver(hd, pw.fr, pw.to, rowStep, UseVolume);
-                }
-                else if (weekSpans.Count == 1)
-                {
-                    var pw = weekSpans[0];
-                    wkRows = ProfileEngine.RowsOver(hd, pw.fr, pw.to, rowStep, UseVolume);
+                    var pw = pwOpt.Value;
+                    // B10: nếu tuần này vắt qua chỗ nối hợp đồng thì chỉ lấy phần SAU
+                    // chỗ nối — nửa trước nằm trên thang giá của hợp đồng cũ.
+                    int sp = ProfileEngine.LastSpliceIndex(hd, pw.fr, pw.to, spliceJump);
+                    int fr = sp > pw.fr ? sp : pw.fr;
+                    _weekSpliced = sp > pw.fr;
+                    wkRows = ProfileEngine.RowsOver(hd, fr, pw.to, rowStep, UseVolume);
                 }
                 // "ngày" = 24h cuối (xấp xỉ ngày đang phát triển)
                 var dayStart = completed[completed.Count - 1].End.AddHours(-24);
@@ -550,7 +579,12 @@ namespace SessionZonesNs
                     if (hd[blocks[i].from, SeekOriginHistory.Begin] is HistoryItemBar bb
                         && bb.TimeLeft >= dayStart) { dFrom = blocks[i].from; break; }
                 if (dFrom >= 0)
-                    dyRows = ProfileEngine.RowsOver(hd, dFrom, blocks[blocks.Count - 2].to, rowStep, UseVolume);
+                {
+                    int dTo = blocks[blocks.Count - 2].to;
+                    int spD = ProfileEngine.LastSpliceIndex(hd, dFrom, dTo, spliceJump);
+                    if (spD > dFrom) { dFrom = spD; _daySpliced = true; }
+                    dyRows = ProfileEngine.RowsOver(hd, dFrom, dTo, rowStep, UseVolume);
+                }
             }
             // B3: HVN tuần = LỚP NỀN — Lo/Hi THẬT (nới từ đỉnh tới khi volume tụt
             // dưới 90% đỉnh), không phải điểm. Đây là chỗ DUY NHẤT trong nhóm HVN

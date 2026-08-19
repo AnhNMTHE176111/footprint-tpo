@@ -86,6 +86,17 @@ namespace SessionZonesNs
         //  để kết luận "mốc nhọn phản ứng tốt hơn mốc bẹt" (84% phiên đã nhọn sẵn
         //  nên rổ "vừa/bẹt" gần trống). MẶC ĐỊNH TẮT — chỉ hiện con số độ nhọn
         //  trên nhãn, KHÔNG tự hạ cấp mốc, cho tới khi có bằng chứng đủ mạnh.
+        // B8: cổng chất lượng + lớp MỤC TIÊU (người học chốt 2026-08-19).
+        //  - Cổng tỉ lệ: HVN yếu hơn nguong nay khong phai buou that, chi la nen
+        //    phang bi thuat toan goi ten -> bo han cho do roi mat.
+        //  - Muc xa KHONG bo (yeu cau nguoi hoc): muc xa ma DU MANH van ve, nhung
+        //    doi vai tro thanh MUC TIEU CHOT LOI, khong phai cho vao lenh.
+        [InputParameter("Cổng: tỉ lệ HVN tối thiểu (×TB)", 38, 1.0, 10.0, 0.1, 1)]
+        public double MinHvnRatio { get; set; } = 2.0;
+        [InputParameter("Mục tiêu chốt lời: tỉ lệ tối thiểu cho mức NGOÀI tầm với", 39, 1.0, 10.0, 0.1, 1)]
+        public double TargetMinRatio { get; set; } = 2.5;
+        [InputParameter("Hiện mức xa đủ mạnh làm mục tiêu chốt lời", 40)]
+        public bool ShowTargets { get; set; } = true;
         [InputParameter("Hiện viền mờ nền quanh mốc HVN ngày", 37)]
         public bool ShowMarkerBand { get; set; } = true;
         [InputParameter("Bật cổng độ nhọn (hạ mốc bẹt xuống lớp nền)", 36)]
@@ -113,6 +124,8 @@ namespace SessionZonesNs
         // → HVN dùng CAM để phân biệt được trên chart.
         [InputParameter("Màu HVN", 43)]
         public Color HvnColor { get; set; } = Color.FromArgb(0xFF, 0x8F, 0x00);
+        [InputParameter("Màu mục tiêu chốt lời", 127)]
+        public Color TargetColor { get; set; } = Color.FromArgb(0x7E, 0x57, 0xC2);   // tím — khác hẳn cam của HVN
 
         // ---------- Telegram (tổng hợp: đầu ngày + buổi chiều + trước phiên Mỹ) ----------
         [InputParameter("Gửi Telegram", 50)]
@@ -311,7 +324,8 @@ namespace SessionZonesNs
                 var canhLenh = zones.Where(z => z.IsMarker && z.Type != "lvn" && IsHvn(z)).ToList();
                 var boiCanh = zones.Where(z => z.IsMarker && z.Type != "lvn" && !IsHvn(z)).ToList();
                 var lvnList = zones.Where(z => z.Type == "lvn").ToList();
-                var nenList = zones.Where(z => !z.IsMarker && z.Type != "lvn").ToList();
+                var nenList = zones.Where(z => !z.IsMarker && !z.IsTarget && z.Type != "lvn").ToList();
+                var targetList = zones.Where(z => z.IsTarget).OrderBy(z => Math.Abs(z.Center - nowPrice)).ToList();
                 if (canhLenh.Count > 0)
                 {
                     // B2: sắp theo KHOẢNG CÁCH gần→xa (không theo điểm mạnh) — người
@@ -330,6 +344,17 @@ namespace SessionZonesNs
                     var below = canhLenh.Where(z => z.Center < nowPrice).OrderByDescending(z => z.Center).Take(2).ToList();
                     if (above.Count > 0) panel.Add(($"  Nếu LONG → T: {string.Join(", ", above.Select(z => Fmt(z.Center - 2 * tick)))}", Color.DimGray));
                     if (below.Count > 0) panel.Add(($"  Nếu SHORT → T: {string.Join(", ", below.Select(z => Fmt(z.Center + 2 * tick)))}", Color.DimGray));
+                }
+                if (targetList.Count > 0)
+                {
+                    // B8: mức mạnh nhưng NGOÀI tầm vào lệnh — dùng để đặt chốt lời.
+                    panel.Add(("MỤC TIÊU CHỐT LỜI (ngoài tầm vào lệnh):", Color.Silver));
+                    foreach (var z in targetList.Take(4))
+                    {
+                        double distGia = Math.Abs(z.Center - nowPrice) / (10.0 * tick);
+                        string dir = z.Center > nowPrice ? "trên" : "dưới";
+                        panel.Add(($"  {Fmt(z.Center)}  {dir} · cách {distGia:0.0} giá · ×{z.Ratio:0.0}", TargetColor));
+                    }
                 }
                 if (boiCanh.Count > 0)
                     panel.Add(($"Bối cảnh phiên (chỉ tham khảo): {string.Join(" · ", boiCanh.Select(z => $"{z.Label} {Fmt(z.Center)}"))}", Color.Gray));
@@ -526,10 +551,11 @@ namespace SessionZonesNs
             if (ShowHvn && wkRows != null)
                 foreach (var (p, ratio) in ProfileEngine.FindHvn(wkRows, tick).Take(MaxHvn))
                 {
+                    if (ratio < MinHvnRatio) continue;                     // B8: cổng tỉ lệ
                     var (lo, hi) = ShowContextBands ? ProfileEngine.PeakSharpness(wkRows, p, rowStep) : (p, p);
                     zones.Add(new Zone { Center = p, Lo = lo, Hi = hi, Type = "hvn_week",
                         Side = SideOf(p), Strength = Math.Min(95, 70 + ratio * 6), IsMarker = false,
-                        Label = $"HVN tuần ×{ratio:0.0}" });
+                        Ratio = ratio, Label = $"HVN tuần ×{ratio:0.0}" });
                 }
             // B4: HVN ngày = MỐC — giữ Lo=Hi=đỉnh (điểm, để canh lệnh chính xác),
             // nhưng đo kèm độ nhọn (nền 90%) để (a) ghi lên nhãn, (b) hạ cấp xuống
@@ -537,6 +563,7 @@ namespace SessionZonesNs
             if (ShowHvn && dyRows != null)
                 foreach (var (p, ratio) in ProfileEngine.FindHvn(dyRows, tick).Take(MaxHvn))
                 {
+                    if (ratio < MinHvnRatio) continue;                     // B8: cổng tỉ lệ
                     var (lo, hi) = ProfileEngine.PeakSharpness(dyRows, p, rowStep);
                     double widthGia = (hi - lo) / (10.0 * tick);
                     bool tooFlat = SharpnessGate && widthGia > MaxLevelThicknessPrices;
@@ -547,6 +574,7 @@ namespace SessionZonesNs
                         BandLo = lo, BandHi = hi,
                         Type = "hvn_day", Side = SideOf(p),
                         Strength = Math.Min(88, 64 + ratio * 6),
+                        Ratio = ratio,
                         IsMarker = !tooFlat,
                         Label = tooFlat
                             ? $"HVN ngày ×{ratio:0.0} · nền {widthGia:0} giá (bẹt, xem là bối cảnh)"
@@ -606,6 +634,21 @@ namespace SessionZonesNs
             double radius = ZoneRadiusPrices > 0
                 ? ZoneRadiusPrices * 10.0 * tick
                 : ZoneRangeAtr * Math.Max(atr, tick);
+            // B8: mức NGOÀI tầm với không bị vứt vô điều kiện nữa. Mức xa mà đủ
+            // mạnh (Ratio >= TargetMinRatio) đổi vai trò thành MỤC TIÊU CHỐT LỜI —
+            // không phải chỗ vào lệnh, nhưng là chỗ giá có lý do dừng lại, nên cần
+            // thấy để đặt chốt lời. Mức xa mà yếu thì vẫn bỏ (đó mới là rác).
+            var farTargets = new List<Zone>();
+            if (ShowTargets)
+                foreach (var z in zones)
+                {
+                    if (Math.Abs(z.Center - nowPrice) <= radius) continue;
+                    if (z.Ratio < TargetMinRatio) continue;
+                    z.IsTarget = true;
+                    z.IsMarker = false;                 // không phải mốc vào lệnh
+                    z.Label += " · MỤC TIÊU";
+                    farTargets.Add(z);
+                }
             zones = zones.Where(z => Math.Abs(z.Center - nowPrice) <= radius).ToList();
 
             // ---- D5: trần số vùng + cân đối 2 phía ---------------------------
@@ -616,6 +659,7 @@ namespace SessionZonesNs
             // LVN xét riêng: không cạnh tranh khe với vùng canh lệnh, giữ nguyên
             // (đã giới hạn MaxLvn ở trên), nhưng vẫn áp lọc tầm với.
             zones.AddRange(lvnZones.Where(z => Math.Abs(z.Center - nowPrice) <= radius));
+            zones.AddRange(farTargets);   // B8: mục tiêu xét riêng, không chiếm khe MaxZones
             return zones.OrderByDescending(z => z.Strength).ToList();
         }
 
@@ -683,7 +727,7 @@ namespace SessionZonesNs
                 // chỗ đặt lệnh — HVN tuần gộp nhiều phiên + LVN + mốc bị B4 hạ
                 // cấp vì quá bẹt), rồi vẽ LỚP MỐC sau đè lên (đường mảnh + nhãn +
                 // khoảng cách tới giá — đây mới là chỗ đặt lệnh).
-                foreach (var z in rs.Zones.Where(z => !z.IsMarker).OrderBy(z => z.Strength))
+                foreach (var z in rs.Zones.Where(z => !z.IsMarker && !z.IsTarget).OrderBy(z => z.Strength))
                 {
                     bool isLvn = z.Type == "lvn";
                     Color col = isLvn ? Color.FromArgb(0x90, 0x90, 0x90) : HvnColor;
@@ -703,6 +747,20 @@ namespace SessionZonesNs
                     using var f = new Font("Arial", 7, FontStyle.Italic);
                     using var br = new SolidBrush(Color.FromArgb(170, col));
                     gr.DrawString(z.Label, f, br, clip.Right - 190, ym - 10);
+                }
+                // B8: MỤC TIÊU CHỐT LỜI — nét đứt dài, màu riêng, nhãn ghi rõ vai trò.
+                // Vẽ khác hẳn lớp mốc để mắt không nhầm đây là chỗ vào lệnh.
+                foreach (var z in rs.Zones.Where(z => z.IsTarget))
+                {
+                    float ym = (float)conv.GetChartY(z.Center);
+                    if (ym < clip.Top || ym > clip.Bottom) continue;
+                    using var pen = new Pen(Color.FromArgb(180, TargetColor), 1.4f)
+                    { DashStyle = DashStyle.Custom, DashPattern = new float[] { 10f, 6f } };
+                    gr.DrawLine(pen, clip.Left, ym, clip.Right, ym);
+                    double distGia = Math.Abs(z.Center - rs.NowPrice) / (10.0 * rs.Tick);
+                    using var f = new Font("Arial", 8, FontStyle.Regular);
+                    using var br = new SolidBrush(TargetColor);
+                    gr.DrawString($"{z.Label} · cách {distGia:0.0} giá", f, br, clip.Right - 190, ym - 12);
                 }
                 foreach (var z in rs.Zones.Where(z => z.IsMarker).OrderBy(z => z.Strength))   // yếu vẽ trước
                 {
@@ -766,6 +824,10 @@ namespace SessionZonesNs
         // mờ hai bên đường mốc — mốc vẫn là điểm đặt lệnh, dải chỉ cho biết đỉnh
         // khối lượng nhọn hay bẹt. NaN = không có dải.
         public double BandLo = double.NaN, BandHi = double.NaN;
+        // B8: tỉ lệ khối lượng so với trung bình (chỉ HVN có); IsTarget = mức ngoài
+        // tầm với nhưng đủ mạnh -> vai trò MỤC TIÊU CHỐT LỜI, không phải chỗ vào lệnh.
+        public double Ratio = 0;
+        public bool IsTarget = false;
     }
 
     internal sealed class ZoneRenderState

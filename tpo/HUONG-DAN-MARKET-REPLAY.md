@@ -76,3 +76,23 @@ lớp `Strategy` mỏng gọi lại logic của `RunnerSignal`.
 - [Question about Market Replay — diễn đàn Optimus (tốc độ 40%)](https://community.optimusfutures.com/t/question-about-market-replay/5036)
 - [Backtesting data is very limited — diễn đàn Optimus (tick mỏng, Rithmic nhiều nhất)](https://community.optimusfutures.com/t/backtesting-data-is-very-limited/5642)
 - [dxFeed mở rộng độ sâu dữ liệu lịch sử cho Quantower (tick 2 năm)](https://dxfeed.com/dxfeed-has-expanded-historical-market-data-depth-for-quantower-retail-users/)
+
+## 6. ⚠️ Áp template vào chart phát lại bị "No data" — cách xử lý
+
+**Hiện tượng:** đang phát lại bình thường, bấm *Apply template* → chart trắng, báo
+*"No data for /GCZ26:XCEC — Your current connection does not provide such data"*.
+
+**Nguyên nhân:** tài liệu Quantower ghi rõ template lưu **"a predefined symbol"** — tức lưu luôn mã
+**kèm nguồn dữ liệu** lúc lưu template (dxFeed trực tiếp). Khi áp vào panel đang phát lại, nó kéo panel
+về nguồn dxFeed trực tiếp — nguồn này **đứng im trong lúc mô phỏng** ⇒ không có dữ liệu.
+Nhận biết: ô mã trên chart chạy đúng ghi phụ đề **"Market Replay"**, chart lỗi thì ghi **"dxFeed"**.
+
+**Sửa ngay:** sau khi áp template → bấm vào **ô mã** trên chart → tìm `GCZ26` → chọn đúng dòng thuộc
+nguồn **Market Replay** (không phải dxFeed). Dữ liệu về lại, **toàn bộ cấu hình template được giữ**.
+Nhớ chỉnh lại khung thời gian (template có thể kéo về *3 days*, cần *1m*).
+
+**Cách khỏi gặp lại:** mở một chart cấu hình đúng ý → menu ngữ cảnh → **"Set as default"**. Mọi chart mở
+sau đó từ nút **Visualizer** của Market Replay sẽ tự có sẵn cấu hình, không cần áp template nữa.
+Cách khác: **"Duplicate panel"** từ chart phát lại đang chạy — bản sao giữ nguyên ràng buộc Market Replay.
+
+Nguồn: [Templates — Quantower](https://help.quantower.com/quantower/general-settings/templates)

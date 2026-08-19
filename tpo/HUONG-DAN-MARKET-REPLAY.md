@@ -96,3 +96,19 @@ sau đó từ nút **Visualizer** của Market Replay sẽ tự có sẵn cấu 
 Cách khác: **"Duplicate panel"** từ chart phát lại đang chạy — bản sao giữ nguyên ràng buộc Market Replay.
 
 Nguồn: [Templates — Quantower](https://help.quantower.com/quantower/general-settings/templates)
+
+## 7. Nhảy tới một ngày cụ thể trong lúc phát lại
+
+Optimus Flow **không có** kiểu bấm thẳng lên chart để nhảy ngày như TradingView. Trong lúc mô phỏng chỉ có:
+thanh **Speed** (tốc độ), nút **tạm dừng/chạy**, nút **▷▷ tua nhanh**. Thanh phần trăm tiến độ **không kéo được**.
+
+**Cách nhảy tới ngày mong muốn:** bấm **STOP** → ở panel Market Replay đặt lại:
+- **History range**: giữ mốc đầu **sớm hơn ngày muốn tập ít nhất 3 tuần** (để `Session Zones` có đủ dữ liệu
+  dựng HVN tuần / HVN ngày), mốc cuối là ngày kết thúc.
+- **Start replaying from**: đặt đúng **ngày + giờ** muốn bắt đầu tập.
+
+Ví dụ muốn tập ngày 15/8: History range `7/25/2026 → 8/17/2026`, Start replaying from `8/15/2026`.
+Phần dữ liệu từ 25/7 đến 15/8 vẫn được nạp để chỉ báo tính đúng, nhưng phát lại bắt đầu ngay từ 15/8.
+
+⚠️ Mỗi lần Start là dựng lại cache từ đầu (mất vài chục giây tới vài phút tuỳ độ dài range) ⇒ đừng đặt
+range quá dài nếu chỉ tập một ngày.

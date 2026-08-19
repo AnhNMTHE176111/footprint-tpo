@@ -86,6 +86,8 @@ namespace SessionZonesNs
         //  để kết luận "mốc nhọn phản ứng tốt hơn mốc bẹt" (84% phiên đã nhọn sẵn
         //  nên rổ "vừa/bẹt" gần trống). MẶC ĐỊNH TẮT — chỉ hiện con số độ nhọn
         //  trên nhãn, KHÔNG tự hạ cấp mốc, cho tới khi có bằng chứng đủ mạnh.
+        [InputParameter("Hiện viền mờ nền quanh mốc HVN ngày", 37)]
+        public bool ShowMarkerBand { get; set; } = true;
         [InputParameter("Bật cổng độ nhọn (hạ mốc bẹt xuống lớp nền)", 36)]
         public bool SharpnessGate { get; set; } = false;
         [InputParameter("Độ dày tối đa của MỐC (giá) — bằng SL của bạn", 37, 1, 20, 0.5, 1)]
@@ -542,6 +544,7 @@ namespace SessionZonesNs
                     {
                         Center = p,
                         Lo = tooFlat ? lo : p, Hi = tooFlat ? hi : p,
+                        BandLo = lo, BandHi = hi,
                         Type = "hvn_day", Side = SideOf(p),
                         Strength = Math.Min(88, 64 + ratio * 6),
                         IsMarker = !tooFlat,
@@ -708,6 +711,24 @@ namespace SessionZonesNs
                               : z.Side > 0 ? SupColor : z.Side < 0 ? ResColor : Color.Gray;
                     float ym = (float)conv.GetChartY(z.Center);
                     if (ym < clip.Top || ym > clip.Bottom) continue;
+                    // B7: viền mờ hai bên = "nền" đo được (khối lượng còn >=90% đỉnh).
+                    // Nền mỏng ⇒ đỉnh nhọn, mốc đáng tin; nền dày ⇒ đỉnh bẹt, vào lệnh
+                    // theo điểm là ảo tưởng chính xác. Đường giữa vẫn là chỗ đặt lệnh.
+                    if (ShowMarkerBand && !double.IsNaN(z.BandLo) && !double.IsNaN(z.BandHi)
+                        && z.BandHi > z.BandLo)
+                    {
+                        float yb1 = (float)conv.GetChartY(z.BandLo), yb2 = (float)conv.GetChartY(z.BandHi);
+                        float bTop = Math.Min(yb1, yb2), bBot = Math.Max(yb1, yb2);
+                        if (bBot - bTop >= 1)
+                        {
+                            using var bandFill = new SolidBrush(Color.FromArgb(30, col));
+                            gr.FillRectangle(bandFill, clip.Left, bTop, clip.Width, bBot - bTop);
+                            using var bandPen = new Pen(Color.FromArgb(70, col), 1f)
+                            { DashStyle = DashStyle.Dot };
+                            gr.DrawLine(bandPen, clip.Left, bTop, clip.Right, bTop);
+                            gr.DrawLine(bandPen, clip.Left, bBot, clip.Right, bBot);
+                        }
+                    }
                     // HVN ngày đậm nhất trong nhóm mốc, naked POC nét đứt, còn lại nét mảnh.
                     float pw = z.Type == "hvn_day" ? 2f : z.Type == "naked_poc" ? 2f : 1.2f;
                     using var pen = new Pen(col, pw)
@@ -741,6 +762,10 @@ namespace SessionZonesNs
         // false = lớp NỀN/bối cảnh (dải mờ, KHÔNG đặt lệnh — hoặc vì bản chất là
         // vùng gộp nhiều phiên [hvn_week], hoặc vì bị B4 hạ cấp do quá bẹt).
         public bool IsMarker = true;
+        // B7: dải "nền" đo được quanh MỐC (PeakSharpness 90%). Chỉ dùng để VẼ viền
+        // mờ hai bên đường mốc — mốc vẫn là điểm đặt lệnh, dải chỉ cho biết đỉnh
+        // khối lượng nhọn hay bẹt. NaN = không có dải.
+        public double BandLo = double.NaN, BandHi = double.NaN;
     }
 
     internal sealed class ZoneRenderState

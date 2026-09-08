@@ -88,3 +88,30 @@ Chờ đi ngang **chỉ có ích khi kéo dừng lỗ lên sát cụm đi ngang*
 "Khối lượng cực lớn" ở đây là `≥ 3× trung vị 50 nến`, **không phải công thức cột tím của
 VSA Volume** — nếu chỉ báo đó dùng ngưỡng khác thì tập ca sẽ khác. Đo trên M1, đích 2R, chân
 trời 60 nến; chưa thử khung lớn hơn.
+
+---
+
+# Bổ sung 2: CHẠY CẢ HAI CHIỀU (lật gương dữ liệu)
+
+Script `research/kich-ban-hap-thu5.py` — lật dấu giá và delta để dùng **cùng một bộ code** cho hai chiều,
+nên số liệu so sánh được trực tiếp. ⚠️ Trong output thô của chiều 2, nhãn "duoi VWAP" là **theo không gian
+lật gương**, đọc ngoài đời phải hiểu ngược lại thành **TRÊN VWAP**.
+
+| | Bán bị hấp thụ ở ĐÁY → mua | Mua bị hấp thụ ở ĐỈNH → bán |
+|---|---|---|
+| số ca | 4.205 | 3.783 |
+| có nến xác nhận mạnh | 498 (11,8%) | 486 (12,8%) |
+| **không lọc:** K1 / K2 / K3 / K0 | 8,1 / 18,0 / **61,9** / 11,9 % | 5,9 / 19,0 / **65,2** / 9,8 % |
+| **có xác nhận:** K1 / K2 / K3 / K0 | 25,9 / 15,3 / **44,2** / 14,7 % | 28,0 / 10,5 / **49,4** / 12,1 % |
+| V0 vào ngay nến xác nhận | −0,008R | **−0,131R** |
+| V2 chờ 2 nến đi ngang, lỗ dưới đáy/đỉnh sự kiện | −0,060R | −0,066R |
+| V2t chờ 2 nến đi ngang, lỗ sát cụm đi ngang | **+0,007R** | −0,052R |
+
+⇒ **Tần số 3 kịch bản gần như đối xứng** giữa hai chiều (K3 luôn đứng đầu; đỉnh còn thất bại nhiều hơn đáy).
+⇒ Nhưng **vào lệnh chiều BÁN tệ hơn rõ rệt** (−0,131R so với −0,008R) — khớp với việc vàng 2 năm qua
+xu hướng tăng, bán ngược đỉnh bị nghiến.
+⇒ Ca lọt cả hai điều kiện "có xác nhận" **và** "thử lại rồi lên" (K2) ở chiều đáy: 15,3% × 498 ≈ **76 ca
+trong 2 năm = 1,8%** tổng số ca bán tháo.
+
+Đáng đào thêm (n nhỏ, chưa kết luận): bán ở đỉnh **khi giá đang dưới VWAP ngày** cho K1 **40,0%**
+(n=95) so với 25,1% khi ở trên VWAP — tức bán ngược đỉnh chỉ đáng làm khi khung ngày đang yếu.

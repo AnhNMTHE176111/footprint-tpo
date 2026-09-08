@@ -46,3 +46,45 @@ trượt giá. Gần như hòa ⇒ **chỉ dùng đọc chart, không code thàn
 ## Lưu ý cách đọc con số
 "K3" nghĩa là **đáy bị xuyên**, KHÔNG đồng nghĩa "phóng mạnh xuống" — nhiều ca chỉ xuyên vài tick rồi
 lình xình (thấy rõ ở chỗ nới ngưỡng xuyên: K3 tụt từ 75,9% xuống 45,5%, phần lớn chuyển sang K0/K2).
+
+---
+
+# Bổ sung (cùng ngày): CHIA THEO VÙNG + đo kỳ vọng từng kiểu vào lệnh
+
+Script: `research/kich-ban-hap-thu3.py`, `research/kich-ban-hap-thu4.py`. Vùng tính từ chính file bars
+(UTC, phiên CME mốc 22:00 UTC).
+
+## Vùng KHÔNG đổi được kết quả
+| Điều kiện vùng | K1 | K2 | K3 | n |
+|---|---|---|---|---|
+| tất cả (không xác nhận) | 8,1% | 17,9% | 61,9% | 4.368 |
+| dưới VWAP ngày | 8,2% | 17,7% | 62,3% | 2.934 |
+| trên VWAP ngày | 7,9% | 18,5% | 61,0% | 1.434 |
+| là đáy PHIÊN mới | 9,6% | 16,9% | 58,8% | 1.031 |
+| chỉ là đáy 20 nến | 7,6% | 18,2% | 62,8% | 3.337 |
+| trùng đáy phiên trước ±5 | 6,6% | 18,3% | 63,8% | 257 |
+| trùng đáy phiên trước ±10 | 7,5% | 18,9% | 62,8% | 545 |
+| trong giờ pit COMEX | 8,2% | 16,5% | 60,4% | 886 |
+
+Có xác nhận (n=526): dưới VWAP K1 26,3% vs trên VWAP 22,1%; đáy phiên mới 28,0% vs 24,3%.
+⇒ **Chênh lệch nhỏ, không đủ tách khỏi nhiễu.** Trùng đáy phiên trước còn **hơi kém hơn** nền.
+
+## Kỳ vọng từng kiểu vào lệnh (đích 2R, tối đa 60 nến)
+| Kiểu vào | n | thắng | thua | kỳ vọng |
+|---|---|---|---|---|
+| V0 vào ngay nến xác nhận, lỗ dưới đáy bán tháo | 494 | 24,9% | 59,3% | −0,008R |
+| V0t vào ngay, lỗ sát dưới đáy nến xác nhận | 498 | 26,1% | 68,1% | −0,119R |
+| V2 chờ 2 nến đi ngang rồi vào nến tăng, lỗ dưới đáy bán tháo | 1.127 | 14,5% | 51,2% | −0,060R |
+| **V2t chờ 2 nến đi ngang, lỗ SÁT dưới cụm đi ngang** | 1.127 | 27,7% | 60,9% | **+0,007R** |
+| V3t chờ 3 nến đi ngang, lỗ sát cụm đi ngang | 1.046 | 26,0% | 59,8% | −0,009R |
+| V3 đi ngang rồi xuyên đáy → BÁN | 384 | 25,3% | 54,7% | +0,023R |
+
+⇒ **Tất cả nằm trong khoảng −0,12R đến +0,02R = KHÔNG có lợi thế**, chưa trừ phí.
+⇒ Chờ đi ngang **không** cải thiện gì nếu vẫn để dừng lỗ dưới đáy nến bán tháo (−0,060R):
+tỷ lệ thắng tụt từ 24,9% xuống 14,5% vì vào cao hơn ⇒ đích 2R xa hơn theo giá.
+Chờ đi ngang **chỉ có ích khi kéo dừng lỗ lên sát cụm đi ngang** (−0,060R → +0,007R).
+
+## Giới hạn của phép đo
+"Khối lượng cực lớn" ở đây là `≥ 3× trung vị 50 nến`, **không phải công thức cột tím của
+VSA Volume** — nếu chỉ báo đó dùng ngưỡng khác thì tập ca sẽ khác. Đo trên M1, đích 2R, chân
+trời 60 nến; chưa thử khung lớn hơn.

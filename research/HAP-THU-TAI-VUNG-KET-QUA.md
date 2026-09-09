@@ -61,3 +61,24 @@ Hai thứ đáng theo tiếp vì **nhất quán qua nhiều cách cắt**, khôn
 - Kiểm định tách đôi thời gian (2 năm chia 2 nửa) — luật nào chết ở nửa sau thì bỏ.
 - Nếu muốn dùng ngay: đánh **theo hướng phá** khi cụm phá cực trị xảy ra **xa mọi vùng**, thay vì
   bắt đảo chiều.
+
+---
+
+# Bổ sung: TẦN SUẤT xảy ra gần VWAP (khác hẳn tỉ lệ thành công ở trên)
+
+`research/tan-suat-hap-thu-tai-vwap.py` — đo tỉ lệ nến sự kiện nằm trong ±tol quanh VWAP,
+so với nến ngẫu nhiên (n = 22.383).
+
+| VWAP ngày, bán kính | nến ngẫu nhiên | hấp thụ đúng nghĩa (B, n=367) | phá cực trị (A, n=7.835) |
+|---|---|---|---|
+| ±1 giá | 8,1% | 10,4% (z=+1,55) | 7,1% (z=−3,35) |
+| ±2 giá | 16,4% | **21,0% (z=+2,38)** | 14,3% (z=−4,89) |
+| ±4 giá | 30,0% | **38,7% (z=+3,63)** | 27,9% (z=−4,15) |
+
+VWAP **tuần**: hấp thụ 4,6% so với nền 4,0% ở ±1 giá (z=+0,58) — **không có gì**.
+
+⇒ **Hấp thụ đúng nghĩa XẢY RA gần VWAP ngày nhiều hơn ngẫu nhiên** (+29% tương đối ở ±4 giá,
+z=+3,63) — đây là bằng chứng về tần suất, độc lập với bằng chứng về tỉ lệ thành công.
+⇒ **Cụm phá cực trị thì ngược lại: xảy ra XA VWAP hơn** (z=−4,89) — hợp logic, cực trị mới
+thì phải cách xa giá trung bình.
+⇒ Hai phép đo độc lập cùng chỉ về **VWAP ngày**, không phải HVN.

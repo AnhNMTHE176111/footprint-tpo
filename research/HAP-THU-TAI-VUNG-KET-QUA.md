@@ -82,3 +82,32 @@ z=+3,63) — đây là bằng chứng về tần suất, độc lập với bằ
 ⇒ **Cụm phá cực trị thì ngược lại: xảy ra XA VWAP hơn** (z=−4,89) — hợp logic, cực trị mới
 thì phải cách xa giá trung bình.
 ⇒ Hai phép đo độc lập cùng chỉ về **VWAP ngày**, không phải HVN.
+
+---
+
+# Bổ sung 2: "PHÁ → HỒI VỀ MỐC → ĐI TIẾP" có đúng ở HVN / VWAP không?
+
+`research/pha-hoi-di-tiep-tai-vung.py` — chỉ xét họ **A (phá cực trị)**, phân loại hình dạng
+60 nến sau: đảo chiều (chạm 2u ngược) · đi luôn · hồi về mốc (±1 giá) rồi mới đi tiếp.
+
+| Nhóm vùng | n | ĐẢO CHIỀU | đi luôn | hồi rồi tiếp | **tổng đi tiếp** |
+|---|---|---|---|---|---|
+| HVN ngày | 309 | 43,0% | 19,1% | 36,9% | **56,0%** |
+| HVN 3 tuần | 217 | 43,3% | 20,7% | 35,5% | **56,2%** |
+| HVN bất kỳ | 664 | 45,0% | 20,3% | 33,6% | 53,9% |
+| **HVN tuần** | 278 | **49,6%** | 19,4% | 29,5% | 48,9% |
+| **VWAP ngày** | 989 | **51,6%** | 16,1% | 32,1% | 48,1% |
+| **VWAP tuần** | 446 | **53,6%** | 14,1% | 31,6% | **45,7%** |
+| không ở vùng nào | 4.349 | 47,4% | 13,1% | 38,9% | 52,0% |
+
+## Kết luận
+1. **HVN ngày và HVN 3 tuần: ĐÚNG là nghiêng "phá rồi đi tiếp"** (56,0% / 56,2%), và trong số ca
+   đi tiếp thì **65,9% / 63,1% có hồi về mốc trước** ⇒ hình dạng phá-hồi-đi tiếp là thật ở đây.
+   Nhưng lệch so với nhóm không vùng chỉ +4 điểm (z ≈ +1,4) ⇒ **chưa đủ mạnh**.
+2. **HVN tuần: SAI** — 48,9% đi tiếp, đảo chiều 49,6%, tức chia đôi, hơi nghiêng đảo chiều.
+3. **VWAP tuần: SAI HẲN, ngược lại** — đảo chiều **53,6%**, cao nhất bảng, đi tiếp thấp nhất (45,7%);
+   so với nhóm không vùng thì z ≈ **−2,7** ⇒ đây là ô lệch đáng kể nhất, và nó lệch **về phía đảo chiều**.
+4. **VWAP ngày: nghiêng đảo chiều** (51,6%) — nhất quán với hai phép đo trước.
+5. ⚠️ **"Hồi về mốc rồi mới đi tiếp" là hình dạng CHUNG của mọi cú phá**, không phải đặc trưng của HVN:
+   trong nhóm **không ở vùng nào**, 74,7% số ca đi tiếp cũng hồi về đáy/đỉnh nến sự kiện trước.
+   Vậy "hồi nhẹ rồi đi tiếp" đúng về **hình dạng**, nhưng **không dùng để phân biệt vùng nào**.

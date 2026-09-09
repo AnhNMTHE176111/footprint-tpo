@@ -269,3 +269,23 @@ trên 128 phiên GCQ26. Kết quả ghi `MEASURE-LEVELS-RESULTS.md`, 21 rổ đ�
 **Còn lại theo plan:** B5 (cảnh báo tiếp cận Telegram), B6 (gộp 3 tuần cho lớp nền, ưu tiên thấp),
 A1 cần dữ liệu dài hơn mới đo được. Build DLL đã sẵn ở `dist/SessionZones.dll`, CHƯA deploy/test live
 trên Windows.
+
+---
+
+## 2026-09-09 — Hỏi đáp: phân biệt lệnh chủ động THẬT vs lệnh do chốt vị thế
+
+Người học tự bắt được đúng lỗ hổng của định nghĩa Bid/Ask: một lệnh khớp tại Ask có thể là **mua mở
+mới** HOẶC **người bán khống mua để đóng vị thế** — dữ liệu footprint dùng chung một ô, không tách được.
+Đã xác nhận là ĐÚNG (ebook nói thẳng "không có cách nào biết chắc chắn tuyệt đối", trang ảnh
+`ebook/images/p024.png`; ebook trang p133 mô tả chính ca "người bán đóng vị thế đẩy giá lên").
+
+Đã dạy khung 3 lớp thay cho việc đọc ý định: (1) **vị trí so với vùng giá trị** — mua trên vùng giá trị
+= chủ động thật (initiative), mua dưới = phản ứng/nhặt rẻ (responsive); (2) **hệ quả trên footprint** —
+delta dương + imbalance mua xếp tầng + giá tạo mức mới = lực thật; delta dương mà giá đứng = bị hấp thụ
+⇒ chỉ là chốt short; (3) **dấu vết sau đó** — giữ được mức, cumulative delta lên cùng giá.
+Nêu rõ chỉ **Open Interest** (số hợp đồng đang mở) mới phân biệt mở/đóng thật, nhưng vàng chỉ có OI cuối
+ngày ⇒ intraday không dùng được.
+
+⚠️ Combo 3 điều kiện đưa ra **chưa backtest** — thuộc diện "đọc chart được, chưa được code thành signal"
+(bảng theo dõi ở `tpo/EVIDENCE-DRILLS.md`). Bài săn bằng chứng đã giao: tìm 1 ca hấp thụ (delta dương,
+giá không lên) + 1 ca initiative thật, tại HVN/naked POC, lưu `tpo/evidence/`.

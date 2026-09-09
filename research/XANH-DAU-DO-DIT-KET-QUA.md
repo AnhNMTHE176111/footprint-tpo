@@ -83,3 +83,51 @@ max/min delta trong lúc chạy live.
 
 **Script:** `research/perlevel_extract.py` (quét 583 MB → `research/perlevel_feats.csv`),
 `research/xanh-dau-do-dit.py`, `-2.py`, `-3.py`.
+
+---
+
+# SỬA LẠI: "xanh đầu đỏ đít" là **BUBBLE BIG TRADE**, không phải màu ô imbalance
+
+Người học đính chính (2026-09-09): xanh/đỏ ở đây là **marker tròn lệnh đơn lớn** trên footprint —
+bubble MUA (xanh) ở đỉnh nến + bubble BÁN (đỏ) ở đáy nến. Toàn bộ §1–§3 ở trên đo **màu ô mất cân
+bằng bid/ask**, tức **đo sai đối tượng**. Lỗi cụ thể: đã đọc và trích chính `CORVEN_SPEC_V1.md`
+("bubble big trade nằm ở 30% DƯỚI của nến") trong cùng lượt mà không nối được với câu hỏi.
+
+## Kết quả kiểm khả thi: KHÔNG ĐO ĐƯỢC — cột `max_one_trade` rỗng
+
+`max_one_trade` là cột duy nhất định vị được lệnh đơn lớn. Độ phủ thực tế:
+
+| File | dòng | % mức giá có big trade | lớn nhất |
+|---|---|---|---|
+| `fp_GC_XCEC_..._748d9h.csv` (583 MB, 2 năm) | ~11,4 triệu | **0,00%** (chỉ 2026-08 có 0,08%) | 19 |
+| `Data_Footprint_Export.csv` | 182.844 | **0,00%** | 0 |
+| `27-7/sample.csv` | 761.199 | **0,00%** | 0 |
+| `data-footprint/Data_Footprint_Export.csv` | 44.054 | **0,00%** | 0 |
+| **`28-7/30-7-2026.csv`** (2 ngày) | 9.907 | **6,55%** | 34 |
+
+File 2 ngày là file duy nhất có số liệu (1.381 nến M1). Đếm hình trên đó:
+
+| Ngưỡng lệnh đơn | bubble MUA ở đỉnh nến | bubble BÁN ở đáy nến | **CẢ HAI (xanh đầu đỏ đít)** |
+|---|---|---|---|
+| ≥ 5 HĐ | 5 nến | 3 nến | **0 nến** |
+| ≥ 10 HĐ | 3 nến | 0 nến | **0 nến** |
+| ≥ 15 HĐ | 2 nến | 0 nến | **0 nến** |
+
+⇒ **n = 0.** Không có gì để đo.
+
+## Nguyên nhân — cùng gốc với lỗi "nến chỉ ra gạch ngang" của indicator Ask/Bid Difference
+
+Quantower chỉ cấp chi tiết **từng lệnh** (`MaxOneTradeVolume`) cho nến được xử lý **khi chạy tiến /
+live**. Nạp volume-analysis lịch sử chỉ cho **tổng bid/ask từng mức giá**. Vì vậy 2 năm dữ liệu dày
+có đủ bid/ask per-level nhưng **không có cỡ lệnh đơn** — đúng hiện tượng người học đã gặp trên chart.
+
+## Muốn kiểm được thì phải làm gì
+Xuất dữ liệu mà `max_one_trade` **có số** — tức cho chart chạy tiến (replay/live) rồi mới export,
+hoặc dùng nguồn tick. Cần cỡ **vài tháng** mới đủ n: 2 ngày chỉ cho 8 ca một phía và **0 ca hai phía**.
+
+## Bằng chứng liên quan đã có trong repo (không thay thế được phép đo trên)
+`quantower-orderflow-indicator/OrderFlowBubbles.cs` ghi rõ: đã đo lại trên **538.558 ô per-level
+thật**, base rate ~50,6%, **không thành phần nào còn lợi thế** (noResult −7,2đpt · POC nổi bật −5,8đpt
+· hai phe cùng lớn −1,2σ · phân kỳ delta −0,0σ). Hiệu ứng vững duy nhất **ngược dấu**: ô đậm tại cực
+trị + biên độ hẹp báo mức **SẮP BỊ XUYÊN**. Big Trade trong file đó dùng cùng metric — nhưng đó là
+đo **cỡ ô**, chưa phải đo **vị trí bubble hai đầu nến** như CORVEN nói.

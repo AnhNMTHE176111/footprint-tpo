@@ -131,3 +131,60 @@ thật**, base rate ~50,6%, **không thành phần nào còn lợi thế** (noRe
 · hai phe cùng lớn −1,2σ · phân kỳ delta −0,0σ). Hiệu ứng vững duy nhất **ngược dấu**: ô đậm tại cực
 trị + biên độ hẹp báo mức **SẮP BỊ XUYÊN**. Big Trade trong file đó dùng cùng metric — nhưng đó là
 đo **cỡ ô**, chưa phải đo **vị trí bubble hai đầu nến** như CORVEN nói.
+
+---
+
+# ĐO LẠI LẦN 3 — bubble = **HVN cell HOẶC stacked imbalance** (đúng 3 nguồn người học nói)
+
+Người học đính chính tiếp: bubble nổi lên có thể do **HVN cell**, **stacked imbalance**, hoặc **lệnh
+đơn**. Nguồn lệnh đơn không có dữ liệu (§trên), còn **hai nguồn kia đo được**. Lấy đúng ngưỡng trong
+`quantower-orderflow-indicator/OrderFlowBubbles.cs`:
+
+| Nguồn bubble | Luật trong indicator |
+|---|---|
+| **HVN cell** | khối lượng ô ≥ 5 · modified z-score ≥ **3,0** · **và** ≥ **4,0×** trung vị ô (nền 100 nến, median+MAD) |
+| màu | `AggColor(buy, sell)` — **xanh** nếu ask ≥ bid, **đỏ** nếu ngược |
+| **Stacked imbalance** | chéo **3:1** (`ImbalanceRatioPct = 300`), **≥ 3 mức liên tiếp**, lọc min-vol = max(5, trung vị ô) |
+
+Hình CORVEN = **bubble XANH trong band 30% trên** và **bubble ĐỎ trong band 30% dưới**.
+Script: `research/bubble_extract.py` → `research/bubble_feats.csv`, rồi
+`research/bubble-xanh-dau-do-dit.py` và `research/bubble-vwap-kiem-chat.py`.
+
+## Phát hiện phụ nhưng quan trọng: stacked imbalance gần như KHÔNG BAO GIỜ nổ
+Với thiết lập mặc định (3:1, 3 mức liên tiếp) nguồn này chỉ nổ ở **0,0–0,1%** số nến trên GC M1.
+⇒ Trên thực tế, **bubble mà bạn thấy gần như luôn là HVN cell**. Bubble bất kỳ: 25,4% số nến.
+Hình "xanh đầu đỏ đít": **2,5%** số nến — lần này đủ hiếm để là một bộ lọc thật.
+
+## Kết quả — so với ĐỐI CHỨNG SÁT NHẤT (cùng tại VWAP, có bubble nhưng KHÔNG đúng hình)
+
+| Bán kính VWAP ngày | đúng hình | có bubble khác hình | không bubble | z (hình vs khác hình) |
+|---|---|---|---|---|
+| **±1 giá** | **57,8%** (n=109) | 50,8% (n=957) | 48,0% (n=492) | +1,39 |
+| ±2 giá | 54,0% (n=252) | 51,9% (n=1.898) | 49,5% (n=864) | +0,62 |
+| ±4 giá | 52,4% (n=477) | 50,1% (n=3.646) | 50,1% (n=1.522) | +0,93 |
+| **mọi khoảng (không cần VWAP)** | **50,7%** (n=2.057) | 50,6% (n=11.945) | 50,5% (n=3.708) | +0,06 |
+
+Đọc theo hàng: tỉ lệ **giảm đơn điệu** khi nới bán kính (57,8 → 54,0 → 52,4 → 50,7) — đúng dạng mà
+một hiệu ứng thật phải có. **Không cần VWAP thì hình bằng đúng 0.**
+
+## Nhưng phép tách đôi thời gian giết nó
+
+Chênh lệch (đúng hình − có bubble khác hình), tính riêng từng nửa:
+
+| Bán kính | nửa đầu | nửa sau |
+|---|---|---|
+| ±1 giá | **+11,8 điểm** (61,9% vs 50,1%) | **−0,1 điểm** (52,2% vs 52,3%) |
+| ±2 giá | +2,4 | +0,9 |
+| ±4 giá | +3,5 | +0,1 |
+| mọi khoảng | −1,3 | +0,7 |
+
+Toàn bộ "lợi thế" nằm ở **nửa đầu, bán kính ±1, n=63**. Ở nửa sau, hình **không thêm gì** ở mọi bán kính.
+
+## Kết luận lần 3
+1. Đây là bản đo **đúng đối tượng** (bubble, không phải màu ô) và **đúng ngưỡng của indicator**.
+2. Hình có dạng đúng đắn về mặt cấu trúc: **chỉ có ý nghĩa khi ở sát VWAP**, và **đơn điệu theo
+   khoảng cách tới VWAP**. Đây là dấu hiệu đáng theo, không phải rác.
+3. Nhưng **chưa qua được phép tách đôi thời gian**: nửa sau bằng 0. n = 109 ở ô mạnh nhất là quá
+   nhỏ để phân biệt "hiệu ứng thật yếu" với "may mắn nửa đầu".
+4. ⚠️ **Chưa được code thành signal.** Cần tăng n: nới nhẹ ngưỡng HVN cell (4,0× → 3,0×) hoặc
+   xuất thêm mã cùng dạng, rồi đo lại — đây là ô đầu tiên trong cả chuỗi nghiên cứu đáng làm việc đó.

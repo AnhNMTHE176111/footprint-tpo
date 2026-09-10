@@ -315,3 +315,16 @@ hạ ngưỡng trong Optimus Flow về **2 mức liên tiếp** và/hoặc **200
   một phe = 0. Cùng dạng lỗi "hệ quả điển hình vs định nghĩa" như ca UB 15×0.
 - Trung thực: tổng Bid/Ask đọc từ ảnh ra ≈ −66, không khớp −82 ⇒ ảnh bị cắt trên/dưới hoặc còn ô mờ
   đọc sai; đã nói rõ với người học chứ không ép số cho khớp.
+
+**2026-09-10 — kiểm code theo yêu cầu người học: "indicator bubble có thiếu case ask=0 không?"**
+Kết quả kiểm 2 bản (`quantower-orderflow-indicator/OrderFlowBubbles.cs`, `atas-orderflow-indicator/OrderFlowBubbles.cs`):
+- **PHÁT HIỆN: KHÔNG thiếu.** Cả hai dùng **nhân chéo** (`bidFilter = ask × 300/100`) chứ không chia,
+  nên ask=0 ⇒ filter=0 ⇒ `bid > 0` vẫn đạt (miễn qua min-vol = max(5, trung vị ô)). Giả thuyết
+  "chia cho 0 nên bỏ ca" **SAI với code của mình** (vẫn chưa kiểm được footprint gốc Optimus — đóng nguồn).
+- **KÍCH CỠ: CÓ lỗi thật** — fallback `: 1` (Quantower dòng 669) / `: 1m` (ATAS dòng 314) khi filter=0
+  cho ra đúng `MinBubbleSize`: `SizeFromMagnitude(1,1)` → t=0; `SizeFromRatio(1m)` → t=0.
+  ⇒ ca mất cân bằng **tuyệt đối** (ask=0) vẽ hình thoi **nhỏ nhất**, còn ca yếu hơn (bid 10 vs ask 1,
+  tỷ lệ 3,33) vẽ **to hơn** — nghịch lý về thị giác, đúng hướng nghi ngờ của người học nhưng khác nguyên nhân.
+  Sửa 1 dòng mỗi bản: fallback → 7.0 (Quantower) / 5m (ATAS) để t=1 ⇒ size lớn nhất. **CHƯA sửa, chờ chốt.**
+- Đã kiểm thêm: run KHÔNG nối qua khoảng trống (cả hai lặp từng tick và reset ở dòng 547 / 273) ✔.
+- Cả hai bản có `ImbalanceEnabled = false` mặc định ⇒ chưa bật thì không có hình thoi nào.

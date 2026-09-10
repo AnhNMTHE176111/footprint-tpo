@@ -181,3 +181,45 @@ Cắt phiên bằng khoảng trống >5 phút cho **538 phiên / 748 ngày lịc
 ⇒ VWAP đã dùng chính là **VWAP DAY**, reset ở nghỉ phiên hằng ngày. Không phải VWAP con.
 
 Script: `scratchpad/ident.py`.
+
+---
+
+# Bổ sung 4 — CHỐT: bối cảnh nào thì stop-hunt đảo chiều?
+
+**Trả lời: KHÔNG có bối cảnh nào. Tỷ lệ đảo chiều là 50-53% ở mọi cách chia — tức tung đồng xu.**
+
+| bối cảnh | 3 tháng | 2 năm trước (đối chứng) |
+|---|---|---|
+| **TẤT CẢ tín hiệu** | **53,0%** ±4,3 (n=134) | **50,1%** ±1,7 (n=853) |
+| mức = đỉnh/đáy PHIÊN | 58,8% ±8,4 (n=34) | **48,9%** ±3,3 (n=235) |
+| mức ≠ đỉnh/đáy phiên | 51,0% ±5,0 | 50,5% ±2,0 |
+| mức = đỉnh/đáy 4 giờ | **65,9%** ±7,4 (n=41) | **49,3%** ±2,9 (n=292) |
+| mức ≠ đỉnh/đáy 4 giờ | 47,3% ±5,2 | 50,4% ±2,1 |
+| nổ khối lượng ≥5× median | 57,1% ±9,4 (n=28) | 53,5% ±3,8 (n=170) |
+| nổ khối lượng <5× | 51,9% ±4,9 | 49,2% ±1,9 |
+| xuyên sâu ≥8 tick | 45,2% ±8,9 | **56,5%** ±4,5 |
+| xuyên nông <8 tick | 55,3% ±4,9 | 49,0% ±1,9 |
+| **PHIÊN + xuyên nông** | **75,0%** ±9,7 (**n=20**) | **48,9%** ±3,7 (n=186) |
+| PHIÊN + nổ KL ≥5× + xuyên nông | 71,4% (n=7) | **44,4%** ±6,8 (n=54) |
+| chỉ phía ĐỈNH (bán) | **44,6%** ±6,6 | **52,7%** ±2,3 |
+| chỉ phía ĐÁY (mua) | **59,0%** ±5,6 | **46,7%** ±2,6 |
+
+## Đọc bảng
+
+**Mọi dòng "đẹp" ở cột 3 tháng đều sập về ~49% ở cột đối chứng.** Không sót dòng nào.
+
+Hai chỗ đáng ghi làm bài học:
+- **"PHIÊN + xuyên nông" = 75,0%** — nhìn như đã tìm ra chén thánh. n = **20**, tức 15/20.
+  Đối chứng 186 ca: **48,9%**.
+- **Hai phía ngược dấu và tự đảo chiều giữa hai cửa sổ**: 3 tháng thì ĐÁY tốt (59,0%) ĐỈNH
+  tệ (44,6%); 2 năm thì ngược lại hoàn toàn (ĐÁY 46,7%, ĐỈNH 52,7%). Một cơ chế có thật
+  không thể hành xử như vậy.
+
+Cả giả thuyết hấp dẫn nhất — *"siết vào đỉnh/đáy phiên thì mới là stop hunt thật nên phải
+tốt hơn"* — cũng **sai**: 48,9% trên 235 ca, tức **kém hơn** cả nhóm không siết (50,5%).
+Bổ sung 3 chứng minh nhóm đó nhận dạng **đúng bản chất hơn**; nhưng đúng bản chất hơn
+**không** kéo theo đảo chiều nhiều hơn.
+
+⇒ Đóng hướng nghiên cứu này. `StopHuntEnabled` và `SweepEnabled` giữ **TẮT**.
+
+Script: `scratchpad/final.py`.

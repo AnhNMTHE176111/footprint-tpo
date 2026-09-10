@@ -357,3 +357,17 @@ phần HIỂN THỊ (đọc chart), không dùng bấm cò. Hướng còn mở: 
 (tại HVN/naked POC/biên VA) — chưa đo.
 🔧 Sửa số cũ: "0,0-0,1% nến" trong `XANH-DAU-DO-DIT-KET-QUA.md` là tỷ lệ trong band 30% và nền script
 cũ nạp MỌI ô (ngưỡng 5) thay vì 3 ô đậm nhất (ngưỡng 11) ⇒ số đúng toàn nến là 0,39%/0,68%.
+
+**2026-09-10 (tiếp 3) — ĐO STACKED IMBALANCE TRONG BỐI CẢNH (3 rule người học đặt).**
+Báo cáo: `research/STACK-IMBALANCE-BOI-CANH-KET-QUA.md` · script `research/stack-imb-boi-canh.py`.
+Bias VWAP ngày (reset 22:00 UTC) + kịch bản A (sau move → nhịp hồi) + kịch bản B (giữa move ≥3 nến
+cùng chiều), đối chứng = cùng bối cảnh nhưng KHÔNG có imbalance, tách đôi thời gian, loại 179 phiên nối.
+- **Bối cảnh CÓ cứu được imbalance** (khác phép đo trần trụi cùng ngày, vốn tệ hơn ngẫu nhiên).
+- **Chỉ phía MUA trên VWAP có tín hiệu.** Ứng viên tốt nhất: **B-BUY (giữa move)** sau 20 nến
+  53,1%/56,1% vs đối chứng 49,4%/47,9% ⇒ **+3,7/+8,2 điểm**, cùng dấu cả hai nửa, trung vị +0,20/+0,70 giá.
+- Phía BÁN dưới VWAP: không có gì (B-SELL +0,4/−0,1). Bất đối xứng khớp xu hướng tăng của vàng 2 năm ⇒
+  chưa tách được "imbalance mua mạnh" khỏi "thị trường tăng".
+- **Kịch bản B (giữa move) MẠNH HƠN kịch bản A (sau nhịp hồi)** — trái trực giác chờ pullback.
+- Chỉ có nghĩa ở chân trời ~20 nến; k=3-5 không có gì. A-BUY k=3 nửa đầu +9,7 nhưng nửa sau −1,0 (bẫy).
+- n nhỏ (289-409/nửa) ⇒ **đáng theo dõi, chưa đủ kết luận**. Trạng thái: dùng ĐỌC CHART được (đúng mục
+  đích người học nêu: dấu hiệu phe chủ động), CHƯA code thành signal.

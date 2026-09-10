@@ -1,0 +1,49 @@
+nen: 724279 | phien loai vi noi hop dong: 179
+
+=== KICH BAN A — sau MOVE + NHIP HOI, nen theo chieu move | SELL (duoi VWAP) ===
+  n tin hieu (co imbalance): 336 | doi chung (khong imbalance): 36622
+   k |  CO imbalance: nua dau / nua sau      |  KHONG imbalance: nua dau / nua sau
+   3 |   171  48.5% -0.00 /   165  44.8% -0.20 |  17912  46.9% -0.00 /  18676  46.9% -0.10
+   5 |   171  48.0% -0.00 /   165  41.8% -0.50 |  17901  47.9% -0.00 /  18660  47.5% -0.10
+  10 |   171  49.1% -0.00 /   164  45.7% -0.75 |  17870  47.6% -0.10 /  18613  46.9% -0.20
+  20 |   171  52.6% +0.20 /   164  50.0% +0.00 |  17837  47.5% -0.10 /  18513  47.6% -0.20
+
+=== KICH BAN A — sau MOVE + NHIP HOI, nen theo chieu move | BUY (tren VWAP) ===
+  n tin hieu (co imbalance): 335 | doi chung (khong imbalance): 38428
+   k |  CO imbalance: nua dau / nua sau      |  KHONG imbalance: nua dau / nua sau
+   3 |   163  57.7% +0.30 /   172  46.5% -0.10 |  18078  48.0% +0.00 /  20302  47.5% -0.10
+   5 |   162  58.0% +0.25 /   172  48.3% -0.10 |  18061  48.6% +0.00 /  20292  48.4% +0.00
+  10 |   162  54.9% +0.25 /   172  44.8% -0.40 |  18035  49.8% +0.00 /  20264  49.5% +0.00
+  20 |   162  56.2% +0.35 /   172  48.8% -0.05 |  17990  51.4% +0.10 /  20189  49.9% +0.00
+
+=== KICH BAN B — GIUA MOVE (>=3 nen lien tiep cung chieu) | SELL (duoi VWAP) ===
+  n tin hieu (co imbalance): 650 | doi chung (khong imbalance): 25427
+   k |  CO imbalance: nua dau / nua sau      |  KHONG imbalance: nua dau / nua sau
+   3 |   371  43.1% -0.10 /   276  42.8% -0.40 |  15168  44.8% -0.10 /  10216  44.3% -0.20
+   5 |   370  48.4% -0.00 /   276  39.9% -0.50 |  15151  45.6% -0.10 /  10207  45.0% -0.20
+  10 |   369  45.3% -0.20 /   274  43.4% -0.60 |  15113  45.9% -0.10 /  10173  45.1% -0.30
+  20 |   366  45.9% -0.30 /   274  46.4% -0.40 |  15036  45.5% -0.20 /  10108  46.5% -0.30
+
+=== KICH BAN B — GIUA MOVE (>=3 nen lien tiep cung chieu) | BUY (tren VWAP) ===
+  n tin hieu (co imbalance): 703 | doi chung (khong imbalance): 31744
+   k |  CO imbalance: nua dau / nua sau      |  KHONG imbalance: nua dau / nua sau
+   3 |   411  47.4% +0.00 /   290  49.7% +0.00 |  18888  46.5% +0.00 /  12799  47.0% -0.10
+   5 |   411  47.0% +0.00 /   290  50.3% +0.10 |  18863  48.4% +0.00 /  12787  47.9% -0.10
+  10 |   410  51.5% +0.10 /   290  49.7% +0.00 |  18797  48.7% +0.00 /  12747  47.8% -0.10
+  20 |   409  53.1% +0.20 /   289  56.1% +0.70 |  18672  49.4% +0.00 /  12675  47.9% -0.20
+
+=== KHONG DIEU KIEN BOI CANH (chi bias VWAP + nen theo chieu) | SELL (duoi VWAP) ===
+  n tin hieu (co imbalance): 1761 | doi chung (khong imbalance): 114489
+   k |  CO imbalance: nua dau / nua sau      |  KHONG imbalance: nua dau / nua sau
+   3 |  1078  44.8% -0.10 /   673  44.7% -0.20 |  69479  45.6% -0.00 /  44768  46.4% -0.10
+   5 |  1073  45.9% -0.10 /   672  43.5% -0.40 |  69389  46.4% -0.10 /  44706  46.8% -0.10
+  10 |  1067  44.3% -0.20 /   669  44.2% -0.40 |  69195  46.7% -0.10 /  44536  47.0% -0.20
+  20 |  1060  47.9% -0.10 /   669  45.9% -0.40 |  68776  46.6% -0.20 /  44170  47.5% -0.20
+
+=== KHONG DIEU KIEN BOI CANH (chi bias VWAP + nen theo chieu) | BUY (tren VWAP) ===
+  n tin hieu (co imbalance): 1962 | doi chung (khong imbalance): 140343
+   k |  CO imbalance: nua dau / nua sau      |  KHONG imbalance: nua dau / nua sau
+   3 |  1206  47.3% +0.00 /   748  48.4% +0.00 |  85597  47.1% +0.00 /  54450  47.5% +0.00
+   5 |  1205  48.5% +0.00 /   748  48.7% +0.00 |  85461  48.1% +0.00 /  54387  48.1% +0.00
+  10 |  1199  50.7% +0.10 /   747  48.7% -0.10 |  85128  49.0% +0.00 /  54211  48.9% +0.00
+  20 |  1196  52.2% +0.20 /   744  52.2% +0.30 |  84504  50.0% +0.10 /  53858  49.5% +0.00

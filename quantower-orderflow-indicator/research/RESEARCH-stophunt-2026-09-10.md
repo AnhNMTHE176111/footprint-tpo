@@ -48,3 +48,47 @@ thật đọng ở đỉnh/đáy PHIÊN, mức ngày, số tròn. Nếu muốn t
 các mức đó chứ không phải swing 8 nến; nhưng chưa đo thì vẫn không được bật.
 
 Script: `scratchpad/stophunt.py` (chạy lại được, ~4 phút trên file 583MB).
+
+---
+
+# Bổ sung — đi tìm "bối cảnh chung" của các ca ĐẢO CHIỀU ĐÚNG
+
+Câu hỏi: trong số các ca stop-hunt có đảo chiều đúng hướng, chúng có đặc điểm gì chung?
+
+**Kết luận: KHÔNG tìm được đặc điểm nào. Ca đúng và ca sai trông giống hệt nhau.**
+
+## Cách làm (chống tự lừa)
+Gộp cả hai phía, n = **1.098** tín hiệu, tỷ lệ đảo chiều chung **51,1%**.
+**Tách đôi theo thời gian**: dùng **nửa đầu để TÌM** (chọn nhóm 1/3 tốt hơn của mỗi đặc
+điểm), rồi **nửa sau để KIỂM CHỨNG**. Không làm vậy thì thử 8 đặc điểm kiểu gì cũng ra
+một cái "đẹp" do ngẫu nhiên.
+
+⚠️ Bẫy quan trọng: nền của **nửa sau tự nó đã là 52,8%** (nửa đầu chỉ 49,1% — tức bản
+thân tín hiệu cũng không ổn định). Phải so nhóm chọn ra với **52,8%**, không phải với 50%.
+
+## Kết quả
+
+| đặc điểm | nhóm chọn ở nửa đầu | nửa sau (kiểm chứng) | so nền 52,8% |
+|---|---|---|---|
+| độ đậm ô cực trị (vZ) | thấp | 53,0% ±3,4 | +0,2 |
+| độ rộng nến / median | hẹp | 51,2% ±3,4 | −1,6 |
+| khối lượng nến / median | cao | 52,5% ±4,2 | −0,3 |
+| close lùi khỏi cực trị | ít | 50,0% ±3,2 | −2,8 |
+| vượt qua đỉnh cũ bao nhiêu tick | sâu | 53,6% ±2,5 | +0,8 |
+| delta nến ủng hộ đảo chiều | — | 52,9% ±3,8 | +0,1 |
+| đã chạy bao nhiêu R trước đó | ít | 51,3% ±4,1 | −1,5 |
+| delta % của ô cực trị | cao | 53,0% ±3,3 | +0,2 |
+
+Mọi ô đều nằm trong ±3pp quanh nền, sai số ±3pp. **Không có gì.**
+
+## Theo phiên (giờ UTC, chưa tách đôi nên còn yếu hơn)
+Á 00-07: 49,2% (n=427) · Âu 07-13: 52,8% (n=303) · Mỹ 13-20: 52,8% (n=246) · 20-24: 50,0% (n=122).
+Chênh ~3,6pp với sai số 2,4-4,5pp → không kết luận được.
+
+## Giới hạn phải nói rõ
+n = 1.098 chia thành nhóm chỉ còn 150-400 mỗi nhóm ⇒ sai số ±3-4pp ⇒ phép đo này chỉ
+thấy được hiệu ứng **từ ~8pp trở lên**. Một hiệu ứng thật nhưng nhỏ (2-3pp) sẽ vô hình ở
+đây. Nhưng hiệu ứng nhỏ như vậy cũng không giao dịch được: phần trên đã đo SL trung vị
+chỉ 9 tick nên **1 tick phí đã xoá +0,126R**.
+
+Script: `scratchpad/build_cache.py` + `scratchpad/context.py`.

@@ -92,3 +92,43 @@ thấy được hiệu ứng **từ ~8pp trở lên**. Một hiệu ứng thật
 chỉ 9 tick nên **1 tick phí đã xoá +0,126R**.
 
 Script: `scratchpad/build_cache.py` + `scratchpad/context.py`.
+
+---
+
+# Bổ sung 2 — kết hợp bối cảnh: VWAP, đà đi trước, nhịp hồi
+
+Người học yêu cầu **chỉ đo 2-3 tháng gần nhất**. Đã làm đúng vậy (2026-05-19 → 08-19),
+và chạy thêm **2 năm trước đó làm đối chứng ĐỘC LẬP** — vì n của 3 tháng chỉ 134, sai số
+±4,3pp, không đủ để kết luận bất cứ điều gì một mình.
+
+**Kết luận: không luật nào sống. Luật VWAP chết rõ ràng nhất.**
+
+| | 3 tháng (n=134) | 2 năm trước (n=853) |
+|---|---|---|
+| TẤT CẢ tín hiệu | 53,0% ±4,3 | 50,1% ±1,7 |
+| **VWAP ĐÚNG phía** (trên VWAP canh mua / dưới canh bán) | 52,9% ±8,6 (n=34) | **48,3%** ±3,5 (n=205) |
+| VWAP SAI phía | 53,0% ±5,0 (n=100) | 50,6% ±2,0 (n=648) |
+| đã chạy ≥3R trước đó | 51,2% ±4,5 | 50,2% ±1,8 |
+| đã chạy <3R | **77,8%** ±13,9 (**n=9**) | **49,2%** ±4,5 (n=122) |
+| nhịp hồi SÂU ≥1,5R | 52,6% ±5,7 | 48,3% ±2,3 |
+| nhịp hồi NÔNG <1,5R | 53,4% ±6,5 | 52,2% ±2,5 |
+| cách VWAP ≥2R | 52,2% ±5,2 | 51,0% ±2,1 |
+| cách VWAP <2R | **54,8%** ±7,7 | **48,0%** ±3,0 |
+| VWAP đúng + hồi nông + đã chạy ≥3R | 40,0% (n=10) | 50,7% ±5,9 |
+
+## Hai điều đáng ghi lại
+
+**1. Luật VWAP và tín hiệu stop-hunt MÂU THUẪN CẤU TRÚC với nhau.**
+Chỉ **34/134** tín hiệu nằm đúng phía VWAP. Lý do cơ học: nến quét qua đỉnh 8 nến xảy ra
+khi giá đang được đẩy lên, mà lúc đó giá gần như luôn **trên** VWAP — trong khi luật đòi
+"bán khi dưới VWAP". Nên bộ lọc này ném đi ~75% tín hiệu đỉnh và giữ lại phần dư kỳ quặc.
+Không phải bộ lọc kém — nó **không tương thích** với tín hiệu.
+
+**2. Bẫy n nhỏ, ví dụ giáo khoa.** "đã chạy <3R" cho **77,8%** ở 3 tháng — nhìn như vàng.
+n = **9**, tức 7/9. Đối chứng 2 năm (n=122): **49,2%**. Đây đúng là lý do không được kết
+luận trên cửa sổ hẹp: 3 tháng cho ~134 tín hiệu, chia nhóm còn 9-100, sai số 4-14pp.
+
+Mọi con số "đẹp" ở cột 3 tháng đều **đảo dấu** ở cột 2 năm. Không có ngoại lệ.
+
+Script: `scratchpad/ctx2.py`. VWAP = theo phiên (cắt phiên bằng khoảng trống >5 phút),
+giá điển hình (H+L+C)/3 nhân khối lượng, chỉ tính khi phiên đã chạy ≥20 nến.

@@ -49,3 +49,39 @@ Chân trời ngắn (3-5 nến) **không có gì** ở mọi kịch bản: B-BUY
    kết luận**. Muốn chắc phải mở rộng bằng mã khác hoặc kỳ dài hơn.
 6. Trạng thái theo bảng ở `tpo/EVIDENCE-DRILLS.md`: **được dùng đọc chart** (đúng đúng mục đích người
    học nêu — dấu hiệu nhận biết phe chủ động), **chưa được code thành signal**.
+
+---
+
+# LẦN 2 — tách riêng đóng góp của BIAS VWAP
+
+**Script:** `research/stack-imb-boi-canh-2.py` · **Log:** `research/_stack_boicanh2_log.txt` · 483.042 ca.
+
+Lần 1 **đã** lồng bias VWAP vào cả A và B. Lần này chạy ba biến thể để thấy VWAP đóng góp bao nhiêu:
+**THEO** (như lần 1) · **BỎ** (không xét VWAP) · **NGƯỢC** (buy dưới VWAP, sell trên VWAP).
+Mỗi ô so với đối chứng **cùng kịch bản, cùng biến thể VWAP, cùng chiều nến, không có imbalance**.
+
+## Lệch so với đối chứng (điểm phần trăm), nửa đầu / nửa sau
+
+| Kịch bản · chiều | k | THEO VWAP | BỎ VWAP | NGƯỢC VWAP |
+|---|---|---|---|---|
+| **B · BUY** | 10 | +2,9 / +2,0 | +3,0 / +2,3 | +2,9 / +3,0 |
+| **B · BUY** | 20 | **+3,7 / +8,1** | **+3,8 / +4,9** | +4,1 / −3,7 |
+| B · SELL | 20 | +0,4 / −0,1 | +1,7 / −0,3 | +4,6 / −0,8 |
+| A · SELL | 20 | +5,1 / +2,4 | +5,0 / +1,2 | +4,4 / −0,4 |
+| A · BUY | 20 | +4,7 / −1,0 | −2,2 / −1,5 | −15,7 / −2,2 |
+
+Số ca (B·BUY, k=20): THEO 409/289 · BỎ **566/396** · NGƯỢC 157/107.
+
+## Kết luận lần 2
+
+1. **Bias VWAP KHÔNG đóng góp gì.** Ở ô mạnh nhất (B·BUY, k=10) ba biến thể cho +2,9 / +3,0 / +2,9 —
+   gần như trùng khít; k=20 nửa đầu cũng vậy (+3,7 / +3,8 / +4,1). Kể cả làm **ngược** VWAP vẫn ra lệch
+   dương. Một điều kiện mà bật, tắt, hay đảo ngược đều cho cùng kết quả thì **không mang thông tin**.
+2. **Cái thật sự mang lại lệch là "GIỮA MOVE + buy imbalance", chân trời 10-20 nến** — sống sót ở cả hai
+   nửa thời gian trong cả THEO và BỎ.
+3. **Bỏ VWAP còn tốt hơn về mặt thống kê:** cùng mức lệch nhưng n tăng ~38% (566/396 so với 409/289).
+   Giữ VWAP chỉ làm mất một nửa số ca mà không mua thêm được độ tin cậy nào.
+4. A·BUY sụp khi bỏ VWAP (+4,7 → −2,2) ⇒ phần "đẹp" của A·BUY lần 1 là **trùng hợp của tập con nhỏ**
+   (n=162), không phải hiệu ứng.
+5. A·SELL ổn định ~+5 nửa đầu ở cả ba biến thể nhưng nửa sau tụt (+2,4 / +1,2 / −0,4), và k=5-10 nửa sau
+   âm ⇒ yếu hơn B·BUY, chưa đáng theo.

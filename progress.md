@@ -371,3 +371,15 @@ cùng chiều), đối chứng = cùng bối cảnh nhưng KHÔNG có imbalance,
 - Chỉ có nghĩa ở chân trời ~20 nến; k=3-5 không có gì. A-BUY k=3 nửa đầu +9,7 nhưng nửa sau −1,0 (bẫy).
 - n nhỏ (289-409/nửa) ⇒ **đáng theo dõi, chưa đủ kết luận**. Trạng thái: dùng ĐỌC CHART được (đúng mục
   đích người học nêu: dấu hiệu phe chủ động), CHƯA code thành signal.
+
+**2026-09-10 (tiếp 4) — tách riêng đóng góp của bias VWAP (người học yêu cầu kết hợp VWAP vào A/B).**
+Lưu ý: lần 1 ĐÃ lồng VWAP vào cả A và B (dòng "chỉ bias VWAP" trong bảng lần 1 là đối chứng không có
+điều kiện move) → lần 2 đo 3 biến thể THEO / BỎ / NGƯỢC để thấy VWAP đóng góp bao nhiêu.
+Script `research/stack-imb-boi-canh-2.py`, 483.042 ca.
+- **VWAP KHÔNG đóng góp gì:** ô mạnh nhất (B·BUY k=10) ra +2,9 / +3,0 / +2,9 cho THEO / BỎ / NGƯỢC —
+  trùng khít. Điều kiện mà bật-tắt-đảo đều cùng kết quả thì không mang thông tin.
+- **Cái thật sự có tác dụng: "GIỮA MOVE + buy imbalance", chân trời 10-20 nến** (+3,7/+8,1 THEO;
+  +3,8/+4,9 BỎ) — sống sót cả hai nửa.
+- **Bỏ VWAP tốt hơn về thống kê:** cùng lệch, n tăng 38% (566/396 vs 409/289).
+- A·BUY sụp khi bỏ VWAP (+4,7 → −2,2) ⇒ phần đẹp ở lần 1 chỉ là trùng hợp của n=162.
+- A·SELL nửa đầu ~+5 ở mọi biến thể nhưng nửa sau tụt ⇒ yếu hơn B·BUY.

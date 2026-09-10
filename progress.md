@@ -301,3 +301,17 @@ lại là vị trí (phá VAH / tại HVN-naked POC) + delta nến + đóng ở 
 hạ ngưỡng trong Optimus Flow về **2 mức liên tiếp** và/hoặc **200%**, nhưng đó là ngưỡng CHƯA đo.
 ⚠️ Bubble/HVN cell cũng chưa qua tách đôi thời gian (57,8% ở VWAP ±1 giá nửa đầu → nửa sau về 0)
 ⇒ không dùng làm tín hiệu duy nhất.
+
+**2026-09-10 — ca thật đầu tiên (ảnh người học gửi, nến GIẢM):** người học đưa ảnh footprint 3 cột
+(Bid | Ask | thanh delta), delta nến **−82**, dải vàng ở mức Bid=16 (POC), chấm tròn hover ra
+**"lệnh đơn"** ngay dưới POC (Bid=8/Ask=1).
+- Chấm tròn hover ra lệnh đơn ⇒ **xác nhận** kết luận trước: Quantower/Optimus CÓ cỡ lệnh đơn khi nến
+  chạy live/replay, chỉ dữ liệu lịch sử export mới rỗng.
+- Chấm bài: **CÓ sell stacked imbalance**, đúng 3 mức liên tiếp ở cụm Bid 8/10/8 với Ask mức trên = 0.
+  Theo công thức trong `quantower-orderflow-indicator/OrderFlowBubbles.cs:663` (`bid[k−1] > 3×ask[k]`
+  và `bid > max(5, trung vị ô)`) thì cả 3 mức đều đạt.
+- 🔎 **Giả thuyết cần kiểm:** Optimus Flow có thể KHÔNG vẽ hình thoi khi `ask = 0` (chia cho 0) — nếu
+  đúng thì đây là lý do thật của việc "hiếm thấy hình thoi", vì mất cân bằng MẠNH NHẤT lại chính là ca
+  một phe = 0. Cùng dạng lỗi "hệ quả điển hình vs định nghĩa" như ca UB 15×0.
+- Trung thực: tổng Bid/Ask đọc từ ảnh ra ≈ −66, không khớp −82 ⇒ ảnh bị cắt trên/dưới hoặc còn ô mờ
+  đọc sai; đã nói rõ với người học chứ không ép số cho khớp.

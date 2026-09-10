@@ -394,3 +394,15 @@ giá đảo nhiều hơn, mọi dấu hiệu tiếp diễn đều kém đi.
 Muốn đo được trên vài tháng phải nới định nghĩa dồn xuống **2 mức liên tiếp** (ca tăng ~4-5 lần) — chưa chạy.
 Ghi chú kỹ thuật: `stack-imb-boi-canh-2.py` giờ nhận tham số ngày bắt đầu và chia đôi thời gian theo
 TẬP CA thực tế (trước đây chia theo toàn file ⇒ sai khi lọc theo ngày).
+
+**2026-09-10 (tiếp 6) — người học yêu cầu SỐ ĐẾM THÔ thay vì bảng thống kê.** Script mới
+`research/stack-imb-dem.py` (đếm MỌI nến có imbalance, không đòi nến cùng chiều), log `_stack_dem_log.txt`.
+- **2,5 tháng gần nhất** (34.717 nến): mua dồn **318 lần** → đi theo 148, ngược 166, y nguyên 4;
+  bán dồn **363 lần** → theo 165, ngược 195, y nguyên 3. Cả hai chiều đều NGƯỢC nhiều hơn theo, nhưng
+  nền giai đoạn này cũng vậy (nến tăng thường chỉ tiếp tục 45/100) ⇒ không tệ hơn nền.
+- **Hai năm** (529.673 nến): mua dồn **3.565 lần** → theo 1.824 (51,2%) / ngược 1.680; bán dồn
+  **3.483 lần** → theo 1.638 (47,0%) / ngược 1.798 (51,6%) ⇒ chỉ phía MUA nghiêng theo.
+- **Phân bổ kịch bản (phát hiện quan trọng): hơn một nửa số ca KHÔNG thuộc kịch bản nào** (58% ở hai năm,
+  51% ở 2,5 tháng). "Giữa đợt đi" ~23-24%, "sau nhịp hồi" ~15-21%, cả hai cùng lúc chỉ 3-5%.
+- Ô tốt nhất hai năm: mua dồn **vừa giữa đợt đi vừa sau nhịp hồi** — 114 lần, theo 68 (59,6%), nhưng
+  n=114 nên chưa chắc; "giữa đợt đi" 848 lần → 52,2%.

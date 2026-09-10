@@ -132,3 +132,52 @@ Mọi con số "đẹp" ở cột 3 tháng đều **đảo dấu** ở cột 2 n
 
 Script: `scratchpad/ctx2.py`. VWAP = theo phiên (cắt phiên bằng khoảng trống >5 phút),
 giá điển hình (H+L+C)/3 nhân khối lượng, chỉ tính khi phiên đã chạy ≥20 nến.
+
+---
+
+# Bổ sung 3 — CÓ NHẬN DẠNG ĐÚNG "STOP HUNT" KHÔNG? (bỏ qua chuyện lãi lỗ)
+
+Câu hỏi tách riêng: thứ chỉ báo gắn nhãn "Stop-hunt" có thật sự là stop hunt không?
+Không đo đảo chiều, chỉ đo **bản chất của cái được đánh dấu**.
+
+Stop hunt thật cần 3 thứ: (a) một mức có **lệnh dừng lỗ đọng thật**, (b) **cú nổ khối
+lượng** khi các lệnh đó kích hoạt, (c) giá **quay lại** vào trong.
+(c) nằm sẵn trong định nghĩa. Đo (a) và (b):
+
+| | 3 tháng (n=144) | 2 năm (n=1027) |
+|---|---|---|
+| Mức bị quét cũng là đỉnh/đáy **30 nến** | 61,1% | 65,1% |
+| … **60 nến** | 48,6% | 52,6% |
+| … **240 nến** (4 giờ) | 31,2% | 34,1% |
+| … **cả phiên** | 26,4% | **27,7%** |
+| Mức rơi vào bội số 0,5 giá (ngẫu nhiên 20%) | 20,8% | **19,0%** |
+| Mức rơi vào số tròn 1,0 giá (ngẫu nhiên 10%) | 11,1% | **8,6%** |
+| Khối lượng nến tín hiệu / median | 2,9× (p90 7,8×) | **3,0×** (p90 7,6×) |
+| Vượt qua mức cũ | 4 tick (p90 13) | **3 tick** (p90 10) |
+
+## Kết luận
+
+**(b) ĐÚNG.** Khối lượng nến tín hiệu gấp **3 lần** median, p90 gấp 7,6 lần. Đây là cú nổ
+khối lượng thật, không phải nến bình thường.
+
+**(a) SAI.** Chỉ **27,7%** số mức bị quét là đỉnh/đáy của cả phiên; **66%** không phải cả
+đỉnh/đáy 4 giờ. Đa số là một nhấp nhô 30 phút tuổi — chỗ đó **không có lệnh dừng lỗ đọng**.
+Và mức phân bố trên số tròn **19,0% / 8,6%**, tức **thấp hơn ngẫu nhiên** (20% / 10%):
+không hề bám mốc tâm lý.
+
+Thêm: vượt qua mức cũ trung vị chỉ **3 tick**. Một chuỗi dừng lỗ kích hoạt thật sẽ đẩy xa
+hơn nhiều.
+
+⇒ Chỉ báo nhận dạng **chính xác và nhất quán** một hiện tượng có thật: *nổ khối lượng tại
+cực trị cục bộ, bên chủ động áp đảo, giá đóng lại vào trong*. Nhưng hiện tượng đó **không
+phải stop hunt** theo nghĩa trader dùng. Đặt tên sai chứ không phải đo sai.
+
+Hướng sửa đo được: siết `TryStopHunt` chỉ nhận mức là **đỉnh/đáy PHIÊN** (27,7% ⇒ ~285 ca
+trong 2 năm) rồi đo lại từ đầu. Chưa đo thì vẫn giữ TẮT.
+
+## Ghi chú về VWAP dùng ở Bổ sung 2
+Cắt phiên bằng khoảng trống >5 phút cho **538 phiên / 748 ngày lịch** (~534 ngày giao dịch),
+độ dài trung vị **1.379 nến M1 ≈ 23 giờ**. Tức mỗi phiên = **một ngày giao dịch Globex**
+⇒ VWAP đã dùng chính là **VWAP DAY**, reset ở nghỉ phiên hằng ngày. Không phải VWAP con.
+
+Script: `scratchpad/ident.py`.

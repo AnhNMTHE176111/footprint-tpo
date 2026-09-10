@@ -1,0 +1,47 @@
+Khoang: 2026-06-01 -> 2026-08-19 | tong ca: 640
+
+========================================================================================================
+MUA DON — 297 ca | THANG (di theo chieu) 139 | THUA 158
+========================================================================================================
+  boi canh truoc do                          nguong | ro CAO                   | ro THAP                  | 2 nua
+  pha dinh/day 60 nen (gia, >0 la pha)        -4.00 | 149 ca, thang  62 = 41.6% | 148 ca, thang  77 = 52.0% | -18.5/ -2.6  <== BEN
+  so nen ke tu dinh/day dot day               26.00 | 150 ca, thang  77 = 51.3% | 147 ca, thang  62 = 42.2% | +21.8/ -3.6
+  vi tri trong bien do 60 nen (0-1)            0.68 | 149 ca, thang  63 = 42.3% | 148 ca, thang  76 = 51.4% | -19.7/ +1.6
+  move 60 nen truoc (gia)                      1.40 | 149 ca, thang  63 = 42.3% | 148 ca, thang  76 = 51.4% | -18.9/ +0.6
+  bien do 60 nen (gia)                        15.50 | 149 ca, thang  76 = 51.0% | 148 ca, thang  63 = 42.6% |  +5.0/+11.5  <== BEN
+  so nen cung chieu trong 20 nen              10.00 | 162 ca, thang  70 = 43.2% | 135 ca, thang  69 = 51.1% | -15.0/ -0.2  <== BEN
+  move 20 nen truoc (gia)                      2.80 | 149 ca, thang  64 = 43.0% | 148 ca, thang  75 = 50.7% | -16.5/ +1.3
+  bien do nen trung binh 20 nen                1.87 | 149 ca, thang  75 = 50.3% | 148 ca, thang  64 = 43.2% |  -2.1/+15.8
+  da hoi lai bao nhieu (0=chua, 1=het)         0.39 | 149 ca, thang  73 = 49.0% | 148 ca, thang  66 = 44.6% | +14.3/ -6.1
+  delta luy ke phien (theo chieu)           -329.00 | 149 ca, thang  72 = 48.3% | 148 ca, thang  67 = 45.3% |  -8.6/+15.1
+  do lon dot day gan nhat (gia)                8.10 | 149 ca, thang  68 = 45.6% | 148 ca, thang  71 = 48.0% | -14.9/+10.1
+  move di THANG hay lình xình (0-1)            0.13 | 149 ca, thang  71 = 47.7% | 148 ca, thang  68 = 45.9% |  +1.2/ +2.3  <== BEN
+
+========================================================================================================
+BAN DON — 343 ca | THANG (di theo chieu) 154 | THUA 189
+========================================================================================================
+  boi canh truoc do                          nguong | ro CAO                   | ro THAP                  | 2 nua
+  so nen ke tu dinh/day dot day               26.00 | 172 ca, thang  83 = 48.3% | 171 ca, thang  71 = 41.5% | +12.0/ +2.2  <== BEN
+  move di THANG hay lình xình (0-1)            0.14 | 172 ca, thang  73 = 42.4% | 171 ca, thang  81 = 47.4% |  +3.0/-12.8
+  do lon dot day gan nhat (gia)                7.60 | 173 ca, thang  81 = 46.8% | 170 ca, thang  73 = 42.9% |  -4.5/+10.6
+  move 60 nen truoc (gia)                      1.90 | 172 ca, thang  74 = 43.0% | 171 ca, thang  80 = 46.8% | -17.8/ +8.8
+  bien do nen trung binh 20 nen                1.83 | 172 ca, thang  74 = 43.0% | 171 ca, thang  80 = 46.8% |  +3.2/-11.2
+  delta luy ke phien (theo chieu)            459.00 | 172 ca, thang  75 = 43.6% | 171 ca, thang  79 = 46.2% |  -4.6/ -2.0  <== BEN
+  bien do 60 nen (gia)                        15.20 | 172 ca, thang  75 = 43.6% | 171 ca, thang  79 = 46.2% |  -2.1/ -4.7  <== BEN
+  move 20 nen truoc (gia)                      3.00 | 173 ca, thang  79 = 45.7% | 170 ca, thang  75 = 44.1% |  -1.2/ +3.4
+  vi tri trong bien do 60 nen (0-1)            0.70 | 172 ca, thang  78 = 45.3% | 171 ca, thang  76 = 44.4% |  -6.0/ +6.8
+  so nen cung chieu trong 20 nen              11.00 | 177 ca, thang  80 = 45.2% | 166 ca, thang  74 = 44.6% |  -6.1/ +6.8
+  pha dinh/day 60 nen (gia, >0 la pha)        -3.70 | 173 ca, thang  78 = 45.1% | 170 ca, thang  76 = 44.7% |  -6.3/ +6.8
+  da hoi lai bao nhieu (0=chua, 1=het)         0.35 | 172 ca, thang  77 = 44.8% | 171 ca, thang  77 = 45.0% | +10.8/-10.5
+
+########################################################################################################
+# COMBO boi canh (chi tu dac trung ben ca hai nua)
+########################################################################################################
+  MUA · con xa dinh 60 nen (>4 gia) + bien do 60 nen rong (>=15,5)  84 ca | thang  46 / thua  38 = 54.8% | nua dau 56.7% (60) / nua sau 50.0% (24)
+  MUA · them: 20 nen truoc KHONG toan nen tang (<10)                58 ca | thang  34 / thua  24 = 58.6% | nua dau 61.4% (44) / nua sau 50.0% (14)
+  MUA · chi 'con xa dinh 60 nen'                                   148 ca | thang  77 / thua  71 = 52.0% | nua dau 54.8% (93) / nua sau 47.3% (55)
+  MUA · TAT CA (doi chung)                                         297 ca | thang 139 / thua 158 = 46.8% | nua dau 48.0% (148) / nua sau 45.6% (149)
+  BAN · cuc tri dot day da cu (>=26 nen) + bien do 60 nen hep (<15,2)  78 ca | thang  44 / thua  34 = 56.4% | nua dau 66.7% (30) / nua sau 50.0% (48)
+  BAN · them: phien chua ban rong nhieu                             40 ca | thang  24 / thua  16 = 60.0% | nua dau 64.3% (14) / nua sau 57.7% (26)
+  BAN · chi 'cuc tri da cu (>=26 nen)'                             172 ca | thang  83 / thua  89 = 48.3% | nua dau 53.8% (80) / nua sau 43.5% (92)
+  BAN · TAT CA (doi chung)                                         343 ca | thang 154 / thua 189 = 44.9% | nua dau 47.4% (171) / nua sau 42.4% (172)

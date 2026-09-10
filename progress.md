@@ -428,3 +428,17 @@ Thêm VWAP vào mọi combo (log `research/_stack_combo_vwap.txt`, mục 5 của
 251 ca). Ở 2,5 tháng gần: combo mua tụt 55,7% → 50,0%; và riêng điều kiện "mua dồn ở TRÊN VWAP" chỉ
 thắng 44,5%, **thấp hơn nền 47,1%** ⇒ trong chế độ đảo nhiều, phía trên VWAP là chỗ dễ bị đánh xuống,
 ngược hẳn giả thiết "trên VWAP thì thuận mua". Khớp với phép đo THEO/BỎ/NGƯỢC hôm nay.
+
+**2026-09-10 (tiếp 9) — BỐI CẢNH TRƯỚC nến tín hiệu (người học: bỏ hẳn giai đoạn 22 tháng, chỉ 2,5 tháng).**
+Script `research/stack-imb-boi-canh-truoc.py` (12 đặc trưng về bối cảnh 60 nến trước: độ lớn move, độ sâu
+nhịp hồi, tuổi cực trị, move thẳng hay lình xình, biên độ 60 nến, vị trí trong biên độ, có phá đỉnh/đáy
+60 nến, số nến cùng chiều, delta luỹ kế phiên). Log `_stack_bctruoc_log.txt`.
+- **MUA thắng khi:** còn cách đỉnh 60 nến >4 giá (không sát/phá đỉnh) · biên độ 60 nến RỘNG ≥15,5 ·
+  20 nến trước KHÔNG toàn nến tăng (<10/20). Combo 3 điều kiện: **58 ca, thắng 34 thua 24** (nền 297 ca
+  thắng 139 thua 158).
+- **BÁN thắng khi:** cực trị đợt đẩy đã cũ ≥26 nến · biên độ 60 nến HẸP <15,2 (ngược phía mua) ·
+  phiên chưa bán ròng nhiều. Combo: **40 ca, thắng 24 thua 16** (nền 343 ca thắng 154 thua 189).
+- ⭐ **Mẫu chung nhất quán ở cả hai chiều: dồn lệnh đáng tin khi xuất hiện ở chỗ CHƯA CÓ AI ĐUỔI GIÁ**
+  (không sát cực trị, chưa có chuỗi nến cùng chiều, phiên chưa dồn hết delta); dồn lệnh lúc "nóng" là
+  dấu hiệu MUỘN. Khớp cơ chế: sau khi đám đông đuổi giá thì thanh khoản đối phương đã bị ăn hết.
+- ⚠️ Nửa sau kỳ tụt về ~50% ở phía mua (n=14-24) ⇒ vẫn là giả thuyết, chưa code.

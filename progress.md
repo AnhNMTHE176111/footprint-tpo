@@ -289,3 +289,15 @@ ngày ⇒ intraday không dùng được.
 ⚠️ Combo 3 điều kiện đưa ra **chưa backtest** — thuộc diện "đọc chart được, chưa được code thành signal"
 (bảng theo dõi ở `tpo/EVIDENCE-DRILLS.md`). Bài săn bằng chứng đã giao: tìm 1 ca hấp thụ (delta dương,
 giá không lên) + 1 ca initiative thật, tại HVN/naked POC, lưu `tpo/evidence/`.
+
+**Bổ sung 2026-09-10 — người học phản biện: "hình thoi (imbalance xếp tầng) rất hiếm, toàn bóng tròn".
+ĐÚNG, và repo đã có số:** `research/XANH-DAU-DO-DIT-KET-QUA.md` đo trên 724.279 nến GC M1 —
+stacked imbalance với ngưỡng mặc định (chéo 3:1, ≥3 mức liên tiếp, min-vol = max(5, trung vị ô)) chỉ
+nổ ở **0,0–0,1% số nến**; bóng tròn (bubble) có ở **25,4% số nến** và **gần như luôn là HVN cell**
+(ô khối lượng nổi trội), không phải lệnh đơn lớn — vì Quantower không cấp `max_one_trade` cho dữ liệu
+lịch sử (0,00% độ phủ trên cả file 583 MB).
+⇒ **Đã sửa combo:** "imbalance xếp tầng ≥3 mức" chuyển từ **điều kiện bắt buộc → điểm cộng**; lõi còn
+lại là vị trí (phá VAH / tại HVN-naked POC) + delta nến + đóng ở 1/3 trên. Nếu muốn thấy hình thoi thì
+hạ ngưỡng trong Optimus Flow về **2 mức liên tiếp** và/hoặc **200%**, nhưng đó là ngưỡng CHƯA đo.
+⚠️ Bubble/HVN cell cũng chưa qua tách đôi thời gian (57,8% ở VWAP ±1 giá nửa đầu → nửa sau về 0)
+⇒ không dùng làm tín hiệu duy nhất.

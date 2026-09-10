@@ -342,3 +342,18 @@ Người học xác nhận đã bật Stacked Imbalance, để 300% / 3 mức. B
 🔧 **Sửa lại lời của Claude lượt trước:** đã nói "min-vol ≈ 5" — SAI; thực tế 8 trên GC M1, có cửa sổ tới 33.
 Ghi chú: hạ `MinLevelVolFloor` KHÔNG giúp (vì lấy `max` với trung vị) ⇒ muốn thấy ca một phe = 0 thì phải
 thêm input cho phép bỏ/nới min-vol, hoặc bỏ min-vol khi phe đối diện = 0. CHƯA sửa, chờ chốt.
+
+**2026-09-10 (tiếp 2) — ĐO XONG trên file 583 MB: stacked imbalance KHÔNG có follow-through.**
+Báo cáo đầy đủ: `research/STACK-IMBALANCE-FOLLOW-KET-QUA.md`; script `research/stack-imb-follow.py`.
+724.179 nến M1 GC (2 năm), loại cửa sổ vắt qua bước nhảy nối hợp đồng + khoảng nghỉ, tách đôi thời gian.
+- Tần suất: `>` cho **0,39%** nến, `>=` cho **0,68%** (dấu bằng làm số ca +73%).
+- `imbMinVol` thật: trung vị **11,0** (GC 2 năm); riêng GCZ26 tháng 8 = 8,0. ⇒ nến 8/10/8 của người học
+  đủ điều kiện khi ngưỡng ≤8 với `>=`, tức chỉ ở giai đoạn thị trường vừa phải.
+- Sau 20 nến: sell imbalance xuống 47,9%/46,6% vs **đối chứng mọi nến 47,4%/48,7%** ⇒ **kém hơn** ngẫu
+  nhiên ở nửa sau; buy 51,2%/50,3% vs 50,8%/50,4% ⇒ bằng 0. Siết ≥4 mức cũng không cứu.
+  Trung vị dịch chuyển 0,1-0,4 giá — dưới spread+phí.
+⇒ **KHÔNG code stacked imbalance thành signal entry theo chiều.** Việc nới `>` → `>=` chỉ nên làm cho
+phần HIỂN THỊ (đọc chart), không dùng bấm cò. Hướng còn mở: stacked imbalance có điều kiện vị trí
+(tại HVN/naked POC/biên VA) — chưa đo.
+🔧 Sửa số cũ: "0,0-0,1% nến" trong `XANH-DAU-DO-DIT-KET-QUA.md` là tỷ lệ trong band 30% và nền script
+cũ nạp MỌI ô (ngưỡng 5) thay vì 3 ô đậm nhất (ngưỡng 11) ⇒ số đúng toàn nến là 0,39%/0,68%.

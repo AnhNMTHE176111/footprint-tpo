@@ -1,0 +1,8 @@
+  ...100000 nen
+  ...200000 nen
+  ...300000 nen
+  ...400000 nen
+  ...500000 nen
+  ...600000 nen
+  ...700000 nen
+xong: 724279 nen -> C:\Users\anhla\OneDrive\Documents\footprint-tpo\research/perlevel_feats.csv

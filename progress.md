@@ -328,3 +328,17 @@ Kết quả kiểm 2 bản (`quantower-orderflow-indicator/OrderFlowBubbles.cs`,
   Sửa 1 dòng mỗi bản: fallback → 7.0 (Quantower) / 5m (ATAS) để t=1 ⇒ size lớn nhất. **CHƯA sửa, chờ chốt.**
 - Đã kiểm thêm: run KHÔNG nối qua khoảng trống (cả hai lặp từng tick và reset ở dòng 547 / 273) ✔.
 - Cả hai bản có `ImbalanceEnabled = false` mặc định ⇒ chưa bật thì không có hình thoi nào.
+
+**2026-09-10 (tiếp) — trả lời "nến 8/10/8 có đủ điều kiện hiện hình thoi?" — đã ĐO số thật.**
+Người học xác nhận đã bật Stacked Imbalance, để 300% / 3 mức. Ba điều kiện của code:
+1. tỷ lệ chéo 300% → **đạt thừa** (ask mức trên = 0);
+2. 3 mức liên tiếp → **có đủ 3 mức**;
+3. **min-vol ẩn** `imbMinVol = max(MinLevelVolFloor=5, trung vị của 3 ô ĐẬM NHẤT trên 100 nến gần nhất)`
+   — **không có trong bảng cài đặt**, và điều kiện là **LỚN HƠN** (`bid > imbMinVol`), không phải bằng.
+Đo trên `fp_GCZ26_XCEC_Time_20260802-20260831_28d16h.csv` (28.177 nến M1): trung vị top-3 = **8,0**
+(trung vị mọi ô = 3,0). Chia cửa sổ 100 nến: **49%** cửa sổ có trung vị ≤ 7, còn lại ≥ 8 (đuôi tới 33).
+⇒ Với bid 8/10/8: ngưỡng ≤7 thì đủ 3 mức ⇒ HIỆN; ngưỡng =8 thì hai ô bid=8 bị loại, run còn 1 ⇒ KHÔNG HIỆN.
+**Ca này nằm đúng ranh giới ~50/50**; chart không hiện ⇒ lúc đó ngưỡng ≥ 8.
+🔧 **Sửa lại lời của Claude lượt trước:** đã nói "min-vol ≈ 5" — SAI; thực tế 8 trên GC M1, có cửa sổ tới 33.
+Ghi chú: hạ `MinLevelVolFloor` KHÔNG giúp (vì lấy `max` với trung vị) ⇒ muốn thấy ca một phe = 0 thì phải
+thêm input cho phép bỏ/nới min-vol, hoặc bỏ min-vol khi phe đối diện = 0. CHƯA sửa, chờ chốt.

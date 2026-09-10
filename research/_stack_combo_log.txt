@@ -1,0 +1,33 @@
+=== FIT: 22 thang (2024-08 -> 2026-06) ===
+####################################################################################################
+  MUA · gia CHUA chay xa (<2,5) + nen KHONG dong sat dinh (<0,75)  953 ca | theo  501 / nguoc  452 =  52.6% | nua dau  52.9% (n=501) / nua sau  52.2% (n=452)
+  MUA · chi 'chua chay xa' (<2,5)                                1918 ca | theo 1022 / nguoc  896 =  53.3% | nua dau  54.9% (n=1059) / nua sau  51.3% (n=859)
+  MUA · chi 'khong dong sat dinh' (<0,75)                        1510 ca | theo  774 / nguoc  736 =  51.3% | nua dau  52.0% (n=741) / nua sau  50.6% (n=769)
+  MUA · TAT CA (doi chung)                                       3190 ca | theo 1676 / nguoc 1514 =  52.5% | nua dau  53.2% (n=1595) / nua sau  51.8% (n=1595)
+  BAN · dong SAT DAY (>=0,71) + bien do ngay rong (>=52)          231 ca | theo   93 / nguoc  138 =  40.3% | nua dau  52.6% (n=38) / nua sau  37.8% (n=193)
+  BAN · dong SAT DAY + bien do rong + sau 9h UTC                  168 ca | theo   71 / nguoc   97 =  42.3% | nua dau  55.6% (n=27) / nua sau  39.7% (n=141)
+  BAN · chi 'dong sat day' (>=0,71)                              1666 ca | theo  791 / nguoc  875 =  47.5% | nua dau  49.0% (n=868) / nua sau  45.9% (n=798)
+  BAN · TAT CA (doi chung)                                       3076 ca | theo 1473 / nguoc 1603 =  47.9% | nua dau  49.1% (n=1538) / nua sau  46.7% (n=1538)
+  MUA-22T · co lenh TB >=1,15 + delta nen >=65 + dong sat dinh >=0,77  516 ca | theo  286 / nguoc  230 =  55.4% | nua dau  52.2% (n=274) / nua sau  59.1% (n=242)
+  MUA-22T · co lenh TB >=1,15 + dong sat dinh >=0,77              807 ca | theo  453 / nguoc  354 =  56.1% | nua dau  54.5% (n=448) / nua sau  58.2% (n=359)
+  MUA-22T · chi co lenh TB >=1,15                                1587 ca | theo  882 / nguoc  705 =  55.6% | nua dau  54.2% (n=901) / nua sau  57.4% (n=686)
+  BAN-22T · chua giam nhieu (<1,3) + it lenh (<162) + ngay yen (<21,9)  597 ca | theo  316 / nguoc  281 =  52.9% | nua dau  53.4% (n=410) / nua sau  51.9% (n=187)
+  BAN-22T · chua giam nhieu (<1,3) + ngay yen (<21,9)             837 ca | theo  444 / nguoc  393 =  53.0% | nua dau  54.0% (n=576) / nua sau  51.0% (n=261)
+  BAN-22T · chi chua giam nhieu (<1,3)                           1533 ca | theo  778 / nguoc  755 =  50.8% | nua dau  52.1% (n=818) / nua sau  49.2% (n=715)
+
+=== KIEM NGOAI MAU: 2,5 thang gan nhat (2026-06 -> 08-19) ===
+####################################################################################################
+  MUA · gia CHUA chay xa (<2,5) + nen KHONG dong sat dinh (<0,75)   88 ca | theo   49 / nguoc   39 =  55.7% | nua dau  57.7% (n=52) / nua sau  52.8% (n=36)
+  MUA · chi 'chua chay xa' (<2,5)                                 156 ca | theo   82 / nguoc   74 =  52.6% | nua dau  54.8% (n=93) / nua sau  49.2% (n=63)
+  MUA · chi 'khong dong sat dinh' (<0,75)                         161 ca | theo   84 / nguoc   77 =  52.2% | nua dau  51.7% (n=87) / nua sau  52.7% (n=74)
+  MUA · TAT CA (doi chung)                                        314 ca | theo  148 / nguoc  166 =  47.1% | nua dau  47.8% (n=157) / nua sau  46.5% (n=157)
+  BAN · dong SAT DAY (>=0,71) + bien do ngay rong (>=52)           87 ca | theo   45 / nguoc   42 =  51.7% | nua dau  54.4% (n=57) / nua sau  46.7% (n=30)
+  BAN · dong SAT DAY + bien do rong + sau 9h UTC                   67 ca | theo   37 / nguoc   30 =  55.2% | nua dau  56.8% (n=44) / nua sau  52.2% (n=23)
+  BAN · chi 'dong sat day' (>=0,71)                               177 ca | theo   92 / nguoc   85 =  52.0% | nua dau  52.5% (n=101) / nua sau  51.3% (n=76)
+  BAN · TAT CA (doi chung)                                        360 ca | theo  165 / nguoc  195 =  45.8% | nua dau  48.3% (n=180) / nua sau  43.3% (n=180)
+  MUA-22T · co lenh TB >=1,15 + delta nen >=65 + dong sat dinh >=0,77   14 ca | theo    5 / nguoc    9 =  35.7% | nua dau  16.7% (n=6) / nua sau  50.0% (n=8)
+  MUA-22T · co lenh TB >=1,15 + dong sat dinh >=0,77               54 ca | theo   19 / nguoc   35 =  35.2% | nua dau  36.0% (n=25) / nua sau  34.5% (n=29)
+  MUA-22T · chi co lenh TB >=1,15                                 113 ca | theo   51 / nguoc   62 =  45.1% | nua dau  46.4% (n=56) / nua sau  43.9% (n=57)
+  BAN-22T · chua giam nhieu (<1,3) + it lenh (<162) + ngay yen (<21,9)   17 ca | theo   10 / nguoc    7 =  58.8% | nua dau  75.0% (n=4) / nua sau  53.8% (n=13)
+  BAN-22T · chua giam nhieu (<1,3) + ngay yen (<21,9)              21 ca | theo   11 / nguoc   10 =  52.4% | nua dau  60.0% (n=5) / nua sau  50.0% (n=16)
+  BAN-22T · chi chua giam nhieu (<1,3)                            148 ca | theo   74 / nguoc   74 =  50.0% | nua dau  53.1% (n=64) / nua sau  47.6% (n=84)

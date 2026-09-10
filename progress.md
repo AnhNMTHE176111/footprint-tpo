@@ -406,3 +406,18 @@ TẬP CA thực tế (trước đây chia theo toàn file ⇒ sai khi lọc theo
   51% ở 2,5 tháng). "Giữa đợt đi" ~23-24%, "sau nhịp hồi" ~15-21%, cả hai cùng lúc chỉ 3-5%.
 - Ô tốt nhất hai năm: mua dồn **vừa giữa đợt đi vừa sau nhịp hồi** — 114 lần, theo 68 (59,6%), nhưng
   n=114 nên chưa chắc; "giữa đợt đi" 848 lần → 52,2%.
+
+**2026-09-10 (tiếp 7) — bóc đặc điểm ca thành công/thất bại + thử lập combo.**
+Báo cáo: `research/STACK-IMBALANCE-DAC-DIEM-KET-QUA.md` · script `research/stack-imb-dac-diem.py`.
+Trích 16 đặc trưng cho từng ca, chia rổ theo trung vị, tách đôi thời gian, rồi kiểm chéo hai giai đoạn.
+- Combo tìm trên 2,5 tháng: **mua** = chưa chạy xa + không đóng sát đỉnh (88 ca, thắng 49/thua 39);
+  **bán** = đóng sát đáy + ngày biên độ rộng + sau 9h UTC (67 ca, thắng 37/thua 30).
+- **Kiểm trên 22 tháng: cả hai sụp** — mua 52,6% so với nền 52,5% (không hơn gì); bán 42,3% so với
+  nền 47,9% (tệ hơn).
+- Chiều ngược lại cũng sụp: combo rút từ 22 tháng (mua dồn cỡ lệnh lớn + đóng sát đỉnh, 56,1% trên
+  807 ca) chỉ còn **35,2%** khi kiểm trên 2,5 tháng gần.
+- ⭐ **Phát hiện đáng giữ (không phải combo): hai giai đoạn hành xử NGƯỢC NHAU.** 22 tháng thị trường
+  tăng mạnh thưởng hành vi "đuổi giá" (mua dồn đóng sát đỉnh, lệnh to = 56%); giai đoạn 6-8/2026 phạt
+  đúng hành vi đó (35%). Nền mua dồn cũng tụt từ 52,5% xuống 47,1%.
+- ⇒ Lỗ hổng thật cần giải trước khi lập combo: **chưa có cách nhận ra chế độ thị trường** (xu hướng bền
+  vs đảo liên tục). Không code combo nào trong tài liệu này thành tín hiệu.

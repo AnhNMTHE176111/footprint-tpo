@@ -421,3 +421,10 @@ Trích 16 đặc trưng cho từng ca, chia rổ theo trung vị, tách đôi th
   đúng hành vi đó (35%). Nền mua dồn cũng tụt từ 52,5% xuống 47,1%.
 - ⇒ Lỗ hổng thật cần giải trước khi lập combo: **chưa có cách nhận ra chế độ thị trường** (xu hướng bền
   vs đảo liên tục). Không code combo nào trong tài liệu này thành tín hiệu.
+
+**2026-09-10 (tiếp 8) — người học hỏi "combo đã kết hợp VWAP ngày chưa?": CHƯA, và giờ đã đo.**
+Thêm VWAP vào mọi combo (log `research/_stack_combo_vwap.txt`, mục 5 của báo cáo đặc điểm):
+**không cải thiện gì, chỉ cắt bớt số ca.** Combo mua 22 tháng: 56,1% cả khi có và không có VWAP (mất
+251 ca). Ở 2,5 tháng gần: combo mua tụt 55,7% → 50,0%; và riêng điều kiện "mua dồn ở TRÊN VWAP" chỉ
+thắng 44,5%, **thấp hơn nền 47,1%** ⇒ trong chế độ đảo nhiều, phía trên VWAP là chỗ dễ bị đánh xuống,
+ngược hẳn giả thiết "trên VWAP thì thuận mua". Khớp với phép đo THEO/BỎ/NGƯỢC hôm nay.

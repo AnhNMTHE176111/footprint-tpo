@@ -60,3 +60,30 @@ nhiều lệnh 45,4% vs 50,4%; ngày biên độ rộng 45,5% vs 50,2%).
 4. Việc cần làm trước khi lập bất kỳ combo nào: **có cách nhận ra chế độ thị trường đang là loại nào**
    (xu hướng bền vs đảo liên tục). Chưa có, và đó là lỗ hổng thật.
 5. ⛔ Không code combo nào trong tài liệu này thành tín hiệu.
+
+---
+
+## 5. Bổ sung — ghép thêm bias VWAP ngày vào các combo (người học hỏi 2026-09-10)
+
+Trước đó VWAP chỉ được đo như **một đặc trưng riêng** và bị loại vì đổi dấu giữa hai nửa; các combo ở
+mục 1-3 **không** có điều kiện VWAP. Đo lại có VWAP (log `_stack_combo_vwap.txt`):
+
+| Combo | 2,5 tháng gần | 22 tháng trước |
+|---|---|---|
+| Mua (combo 2,5T) **không** VWAP | 55,7% — 88 ca | 52,6% — 953 ca |
+| Mua (combo 2,5T) **+ trên VWAP** | **50,0%** — 28 ca | 54,1% — 462 ca |
+| Mua (combo 22T) không VWAP | 35,2% — 54 ca | 56,1% — 807 ca |
+| Mua (combo 22T) **+ trên VWAP** | **36,1%** — 36 ca | 56,1% — 556 ca |
+| Chỉ riêng điều kiện "trên VWAP" | **44,5%** — 173 ca | 53,4% — 1.978 ca |
+| Bán (combo 2,5T) không VWAP | 55,2% — 67 ca | 42,3% — 168 ca |
+| Bán (combo 2,5T) **+ dưới VWAP** | 56,7% — 30 ca | 40,8% — 103 ca |
+| Chỉ riêng điều kiện "dưới VWAP" | 45,3% — 170 ca | 48,1% — 1.755 ca |
+
+Nền để so: mua dồn nói chung 47,1% (2,5 tháng) và 52,5% (22 tháng); bán dồn 45,8% và 47,9%.
+
+**Kết luận:** thêm VWAP **không cải thiện combo nào**, chỉ cắt bớt số ca — combo mua 22 tháng giữ đúng
+56,1% nhưng mất 251 ca; combo bán giữ ~52-53% nhưng mất hai phần ba ca. Ở 2,5 tháng gần đây VWAP còn
+làm **xấu đi**: combo mua tụt từ 55,7% xuống 50,0%, và bản thân việc mua dồn **ở trên** VWAP chỉ thắng
+44,5% — **thấp hơn cả nền 47,1%**. Tức trong chế độ thị trường đảo nhiều, phía trên VWAP là chỗ dễ bị
+đánh xuống, ngược hẳn giả thiết "trên VWAP thì thuận mua". Kết quả này khớp với phép đo THEO/BỎ/NGƯỢC
+ở `STACK-IMBALANCE-BOI-CANH-KET-QUA.md` mục lần 2.

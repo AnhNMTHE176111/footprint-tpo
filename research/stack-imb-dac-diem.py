@@ -221,6 +221,23 @@ def main():
         ("BAN-22T · chua giam nhieu (<1,3) + ngay yen (<21,9)", "BAN",
          lambda x: x["da di duoc 20 nen (gia)"] < 1.3 and x["bien do ngay den gio (gia)"] < 21.9),
         ("BAN-22T · chi chua giam nhieu (<1,3)", "BAN", lambda x: x["da di duoc 20 nen (gia)"] < 1.3),
+        # --- cac combo tren + BIAS VWAP NGAY (mua chi khi tren vwap, ban chi khi duoi vwap) ---
+        ("MUA 2,5T combo + TREN vwap ngay", "MUA",
+         lambda x: x["da di duoc 20 nen (gia)"] < 2.5 and x["dong cua o dau nen (0-1)"] < 0.75
+         and x["cach vwap ngay (gia, +la dung phia)"] > 0),
+        ("MUA 22T combo + TREN vwap ngay", "MUA",
+         lambda x: x["co lenh trung binh"] >= 1.15 and x["dong cua o dau nen (0-1)"] >= 0.77
+         and x["cach vwap ngay (gia, +la dung phia)"] > 0),
+        ("MUA · chi dieu kien TREN vwap ngay", "MUA",
+         lambda x: x["cach vwap ngay (gia, +la dung phia)"] > 0),
+        ("BAN 2,5T combo + DUOI vwap ngay", "BAN",
+         lambda x: x["dong cua o dau nen (0-1)"] >= 0.71 and x["bien do ngay den gio (gia)"] >= 52.0
+         and x["gio UTC"] >= 9 and x["cach vwap ngay (gia, +la dung phia)"] > 0),
+        ("BAN 22T combo + DUOI vwap ngay", "BAN",
+         lambda x: x["da di duoc 20 nen (gia)"] < 1.3 and x["bien do ngay den gio (gia)"] < 21.9
+         and x["cach vwap ngay (gia, +la dung phia)"] > 0),
+        ("BAN · chi dieu kien DUOI vwap ngay", "BAN",
+         lambda x: x["cach vwap ngay (gia, +la dung phia)"] > 0),
     ]
     for ten_combo, chieu, pred in combos:
         sub = [c for c in cases if c[0] == chieu and pred(c[2])]

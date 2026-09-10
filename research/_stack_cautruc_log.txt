@@ -1,0 +1,77 @@
+Nguong dao chieu zigzag: 2.0 gia | tu 2026-06-01
+
+================================================================================================
+MUA DON — 314 ca | THANG 148 | THUA 166  (47.1%)
+================================================================================================
+  A. trong nhip hoi cua move cung chieu        hoi SAU >66%                        39 ca | thang  19 thua  20 = 48.7%
+  A. trong nhip hoi cua move cung chieu        hoi VUA 33-66%                      26 ca | thang  12 thua  14 = 46.2%
+  A. trong nhip hoi cua move cung chieu        hoi NONG <33%                       17 ca | thang   5 thua  12 = 29.4%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg con ngan hon move truoc  53 ca | thang  27 thua  26 = 50.9%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg con ngan hon move truoc  32 ca | thang  13 thua  19 = 40.6%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg da di >= move truoc   5 ca | thang   4 thua   1 = 80.0%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg da di >= move truoc   1 ca | thang   1 thua   0 = 100.0%
+  C. vua pha cuc tri cua move nguoc truoc                                         141 ca | thang  67 thua  74 = 47.5%
+
+================================================================================================
+BAN DON — 360 ca | THANG 165 | THUA 195  (45.8%)
+================================================================================================
+  A. trong nhip hoi cua move cung chieu        hoi SAU >66%                        46 ca | thang  22 thua  24 = 47.8%
+  A. trong nhip hoi cua move cung chieu        hoi NONG <33%                       21 ca | thang  11 thua  10 = 52.4%
+  A. trong nhip hoi cua move cung chieu        hoi VUA 33-66%                      17 ca | thang   4 thua  13 = 23.5%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg con ngan hon move truoc  56 ca | thang  26 thua  30 = 46.4%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg con ngan hon move truoc  49 ca | thang  23 thua  26 = 46.9%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg da di >= move truoc   3 ca | thang   0 thua   3 =  0.0%
+  C. vua pha cuc tri cua move nguoc truoc                                         168 ca | thang  79 thua  89 = 47.0%
+
+########## NGUONG 1.5 GIA ##########
+  A. trong nhip hoi cua move cung chieu        hoi SAU >66%                        42 ca | thang  18 thua  24 = 42.9%
+  A. trong nhip hoi cua move cung chieu        hoi NONG <33%                       17 ca | thang   6 thua  11 = 35.3%
+  A. trong nhip hoi cua move cung chieu        hoi VUA 33-66%                      17 ca | thang   8 thua   9 = 47.1%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg con ngan hon move truoc  50 ca | thang  25 thua  25 = 50.0%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg con ngan hon move truoc  35 ca | thang  16 thua  19 = 45.7%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg da di >= move truoc   3 ca | thang   2 thua   1 = 66.7%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg da di >= move truoc   1 ca | thang   1 thua   0 = 100.0%
+  C. vua pha cuc tri cua move nguoc truoc                                         149 ca | thang  72 thua  77 = 48.3%
+  A. trong nhip hoi cua move cung chieu        hoi SAU >66%                        40 ca | thang  19 thua  21 = 47.5%
+  A. trong nhip hoi cua move cung chieu        hoi VUA 33-66%                      24 ca | thang   8 thua  16 = 33.3%
+  A. trong nhip hoi cua move cung chieu        hoi NONG <33%                       22 ca | thang  11 thua  11 = 50.0%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg con ngan hon move truoc  53 ca | thang  28 thua  25 = 52.8%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg con ngan hon move truoc  50 ca | thang  21 thua  29 = 42.0%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg da di >= move truoc   2 ca | thang   0 thua   2 =  0.0%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg da di >= move truoc   1 ca | thang   1 thua   0 = 100.0%
+  C. vua pha cuc tri cua move nguoc truoc                                         168 ca | thang  77 thua  91 = 45.8%
+
+########## NGUONG 3.0 GIA ##########
+  A. trong nhip hoi cua move cung chieu        hoi SAU >66%                        46 ca | thang  25 thua  21 = 54.3%
+  A. trong nhip hoi cua move cung chieu        hoi VUA 33-66%                      22 ca | thang   7 thua  15 = 31.8%
+  A. trong nhip hoi cua move cung chieu        hoi NONG <33%                       13 ca | thang   5 thua   8 = 38.5%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg con ngan hon move truoc  60 ca | thang  33 thua  27 = 55.0%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg con ngan hon move truoc  33 ca | thang  16 thua  17 = 48.5%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg da di >= move truoc   4 ca | thang   3 thua   1 = 75.0%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg da di >= move truoc   1 ca | thang   1 thua   0 = 100.0%
+  C. vua pha cuc tri cua move nguoc truoc                                         135 ca | thang  58 thua  77 = 43.0%
+  A. trong nhip hoi cua move cung chieu        hoi SAU >66%                        49 ca | thang  22 thua  27 = 44.9%
+  A. trong nhip hoi cua move cung chieu        hoi VUA 33-66%                      23 ca | thang  11 thua  12 = 47.8%
+  A. trong nhip hoi cua move cung chieu        hoi NONG <33%                       17 ca | thang   9 thua   8 = 52.9%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg con ngan hon move truoc  74 ca | thang  36 thua  38 = 48.6%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg con ngan hon move truoc  36 ca | thang  16 thua  20 = 44.4%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg da di >= move truoc   4 ca | thang   0 thua   4 =  0.0%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg da di >= move truoc   1 ca | thang   0 thua   1 =  0.0%
+  C. vua pha cuc tri cua move nguoc truoc                                         156 ca | thang  71 thua  85 = 45.5%
+
+########## NGUONG 4.0 GIA ##########
+  A. trong nhip hoi cua move cung chieu        hoi SAU >66%                        52 ca | thang  26 thua  26 = 50.0%
+  A. trong nhip hoi cua move cung chieu        hoi VUA 33-66%                      23 ca | thang   8 thua  15 = 34.8%
+  A. trong nhip hoi cua move cung chieu        hoi NONG <33%                       10 ca | thang   5 thua   5 = 50.0%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg con ngan hon move truoc  73 ca | thang  38 thua  35 = 52.1%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg con ngan hon move truoc  27 ca | thang  13 thua  14 = 48.1%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg da di >= move truoc   6 ca | thang   4 thua   2 = 66.7%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg da di >= move truoc   3 ca | thang   2 thua   1 = 66.7%
+  C. vua pha cuc tri cua move nguoc truoc                                         120 ca | thang  52 thua  68 = 43.3%
+  A. trong nhip hoi cua move cung chieu        hoi SAU >66%                        59 ca | thang  23 thua  36 = 39.0%
+  A. trong nhip hoi cua move cung chieu        hoi VUA 33-66%                      21 ca | thang  11 thua  10 = 52.4%
+  A. trong nhip hoi cua move cung chieu        hoi NONG <33%                       17 ca | thang   9 thua   8 = 52.9%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg con ngan hon move truoc  83 ca | thang  47 thua  36 = 56.6%
+  B. dang chay cung chieu, chua hoi xong       da lui khoi cuc tri leg · leg con ngan hon move truoc  32 ca | thang  10 thua  22 = 31.2%
+  B. dang chay cung chieu, chua hoi xong       sat cuc tri leg · leg da di >= move truoc   4 ca | thang   0 thua   4 =  0.0%
+  C. vua pha cuc tri cua move nguoc truoc                                         144 ca | thang  65 thua  79 = 45.1%

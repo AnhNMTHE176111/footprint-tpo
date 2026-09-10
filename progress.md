@@ -442,3 +442,16 @@ nhịp hồi, tuổi cực trị, move thẳng hay lình xình, biên độ 60 n
   (không sát cực trị, chưa có chuỗi nến cùng chiều, phiên chưa dồn hết delta); dồn lệnh lúc "nóng" là
   dấu hiệu MUỘN. Khớp cơ chế: sau khi đám đông đuổi giá thì thanh khoản đối phương đã bị ăn hết.
 - ⚠️ Nửa sau kỳ tụt về ~50% ở phía mua (n=14-24) ⇒ vẫn là giả thuyết, chưa code.
+
+**2026-09-10 (tiếp 10) — người học bác cách đo bằng "60 nến/26 nến" (không ai đếm nến được) ⇒ đo lại
+theo CẤU TRÚC SÓNG.** Script `research/stack-imb-cau-truc.py`: zigzag theo ngưỡng GIÁ (chạy 4 ngưỡng
+1,5 · 2,0 · 3,0 · 4,0 giá để kiểm độ bền), phân bối cảnh thành nhóm mô tả được bằng mắt:
+A trong nhịp hồi của move cùng chiều (nông/vừa/sâu) · B đang chạy cùng chiều chưa hồi · C vừa phá cực
+trị của move ngược · E nhịp hồi của move ngược. Log `_stack_cautruc_log.txt`.
+- ⭐ **Bền nhất qua cả 4 ngưỡng: nhóm C "dồn lệnh ngay lúc phá đỉnh/đáy của move trước" là nhóm KÉM**
+  (mua 43,0-48,3% · bán 45,1-47,0%, luôn ≤ nền) — và đây là **nhóm ĐÔNG NHẤT, ~45% tổng số ca**.
+- Khá bền phía MUA: nhóm B "giá đang chạy lên, còn gần đỉnh đợt đẩy hiện tại, và đợt này còn NGẮN hơn
+  move trước" → 50,0 / 50,9 / 52,1 / 55,0% ở 4 ngưỡng (4/4 đều trên nền 47,1%). Phía bán lung tung.
+- ❌ **"Chờ hồi bao nhiêu phần trăm" KHÔNG phân biệt được gì:** mua hồi nông ra 29,4% ở ngưỡng 2,0 nhưng
+  50,0% ở ngưỡng 4,0; hồi sâu 42,9→54,3%. Đảo lộn khi đổi ngưỡng nhận sóng ⇒ không kết luận, và các con
+  số "hồi nông kém" ở lượt trước phải rút lại.

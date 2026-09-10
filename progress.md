@@ -383,3 +383,14 @@ Script `research/stack-imb-boi-canh-2.py`, 483.042 ca.
 - **Bỏ VWAP tốt hơn về thống kê:** cùng lệch, n tăng 38% (566/396 vs 409/289).
 - A·BUY sụp khi bỏ VWAP (+4,7 → −2,2) ⇒ phần đẹp ở lần 1 chỉ là trùng hợp của n=162.
 - A·SELL nửa đầu ~+5 ở mọi biến thể nhưng nửa sau tụt ⇒ yếu hơn B·BUY.
+
+**2026-09-10 (tiếp 5) — đo riêng 2,5 tháng gần nhất (1/6 → 19/8/2026, dữ liệu repo dừng ở 19/8).**
+Kết quả: **không đo được vì quá ít ca.** Mua dồn giữa đợt tăng chỉ còn **89 ca** (46,1% vs đối chứng
+45,2% ⇒ +0,8); giữ VWAP còn 58 ca (+2,3); mua dồn sau nhịp hồi 32 ca. Sai số ±5 điểm ⇒ không xác nhận
+cũng không phủ định mức +4 của hai năm.
+Hai điều vẫn đứng: (1) **phía bán nghiêng ngược** (bán dồn giữa đợt giảm: 42,4% vs 47,4% = −5,0);
+(2) giai đoạn 6-8/2026 nến tăng nói chung chỉ tiếp tục lên **45/100 lần** so với 49-50 của hai năm ⇒
+giá đảo nhiều hơn, mọi dấu hiệu tiếp diễn đều kém đi.
+Muốn đo được trên vài tháng phải nới định nghĩa dồn xuống **2 mức liên tiếp** (ca tăng ~4-5 lần) — chưa chạy.
+Ghi chú kỹ thuật: `stack-imb-boi-canh-2.py` giờ nhận tham số ngày bắt đầu và chia đôi thời gian theo
+TẬP CA thực tế (trước đây chia theo toàn file ⇒ sai khi lọc theo ngày).

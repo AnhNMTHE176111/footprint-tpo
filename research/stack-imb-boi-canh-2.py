@@ -16,9 +16,14 @@ Khac lan truoc ve ky thuat: chi mot pass tinh co (flag) cho tung nen roi tong ho
 => nhanh hon nhieu lan quet lai.
 """
 import os
+import sys
 import csv
 import statistics as st
 from datetime import datetime, timedelta
+
+# Tham so dong lenh: ngay bat dau (YYYY-MM-DD). Vd  python stack-imb-boi-canh-2.py 2026-06-01
+# Nen truoc ngay nay VAN duoc dung de tinh vwap/lookback, chi khong duoc tinh la ca do.
+DATE_FROM = datetime.strptime(sys.argv[1], "%Y-%m-%d") if len(sys.argv) > 1 else None
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BARS = os.path.join(ROOT, "data-export/data-footprint/fp_GC_XCEC_Time_20240801-20260819_748d9h_bars.csv")
@@ -127,6 +132,8 @@ def main():
     recs = []          # (i, sgn, above_vwap, has_imb, in_A, in_B, {k: move})
     for i in range(LOOKBACK, n - max(HORIZONS) - 1):
         _bi, t, o, _h, _l, c, _v = rows[i]
+        if DATE_FROM is not None and t < DATE_FROM:
+            continue
         if session_key(t) in bad:
             continue
         f = feats.get(_bi)
@@ -143,6 +150,11 @@ def main():
         if len(recs) % 200000 == 0:
             print("  ...%d nen thu thap" % len(recs), flush=True)
     print("tong ca: %d" % len(recs), flush=True)
+    # chia doi theo TAP CA thuc te (khong theo toan file) — de con dung khi loc theo ngay
+    if recs:
+        half = recs[len(recs) // 2][0]
+        print("khoang do: %s -> %s | moc chia doi: %s"
+              % (rows[recs[0][0]][1], rows[recs[-1][0]][1], rows[half][1]), flush=True)
 
     def group(scen, sgn, vwmode, want_imb, lo, hi, k):
         vals = []

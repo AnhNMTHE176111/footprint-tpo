@@ -85,3 +85,35 @@ Số ca (B·BUY, k=20): THEO 409/289 · BỎ **566/396** · NGƯỢC 157/107.
    (n=162), không phải hiệu ứng.
 5. A·SELL ổn định ~+5 nửa đầu ở cả ba biến thể nhưng nửa sau tụt (+2,4 / +1,2 / −0,4), và k=5-10 nửa sau
    âm ⇒ yếu hơn B·BUY, chưa đáng theo.
+
+---
+
+# LẦN 3 — chỉ đo 2,5 tháng gần nhất (2026-06-01 → 2026-08-19)
+
+Người học yêu cầu đo riêng giai đoạn gần. Dữ liệu mới nhất trong repo dừng ở **19/8/2026**, nên khoảng
+đo là **1/6 → 19/8/2026** (32.707 cây nến đi theo chiều).
+Chạy: `python research/stack-imb-boi-canh-2.py 2026-06-01` (log `_stack_3thang_log.txt`) và bản gộp cả kỳ
+(`_stack_3thang_gop.txt`).
+
+## Số ca sụp xuống mức không đo được
+
+| Nhóm (gộp cả kỳ, sau 20 phút, bỏ điều kiện VWAP) | Số ca | Đúng chiều | Đối chứng cùng hoàn cảnh | Chênh |
+|---|---|---|---|---|
+| Mua dồn giữa đợt tăng | 89 | 46,1% | 45,2% (3.399 ca) | +0,8 |
+| Mua dồn giữa đợt tăng (giữ điều kiện VWAP) | 58 | 46,6% | 44,3% | +2,3 |
+| Bán dồn giữa đợt giảm | 99 | 42,4% | 47,4% (3.500 ca) | **−5,0** |
+| Mua dồn sau nhịp hồi | 32 | 53,1% | 50,1% | +3,0 |
+
+Với 89 ca, sai số một lần đo đã là **±5 điểm** ⇒ không phân biệt được +0,8 với 0, mà cũng **không loại
+trừ** được mức +4 đo trên hai năm.
+
+## Kết luận lần 3
+
+1. **2,5 tháng là quá ngắn để đo hiện tượng này.** Dồn ba mức chỉ xảy ra ở 0,7% số nến; thêm điều kiện
+   bối cảnh thì còn vài chục ca. Không xác nhận cũng không phủ định được kết quả hai năm.
+2. **Bối cảnh thị trường giai đoạn này khác rõ:** nến tăng nói chung chỉ tiếp tục lên **45 trên 100 lần**
+   (hai năm là 49-50) ⇒ giai đoạn 6-8/2026 giá đảo qua đảo lại nhiều hơn, mọi dấu hiệu *tiếp diễn* đều
+   kém đi. Đây là thông tin đáng giữ, độc lập với chuyện imbalance.
+3. **Phía bán vẫn nghiêng ngược** (−5,0) — lặp lại đúng điều đã thấy trên hai năm.
+4. Muốn đo được trên khoảng vài tháng thì phải **nới định nghĩa dồn xuống 2 mức liên tiếp** (số ca tăng
+   khoảng 4-5 lần). Chưa chạy.

@@ -1,0 +1,71 @@
+nen: 724279 | phien loai: 179
+tong ca: 32707
+khoang do: 2026-06-01 00:00:00 -> 2026-08-19 09:14:00 | moc chia doi: 2026-06-01 00:00:00
+
+############ KICH BAN A (sau move + nhip hoi) | BUY ############
+  --- bias VWAP: THEO ---
+    k |   CO imb: nua dau / nua sau        | KHONG imb: nua dau / nua sau      | LECH
+    5 |     0   nan%  +nan /    36  36.1% -1.00 |      0   nan% /   3510  47.0% |  +nan / -10.9
+   10 |     0   nan%  +nan /    36  33.3% -1.80 |      0   nan% /   3510  47.3% |  +nan / -14.0
+   20 |     0   nan%  +nan /    36  38.9% -2.10 |      0   nan% /   3510  47.8% |  +nan /  -8.9
+  --- bias VWAP: BO ---
+    k |   CO imb: nua dau / nua sau        | KHONG imb: nua dau / nua sau      | LECH
+    5 |     0   nan%  +nan /    62  48.4% -0.10 |      0   nan% /   6659  47.6% |  +nan /  +0.8
+   10 |     0   nan%  +nan /    62  41.9% -1.10 |      0   nan% /   6659  48.0% |  +nan /  -6.0
+   20 |     0   nan%  +nan /    62  41.9% -1.85 |      0   nan% /   6659  48.2% |  +nan /  -6.3
+  --- bias VWAP: NGUOC ---
+    k |   CO imb: nua dau / nua sau        | KHONG imb: nua dau / nua sau      | LECH
+    5 |     0   nan%  +nan /    26  65.4% +0.85 |      0   nan% /   3149  48.3% |  +nan / +17.1
+   10 |     0   nan%  +nan /    26  53.8% +0.20 |      0   nan% /   3149  48.7% |  +nan /  +5.1
+   20 |     0   nan%  +nan /    26  46.2% -0.95 |      0   nan% /   3149  48.7% |  +nan /  -2.5
+
+############ KICH BAN A (sau move + nhip hoi) | SELL ############
+  --- bias VWAP: THEO ---
+    k |   CO imb: nua dau / nua sau        | KHONG imb: nua dau / nua sau      | LECH
+    5 |     0   nan%  +nan /    32  34.4% -0.95 |      0   nan% /   3761  48.2% |  +nan / -13.9
+   10 |     0   nan%  +nan /    32  46.9% -0.55 |      0   nan% /   3761  47.8% |  +nan /  -0.9
+   20 |     0   nan%  +nan /    32  53.1% +0.40 |      0   nan% /   3761  50.1% |  +nan /  +3.0
+  --- bias VWAP: BO ---
+    k |   CO imb: nua dau / nua sau        | KHONG imb: nua dau / nua sau      | LECH
+    5 |     0   nan%  +nan /    76  39.5% -0.90 |      0   nan% /   6728  48.9% |  +nan /  -9.4
+   10 |     0   nan%  +nan /    76  46.1% -0.90 |      0   nan% /   6728  48.2% |  +nan /  -2.2
+   20 |     0   nan%  +nan /    76  50.0% -0.20 |      0   nan% /   6728  49.3% |  +nan /  +0.7
+  --- bias VWAP: NGUOC ---
+    k |   CO imb: nua dau / nua sau        | KHONG imb: nua dau / nua sau      | LECH
+    5 |     0   nan%  +nan /    44  43.2% -0.80 |      0   nan% /   2967  49.7% |  +nan /  -6.6
+   10 |     0   nan%  +nan /    44  45.5% -1.20 |      0   nan% /   2967  48.8% |  +nan /  -3.3
+   20 |     0   nan%  +nan /    44  47.7% -0.65 |      0   nan% /   2967  48.4% |  +nan /  -0.6
+
+############ KICH BAN B (giua move) | BUY ############
+  --- bias VWAP: THEO ---
+    k |   CO imb: nua dau / nua sau        | KHONG imb: nua dau / nua sau      | LECH
+    5 |     0   nan%  +nan /    58  44.8% -0.35 |      0   nan% /   1944  45.4% |  +nan /  -0.6
+   10 |     0   nan%  +nan /    58  44.8% -0.50 |      0   nan% /   1944  45.2% |  +nan /  -0.3
+   20 |     0   nan%  +nan /    58  46.6% -0.45 |      0   nan% /   1944  44.3% |  +nan /  +2.3
+  --- bias VWAP: BO ---
+    k |   CO imb: nua dau / nua sau        | KHONG imb: nua dau / nua sau      | LECH
+    5 |     0   nan%  +nan /    89  44.9% -0.30 |      0   nan% /   3399  44.7% |  +nan /  +0.2
+   10 |     0   nan%  +nan /    89  46.1% -0.30 |      0   nan% /   3399  45.1% |  +nan /  +1.0
+   20 |     0   nan%  +nan /    89  46.1% -0.40 |      0   nan% /   3399  45.2% |  +nan /  +0.8
+  --- bias VWAP: NGUOC ---
+    k |   CO imb: nua dau / nua sau        | KHONG imb: nua dau / nua sau      | LECH
+    5 |     0   nan%  +nan /    31  45.2% +0.00 |      0   nan% /   1455  43.8% |  +nan /  +1.4
+   10 |     0   nan%  +nan /    31  48.4% +0.00 |      0   nan% /   1455  44.9% |  +nan /  +3.4
+   20 |     0   nan%  +nan /    31  45.2% -0.40 |      0   nan% /   1455  46.5% |  +nan /  -1.3
+
+############ KICH BAN B (giua move) | SELL ############
+  --- bias VWAP: THEO ---
+    k |   CO imb: nua dau / nua sau        | KHONG imb: nua dau / nua sau      | LECH
+    5 |     0   nan%  +nan /    62  33.9% -1.05 |      0   nan% /   1971  45.2% |  +nan / -11.3
+   10 |     0   nan%  +nan /    62  48.4% -0.60 |      0   nan% /   1971  44.6% |  +nan /  +3.7
+   20 |     0   nan%  +nan /    62  41.9% -1.25 |      0   nan% /   1971  46.7% |  +nan /  -4.8
+  --- bias VWAP: BO ---
+    k |   CO imb: nua dau / nua sau        | KHONG imb: nua dau / nua sau      | LECH
+    5 |     0   nan%  +nan /    99  38.4% -0.50 |      0   nan% /   3500  45.6% |  +nan /  -7.2
+   10 |     0   nan%  +nan /    99  45.5% -0.40 |      0   nan% /   3500  45.9% |  +nan /  -0.5
+   20 |     0   nan%  +nan /    99  42.4% -0.80 |      0   nan% /   3500  47.4% |  +nan /  -5.0
+  --- bias VWAP: NGUOC ---
+    k |   CO imb: nua dau / nua sau        | KHONG imb: nua dau / nua sau      | LECH
+    5 |     0   nan%  +nan /    37  45.9% -0.10 |      0   nan% /   1529  46.1% |  +nan /  -0.2
+   10 |     0   nan%  +nan /    37  40.5% -0.30 |      0   nan% /   1529  47.6% |  +nan /  -7.1
+   20 |     0   nan%  +nan /    37  43.2% -0.40 |      0   nan% /   1529  48.3% |  +nan /  -5.0

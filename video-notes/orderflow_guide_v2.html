@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Hướng Dẫn Toàn Tập Về Orderflow (Orderflow Guide)</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm 15mm;
+        }
+        * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            color: #2c3e50;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #fdfbf7;
+        }
+        h1 {
+            color: #1a252f;
+            text-align: center;
+            font-size: 24pt;
+            margin-bottom: 5mm;
+            padding-bottom: 5mm;
+            border-bottom: 2px solid #34495e;
+            text-transform: uppercase;
+        }
+        h2 {
+            color: #2980b9;
+            font-size: 16pt;
+            margin-top: 15mm;
+            margin-bottom: 5mm;
+            border-left: 4px solid #e74c3c;
+            padding-left: 10px;
+            page-break-after: avoid;
+        }
+        h3 {
+            color: #34495e;
+            font-size: 14pt;
+            margin-top: 8mm;
+            margin-bottom: 3mm;
+            page-break-after: avoid;
+        }
+        p {
+            font-size: 12pt;
+            text-align: justify;
+            margin-bottom: 4mm;
+        }
+        ul, ol {
+            font-size: 12pt;
+            margin-bottom: 4mm;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 2mm;
+        }
+        .highlight {
+            background-color: #ecf0f1;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin-bottom: 4mm;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 5mm;
+            font-size: 11pt;
+        }
+        th, td {
+            border: 1px solid #bdc3c7;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #34495e;
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .timestamp {
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+        .video-reference {
+            background-color: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 12px;
+            margin: 6mm 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 11.5pt;
+            page-break-inside: avoid;
+        }
+        .video-reference strong {
+            color: #2980b9;
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Giáo Án: Hướng Dẫn Toàn Tập Về Orderflow</h1>
+
+    <div class="highlight">
+        Nguồn: Video "The Only Orderflow Guide You'll Ever Need" bởi Fabervaale ENG
+    </div>
+
+    <p>Giáo án này được tổng hợp chi tiết từ video hướng dẫn, giải thích từ cơ bản đến nâng cao về Orderflow (Dòng lệnh), cách thị trường hoạt động dựa trên sự tương tác giữa người mua và người bán, và cách đọc dấu chân (footprint) của dòng tiền thông minh.</p>
+
+    <h2>Phần 1: Nền Tảng Của Thị Trường &amp; Lực Lượng Giao Dịch <span class="timestamp">[00:01:13]</span></h2>
+    <p>Thị trường được tạo nên bởi sự tương tác giữa hai lực lượng chính: <strong>Ý định Mua</strong> và <strong>Ý định Bán</strong>. Giao dịch diễn ra thông qua một sàn giao dịch trung tâm và được thể hiện dưới dạng khối lượng (volume).</p>
+
+    <h3>1. Hai Loại Người Tham Gia Cốt Lõi</h3>
+    <ul>
+        <li><strong>Người tham gia Thụ động (Passive Participants - Limit Orders):</strong>
+            <ul>
+                <li>Họ đặt lệnh chờ (Limit Order) trên sổ lệnh (Order Book - Bid/Ask).</li>
+                <li><strong>Đặc điểm:</strong> Quyền quyết định giá cả (Price Authority) và Sự chắc chắn về giá (Price Certainty) - họ biết chính xác mức giá họ muốn khớp.</li>
+                <li><strong>Hạn chế:</strong> Sự không chắc chắn về việc khớp lệnh (Execution Uncertainty) - lệnh có thể không bao giờ được khớp nếu giá không chạm tới mức đó.</li>
+                <li><strong>Vai trò:</strong> Tạo ra <strong>sức kháng cự (Resistance)</strong> và tính thanh khoản (Liquidity) cho thị trường.</li>
+            </ul>
+        </li>
+        <li><strong>Người tham gia Chủ động (Aggressive Participants - Market Orders):</strong>
+            <ul>
+                <li>Họ đặt lệnh thị trường (Market Order) và chấp nhận mua/bán ngay lập tức ở mức giá tốt nhất hiện có trên sổ lệnh.</li>
+                <li><strong>Đặc điểm:</strong> Quyền quyết định khớp lệnh (Execution Authority) và Sự chắc chắn về việc khớp lệnh (Execution Certainty) - lệnh chắc chắn sẽ được khớp ngay lập tức.</li>
+                <li><strong>Hạn chế:</strong> Sự không chắc chắn về giá (Price Uncertainty) - có thể bị trượt giá (slippage) nếu khối lượng lệnh lớn hơn thanh khoản ở mức giá hiện tại.</li>
+                <li><strong>Vai trò:</strong> Tạo ra <strong>áp lực (Pressure)</strong> và đẩy giá di chuyển.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <div class="video-reference">
+        <strong>📽️ Tham khảo hình ảnh tại mốc thời gian: [00:01:46] - [00:02:29]</strong>
+        <em>Tác giả minh họa màn hình chia làm 2 bên: Sổ lệnh (Order Book) bên phải với các lệnh Limit (Passive) và các lệnh Market (Aggressive) bên trái chuẩn bị khớp để đẩy giá đi.</em>
+    </div>
+
+    <h3>2. Cơ Chế Khớp Lệnh &amp; Sự Di Chuyển Của Giá <span class="timestamp">[00:01:46]</span></h3>
+    <p>Giá di chuyển khi lực lượng chủ động (Market Orders) tiêu thụ hết tính thanh khoản của lực lượng thụ động (Limit Orders) ở một mức giá nhất định.</p>
+    <ul>
+        <li><strong>Ví dụ 1 (Đủ thanh khoản):</strong> Lệnh Mua Chủ động 25 contracts khớp với Lệnh Bán Thụ động (Best Ask) có 33 contracts ở giá 101. Lệnh mua được khớp hết, giá Ask dời lên nhưng vẫn ở mức 101 (còn lại 8 contracts).</li>
+        <li><strong>Ví dụ 2 (Thiếu thanh khoản - Trượt giá):</strong> Lệnh Mua Chủ động 75 contracts khớp với mức giá 101 (chỉ có 8 contracts). Sau khi khớp 8 contracts, 67 contracts còn lại sẽ tiếp tục "ăn" lên mức giá 102 (khớp 42 contracts) và sau đó lên 103 (khớp 25 contracts). <strong>Kết quả:</strong> Giá bị đẩy từ 101 lên 103.</li>
+    </ul>
+
+    <h2>Phần 2: Phân Tích Biểu Đồ Footprint &amp; Đọc Tình Huống <span class="timestamp">[00:11:02]</span></h2>
+    <p>Biểu đồ Footprint cung cấp cái nhìn vi mô vào bên trong một cây nến, cho thấy chính xác khối lượng giao dịch mua chủ động và bán chủ động ở từng mức giá cụ thể.</p>
+
+    <h3>1. Absorption (Sự Hấp Thụ) <span class="timestamp">[00:11:40]</span></h3>
+    <p><strong>Nỗ lực cao, nhưng kết quả thấp (High effort, low result).</strong></p>
+    <ul>
+        <li>Xảy ra khi một phe chủ động (ví dụ: Mua) tạo ra áp lực cực lớn (khối lượng mua lớn ở một mức giá), nhưng bị phe thụ động (Limit Sell) "hấp thụ" hoàn toàn.</li>
+        <li><strong>Dấu hiệu trên Footprint:</strong> Khối lượng mua/bán rất lớn ở đỉnh/đáy nến nhưng nến đóng cửa theo hướng ngược lại (Ví dụ: Mua mạnh ở đỉnh nhưng nến đóng cửa đỏ).</li>
+        <li><strong>Ý nghĩa:</strong> Báo hiệu sự cạn kiệt của phe chủ động và khả năng đảo chiều.</li>
+    </ul>
+
+    <div class="video-reference">
+        <strong>📽️ Tham khảo hình ảnh tại mốc thời gian: [00:11:40] - [00:12:13]</strong>
+        <em>Bạn sẽ thấy nến Footprint cho thấy nỗ lực Mua khổng lồ ở đỉnh nến, nhưng nến lại đóng cửa là nến Bán (Sell close) - Ví dụ kinh điển về Hấp thụ (Absorption).</em>
+    </div>
+
+    <h3>2. Initiative Auction (Đấu Giá Chủ Động / Bứt Phá) <span class="timestamp">[00:12:30]</span></h3>
+    <p><strong>Nỗ lực cao và kết quả cao (High effort, high result).</strong></p>
+    <ul>
+        <li>Phe chủ động không chỉ tạo áp lực mạnh mà còn nhận được kết quả xứng đáng (nến di chuyển mạnh và đóng cửa theo hướng nỗ lực).</li>
+        <li><strong>Dấu hiệu trên Footprint:</strong> Khối lượng chủ động lớn, nhất quán suốt thân nến, phá vỡ các mức kháng cự/hỗ trợ, nến đóng cửa mạnh mẽ. Thường xuất hiện các mức "Imbalance" (Mất cân bằng) nơi một phe áp đảo hoàn toàn.</li>
+        <li><strong>Ý nghĩa:</strong> Xác nhận xu hướng mạnh, cơ hội tốt để tham gia theo xu hướng (Trend following).</li>
+    </ul>
+
+    <h3>3. Book Sweeping (Quét Sổ Lệnh / Cạn Kiệt Thanh Khoản) <span class="timestamp">[00:13:26]</span></h3>
+    <p><strong>Nỗ lực thấp, nhưng kết quả cao (Low effort, high result).</strong></p>
+    <ul>
+        <li>Xảy ra khi sổ lệnh cực kỳ mỏng (ít lệnh Limit).</li>
+        <li><strong>Dấu hiệu trên Footprint:</strong> Một khối lượng chủ động rất nhỏ cũng có thể đẩy giá đi một quãng đường dài. Nến dài nhưng tổng khối lượng giao dịch bên trong rất thấp.</li>
+        <li><strong>Ý nghĩa:</strong> Vùng giá di chuyển nhanh nhưng thiếu sự ủng hộ của khối lượng (có thể là bẫy hoặc giá đi tìm thanh khoản).</li>
+    </ul>
+
+    <h3>4. Exhaustion (Sự Kiệt Sức) <span class="timestamp">[00:18:31]</span></h3>
+    <ul>
+        <li>Giá vẫn tiếp tục tăng/giảm nhưng khối lượng giao dịch ngày càng cạn kiệt (giảm dần).</li>
+        <li><strong>Dấu hiệu:</strong> Xuất hiện sự phân kỳ: Giá tạo đỉnh mới nhưng khối lượng chủ động nhỏ dần, kèm theo Imbalance ngược hướng ở đỉnh.</li>
+        <li><strong>Ý nghĩa:</strong> Tín hiệu mạnh mẽ cho sự đảo chiều sắp tới.</li>
+    </ul>
+
+    <div class="video-reference">
+        <strong>📽️ Tham khảo hình ảnh tại mốc thời gian: [00:18:31] - [00:19:13]</strong>
+        <em>Trên màn hình thể hiện mô hình kiệt sức, khối lượng giao dịch (volume) co hẹp dần khi giá đi lên đỉnh, xuất hiện Imbalance bán chặn ở phía trên.</em>
+    </div>
+
+    <h2>Phần 3: Delta &amp; Ứng Dụng <span class="timestamp">[00:14:15]</span></h2>
+    <p><strong>Delta</strong> = (Khối lượng Mua Chủ Động) - (Khối lượng Bán Chủ Động) tại một mức giá hoặc trong một cây nến.</p>
+    <ul>
+        <li><strong>Delta ngang (Horizontal Delta / Delta Footprint Profile):</strong> Cho thấy sự chênh lệch lực mua/bán ở từng mức giá cụ thể trong nến. Giúp xác định chính xác vùng Absorption.</li>
+        <li><strong>Delta dọc (Vertical Delta / Delta per candle):</strong> Thể hiện dưới dạng biểu đồ cột bên dưới giá, cho biết tổng Delta của cả cây nến.</li>
+        <li><strong>Sự kết hợp (Confluence):</strong> Nếu Delta cực âm (Bán chủ động mạnh) nhưng nến đóng cửa Xanh -&gt; Sự hấp thụ (Absorption) -&gt; Tín hiệu Mua. Ngược lại nếu Delta cực dương nhưng nến đóng cửa Đỏ -&gt; Tín hiệu Bán.</li>
+    </ul>
+
+    <h2>Phần 4: Volume Profile &amp; Đấu Giá Thị Trường (Market Auction Theory) <span class="timestamp">[00:19:30]</span></h2>
+    <p>Volume Profile cho thấy khối lượng giao dịch được phân bổ theo <strong>Mức Giá (Price)</strong> chứ không phải theo thời gian.</p>
+
+    <h3>Các Thuật Ngữ Cốt Lõi Của Volume Profile</h3>
+    <table>
+        <tr>
+            <th>Thuật Ngữ</th>
+            <th>Mô tả</th>
+        </tr>
+        <tr>
+            <td><strong>Value Area (VA)</strong></td>
+            <td>Vùng Giá Trị - Nơi diễn ra 68% tổng khối lượng giao dịch. Đại diện cho mức giá "hợp lý" (fair value) được thị trường chấp nhận.</td>
+        </tr>
+        <tr>
+            <td><strong>VAH &amp; VAL</strong></td>
+            <td>Value Area High (Đỉnh Vùng Giá Trị) &amp; Value Area Low (Đáy Vùng Giá Trị). Đóng vai trò là mức Kháng cự và Hỗ trợ cực mạnh.</td>
+        </tr>
+        <tr>
+            <td><strong>POC (Point of Control)</strong></td>
+            <td>Mức giá có khối lượng giao dịch (số lượng giao dịch) cao nhất trong phiên.</td>
+        </tr>
+        <tr>
+            <td><strong>LVN (Low Volume Node)</strong></td>
+            <td>Vùng giá có khối lượng giao dịch rất thấp. Giá thường di chuyển rất nhanh qua vùng này hoặc bị từ chối mạnh khi quay lại.</td>
+        </tr>
+        <tr>
+            <td><strong>HVN (High Volume Node)</strong></td>
+            <td>Vùng giá có khối lượng giao dịch cao (như POC), đóng vai trò như thỏi nam châm hút giá về.</td>
+        </tr>
+    </table>
+
+    <div class="video-reference">
+        <strong>📽️ Tham khảo hình ảnh tại mốc thời gian: [00:20:08] - [00:21:11]</strong>
+        <em>Tác giả chỉ ra biểu đồ Volume Profile dạng phân phối chuẩn hình chuông (Gaussian distribution), chỉ rõ 68% Value Area, VAH, VAL và điểm POC.</em>
+    </div>
+
+    <h3>Sử Dụng Volume Profile Để Xây Dựng Kịch Bản (Bias) <span class="timestamp">[00:24:24]</span></h3>
+    <ul>
+        <li><strong>Thị trường Cân bằng (Balance):</strong> Giá di chuyển qua lại giữa VAH và VAL. Chiến lược: Fade (Mua ở VAL, Bán ở VAH).</li>
+        <li><strong>Mất Cân bằng &amp; Tìm kiếm giá trị (Out of balance &amp; Price Discovery):</strong> Khi giá phá vỡ VAH/VAL và đóng cửa bên ngoài, tạo ra xu hướng.</li>
+        <li><strong>Tái cân bằng LVN:</strong> Khi giá phá vỡ và tạo xu hướng, nó thường để lại các khoảng trống khối lượng (LVN). Giá rất thích quay lại "kiểm tra" (retest) các vùng LVN này trước khi tiếp tục xu hướng. Sự kết hợp giữa VAL/VAH cũ và LVN là điểm vào lệnh cực tốt.</li>
+        <li><strong>Mô hình chữ P (P-Shape Profile):</strong> Khối lượng tập trung nhiều ở phần trên. Thể hiện sự chủ động của phe Mua (Short covering hoặc xu hướng tăng).</li>
+        <li><strong>Failed Auction (Đấu giá thất bại / Fakeout):</strong> Giá phá vỡ VAL/VAH nhưng lập tức quay đầu đi vào trong Vùng Giá Trị. Đây là tín hiệu đảo chiều mạnh, giá thường sẽ đi xuyên qua VA để tiến tới ranh giới đối diện.</li>
+    </ul>
+
+    <h2>Phần 5: Thực Chiến &amp; Chiến Lược Cụ Thể (Ví dụ NASDAQ) <span class="timestamp">[00:28:49]</span></h2>
+    <p>Tác giả kết hợp Volume Profile (để tìm vùng giá trị cốt lõi / bias) và Footprint/Deep Trades (để tìm tín hiệu kích hoạt - trigger) vào phiên New York (Cash Session).</p>
+
+    <ol>
+        <li><strong>Xác định Bias:</strong> Quan sát Vùng Giá Trị (Value Area) của ngày hôm trước. Nếu thị trường "chấp nhận" (accept) giá cao hơn (VAH mới cao hơn), xu hướng là Tăng.</li>
+        <li><strong>Xác định Vùng Cản (Levels):</strong> VAH, VAL, POC và LVN của ngày hôm trước/các ngày gộp lại (merged profiles).</li>
+        <li><strong>Chờ Tín Hiệu (Trigger):</strong> Khi giá về đến VAL (Hỗ trợ), quan sát Footprint (hoặc công cụ lọc lệnh lớn - Deep Trades).
+            <ul>
+                <li>Nếu thấy <strong>Absorption</strong> (Bán chủ động mạnh nhưng không thủng, nến rút chân).</li>
+                <li>Hoặc thấy <strong>Exhaustion</strong> (Khối lượng cạn kiệt khi giá giảm sát VAL).</li>
+            </ul>
+        </li>
+        <li><strong>Vào lệnh &amp; Quản lý vốn:</strong> Vào lệnh Mua, mục tiêu (Target) là VAH hoặc POC. Khi giá vượt qua cản gần nhất, dời Stoploss về Break Even (Hòa vốn). Sử dụng trailing stop dựa trên khối lượng chủ động.</li>
+    </ol>
+
+    <div class="video-reference">
+        <strong>📽️ Tham khảo hình ảnh tại mốc thời gian: [00:37:36] - [00:38:32]</strong>
+        <em>Tác giả sử dụng giao diện "Deep Trades" (lọc lệnh lớn) để cho thấy cách hơn 300 hợp đồng Bán chủ động bị phe Mua (hỗ trợ) hấp thụ hoàn toàn ở sát một ngưỡng Volume Profile, tạo điểm vào lệnh xác suất cao.</em>
+    </div>
+
+</body>
+</html>

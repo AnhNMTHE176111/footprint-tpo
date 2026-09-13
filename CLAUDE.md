@@ -23,6 +23,18 @@
 >   tiếng Anh phải **dịch sang tiếng Việt hoặc giải thích ngay tại chỗ dùng lần đầu**. Ví dụ lỗi đã mắc:
 >   viết "volatility cao" thay vì **"biên độ dao động cao"**. Từ viết tắt đã dạy rồi (TPO, VA, POC, LVN,
 >   HVN, delta) thì dùng bình thường; từ MỚI thì luôn kèm nghĩa tiếng Việt lần đầu.
+>   **NGOẠI LỆ — 4 từ dưới đây BẮT BUỘC dùng tiếng Anh, không dịch (người học chốt 2026-09-13):**
+>   | Viết thế này | KHÔNG viết |
+>   |---|---|
+>   | **sell** | bán |
+>   | **buy** | mua |
+>   | **limit** | lệnh chờ / lệnh giới hạn |
+>   | **market** | lệnh thị trường / đập giá |
+>
+>   Dùng như từ tiếng Việt bình thường, ghép tự nhiên vào câu: "bên sell", "lệnh buy chủ động",
+>   "sell limit treo ở trên", "buy bằng market". **"chủ động" và "thụ động" GIỮ NGUYÊN tiếng Việt**
+>   (không viết aggressive/passive). Lý do người học yêu cầu: đây là từ họ đọc hằng ngày trên phần mềm
+>   và tài liệu gốc, dịch sang tiếng Việt làm chậm phản xạ khi nhìn chart thật.
 
 1. **Dạy bằng hình ảnh.** Footprint học bằng mắt. Khi giảng một khái niệm, **mở ảnh chart tương ứng** (`course/images/bai-N/pNNN.png` hoặc `ebook/images/pNNN.png`) bằng tool Read và mô tả/đọc số liệu trực tiếp trên đó. Đừng chỉ giảng chay.
    - **BẮT BUỘC — luôn kèm link Markdown tới MỌI ảnh nhắc trong bài** (vd `[p056.png](ebook/images/p056.png)`), ngay tại chỗ nói về ảnh đó. KHÔNG nói "trang 56 / hình trên" mà thiếu link — người học cần click mở ngay, đi tìm thủ công làm ngắt quãng buổi học (sự cố 2026-06-29). Nhớ: tên file ảnh = số trang PDF, có thể lệch số trang in trong sách → ưu tiên bám tên file `pNNN.png`.

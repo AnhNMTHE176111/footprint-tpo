@@ -30,6 +30,12 @@
 >   | **buy** | mua |
 >   | **limit** | lệnh chờ / lệnh giới hạn |
 >   | **market** | lệnh thị trường / đập giá |
+>   | **sell limit** | giá chào bán |
+>   | **buy limit** | giá chào mua |
+>
+>   Hai dòng cuối chốt bổ sung 2026-09-13 để cô đọng thuật ngữ: nói thẳng **"sell limit" / "buy limit"**,
+>   không viết "giá chào bán (Ask)" dài dòng nữa. **Ask / Bid vẫn giữ** khi nói về **tên cột trên
+>   footprint** (cột Ask, cột Bid) vì đó là chữ hiện trên phần mềm.
 >
 >   Dùng như từ tiếng Việt bình thường, ghép tự nhiên vào câu: "bên sell", "lệnh buy chủ động",
 >   "sell limit treo ở trên", "buy bằng market". **"chủ động" và "thụ động" GIỮ NGUYÊN tiếng Việt**

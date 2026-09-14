@@ -631,10 +631,16 @@ namespace SessionZonesNs
                 }
             // LVN: KHÔNG phải vùng canh lệnh — nơi giá xuyên nhanh, dùng để đặt SL /
             // biết chỗ không nên kỳ vọng phản ứng. Xét riêng khỏi trần MaxZones (D3).
+            // Người học yêu cầu 2026-09-14: thêm LVN NGÀY (trước chỉ có LVN tuần) —
+            // cùng cặp dyRows đã dùng cho HVN ngày, chỉ khác hàm tìm đáy thay vì đỉnh.
             if (ShowLvn && wkRows != null)
                 foreach (var (p, ratio) in ProfileEngine.FindLvn(wkRows, tick).Take(MaxLvn))
                     lvnZones.Add(new Zone { Center = p, Lo = p, Hi = p, Type = "lvn", IsMarker = false,
                         Side = SideOf(p), Strength = 30, Label = $"LVN tuần ×{ratio:0.0} (xuyên nhanh)" });
+            if (ShowLvn && dyRows != null)
+                foreach (var (p, ratio) in ProfileEngine.FindLvn(dyRows, tick).Take(MaxLvn))
+                    lvnZones.Add(new Zone { Center = p, Lo = p, Hi = p, Type = "lvn", IsMarker = false,
+                        Side = SideOf(p), Strength = 30, Label = $"LVN ngày ×{ratio:0.0} (xuyên nhanh)" });
 
             // naked POC
             foreach (var sp in completed)

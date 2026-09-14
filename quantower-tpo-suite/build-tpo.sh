@@ -9,6 +9,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ENGINE="$HERE/ProfileEngine.cs"
 TMP="$(mktemp -d)"
 QW="$HOME/quantower-libs/qw-build.sh"
+DEPLOY="$HOME/quantower-libs/qw-deploy.sh"
 
 build_one() {
   local src="$1" asm="$2"
@@ -19,6 +20,8 @@ build_one() {
   cp "$TMP/dist/$asm.dll" "$HERE/dist/$asm.dll" 2>/dev/null || \
     cp "$(dirname "$TMP/$asm.cs")/dist/$asm.dll" "$HERE/dist/$asm.dll"
   echo "==> $HERE/dist/$asm.dll"
+  # tu dong nap vao Optimus Flow — ca 2 indicator TPO nam trong thu muc "TPO Suite"
+  [ -f "$DEPLOY" ] && bash "$DEPLOY" "$HERE/dist/$asm.dll" "TPO Suite"
 }
 
 case "${1:-all}" in

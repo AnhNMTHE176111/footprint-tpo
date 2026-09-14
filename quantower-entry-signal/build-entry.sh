@@ -13,4 +13,6 @@ bash "$QW" "$TMP/EntrySignal.cs" EntrySignal
 mkdir -p "$HERE/dist"
 cp "$TMP/dist/EntrySignal.dll" "$HERE/dist/EntrySignal.dll"
 echo "==> $HERE/dist/EntrySignal.dll"
+DEPLOY="$HOME/quantower-libs/qw-deploy.sh"
+[ -f "$DEPLOY" ] && bash "$DEPLOY" "$HERE/dist/EntrySignal.dll" "EntrySignal"
 rm -rf "$TMP"

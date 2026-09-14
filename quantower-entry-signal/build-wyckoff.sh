@@ -13,4 +13,6 @@ bash "$QW" "$TMP/WyckoffRunner.cs" WyckoffRunner
 mkdir -p "$HERE/dist"
 cp "$TMP/dist/WyckoffRunner.dll" "$HERE/dist/WyckoffRunner.dll"
 echo "==> $HERE/dist/WyckoffRunner.dll"
+DEPLOY="$HOME/quantower-libs/qw-deploy.sh"
+[ -f "$DEPLOY" ] && bash "$DEPLOY" "$HERE/dist/WyckoffRunner.dll" ""
 rm -rf "$TMP"

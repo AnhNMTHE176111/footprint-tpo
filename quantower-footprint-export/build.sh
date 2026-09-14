@@ -39,4 +39,6 @@ dotnet build "$B/build.csproj" -c Release 2>&1 | tail -20
 mkdir -p "$HERE/dist"
 cp "$B/bin/Release/$ASM.dll" "$HERE/dist/$ASM.dll"
 echo "==> Da build: $HERE/dist/$ASM.dll"
+DEPLOY="$HOME/quantower-libs/qw-deploy.sh"
+[ -f "$DEPLOY" ] && bash "$DEPLOY" "$HERE/dist/$ASM.dll" ""
 rm -rf "$B"

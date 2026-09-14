@@ -47,6 +47,20 @@
 2. **Luôn dùng thuật ngữ chuẩn.** Hai PDF **dịch bằng máy nên sai thuật ngữ** (vd "Đồng bằng" = Delta, "Nút âm lượng cao" = High Volume Node, "âm lượng" = volume/khối lượng). Mỗi khi gặp từ dịch sai, **dùng từ đúng** và đối chiếu theo `glossary.md`.
 3. **Bám lộ trình** `00-syllabus.md`. Sau mỗi mục: tóm tắt → ví dụ trên chart → 1-3 câu hỏi kiểm tra.
 4. **Cập nhật tiến độ** vào `progress.md` (đã học tới đâu, câu hỏi mở, điểm người học chưa rõ). Tick trạng thái trong `00-syllabus.md`.
+   - **⛔ SỬA CODE (C#/Python indicator, script) XONG PHẢI TEST RỒI MỚI BUILD RA OUTPUT — tối thiểu unit
+     test (người học chốt 2026-09-14).** Không được báo "đã sửa xong" nếu chưa chạy được gì để kiểm
+     chứng. Với bộ `quantower-tpo-suite`: build bằng `./build-tpo.sh` (hoặc `daily`/`zones`), test bằng
+     `tests/` (`tests.csproj` — cần `.NET SDK` + `$HOME/quantower-libs/{TradingPlatform.BusinessLayer,
+     System.Drawing.Common}.dll`, xem README.md).
+     ⚠️ **Máy Windows dùng cho phiên chat (`c:\Users\anhla\OneDrive\Documents\footprint-tpo`) ĐANG THIẾU
+     TOÀN BỘ TOOLCHAIN này** (kiểm tra 2026-09-14): không có `.NET SDK` (`dotnet --version` báo "No .NET
+     SDKs were found"), không có thư mục `~/quantower-libs/` (không có DLL tham chiếu SDK Quantower),
+     không có Quantower cài trên máy, không có WSL distro Linux thật (chỉ có `docker-desktop`) để chạy
+     `qw-build.sh`. Các DLL trong `dist/` hiện có đều được build ở MÁY/MÔI TRƯỜNG KHÁC. ⇒ Khi sửa code
+     C# trong `quantower-tpo-suite`, `quantower-*`: **nói thẳng ngay từ đầu là build/test không chạy
+     được trên máy này**, đừng hứa rồi thất bại giữa chừng; đưa diff cho người học tự build/test trên
+     máy có toolchain, hoặc hỏi người học có muốn cài `.NET SDK` + xin lại `quantower-libs/` vào máy này
+     không. Nếu môi trường sau này đã có SDK/libs thì bỏ đoạn cảnh báo này.
    - **⛔ COMMIT + PUSH SAU MỌI LƯỢT CÓ THAY ĐỔI FILE — không chỉ file học (người học nhắc lại 2026-07-30).**
      Áp cho **TẤT CẢ**: `progress.md`/`00-syllabus.md`, **code C#/Python (indicator, script, DLL trong `dist/`)**,
      note, tài liệu. KHÔNG được diễn giải hẹp rằng rule này chỉ dành cho file tiến độ học — đó chính là lỗi

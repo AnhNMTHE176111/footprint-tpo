@@ -112,6 +112,12 @@ namespace SessionZonesNs
         //  trước chỗ nối, chỉ dựng từ dữ liệu cùng một hợp đồng.
         [InputParameter("Hiện dòng nhắc mức bằng chứng của HVN", 43)]
         public bool ShowEvidenceNote { get; set; } = true;
+        // Người học hỏi "sao HVN lúc ẩn lúc hiện" — do lọc theo bán kính (tầm với)
+        // + trần MaxZones. Thêm cờ này để XEM HẾT mọi vùng đã tính ra, bỏ qua cả
+        // hai lớp lọc đó — chỉ để KIỂM TRA/học, không nên bật khi trade thật vì
+        // chart sẽ rối lại (đúng thứ D1/D5 muốn tránh).
+        [InputParameter("DEBUG: Hiện TẤT CẢ vùng (bỏ lọc bán kính + trần số)", 44)]
+        public bool ShowAllZones { get; set; } = false;
         [InputParameter("Chặn chỗ nối hợp đồng của mã liên tục", 41)]
         public bool SpliceGuard { get; set; } = true;
         [InputParameter("Coi là chỗ nối khi giá nhảy quá (giá)", 42, 5.0, 200.0, 1.0, 1)]
@@ -681,7 +687,7 @@ namespace SessionZonesNs
             // không phải chỗ vào lệnh, nhưng là chỗ giá có lý do dừng lại, nên cần
             // thấy để đặt chốt lời. Mức xa mà yếu thì vẫn bỏ (đó mới là rác).
             var farTargets = new List<Zone>();
-            if (ShowTargets)
+            if (ShowTargets && !ShowAllZones)
                 foreach (var z in zones)
                 {
                     if (Math.Abs(z.Center - nowPrice) <= radius) continue;
@@ -691,16 +697,19 @@ namespace SessionZonesNs
                     z.Label += " · MỤC TIÊU";
                     farTargets.Add(z);
                 }
-            zones = zones.Where(z => Math.Abs(z.Center - nowPrice) <= radius).ToList();
+            if (!ShowAllZones)
+                zones = zones.Where(z => Math.Abs(z.Center - nowPrice) <= radius).ToList();
 
             // ---- D5: trần số vùng + cân đối 2 phía ---------------------------
             //  Tài liệu: đánh dấu mọi mức làm chart thành "cây thông Noel"; mật độ
             //  đúng cho chart trong ngày là 3-5 vùng.
-            zones = LimitAndBalance(zones, MaxZones);
+            if (!ShowAllZones)
+                zones = LimitAndBalance(zones, MaxZones);
 
             // LVN xét riêng: không cạnh tranh khe với vùng canh lệnh, giữ nguyên
-            // (đã giới hạn MaxLvn ở trên), nhưng vẫn áp lọc tầm với.
-            zones.AddRange(lvnZones.Where(z => Math.Abs(z.Center - nowPrice) <= radius));
+            // (đã giới hạn MaxLvn ở trên), nhưng vẫn áp lọc tầm với — trừ khi
+            // ShowAllZones thì hiện luôn LVN xa.
+            zones.AddRange(ShowAllZones ? lvnZones : lvnZones.Where(z => Math.Abs(z.Center - nowPrice) <= radius));
             zones.AddRange(farTargets);   // B8: mục tiêu xét riêng, không chiếm khe MaxZones
             return zones.OrderByDescending(z => z.Strength).ToList();
         }

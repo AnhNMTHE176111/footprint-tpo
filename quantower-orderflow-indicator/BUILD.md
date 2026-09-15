@@ -36,6 +36,16 @@ Indicator implement `IVolumeAnalysisIndicator` và đọc `bar.VolumeAnalysisDat
 Xem `OrderFlowBubbles.csproj`. Chỉnh `<QuantowerDir>` = thư mục cài Quantower, rồi `dotnet build -c Release`.
 Reference cần: `TradingPlatform.BusinessLayer.dll` + `System.Drawing.Common.dll` (trong `…\TradingPlatform\v<ver>\bin\`).
 
+⚠️ **Từ 2026-09-15 indicator gồm 2 file: `OrderFlowBubbles.cs` + `SignalCache.cs`** (niêm phong tín
+hiệu — xem comment đầu 2 file). `OrderFlowBubbles.csproj` là SDK-style project nên tự động gộp cả 2
+file (default glob `*.cs` trong thư mục) — không cần sửa gì thêm. Nếu build tay bằng script 1-file
+(`qw-build.sh <file> <asm>`) thì PHẢI build cả 2 file cùng lúc (viết tạm 1 csproj liệt kê cả 2
+`<Compile Include>`), vì `qw-build.sh` chỉ nhận 1 file nguồn.
+
+## Test
+`tests/` (`OrderFlowBubblesTests`) test riêng `SignalCache.cs` — không cần SDK Quantower vì class này
+không phụ thuộc `TradingPlatform.BusinessLayer`. Chạy: `dotnet run --project quantower-orderflow-indicator/tests`.
+
 ## Bộ reference DLL lấy từ đâu (tái lập)
 DLL tham chiếu được trích **từ chính installer Quantower** (Windows-only, không có gói NuGet):
 ```bash

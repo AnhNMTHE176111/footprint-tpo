@@ -45,6 +45,19 @@
 //  báo mức SẮP BỊ XUYÊN → gắn nhãn "⚠ Mức DỄ VỠ" (vàng), không gọi là hấp thụ.
 //  ⇒ Bubble là công cụ ĐÁNH DẤU để đọc bằng mắt. "Điểm" là độ đậm hiển thị, KHÔNG phải xác suất.
 //
+//  ---- NIÊM PHONG TÍN HIỆU (2026-09-15, xem SignalCache.cs) --------------------
+//  Sự cố: Quantower gọi lại VolumeAnalysisData_Loaded() → ResetState() nhiều lần trong 1 phiên
+//  (không chỉ 1 lần lúc mở indicator), mỗi lần xoá sạch _bubbles rồi tính lại TOÀN BỘ lịch sử bằng
+//  dữ liệu VA hiện có — mà dữ liệu per-level của nến QUÁ KHỨ do feed cấp lại thường MỎNG hơn lúc
+//  live (đã xác nhận: MaxOneTradeVolume luôn về 0 khi tải lại lịch sử) → bóng đã nổ có thể biến mất
+//  dù giá/nến không đổi. Đã đo thật trên dữ liệu 2026-09-14: ngưỡng nổ bóng dao động 17-31 hợp đồng
+//  trong 1 ngày (KHÔNG phải 1 số n cố định) — bản chất tương đối này ĐÚNG, giữ nguyên không sửa.
+//  Sửa: mỗi nến ĐÃ ĐÓNG chỉ tính tín hiệu 1 LẦN TRONG ĐỜI, niêm phong (SignalCache) khoá theo
+//  THỜI GIAN mở nến (không khoá theo idx — idx lệch giữa các lần nếu tải nhiều/ít lịch sử khác nhau),
+//  lưu cả bộ nhớ lẫn file (%AppData%\OrderFlowBubbles\signal-cache\<symbol>_<khung>.jsonl — file này
+//  cũng dùng luôn làm log để backtest). ResetState() sau đó KHÔI PHỤC lại nến đã niêm phong thay vì
+//  tính lại. Confirm (giữ/vỡ mức) khi chốt xong sẽ ghi đè niêm phong (RePersistBar).
+//
 //  ---- HỆ MÃ HOÁ HÌNH ---------------------------------------------------------
 //    • Absorption      = TRÒN ĐẶC (sàn px = AbsMinPx).  cyan(đỉnh)/đỏ(đáy)
 //    • Big Trade/HVN   = TRÒN MỜ (halo). Feed KHÔNG cấp MaxOneTradeVolume (đã kiểm 0% trên
@@ -61,6 +74,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using TradingPlatform.BusinessLayer;
 
@@ -82,6 +96,7 @@ namespace OrderFlowBubbles
             public bool UseBarWidth;    // true = đường kính/độ dài = bề rộng nến (Absorption, HLine)
             public string Tooltip;
             public int Confirm;         // absorption: 0 = đang chờ, +1 = mức GIỮ được, -1 = mức VỠ
+            public bool Confirmable;    // true = thuộc luồng Absorption (được SignalCache/UpdateAbsorptionConfirms theo dõi)
         }
 
         // absorption đang chờ xác nhận (mức giữ hay vỡ trong N nến sau)
@@ -116,6 +131,11 @@ namespace OrderFlowBubbles
         // ô có EFFORT cao theo nến (idx -> danh sách chỉ số tick) — dùng cho điểm "đa nến"
         private readonly Dictionary<int, List<long>> _hotLvls = new();
         private readonly List<AbsRec> _absRecs = new();   // absorption chờ xác nhận
+
+        // ===================== niêm phong tín hiệu (xem SignalCache.cs) =====================
+        // Mỗi nến ĐÃ ĐÓNG chỉ tính tín hiệu 1 lần; kết quả khoá theo THỜI GIAN mở nến, sống sót
+        // qua ResetState() (Quantower gọi lại khi nạp lại Volume Analysis — không chỉ 1 lần).
+        private SignalCache _cache;
 
         // ================================================================
         //  INPUT PARAMETERS
@@ -438,13 +458,26 @@ namespace OrderFlowBubbles
                 EnsureCvd(total);
 
                 // (1) nến đóng chưa xử lý: tính tín hiệu (baseline TRƯỚC bar) rồi nạp baseline
+                //     NIÊM PHONG: nến đã tính (khoá theo thời gian mở nến) thì KHÔI PHỤC lại,
+                //     KHÔNG tính lại — dù ResetState() vừa chạy và dữ liệu VA của nến đó bây giờ
+                //     có mỏng hơn lúc live cũng mặc kệ (xem SignalCache.cs).
+                EnsureCache();
                 for (int i = _processedClosedCount; i < closedCount; i++)
                 {
                     var bar = Bar(i);
                     if (bar == null) continue;
                     _cvd[i] = (i > 0 ? _cvd[i - 1] : 0.0) + BarDelta(bar);
                     bool ready = _rBarVol.BarCount >= MinBars;
-                    ComputeBar(i, bar, tick, ready, isClosed: true);
+
+                    long timeKey = bar.TimeLeft.Ticks;
+                    if (_cache != null && _cache.TryGet(timeKey, out var cached))
+                        RestoreFromCache(i, bar, cached);
+                    else
+                    {
+                        ComputeBar(i, bar, tick, ready, isClosed: true);
+                        PersistBar(i, bar, timeKey);
+                    }
+
                     AddToBaseline(bar);
                     UpdateAbsorptionConfirms(i, tick);     // mức của các nến trước giữ hay vỡ?
                 }
@@ -702,6 +735,7 @@ namespace OrderFlowBubbles
 
             foreach (var c in absKeep)
             {
+                c.b.Confirmable = true;   // đánh dấu để SignalCache/UpdateAbsorptionConfirms theo dõi đúng luồng
                 list.Add(c.b);
                 if (isClosed && AbsConfirmBars > 0)
                     _absRecs.Add(new AbsRec { Idx = idx, Price = c.b.Price, Top = c.top, B = c.b });
@@ -1109,10 +1143,99 @@ namespace OrderFlowBubbles
                     lock (_sync) { r.B.Confirm = verdict; }
                     r.B.Tooltip += broke ? "  → VỠ mức" : "  → GIỮ mức";
                     done.Add(r);
+                    RePersistBar(r.Idx);   // Confirm vừa chốt -> ghi đè niêm phong để lần sau khôi phục đúng
                 }
             }
             foreach (var r in done) _absRecs.Remove(r);
             if (_absRecs.Count > 500) _absRecs.RemoveRange(0, _absRecs.Count - 500);
+        }
+
+        // ================================================================
+        //  NIÊM PHONG TÍN HIỆU (xem SignalCache.cs) — sống sót qua ResetState()
+        // ================================================================
+        private void EnsureCache()
+        {
+            if (_cache != null) return;
+            try
+            {
+                string dir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "OrderFlowBubbles", "signal-cache");
+                string symName = Symbol?.Name ?? "unknown";
+                string period = HistoricalData?.Aggregation?.Title ?? HistoricalData?.Aggregation?.Name ?? "unknown";
+                string safe = SignalCache.SanitizeFileName(symName + "_" + period);
+                _cache = new SignalCache(Path.Combine(dir, safe + ".jsonl"));
+                _cache.Load();
+            }
+            catch
+            {
+                _cache = new SignalCache(null);   // lỗi ghi file (vd không có quyền) -> chạy tiếp KHÔNG niêm phong,
+            }                                      // không được để crash cả indicator vì một tính năng phụ
+        }
+
+        private CachedBarData ToCachedBarData(long timeTicks, List<Bubble> list, int tint)
+        {
+            var d = new CachedBarData { TimeTicks = timeTicks, Tint = tint };
+            if (list != null)
+                foreach (var b in list)
+                    d.Bubbles.Add(new CachedBubbleData
+                    {
+                        Price = b.Price, Shape = (int)b.Shape, ColorArgb = b.Color.ToArgb(), Size = b.Size,
+                        Transparency = b.Transparency, Halo = b.Halo, UseBarWidth = b.UseBarWidth,
+                        Tooltip = b.Tooltip, Confirm = b.Confirm, Confirmable = b.Confirmable
+                    });
+            return d;
+        }
+
+        private static List<Bubble> FromCachedBarData(CachedBarData d)
+        {
+            var list = new List<Bubble>();
+            foreach (var cb in d.Bubbles)
+                list.Add(new Bubble
+                {
+                    Price = cb.Price, Shape = (Shape)cb.Shape, Color = Color.FromArgb(cb.ColorArgb), Size = cb.Size,
+                    Transparency = cb.Transparency, Halo = cb.Halo, UseBarWidth = cb.UseBarWidth,
+                    Tooltip = cb.Tooltip, Confirm = cb.Confirm, Confirmable = cb.Confirmable
+                });
+            return list;
+        }
+
+        // Nến ĐÃ NIÊM PHONG ở lần chạy trước -> khôi phục nguyên trạng, KHÔNG tính lại tín hiệu.
+        private void RestoreFromCache(int idx, HistoryItemBar bar, CachedBarData cached)
+        {
+            var list = FromCachedBarData(cached);
+            int tint = cached.Tint;
+            lock (_sync)
+            {
+                if (list.Count > 0) _bubbles[idx] = list; else _bubbles.Remove(idx);
+                if (tint != 0) _barTint[idx] = tint; else _barTint.Remove(idx);
+            }
+            // absorption còn "đang chờ xác nhận" từ phiên trước -> tiếp tục theo dõi (giữ/vỡ mức)
+            if (AbsConfirmBars > 0)
+                foreach (var b in list)
+                    if (b.Confirmable && b.Confirm == 0)
+                    {
+                        bool top = Math.Abs(b.Price - bar.High) <= Math.Abs(b.Price - bar.Low);
+                        _absRecs.Add(new AbsRec { Idx = idx, Price = b.Price, Top = top, B = b });
+                    }
+        }
+
+        // Nến vừa tính XONG lần đầu -> niêm phong (lưu bộ nhớ + ghi file).
+        private void PersistBar(int idx, HistoryItemBar bar, long timeKey)
+        {
+            if (_cache == null) return;
+            List<Bubble> list; int tint;
+            lock (_sync) { _bubbles.TryGetValue(idx, out list); _barTint.TryGetValue(idx, out tint); }
+            _cache.Put(ToCachedBarData(timeKey, list, tint));
+        }
+
+        // Confirm của 1 nến đã niêm phong vừa chốt (giữ/vỡ mức) -> ghi đè niêm phong.
+        private void RePersistBar(int idx)
+        {
+            if (_cache == null) return;
+            var bar = Bar(idx);
+            if (bar == null) return;
+            PersistBar(idx, bar, bar.TimeLeft.Ticks);
         }
 
         private void EnsureCvd(int total) { while (_cvd.Count < total) _cvd.Add(0.0); }

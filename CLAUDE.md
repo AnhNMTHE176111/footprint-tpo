@@ -52,15 +52,12 @@
      chứng. Với bộ `quantower-tpo-suite`: build bằng `./build-tpo.sh` (hoặc `daily`/`zones`), test bằng
      `tests/` (`tests.csproj` — cần `.NET SDK` + `$HOME/quantower-libs/{TradingPlatform.BusinessLayer,
      System.Drawing.Common}.dll`, xem README.md).
-     ⚠️ **Máy Windows dùng cho phiên chat (`c:\Users\anhla\OneDrive\Documents\footprint-tpo`) ĐANG THIẾU
-     TOÀN BỘ TOOLCHAIN này** (kiểm tra 2026-09-14): không có `.NET SDK` (`dotnet --version` báo "No .NET
-     SDKs were found"), không có thư mục `~/quantower-libs/` (không có DLL tham chiếu SDK Quantower),
-     không có Quantower cài trên máy, không có WSL distro Linux thật (chỉ có `docker-desktop`) để chạy
-     `qw-build.sh`. Các DLL trong `dist/` hiện có đều được build ở MÁY/MÔI TRƯỜNG KHÁC. ⇒ Khi sửa code
-     C# trong `quantower-tpo-suite`, `quantower-*`: **nói thẳng ngay từ đầu là build/test không chạy
-     được trên máy này**, đừng hứa rồi thất bại giữa chừng; đưa diff cho người học tự build/test trên
-     máy có toolchain, hoặc hỏi người học có muốn cài `.NET SDK` + xin lại `quantower-libs/` vào máy này
-     không. Nếu môi trường sau này đã có SDK/libs thì bỏ đoạn cảnh báo này.
+     ✅ **Từ 2026-09-15: máy Windows này ĐÃ CÓ toolchain** (`.NET SDK 10.0.401` qua `dotnet`,
+     `$HOME/quantower-libs/{TradingPlatform.BusinessLayer,System.Drawing.Common}.dll` + `qw-build.sh`,
+     `qw-deploy.sh`). ⛔ **QUY TẮC VĨNH VIỄN (người học chốt 2026-09-15): mỗi khi sửa code C# trong
+     `quantower-*`, TỰ CÀI/TỰ KHÔI PHỤC toolchain còn thiếu (dotnet SDK qua winget, xin lại DLL SDK
+     Quantower) rồi build + test luôn — KHÔNG hỏi người học, KHÔNG dừng lại báo "không build được".**
+     Chỉ báo lại nếu việc cài đặt thực sự bất khả thi (vd cần quyền admin bị chặn) sau khi đã thử.
    - **⛔ COMMIT + PUSH SAU MỌI LƯỢT CÓ THAY ĐỔI FILE — không chỉ file học (người học nhắc lại 2026-07-30).**
      Áp cho **TẤT CẢ**: `progress.md`/`00-syllabus.md`, **code C#/Python (indicator, script, DLL trong `dist/`)**,
      note, tài liệu. KHÔNG được diễn giải hẹp rằng rule này chỉ dành cho file tiến độ học — đó chính là lỗi

@@ -136,6 +136,7 @@ namespace OrderFlowBubbles
         // Mỗi nến ĐÃ ĐÓNG chỉ tính tín hiệu 1 lần; kết quả khoá theo THỜI GIAN mở nến, sống sót
         // qua ResetState() (Quantower gọi lại khi nạp lại Volume Analysis — không chỉ 1 lần).
         private SignalCache _cache;
+        private string _settingsFingerprint = "";   // đổi khi người dùng đổi tham số -> vô hiệu cache cũ
 
         // ================================================================
         //  INPUT PARAMETERS
@@ -183,6 +184,17 @@ namespace OrderFlowBubbles
         // Lý do: gộp cả ô rìa 1-2 lot làm median tụt → z của POC bị thổi phồng, tín hiệu nổ khắp nơi.
         [InputParameter("Baseline · Số ô đậm nhất/nến nạp vào baseline (0 = tất cả)", 14, 0, 20, 1, 0)]
         public int BaselineTopLevels { get; set; } = 3;
+
+        // ---------- Ngưỡng CỐ ĐỊNH (thay cho tương đối) — dùng để soi mắt/thử nghiệm ----------
+        // Đo thật trên ~29 ngày GC: ngưỡng tương đối (median+MAD) dao động 12-40 hợp đồng tuỳ giờ
+        // (median chung ~20). Bật mục này để ép EFFORT (Absorption) và Big Trade dùng THẲNG 1 số
+        // hợp đồng cố định thay vì z-score — mất tính "portable" theo biến động/mã, chỉ nên dùng để
+        // xem trực quan số lượng bóng nổ ra ở 1 mã/khung cụ thể, KHÔNG bật khi giao dịch thật.
+        [InputParameter("Ngưỡng · Dùng số CỐ ĐỊNH (thay vì tương đối, chỉ để soi mắt)", 15)]
+        public bool UseFixedThreshold { get; set; } = false;
+
+        [InputParameter("Ngưỡng · Số hợp đồng cố định (khi bật ở trên)", 16, 1, 1000000, 1, 0)]
+        public double FixedThresholdContracts { get; set; } = 20;
 
         // ---------- Nến delta lớn (dominant-delta candle) ----------
         [InputParameter("Nến delta · Bật (tô thân nến)", 20)]
@@ -410,6 +422,38 @@ namespace OrderFlowBubbles
             lock (_calcLock) { _vaLoaded = false; ResetState(); }
         }
 
+        // Người dùng ĐỔI THAM SỐ trên chart (vd bật "Ngưỡng · Dùng số CỐ ĐỊNH") -> đây là hành động
+        // CHỦ Ý, khác hẳn feed nạp lại dữ liệu. Bắt tính lại từ đầu; dấu vân tay tham số mới sẽ tự
+        // KHÔNG khớp các bản niêm phong cũ (tính bằng tham số cũ) nên chúng được tính lại, còn niêm
+        // phong của phiên trước (nếu mở lại đúng tham số cũ) vẫn được giữ nguyên, không mất.
+        protected override void OnSettingsUpdated()
+        {
+            base.OnSettingsUpdated();
+            lock (_calcLock) { _processedClosedCount = 0; }
+        }
+
+        private string ComputeSettingsFingerprint()
+        {
+            // Chỉ cần liệt kê tham số ẢNH HƯỞNG TỚI QUYẾT ĐỊNH nổ bóng (không cần màu sắc/kích
+            // thước hiển thị — đổi màu không cần tính lại). Thêm tham số nào ảnh hưởng quyết định
+            // thì thêm vào đây.
+            return string.Join("|",
+                UseFixedThreshold, FixedThresholdContracts,
+                BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
+                DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
+                AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
+                AbsRangeRatio, AbsImpactZ, AbsSwingPeriod, AbsPocProminence, AbsDivergencePct,
+                AbsTwoSidedPct, AbsMultiBarLookback, AbsConfirmBars, AbsBreakTicks,
+                WNoResult, WProminent, WDivergence, WTwoSided, WMulti, WSwing, MarkBreakoutRisk,
+                BigTradeEnabled, BigZ, BigVolMult, BigTradeTopN, BigTradeRequireRealTrades, BigTradeSkipOnAbsorption,
+                DLineEnabled, DLineFloor, DLineZ, DLineTopN,
+                ExhaustionEnabled, ExhVolFadeRatio, ExhDeltaFadeRatio, ExhSwingLookback,
+                ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun,
+                DivergenceEnabled, DivSwingLookback, DivVolPartic, DivCooldown,
+                SweepEnabled, SweepLookback, UnfinishedEnabled,
+                StopHuntEnabled, StopHuntLookback);
+        }
+
         private void InitBaselines()
         {
             _rLvlVol = new RollingRobust(BaselineBars);
@@ -462,6 +506,7 @@ namespace OrderFlowBubbles
                 //     KHÔNG tính lại — dù ResetState() vừa chạy và dữ liệu VA của nến đó bây giờ
                 //     có mỏng hơn lúc live cũng mặc kệ (xem SignalCache.cs).
                 EnsureCache();
+                _settingsFingerprint = ComputeSettingsFingerprint();
                 for (int i = _processedClosedCount; i < closedCount; i++)
                 {
                     var bar = Bar(i);
@@ -470,7 +515,10 @@ namespace OrderFlowBubbles
                     bool ready = _rBarVol.BarCount >= MinBars;
 
                     long timeKey = bar.TimeLeft.Ticks;
-                    if (_cache != null && _cache.TryGet(timeKey, out var cached))
+                    // Chỉ khôi phục khi CÙNG dấu vân tay tham số — đổi tham số (vd bật ngưỡng cố
+                    // định) là hành động CHỦ Ý của người dùng, phải tính lại; khác với feed nạp lại
+                    // dữ liệu (tham số không đổi) — trường hợp đó mới cần niêm phong bất di bất dịch.
+                    if (_cache != null && _cache.TryGet(timeKey, out var cached) && cached.SettingsFingerprint == _settingsFingerprint)
                         RestoreFromCache(i, bar, cached);
                     else
                     {
@@ -589,7 +637,8 @@ namespace OrderFlowBubbles
                 if (AbsorptionEnabled && ready && vol >= MinLevelVolFloor && sum > 0)
                 {
                     double volZ = _rLvlVol.ModZ(vol);
-                    if (volZ >= AbsEffortZ)
+                    bool effortHit = UseFixedThreshold ? vol >= FixedThresholdContracts : volZ >= AbsEffortZ;
+                    if (effortHit)
                     {
                         hotThisBar.Add(k);                       // ô "nóng" — dùng cho điểm đa nến
                         bool nearHi = (hiIdx - k) <= AbsMaxDisplaceTicks;
@@ -660,7 +709,8 @@ namespace OrderFlowBubbles
                     {
                         double z = rr.ModZ(metric);
                         bool multOk = BigVolMult <= 0 || metric >= BigVolMult * rr.Median;
-                        if (z >= BigZ && multOk)
+                        bool bigHit = UseFixedThreshold ? metric >= FixedThresholdContracts : (z >= BigZ && multOk);
+                        if (bigHit)
                             bigTradeCands.Add((new Bubble
                             {
                                 Price = price, Shape = Shape.Ellipse, Color = AggColor(buy, sell),
@@ -1175,7 +1225,7 @@ namespace OrderFlowBubbles
 
         private CachedBarData ToCachedBarData(long timeTicks, List<Bubble> list, int tint)
         {
-            var d = new CachedBarData { TimeTicks = timeTicks, Tint = tint };
+            var d = new CachedBarData { TimeTicks = timeTicks, Tint = tint, SettingsFingerprint = _settingsFingerprint };
             if (list != null)
                 foreach (var b in list)
                     d.Bubbles.Add(new CachedBubbleData

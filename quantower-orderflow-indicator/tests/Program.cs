@@ -131,6 +131,33 @@ static class Tests
         finally { File.Delete(path); }
     }
 
+    // [6] Fingerprint tham số KHÁC nhau -> KHÔNG được coi là cache hit (đây là hành vi caller
+    //     [OrderFlowBubbles.Process()] tự so sánh SettingsFingerprint, SignalCache chỉ lưu hộ —
+    //     test mô phỏng đúng cách caller dùng: TryGet trả về record, caller tự so fingerprint).
+    static void FingerprintMismatchMeansMiss()
+    {
+        Console.WriteLine("[6] Doi tham so (fingerprint khac) -> khong dung nham bong cu");
+        string path = Path.Combine(Path.GetTempPath(), "sc_test_" + Guid.NewGuid() + ".jsonl");
+        try
+        {
+            var cache = new SignalCache(path);
+            cache.Load();
+            var rec = MakeBar(6000, 1, (4327.0, 0, true));
+            rec.SettingsFingerprint = "relative-mode|z=2.5";
+            cache.Put(rec);
+
+            // nguoi dung bat "nguong co dinh" -> fingerprint moi khac han
+            string newFingerprint = "fixed-mode|20";
+            bool hit = cache.TryGet(6000, out var got) && got.SettingsFingerprint == newFingerprint;
+            Check(!hit, "fingerprint moi khong khop -> phai la CACHE MISS (tinh lai)", $"cached_fp={got?.SettingsFingerprint}");
+
+            // dung fingerprint CU (khong doi tham so) -> van phai la cache HIT
+            bool hitOld = cache.TryGet(6000, out var got2) && got2.SettingsFingerprint == "relative-mode|z=2.5";
+            Check(hitOld, "fingerprint khop (tham so khong doi) -> van la CACHE HIT");
+        }
+        finally { File.Delete(path); }
+    }
+
     static int Main()
     {
         InMemoryRoundtrip();
@@ -138,6 +165,7 @@ static class Tests
         LaterWriteOverrides();
         EmptyBarIsCached();
         CorruptLineIsSkipped();
+        FingerprintMismatchMeansMiss();
         Console.WriteLine(_fail == 0 ? "\n=== TAT CA PASS ===" : $"\n=== {_fail} FAIL ===");
         return _fail == 0 ? 0 : 1;
     }

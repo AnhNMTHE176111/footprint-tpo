@@ -48,6 +48,11 @@ namespace OrderFlowBubbles
         public long TimeTicks { get; set; }
         public int Tint { get; set; }
         public List<CachedBubbleData> Bubbles { get; set; } = new();
+        // "Dấu vân tay" tham số đang chạy lúc tính ra bản ghi này (xem ComputeSettingsFingerprint
+        // trong OrderFlowBubbles.cs). Khi người dùng ĐỔI THAM SỐ (vd bật mode ngưỡng cố định), dấu
+        // vân tay hiện tại sẽ KHÁC bản ghi cũ -> coi là "chưa niêm phong", tính lại theo tham số mới
+        // — khác với việc feed nạp lại dữ liệu (tham số KHÔNG đổi, dấu vân tay khớp, vẫn niêm phong).
+        public string SettingsFingerprint { get; set; } = "";
     }
 
     // Niêm phong: mỗi nến (khoá = thời gian mở nến, tick DateTime) giữ ĐÚNG 1 bản

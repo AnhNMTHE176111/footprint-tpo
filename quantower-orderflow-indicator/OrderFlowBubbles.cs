@@ -191,11 +191,32 @@ namespace OrderFlowBubbles
         // (median chung ~20). Bật mục này để ép EFFORT (Absorption) và Big Trade dùng THẲNG 1 số
         // hợp đồng cố định thay vì z-score — mất tính "portable" theo biến động/mã, chỉ nên dùng để
         // xem trực quan số lượng bóng nổ ra ở 1 mã/khung cụ thể, KHÔNG bật khi giao dịch thật.
-        [InputParameter("Ngưỡng · Dùng số CỐ ĐỊNH (thay vì tương đối, chỉ để soi mắt)", 15)]
+        [InputParameter("Ngưỡng · Dùng số CỐ ĐỊNH cho Ô Bid/Ask (thay vì tương đối)", 15)]
         public bool UseFixedThreshold { get; set; } = false;
 
-        [InputParameter("Ngưỡng · Số hợp đồng cố định (khi bật ở trên)", 16, 1, 1000000, 1, 0)]
-        public double FixedThresholdContracts { get; set; } = 20;
+        // Đo thật trên 508 đỉnh + 500 đáy đảo chiều thật (29 ngày GC, 2026-09-15): trong khoảng
+        // 10-15, điểm tách biệt "đảo chiều thật" vs "nến bất kỳ" cao nhất rơi vào 10 (bắt 24,1% đảo
+        // chiều thật, nổ trên 12,0% nến bất kỳ) — xem chi tiết trong hội thoại/README nghiên cứu.
+        [InputParameter("Ngưỡng · Số hợp đồng cố định cho Ô Bid/Ask (đã đo: 10 hợp lý nhất)", 16, 1, 1000000, 1, 0)]
+        public double FixedThresholdContracts { get; set; } = 10;
+
+        // ---------- 1.5) Ô BID/ASK LỚN — BÓNG ĐẠI DIỆN CHÍNH (2026-09-15) ----------
+        // Khác Absorption: KHÔNG đòi gần cực trị / sau swing / chấm điểm — chỉ cần buy hoặc sell của
+        // MỘT Ô GIÁ (bất kỳ đâu trong nến) lớn bất thường. Bóng ĐẶC (không mờ), kích thước LUÔN BẰNG
+        // bề ngang nến — KHÔNG phình to theo độ lớn (khác Big Trade cố tình phình to). Đây là bóng
+        // "đại diện chính" — nhiều/hay gặp nhất trên chart, còn Absorption/Big Trade là lớp tín hiệu
+        // đặc thù hơn vẽ chồng lên trên.
+        [InputParameter("Ô Bid/Ask lớn (đại diện chính) · Bật", 17)]
+        public bool CellBigEnabled { get; set; } = true;
+
+        [InputParameter("Ô Bid/Ask lớn · z-score ≥ (khi KHÔNG dùng ngưỡng cố định)", 18, 0.0, 12.0, 0.1, 1)]
+        public double CellBigZ { get; set; } = 2.5;
+
+        [InputParameter("Ô Bid/Ask lớn · số bubble mạnh nhất / nến", 19, 1, 20, 1, 0)]
+        public int CellBigTopN { get; set; } = 2;
+
+        [InputParameter("Ô Bid/Ask lớn · Bỏ nếu trùng mức với Absorption", 67)]
+        public bool CellBigSkipOnAbsorption { get; set; } = true;
 
         // ---------- Nến delta lớn (dominant-delta candle) ----------
         [InputParameter("Nến delta · Bật (tô thân nến)", 20)]
@@ -305,13 +326,22 @@ namespace OrderFlowBubbles
         [InputParameter("Absorption · Kích thước tối thiểu khi zoom hẹp (px)", 54, 6, 60, 1, 0)]
         public int AbsMinPx { get; set; } = 14;
 
-        // ---------- 2) Big Trade / HVN cell ----------
-        //  Feed không cấp MaxOneTradeVolume (đã kiểm: 0% trên 6 tháng dxFeed) → tín hiệu thực chất là
-        //  "ô volume cao (HVN cell)", KHÔNG phải lệnh lớn. Tooltip in rõ nguồn đang dùng.
-        [InputParameter("Big Trade · Bật", 60)]
+        // ---------- 2) Big Trade — LỆNH ĐƠN LỚN (2026-09-15: xác nhận feed LIVE có cấp
+        //  MaxOneTradeVolume thật, dù mọi file CSV xuất ra trước đó đều ghi 0 — do xuất lịch sử
+        //  không giữ chi tiết từng lệnh, chỉ lúc chạy live mới có). Từ nay Big Trade CHỈ đại diện
+        //  cho 1 LỆNH ĐƠN thật lớn (không còn fallback "ô volume cao" làm mặc định) — bóng TRÒN MỜ,
+        //  TO RA theo độ lớn lệnh (SizeFromMagnitude). Đây KHÔNG phải bóng đại diện chính (xem mục 1.5
+        //  "Ô Bid/Ask lớn" bên dưới cho vai trò đó).
+        //  ⚠️ CHƯA ĐO ĐƯỢC ngưỡng "lệnh đơn bao nhiêu là to" bằng số liệu thật — không có file lịch sử
+        //  nào chứa lệnh đơn thật để tính (đã kiểm, luôn = 0). BigTradeFixedContracts dưới đây là số
+        //  KHỞI ĐIỂM hợp lý (không phải số đã đo), cố tình đặt CAO hơn hẳn ngưỡng ô Bid/Ask (10-20) vì
+        //  một lệnh đơn 10-20 lot chỉ là cỡ lệnh bình thường, không phải "to". Baseline tương đối (z-
+        //  score, _rLvlMot) tự hiệu chỉnh theo dữ liệu thật của feed đang chạy nên KHÔNG bị ảnh hưởng
+        //  bởi việc chưa đo được số tuyệt đối — dùng mode tương đối (mặc định) là lựa chọn an toàn hơn.
+        [InputParameter("Big Trade (lệnh đơn) · Bật", 60)]
         public bool BigTradeEnabled { get; set; } = true;
 
-        [InputParameter("Big Trade · z-score ≥ (lệnh đơn / volume ô)", 61, 0.0, 12.0, 0.1, 1)]
+        [InputParameter("Big Trade · z-score ≥ (lệnh đơn)", 61, 0.0, 12.0, 0.1, 1)]
         public double BigZ { get; set; } = 3.0;
 
         // AND (không phải OR như bản cũ): cửa OR '≥3×median' từng chiếm 51-71% số lần nổ.
@@ -321,11 +351,17 @@ namespace OrderFlowBubbles
         [InputParameter("Big Trade · số bubble mạnh nhất / nến", 63, 1, 10, 1, 0)]
         public int BigTradeTopN { get; set; } = 1;
 
-        [InputParameter("Big Trade · Chỉ vẽ khi feed CÓ lệnh đơn thật", 64)]
-        public bool BigTradeRequireRealTrades { get; set; } = false;
+        [InputParameter("Big Trade · Chỉ vẽ khi feed CÓ lệnh đơn thật (mặc định BẬT — xem ghi chú trên)", 64)]
+        public bool BigTradeRequireRealTrades { get; set; } = true;
 
         [InputParameter("Big Trade · Bỏ nếu trùng mức với Absorption", 65)]
         public bool BigTradeSkipOnAbsorption { get; set; } = true;
+
+        // Chỉ dùng khi "Ngưỡng · Dùng số CỐ ĐỊNH" bật — TÁCH RIÊNG khỏi FixedThresholdContracts (của ô
+        // Bid/Ask) vì hai đại lượng khác hẳn quy mô: 1 lệnh đơn 40 hợp đồng mới đáng gọi là "to",
+        // trong khi 1 ô Bid/Ask (cộng dồn nhiều lệnh) chỉ cần 10 đã là bất thường (xem đo lường 2026-09-15).
+        [InputParameter("Big Trade · Số hợp đồng cố định cho LỆNH ĐƠN (khởi điểm, CHƯA đo — xem ghi chú)", 68, 1, 1000000, 1, 0)]
+        public double BigTradeFixedContracts { get; set; } = 40;
 
         // ---------- 3) Big Delta profile (gạch ngang) ----------
         [InputParameter("Big Delta line · Bật", 70)]
@@ -437,13 +473,14 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
+                CellBigEnabled, CellBigZ, CellBigTopN, CellBigSkipOnAbsorption,
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
                 AbsRangeRatio, AbsImpactZ, AbsSwingPeriod, AbsPocProminence, AbsDivergencePct,
                 AbsTwoSidedPct, AbsMultiBarLookback, AbsConfirmBars, AbsBreakTicks,
                 WNoResult, WProminent, WDivergence, WTwoSided, WMulti, WSwing,
-                BigTradeEnabled, BigZ, BigVolMult, BigTradeTopN, BigTradeRequireRealTrades, BigTradeSkipOnAbsorption,
+                BigTradeEnabled, BigZ, BigVolMult, BigTradeTopN, BigTradeRequireRealTrades, BigTradeSkipOnAbsorption, BigTradeFixedContracts,
                 DLineEnabled, DLineFloor, DLineZ, DLineTopN,
                 ExhaustionEnabled, ExhVolFadeRatio, ExhDeltaFadeRatio, ExhSwingLookback,
                 ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun,
@@ -590,6 +627,7 @@ namespace OrderFlowBubbles
             bool motReady = ready && _rLvlMot.BarCount > 0 && _rLvlMot.Median > 0;
             var dLineCands = new List<(double price, double z, int sign, double buy, double sell)>();
             var bigTradeCands = new List<(Bubble b, double z, long k)>();
+            var cellBigCands = new List<(Bubble b, double magnitude, long k)>();
             var absCands = new List<(Bubble b, int score, double z, long k, bool top)>();
             int imbBuyRun = 0, imbSellRun = 0;
             double imbMinVol = Math.Max(MinLevelVolFloor, _rLvlVol.Median);
@@ -684,8 +722,24 @@ namespace OrderFlowBubbles
                     }
                 }
 
-                // 2) BIG TRADE / HVN cell — tròn MỜ. Feed không cấp lệnh đơn → fallback volume ô,
-                //    khi đó tooltip ghi "HVN cell" cho đúng bản chất. Điều kiện z VÀ ×median (không OR).
+                // 1.5) Ô BID/ASK LỚN — bóng ĐẶC, kích thước LUÔN = bề ngang nến (không phình to theo
+                //      độ lớn). Đây là bóng ĐẠI DIỆN CHÍNH: chỉ cần buy hoặc sell của ô này lớn bất
+                //      thường, KHÔNG đòi gần cực trị / sau swing / chấm điểm như Absorption.
+                if (CellBigEnabled && ready && vol >= MinLevelVolFloor && sum > 0)
+                {
+                    double volZ2 = _rLvlVol.ModZ(vol);
+                    bool cellHit = UseFixedThreshold ? vol >= FixedThresholdContracts : volZ2 >= CellBigZ;
+                    if (cellHit)
+                    {
+                        var col2 = AggColor(buy, sell);
+                        string tip2 = $"Ô lớn: buy {buy:0} / sell {sell:0} (tổng {vol:0})";
+                        var b2 = Solid(price, Shape.Ellipse, col2, true, tip2);
+                        cellBigCands.Add((b2, vol, k));
+                    }
+                }
+
+                // 2) BIG TRADE — bóng TRÒN MỜ, TO RA theo độ lớn lệnh đơn (không còn fallback ô
+                //    volume cao làm mặc định — xem ghi chú ở InputParameter). Điều kiện z VÀ ×median.
                 if (BigTradeEnabled && ready)
                 {
                     double metric; RollingRobust rr; bool fromSingleTrade;
@@ -702,7 +756,9 @@ namespace OrderFlowBubbles
                     {
                         double z = rr.ModZ(metric);
                         bool multOk = BigVolMult <= 0 || metric >= BigVolMult * rr.Median;
-                        bool bigHit = UseFixedThreshold ? metric >= FixedThresholdContracts : (z >= BigZ && multOk);
+                        // Ngưỡng cố định RIÊNG cho lệnh đơn (BigTradeFixedContracts) — KHÔNG dùng chung
+                        // FixedThresholdContracts của ô Bid/Ask vì hai đại lượng khác quy mô hẳn nhau.
+                        bool bigHit = UseFixedThreshold ? metric >= BigTradeFixedContracts : (z >= BigZ && multOk);
                         if (bigHit)
                         {
                             // Nói thẳng con số buy/sell của ô này, không dùng nhãn trừu tượng (đã bỏ
@@ -773,6 +829,18 @@ namespace OrderFlowBubbles
                 ? absCands.OrderByDescending(x => x.score).ThenByDescending(x => x.z)
                           .Take(Math.Max(1, AbsorptionTopN)).ToList()
                 : new List<(Bubble b, int score, double z, long k, bool top)>();
+
+            // Ô Bid/Ask lớn add TRƯỚC CÙNG (lớp dưới cùng) — đây là bóng đại diện chính, hay gặp
+            // nhất; Big Trade/Absorption (đặc thù hơn) vẽ chồng lên trên khi trùng vị trí.
+            if (cellBigCands.Count > 0)
+            {
+                var cellKeep = cellBigCands.OrderByDescending(x => x.magnitude).Take(Math.Max(1, CellBigTopN));
+                foreach (var c in cellKeep)
+                {
+                    if (CellBigSkipOnAbsorption && absKeep.Any(a => a.k == c.k)) continue;
+                    list.Add(c.b);
+                }
+            }
 
             if (bigTradeCands.Count > 0)
             {

@@ -74,6 +74,10 @@ namespace SessionZonesNs
         // giữa 2 nến M30 liên tiếp (cuối tuần CME nghỉ ~46h).
         [InputParameter("Gap tách TUẦN cho HVN tuần (giờ)", 34, 20, 60, 1, 0)]
         public int WeekGapHours { get; set; } = 30;
+        // Người học chốt 2026-09-15: gộp 3 TUẦN ĐÃ ĐÓNG gần nhất (không phải chỉ 1 tuần)
+        // thành 1 profile để tìm HVN tuần — vẫn KHÔNG tính tuần đang chạy dở.
+        [InputParameter("Số tuần ĐÃ ĐÓNG gộp cho HVN tuần", 45, 1, 8, 1, 0)]
+        public int WeekLookbackWeeks { get; set; } = 3;
         // ---- B3/B4 (PLAN-MOC-PHAN-UNG.md) — đo 2026-08-18: 84% phiên có đỉnh
         //  volume tách hẳn (nền 90% rộng <=4 giá), nhưng HVN tuần trên chart lại
         //  hiện ra như "cái bướu 50 giá" — vì Optimus Flow gom hàng 10 giá, KHÔNG
@@ -559,15 +563,26 @@ namespace SessionZonesNs
             SortedDictionary<double, double> wkRows = null, dyRows = null;
             if ((ShowHvn || ShowLvn) && completed.Count > 0)
             {
-                // "tuần" = TUẦN CME ĐÃ ĐÓNG gần nhất (không phải ZoneLookbackSessions
-                // trượt) — xem WeekGapHours ở trên. Cần ít nhất 2 tuần trong hd mới có
-                // 1 tuần đã đóng để dùng; nếu chưa đủ thì tạm dùng tuần đang chạy.
+                // "tuần" = gộp N TUẦN CME ĐÃ ĐÓNG gần nhất (WeekLookbackWeeks, mặc định 3;
+                // không phải ZoneLookbackSessions trượt) — xem WeekGapHours ở trên. Cần ít
+                // nhất 2 tuần trong hd mới có 1 tuần đã đóng để dùng; nếu chưa đủ thì tạm
+                // dùng tuần đang chạy dở (chỉ khi hoàn toàn chưa có tuần nào đóng).
                 double spliceJump = SpliceGuard ? MinSpliceJumpPrices * 10.0 * tick : 0;
                 _weekSpliced = _daySpliced = false;
                 var weekSpans = ProfileEngine.WeekSpans(hd, WeekGapHours);
-                var pwOpt = weekSpans.Count >= 2 ? weekSpans[weekSpans.Count - 2]
-                          : weekSpans.Count == 1 ? weekSpans[0]
-                          : ((int fr, int to)?)null;
+                (int fr, int to)? pwOpt = null;
+                if (weekSpans.Count >= 2)
+                {
+                    int closedCount = weekSpans.Count - 1;               // bỏ tuần đang chạy ở cuối
+                    int take = Math.Min(Math.Max(1, WeekLookbackWeeks), closedCount);
+                    int endIdx = weekSpans.Count - 2;                    // tuần đóng gần nhất
+                    int startIdx = endIdx - take + 1;
+                    pwOpt = (weekSpans[startIdx].fr, weekSpans[endIdx].to);
+                }
+                else if (weekSpans.Count == 1)
+                {
+                    pwOpt = weekSpans[0];
+                }
                 if (pwOpt.HasValue)
                 {
                     var pw = pwOpt.Value;
@@ -603,7 +618,7 @@ namespace SessionZonesNs
                     var (lo, hi) = ShowContextBands ? ProfileEngine.PeakSharpness(wkRows, p, rowStep) : (p, p);
                     zones.Add(new Zone { Center = p, Lo = lo, Hi = hi, Type = "hvn_week",
                         Side = SideOf(p), Strength = Math.Min(95, 70 + ratio * 6), IsMarker = false,
-                        Ratio = ratio, Label = $"HVN tuần ×{ratio:0.0}" });
+                        Ratio = ratio, Label = $"HVN tuần(gộp {WeekLookbackWeeks}) ×{ratio:0.0}" });
                 }
             // B4: HVN ngày = MỐC — giữ Lo=Hi=đỉnh (điểm, để canh lệnh chính xác),
             // nhưng đo kèm độ nhọn (nền 90%) để (a) ghi lên nhãn, (b) hạ cấp xuống
@@ -636,7 +651,7 @@ namespace SessionZonesNs
             if (ShowLvn && wkRows != null)
                 foreach (var (p, ratio) in ProfileEngine.FindLvn(wkRows, tick).Take(MaxLvn))
                     lvnZones.Add(new Zone { Center = p, Lo = p, Hi = p, Type = "lvn", IsMarker = false,
-                        Side = SideOf(p), Strength = 30, Label = $"LVN tuần ×{ratio:0.0} (xuyên nhanh)" });
+                        Side = SideOf(p), Strength = 30, Label = $"LVN tuần(gộp {WeekLookbackWeeks}) ×{ratio:0.0} (xuyên nhanh)" });
             if (ShowLvn && dyRows != null)
                 foreach (var (p, ratio) in ProfileEngine.FindLvn(dyRows, tick).Take(MaxLvn))
                     lvnZones.Add(new Zone { Center = p, Lo = p, Hi = p, Type = "lvn", IsMarker = false,

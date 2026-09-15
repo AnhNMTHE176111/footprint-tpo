@@ -117,6 +117,7 @@ namespace OrderFlowBubbles
 
         // ===================== baseline ROBUST (median + MAD) =====================
         private RollingRobust _rLvlVol;       // per-level Volume (chỉ top-K ô/nến nếu BaselineTopLevels>0)
+        private RollingRobust _rLvlSideVol;   // per-level max(buy,sell) — dùng cho "Ô Bid/Ask lớn" (xét 1 BÊN, không xét tổng)
         private RollingRobust _rLvlAbsDelta;  // per-level |Delta|
         private RollingRobust _rLvlMot;       // per-level MaxOneTradeVolume (chỉ khi feed điền)
         private RollingRobust _rBarVol;       // per-bar Total.Volume
@@ -492,6 +493,7 @@ namespace OrderFlowBubbles
         private void InitBaselines()
         {
             _rLvlVol = new RollingRobust(BaselineBars);
+            _rLvlSideVol = new RollingRobust(BaselineBars);
             _rLvlAbsDelta = new RollingRobust(BaselineBars);
             _rLvlMot = new RollingRobust(BaselineBars);
             _rBarVol = new RollingRobust(BaselineBars);
@@ -727,14 +729,18 @@ namespace OrderFlowBubbles
                 //      thường, KHÔNG đòi gần cực trị / sau swing / chấm điểm như Absorption.
                 if (CellBigEnabled && ready && vol >= MinLevelVolFloor && sum > 0)
                 {
-                    double volZ2 = _rLvlVol.ModZ(vol);
-                    bool cellHit = UseFixedThreshold ? vol >= FixedThresholdContracts : volZ2 >= CellBigZ;
+                    // Xét TỪNG BÊN (bên nào áp đảo), KHÔNG xét tổng buy+sell — bid=6/ask=6 (tổng 12)
+                    // KHÔNG được nổ dù tổng vượt ngưỡng 10, vì không bên nào thật sự lớn; bid=15/ask=6
+                    // thì nổ vì bên bid một mình đã vượt ngưỡng.
+                    double sideVol = Math.Max(buy, sell);
+                    double sideZ = _rLvlSideVol.ModZ(sideVol);
+                    bool cellHit = UseFixedThreshold ? sideVol >= FixedThresholdContracts : sideZ >= CellBigZ;
                     if (cellHit)
                     {
                         var col2 = AggColor(buy, sell);
                         string tip2 = $"Ô lớn: buy {buy:0} / sell {sell:0} (tổng {vol:0})";
                         var b2 = Solid(price, Shape.Ellipse, col2, true, tip2);
-                        cellBigCands.Add((b2, vol, k));
+                        cellBigCands.Add((b2, sideVol, k));
                     }
                 }
 
@@ -1211,22 +1217,25 @@ namespace OrderFlowBubbles
             var va = bar.VolumeAnalysisData;
             if (va?.PriceLevels == null) return;
 
-            var vols = new List<double>(); var ads = new List<double>(); var mots = new List<double>();
+            var pairs = new List<(double vol, double sideVol)>(); var ads = new List<double>(); var mots = new List<double>();
             foreach (var it in va.PriceLevels.Values)
             {
-                vols.Add(it.Volume);
+                pairs.Add((it.Volume, Math.Max(it.BuyVolume, it.SellVolume)));
                 ads.Add(Math.Abs(it.Delta));
                 double m = it.MaxOneTradeVolume;
                 if (m > 0) mots.Add(m);
             }
-            // Chỉ nạp K ô ĐẬM NHẤT → "bất thường" nghĩa là bất thường so với các ô đậm lịch sử,
-            // không phải so với ô rìa 1-2 lot (nguyên nhân tín hiệu nổ khắp nơi ở bản cũ).
-            if (BaselineTopLevels > 0 && vols.Count > BaselineTopLevels)
+            // Chỉ nạp K ô ĐẬM NHẤT (theo tổng volume) → "bất thường" nghĩa là bất thường so với các ô
+            // đậm lịch sử, không phải so với ô rìa 1-2 lot (nguyên nhân tín hiệu nổ khắp nơi ở bản cũ).
+            if (BaselineTopLevels > 0 && pairs.Count > BaselineTopLevels)
             {
-                vols.Sort(); vols.Reverse();
-                vols = vols.GetRange(0, BaselineTopLevels);
+                pairs.Sort((a, b) => b.vol.CompareTo(a.vol));
+                pairs = pairs.GetRange(0, BaselineTopLevels);
             }
-            _rLvlVol.AddBar(vols.ToArray());
+            _rLvlVol.AddBar(pairs.Select(p => p.vol).ToArray());
+            // baseline RIÊNG cho "bên áp đảo" (max(buy,sell)) — dùng cho Ô Bid/Ask lớn, KHÔNG lẫn với
+            // _rLvlVol (tổng cả 2 bên) vì Ô Bid/Ask lớn xét TỪNG BÊN, không xét tổng.
+            _rLvlSideVol.AddBar(pairs.Select(p => p.sideVol).ToArray());
             _rLvlAbsDelta.AddBar(ads.ToArray());
             if (mots.Count > 0) _rLvlMot.AddBar(mots.ToArray());
             _rBarVol.AddBar(new[] { va.Total.Volume });

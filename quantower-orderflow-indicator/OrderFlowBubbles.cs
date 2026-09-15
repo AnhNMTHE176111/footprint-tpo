@@ -207,16 +207,16 @@ namespace OrderFlowBubbles
         // bề ngang nến — KHÔNG phình to theo độ lớn (khác Big Trade cố tình phình to). Đây là bóng
         // "đại diện chính" — nhiều/hay gặp nhất trên chart, còn Absorption/Big Trade là lớp tín hiệu
         // đặc thù hơn vẽ chồng lên trên.
-        [InputParameter("Ô Bid/Ask lớn (đại diện chính) · Bật", 17)]
+        [InputParameter("Ô Bid/Ask lớn (đại diện chính) · Bật", 25)]
         public bool CellBigEnabled { get; set; } = true;
 
-        [InputParameter("Ô Bid/Ask lớn · z-score ≥ (khi KHÔNG dùng ngưỡng cố định)", 18, 0.0, 12.0, 0.1, 1)]
+        [InputParameter("Ô Bid/Ask lớn · z-score ≥ (khi KHÔNG dùng ngưỡng cố định)", 26, 0.0, 12.0, 0.1, 1)]
         public double CellBigZ { get; set; } = 2.5;
 
-        [InputParameter("Ô Bid/Ask lớn · số bubble mạnh nhất / nến", 19, 1, 20, 1, 0)]
+        [InputParameter("Ô Bid/Ask lớn · số bubble mạnh nhất / nến", 27, 1, 20, 1, 0)]
         public int CellBigTopN { get; set; } = 2;
 
-        [InputParameter("Ô Bid/Ask lớn · Bỏ nếu trùng mức với Absorption", 67)]
+        [InputParameter("Ô Bid/Ask lớn · Bỏ nếu trùng mức với Absorption", 28)]
         public bool CellBigSkipOnAbsorption { get; set; } = true;
 
         // ---------- Nến delta lớn (dominant-delta candle) ----------
@@ -361,7 +361,7 @@ namespace OrderFlowBubbles
         // Chỉ dùng khi "Ngưỡng · Dùng số CỐ ĐỊNH" bật — TÁCH RIÊNG khỏi FixedThresholdContracts (của ô
         // Bid/Ask) vì hai đại lượng khác hẳn quy mô: 1 lệnh đơn 40 hợp đồng mới đáng gọi là "to",
         // trong khi 1 ô Bid/Ask (cộng dồn nhiều lệnh) chỉ cần 10 đã là bất thường (xem đo lường 2026-09-15).
-        [InputParameter("Big Trade · Số hợp đồng cố định cho LỆNH ĐƠN (khởi điểm, CHƯA đo — xem ghi chú)", 68, 1, 1000000, 1, 0)]
+        [InputParameter("Big Trade · Số hợp đồng cố định cho LỆNH ĐƠN (khởi điểm, CHƯA đo — xem ghi chú)", 17, 1, 1000000, 1, 0)]
         public double BigTradeFixedContracts { get; set; } = 40;
 
         // ---------- 3) Big Delta profile (gạch ngang) ----------

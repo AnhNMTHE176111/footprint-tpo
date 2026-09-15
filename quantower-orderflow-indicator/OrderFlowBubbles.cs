@@ -324,8 +324,6 @@ namespace OrderFlowBubbles
         [InputParameter("Absorption · Xác nhận: coi là VỠ khi vượt (ticks)", 53, 1, 20, 1, 0)]
         public int AbsBreakTicks { get; set; } = 1;
 
-        [InputParameter("Absorption · Kích thước tối thiểu khi zoom hẹp (px)", 54, 6, 60, 1, 0)]
-        public int AbsMinPx { get; set; } = 14;
 
         // ---------- 2) Big Trade — LỆNH ĐƠN LỚN (2026-09-15: xác nhận feed LIVE có cấp
         //  MaxOneTradeVolume thật, dù mọi file CSV xuất ra trước đó đều ghi 0 — do xuất lịch sử
@@ -1085,8 +1083,12 @@ namespace OrderFlowBubbles
                             float y = (float)conv.GetChartY(b.Price);
                             // absorption dùng bề rộng nến, nhưng có SÀN px: khi zoom hẹp nó từng nhỏ
                             // hơn cả halo Big Trade nên gần như vô hình.
-                            int minPx = b.Shape == Shape.Ellipse ? Math.Max(MinBubbleSize, AbsMinPx) : MinBubbleSize;
-                            int drawSize = b.UseBarWidth ? Math.Clamp((int)Math.Round(barsW), minPx, 400) : b.Size;
+                            // UseBarWidth = luôn ĐÚNG BẰNG bề ngang nến, KHÔNG có sàn tối thiểu — trước
+                            // đây có sàn AbsMinPx=14px để bóng không biến mất khi zoom bé, nhưng hệ quả
+                            // là bóng RỘNG HƠN thân nến lúc zoom bé (đè sang nến bên cạnh). Người dùng
+                            // xác nhận ưu tiên "không bao giờ che rộng hơn thân nến" hơn "luôn nhìn thấy
+                            // rõ khi zoom bé" (2026-09-15).
+                            int drawSize = b.UseBarWidth ? Math.Max(1, (int)Math.Round(barsW)) : b.Size;
                             DrawShape(gr, b, cx, y, drawSize, (float)barsW);
 
                             if (hoverTip == null)

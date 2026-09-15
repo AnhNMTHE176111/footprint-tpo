@@ -97,6 +97,7 @@ namespace OrderFlowBubbles
             public string Tooltip;
             public int Confirm;         // absorption: 0 = đang chờ, +1 = mức GIỮ được, -1 = mức VỠ
             public bool Confirmable;    // true = thuộc luồng Absorption (được SignalCache/UpdateAbsorptionConfirms theo dõi)
+            public bool IsDivergence;   // true = thuộc luồng Divergence (TryDivergence dò lại bằng field này, KHÔNG dò tooltip)
         }
 
         // absorption đang chờ xác nhận (mức giữ hay vỡ trong N nến sau)
@@ -268,9 +269,6 @@ namespace OrderFlowBubbles
         // Tổ hợp NGƯỢC DẤU: "ô đậm tại cực trị + range hẹp + POC nổi bật ngay đó" đo được là mức
         // DỄ VỠ hơn đối chứng (−6,6pp, 3,7σ, đơn điệu, nhất quán 3 tháng) → đổi nhãn thành cảnh báo
         // xuyên mức, KHÔNG gọi là hấp thụ nữa.
-        [InputParameter("Absorption · gắn nhãn 'CỰC TRỊ YẾU' khi nến hẹp (đo: 4.9σ)", 67)]
-        public bool MarkBreakoutRisk { get; set; } = true;
-
         [InputParameter("Absorption · Cách cực trị tối đa (ticks)", 43, 0, 20, 1, 0)]
         public int AbsMaxDisplaceTicks { get; set; } = 2;
 
@@ -444,7 +442,7 @@ namespace OrderFlowBubbles
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
                 AbsRangeRatio, AbsImpactZ, AbsSwingPeriod, AbsPocProminence, AbsDivergencePct,
                 AbsTwoSidedPct, AbsMultiBarLookback, AbsConfirmBars, AbsBreakTicks,
-                WNoResult, WProminent, WDivergence, WTwoSided, WMulti, WSwing, MarkBreakoutRisk,
+                WNoResult, WProminent, WDivergence, WTwoSided, WMulti, WSwing,
                 BigTradeEnabled, BigZ, BigVolMult, BigTradeTopN, BigTradeRequireRealTrades, BigTradeSkipOnAbsorption,
                 DLineEnabled, DLineFloor, DLineZ, DLineTopN,
                 ExhaustionEnabled, ExhVolFadeRatio, ExhDeltaFadeRatio, ExhSwingLookback,
@@ -590,7 +588,7 @@ namespace OrderFlowBubbles
             long hiIdx = (long)Math.Round(bar.High / tick);
 
             bool motReady = ready && _rLvlMot.BarCount > 0 && _rLvlMot.Median > 0;
-            var dLineCands = new List<(double price, double z, int sign)>();
+            var dLineCands = new List<(double price, double z, int sign, double buy, double sell)>();
             var bigTradeCands = new List<(Bubble b, double z, long k)>();
             var absCands = new List<(Bubble b, int score, double z, long k, bool top)>();
             int imbBuyRun = 0, imbSellRun = 0;
@@ -612,7 +610,6 @@ namespace OrderFlowBubbles
             double barRange = bar.High - bar.Low;
             double rangeMed = _rBarRange.Median;
             bool noResultRange = ready && rangeMed > 0 && barRange <= AbsRangeRatio * rangeMed;
-            double rangeRatioNow = rangeMed > 0 ? barRange / rangeMed : 0;
             double impact = barVol > 0 ? Math.Abs(bar.Close - bar.Open) / barVol : 0;
             bool noResultImpact = ready && _rBarImpact.BarCount >= MinBars && _rBarImpact.ModZ(impact) <= -AbsImpactZ;
             bool noResult = noResultRange || noResultImpact;
@@ -669,21 +666,17 @@ namespace OrderFlowBubbles
 
                             if (score >= AbsScoreMin)
                             {
-                                // Cực trị của nến HẸP dễ bị xuyên hơn hẳn: 73,6% vs 69,0% đối chứng
-                                // (+4,6pp, 4,9σ, n=2873, ổn định cả 2 tháng và cả 4 quartile biến động).
-                                // Đây là hiệu ứng đo được VỮNG NHẤT trong toàn bộ nghiên cứu — và nó
-                                // thuần bar-level. Cơ chế: nến hẹp tạo cực trị mà không có sự từ chối
-                                // thật; nến rộng có wick dài = đã bị đẩy lùi thật → mức bền hơn.
-                                bool risky = MarkBreakoutRisk && noResultRange;
-                                string why = risky
-                                    ? $"⚠ Cực trị YẾU {(top ? "đỉnh" : "đáy")} — nến hẹp ({rangeRatioNow:0.0#}× median), mức dễ bị xuyên"
-                                      + $"  điểm {score}  vZ={volZ:0.0}"
-                                    : $"Ô đậm tại {(top ? "đỉnh" : "đáy")}  điểm {score}  vZ={volZ:0.0}  Δô={dPctLvl:P0}"
+                                // Luôn dùng màu chuẩn theo phía (đỉnh/đáy) — không đổi màu cảnh báo riêng,
+                                // để nhìn nhất quán trên chart (bỏ nhãn "CỰC TRỊ YẾU" theo yêu cầu 2026-09-15).
+                                // Tooltip nói THẲNG con số buy/sell thật của ô, không dùng ký hiệu z/điểm trừu
+                                // tượng — người đọc chart cần thấy ngay bên nào áp đảo bao nhiêu.
+                                string ratioTxt = _rLvlVol.Median > 0 ? $" (gấp {vol / _rLvlVol.Median:0.0} lần bình thường)" : "";
+                                string why = $"Hấp thụ tại {(top ? "đỉnh" : "đáy")}: buy {buy:0} / sell {sell:0}{ratioTxt}"
                                       + (swing ? " ·sau swing" : "")
-                                      + (divergence ? " ·divergence" : "") + (twoSided ? " ·2 phe" : "")
-                                      + (noResult ? " ·no-result" : "") + (prominent ? " ·POC nổi bật" : "")
+                                      + (divergence ? " ·delta lệch chiều" : "") + (twoSided ? " ·2 phe cùng lớn" : "")
+                                      + (noResult ? " ·giá không nhúc nhích" : "") + (prominent ? " ·POC nổi bật" : "")
                                       + (multi ? " ·đa nến" : "");
-                                var col = risky ? Color.Goldenrod : (top ? BuyColor : SellColor);
+                                var col = top ? BuyColor : SellColor;
                                 var b = Solid(price, Shape.Ellipse, col, true, why);
                                 absCands.Add((b, score, volZ, k, top));
                             }
@@ -695,15 +688,15 @@ namespace OrderFlowBubbles
                 //    khi đó tooltip ghi "HVN cell" cho đúng bản chất. Điều kiện z VÀ ×median (không OR).
                 if (BigTradeEnabled && ready)
                 {
-                    double metric; RollingRobust rr; string src;
+                    double metric; RollingRobust rr; bool fromSingleTrade;
                     if (motReady)
                     {
                         double mot = it.MaxOneTradeVolume;
-                        if (mot > 0) { metric = mot; rr = _rLvlMot; src = "lệnh đơn"; }
-                        else { metric = -1; rr = null; src = null; }
+                        if (mot > 0) { metric = mot; rr = _rLvlMot; fromSingleTrade = true; }
+                        else { metric = -1; rr = null; fromSingleTrade = false; }
                     }
-                    else if (BigTradeRequireRealTrades) { metric = -1; rr = null; src = null; }
-                    else { metric = vol; rr = _rLvlVol; src = "HVN cell · vol/ô"; }
+                    else if (BigTradeRequireRealTrades) { metric = -1; rr = null; fromSingleTrade = false; }
+                    else { metric = vol; rr = _rLvlVol; fromSingleTrade = false; }
 
                     if (rr != null && metric >= MinLevelVolFloor)
                     {
@@ -711,13 +704,20 @@ namespace OrderFlowBubbles
                         bool multOk = BigVolMult <= 0 || metric >= BigVolMult * rr.Median;
                         bool bigHit = UseFixedThreshold ? metric >= FixedThresholdContracts : (z >= BigZ && multOk);
                         if (bigHit)
+                        {
+                            // Nói thẳng con số buy/sell của ô này, không dùng nhãn trừu tượng (đã bỏ
+                            // "HVN cell"/"lệnh đơn"/z=) — người đọc cần thấy ngay bên nào áp đảo.
+                            string tip = fromSingleTrade
+                                ? $"Có 1 lệnh đơn rất lớn trong ô: {metric:0} hợp đồng · buy {buy:0} / sell {sell:0}"
+                                : $"Khối lượng ô lớn bất thường: buy {buy:0} / sell {sell:0} (tổng {metric:0})";
                             bigTradeCands.Add((new Bubble
                             {
                                 Price = price, Shape = Shape.Ellipse, Color = AggColor(buy, sell),
                                 Size = SizeFromMagnitude(z, BigZ), Transparency = HaloTransparency,
                                 Halo = true, UseBarWidth = false,
-                                Tooltip = $"{src} {metric:0}  z={z:0.0}"
+                                Tooltip = tip
                             }, z, k));
+                        }
                     }
                 }
 
@@ -727,7 +727,7 @@ namespace OrderFlowBubbles
                     double dPct = vol > 0 ? dNet / vol : 0;
                     double z = _rLvlAbsDelta.ModZ(Math.Abs(dNet));
                     if (Math.Abs(dPct) >= DLineFloor && (z >= DLineZ || Math.Abs(dNet) >= 2 * _rLvlAbsDelta.Median))
-                        dLineCands.Add((price, z, dNet > 0 ? 1 : -1));
+                        dLineCands.Add((price, z, dNet > 0 ? 1 : -1, buy, sell));
                 }
 
                 // 5) STACKED IMBALANCE — chéo (buy[k] vs sell[k-1]), min-vol RELATIVE
@@ -740,7 +740,8 @@ namespace OrderFlowBubbles
                         {
                             Price = price, Shape = Shape.Diamond, Color = BuyColor,
                             Size = SizeFromMagnitude(askFilter > 0 ? buy / askFilter : 1, 1),
-                            Transparency = SolidTransparency, Tooltip = $"Stacked buy imbalance x{imbBuyRun}"
+                            Transparency = SolidTransparency,
+                            Tooltip = $"Buy áp đảo {imbBuyRun} mức liên tiếp: buy {buy:0} vs sell mức dưới {lo.it.SellVolume:0}"
                         });
 
                     double bidFilter = buy * ImbalanceRatioPct / 100.0;
@@ -750,7 +751,8 @@ namespace OrderFlowBubbles
                         {
                             Price = lo.price, Shape = Shape.Diamond, Color = SellColor,
                             Size = SizeFromMagnitude(bidFilter > 0 ? lo.it.SellVolume / bidFilter : 1, 1),
-                            Transparency = SolidTransparency, Tooltip = $"Stacked sell imbalance x{imbSellRun}"
+                            Transparency = SolidTransparency,
+                            Tooltip = $"Sell áp đảo {imbSellRun} mức liên tiếp: sell {lo.it.SellVolume:0} vs buy mức trên {buy:0}"
                         });
                 }
 
@@ -758,9 +760,9 @@ namespace OrderFlowBubbles
                 if (UnfinishedEnabled)
                 {
                     if (k == hiIdx && buy > MinLevelVolFloor && sell > MinLevelVolFloor)
-                        list.Add(new Bubble { Price = bar.High, Shape = Shape.Rectangle, Color = SellColor, Size = MinBubbleSize, Transparency = SolidTransparency, Tooltip = "Unfinished (đỉnh)" });
+                        list.Add(new Bubble { Price = bar.High, Shape = Shape.Rectangle, Color = SellColor, Size = MinBubbleSize, Transparency = SolidTransparency, Tooltip = $"Đấu giá chưa xong tại đỉnh: buy {buy:0} / sell {sell:0}" });
                     if (k == loIdx && buy > MinLevelVolFloor && sell > MinLevelVolFloor)
-                        list.Add(new Bubble { Price = bar.Low, Shape = Shape.Rectangle, Color = BuyColor, Size = MinBubbleSize, Transparency = SolidTransparency, Tooltip = "Unfinished (đáy)" });
+                        list.Add(new Bubble { Price = bar.Low, Shape = Shape.Rectangle, Color = BuyColor, Size = MinBubbleSize, Transparency = SolidTransparency, Tooltip = $"Đấu giá chưa xong tại đáy: buy {buy:0} / sell {sell:0}" });
                 }
             }
 
@@ -804,7 +806,8 @@ namespace OrderFlowBubbles
                         Price = c.price, Shape = Shape.HLine,
                         Color = c.sign > 0 ? DeltaUpColor : DeltaDownColor,
                         Size = 2 + (int)Math.Clamp(c.z - DLineZ, 0, 4), Transparency = SolidTransparency,
-                        UseBarWidth = true, Tooltip = $"Big delta {(c.sign > 0 ? "+" : "−")}  z={c.z:0.0}"
+                        UseBarWidth = true,
+                        Tooltip = $"Lệch delta mạnh tại mức này: buy {c.buy:0} / sell {c.sell:0}"
                     });
 
             // ---- detector theo NẾN ----
@@ -836,10 +839,12 @@ namespace OrderFlowBubbles
             int n = ExhSwingLookback;
             // buy exhaustion tại đỉnh: delta rút khỏi đỉnh intrabar
             if (IsLocalHigh(idx, n) && maxDelta > 0 && curDelta < maxDelta * ExhDeltaFadeRatio)
-                list.Add(new Bubble { Price = maxPosPrice, Shape = Shape.Triangle, Color = BuyColor, Size = MidSize(), Transparency = SolidTransparency, Tooltip = "Buy exhaustion (đỉnh)" });
+                list.Add(new Bubble { Price = maxPosPrice, Shape = Shape.Triangle, Color = BuyColor, Size = MidSize(), Transparency = SolidTransparency,
+                    Tooltip = $"Buy đuối sức tại đỉnh: delta lúc mạnh nhất +{maxDelta:0}, giờ chỉ còn {curDelta:0}" });
             // sell exhaustion tại đáy: delta hồi lên khỏi đáy intrabar
             if (IsLocalLow(idx, n) && minDelta < 0 && curDelta > minDelta * ExhDeltaFadeRatio)
-                list.Add(new Bubble { Price = minNegPrice, Shape = Shape.Triangle, Color = SellColor, Size = MidSize(), Transparency = SolidTransparency, Tooltip = "Sell exhaustion (đáy)" });
+                list.Add(new Bubble { Price = minNegPrice, Shape = Shape.Triangle, Color = SellColor, Size = MidSize(), Transparency = SolidTransparency,
+                    Tooltip = $"Sell đuối sức tại đáy: delta lúc mạnh nhất {minDelta:0}, giờ chỉ còn {curDelta:0}" });
         }
 
         // Divergence neo vào nến PIVOT = idx-n. Idempotent + cooldown + volume participation.
@@ -861,7 +866,8 @@ namespace OrderFlowBubbles
                 {
                     var pc = Bar(prevPivot);
                     if (pc != null && c.High > pc.High && _cvd[pivot] <= _cvd[prevPivot])   // giá HH, delta LH
-                        divs.Add(new Bubble { Price = c.High, Shape = Shape.Triangle, Color = BuyColor, Size = MidSize(), Transparency = SolidTransparency, Tooltip = "Bearish delta divergence" });
+                        divs.Add(new Bubble { Price = c.High, Shape = Shape.Triangle, Color = BuyColor, Size = MidSize(), Transparency = SolidTransparency, IsDivergence = true,
+                            Tooltip = $"Giá đỉnh sau cao hơn ({c.High:0.0} > {pc.High:0.0}) nhưng delta cộng dồn lại thấp hơn ({_cvd[pivot]:0} ≤ {_cvd[prevPivot]:0}) — buy yếu dần" });
                 }
             }
             if (IsPivotLow(pivot, n) && ParticOk(pivot, medVol))
@@ -871,7 +877,8 @@ namespace OrderFlowBubbles
                 {
                     var pc = Bar(prevPivot);
                     if (pc != null && c.Low < pc.Low && _cvd[pivot] >= _cvd[prevPivot])     // giá LL, delta HL
-                        divs.Add(new Bubble { Price = c.Low, Shape = Shape.Triangle, Color = SellColor, Size = MidSize(), Transparency = SolidTransparency, Tooltip = "Bullish delta divergence" });
+                        divs.Add(new Bubble { Price = c.Low, Shape = Shape.Triangle, Color = SellColor, Size = MidSize(), Transparency = SolidTransparency, IsDivergence = true,
+                            Tooltip = $"Giá đáy sau thấp hơn ({c.Low:0.0} < {pc.Low:0.0}) nhưng delta cộng dồn lại cao hơn ({_cvd[pivot]:0} ≥ {_cvd[prevPivot]:0}) — sell yếu dần" });
                 }
             }
 
@@ -881,7 +888,7 @@ namespace OrderFlowBubbles
             {
                 if (_bubbles.TryGetValue(pivot, out var existing))
                 {
-                    existing.RemoveAll(b => b.Tooltip != null && b.Tooltip.Contains("divergence"));
+                    existing.RemoveAll(b => b.IsDivergence);
                     existing.AddRange(divs);
                     if (existing.Count == 0) _bubbles.Remove(pivot);
                 }
@@ -905,9 +912,11 @@ namespace OrderFlowBubbles
             double hi = MaxHighPrior(idx, SweepLookback);
             double lo = MinLowPrior(idx, SweepLookback);
             if (cur.High > hi && cur.Close < hi && barDelta < 0)
-                list.Add(new Bubble { Price = cur.High, Shape = Shape.Triangle, Color = BuyColor, Size = MidSize(), Transparency = SolidTransparency, Tooltip = "Liquidity sweep (đỉnh)" });
+                list.Add(new Bubble { Price = cur.High, Shape = Shape.Triangle, Color = BuyColor, Size = MidSize(), Transparency = SolidTransparency,
+                    Tooltip = $"Quét đỉnh {SweepLookback} nến rồi bị đẩy lùi: vượt {hi:0.0} nhưng đóng lại {cur.Close:0.0}, delta {barDelta:0}" });
             if (cur.Low < lo && cur.Close > lo && barDelta > 0)
-                list.Add(new Bubble { Price = cur.Low, Shape = Shape.Triangle, Color = SellColor, Size = MidSize(), Transparency = SolidTransparency, Tooltip = "Liquidity sweep (đáy)" });
+                list.Add(new Bubble { Price = cur.Low, Shape = Shape.Triangle, Color = SellColor, Size = MidSize(), Transparency = SolidTransparency,
+                    Tooltip = $"Quét đáy {SweepLookback} nến rồi bị đẩy lùi: xuống dưới {lo:0.0} nhưng đóng lại {cur.Close:0.0}, delta +{barDelta:0}" });
         }
 
         private void TryStopHunt(int idx, HistoryItemBar cur, double tick, List<Bubble> list)
@@ -923,13 +932,15 @@ namespace OrderFlowBubbles
             {
                 double vz = _rLvlVol.ModZ(itH.Volume);
                 if (vz >= AbsEffortZ && itH.BuyVolume > itH.SellVolume)
-                    list.Add(Solid(cur.High, Shape.Ellipse, SellColor, true, "Stop-hunt + absorption (đỉnh)"));
+                    list.Add(Solid(cur.High, Shape.Ellipse, SellColor, true,
+                        $"Quét dừng lỗ tại đỉnh rồi bị chặn: buy {itH.BuyVolume:0} / sell {itH.SellVolume:0}"));
             }
             if (cur.Low < lo && cur.Close > lo && TryLevel(va, cur.Low, tick, out var itL))
             {
                 double vz = _rLvlVol.ModZ(itL.Volume);
                 if (vz >= AbsEffortZ && itL.SellVolume > itL.BuyVolume)
-                    list.Add(Solid(cur.Low, Shape.Ellipse, BuyColor, true, "Stop-hunt + absorption (đáy)"));
+                    list.Add(Solid(cur.Low, Shape.Ellipse, BuyColor, true,
+                        $"Quét dừng lỗ tại đáy rồi bị chặn: buy {itL.BuyVolume:0} / sell {itL.SellVolume:0}"));
             }
         }
 

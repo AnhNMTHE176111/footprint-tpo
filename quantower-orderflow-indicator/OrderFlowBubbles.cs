@@ -138,6 +138,7 @@ namespace OrderFlowBubbles
         // Mỗi nến ĐÃ ĐÓNG chỉ tính tín hiệu 1 lần; kết quả khoá theo THỜI GIAN mở nến, sống sót
         // qua ResetState() (Quantower gọi lại khi nạp lại Volume Analysis — không chỉ 1 lần).
         private SignalCache _cache;
+        private BigTradeLog _bigTradeLog;
         private string _settingsFingerprint = "";   // đổi khi người dùng đổi tham số -> vô hiệu cache cũ
 
         // ================================================================
@@ -763,6 +764,12 @@ namespace OrderFlowBubbles
                     else if (BigTradeRequireRealTrades) { metric = -1; rr = null; fromSingleTrade = false; }
                     else { metric = vol; rr = _rLvlVol; fromSingleTrade = false; }
 
+                    // Ghi log lệnh đơn thật (mọi giá trị quan sát được, KHÔNG chỉ ca đạt ngưỡng) để sau
+                    // này có đủ dữ liệu đo lại ngưỡng cho chuẩn. Chỉ ghi lúc nến ĐÃ ĐÓNG (isClosed) —
+                    // nến đang chạy sống có thể còn tăng tiếp, ghi sớm sẽ chốt nhầm giá trị chưa cuối.
+                    if (isClosed && fromSingleTrade && _bigTradeLog != null)
+                        _bigTradeLog.TryAppend(bar.TimeLeft.Ticks, bar.TimeLeft, price, metric, buy, sell);
+
                     if (rr != null && metric >= MinLevelVolFloor)
                     {
                         double z = rr.ModZ(metric);
@@ -1304,14 +1311,14 @@ namespace OrderFlowBubbles
         private void EnsureCache()
         {
             if (_cache != null) return;
+            string symName = Symbol?.Name ?? "unknown";
+            string period = HistoricalData?.Aggregation?.Title ?? HistoricalData?.Aggregation?.Name ?? "unknown";
+            string safe = SignalCache.SanitizeFileName(symName + "_" + period);
             try
             {
                 string dir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "OrderFlowBubbles", "signal-cache");
-                string symName = Symbol?.Name ?? "unknown";
-                string period = HistoricalData?.Aggregation?.Title ?? HistoricalData?.Aggregation?.Name ?? "unknown";
-                string safe = SignalCache.SanitizeFileName(symName + "_" + period);
                 _cache = new SignalCache(Path.Combine(dir, safe + ".jsonl"));
                 _cache.Load();
             }
@@ -1319,6 +1326,19 @@ namespace OrderFlowBubbles
             {
                 _cache = new SignalCache(null);   // lỗi ghi file (vd không có quyền) -> chạy tiếp KHÔNG niêm phong,
             }                                      // không được để crash cả indicator vì một tính năng phụ
+
+            try
+            {
+                string dir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "OrderFlowBubbles", "bigtrade-log");
+                _bigTradeLog = new BigTradeLog(Path.Combine(dir, safe + ".csv"));
+                _bigTradeLog.Load();
+            }
+            catch
+            {
+                _bigTradeLog = new BigTradeLog(null);   // tương tự trên: lỗi ghi file không được crash indicator
+            }
         }
 
         private CachedBarData ToCachedBarData(long timeTicks, List<Bubble> list, int tint)

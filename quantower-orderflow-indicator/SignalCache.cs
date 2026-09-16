@@ -106,4 +106,67 @@ namespace OrderFlowBubbles
             return s;
         }
     }
+
+    // ========================================================================
+    //  BigTradeLog — ghi lại PHÂN PHỐI THẬT của lệnh đơn (2026-09-16)
+    // ========================================================================
+    //  Lý do: chưa từng đo được "lệnh đơn bao nhiêu là to" bằng số liệu thật, vì
+    //  MỌI file lịch sử export ra đều có MaxOneTradeVolume = 0 (feed chỉ cấp số
+    //  này lúc đang chạy SỐNG). Log này ghi lại NGUYÊN VẸN từng lệnh đơn thật
+    //  quan sát được trong lúc feed sống, để vài ngày sau có đủ dữ liệu đo lại
+    //  con số ngưỡng cho chuẩn (thay vì đoán 35 hay 50).
+    //
+    //  Chỉ ghi 1 dòng / (nến, mức giá) — dedup bằng key nạp từ file lúc Load(),
+    //  để chạy lại (mở lại indicator) không ghi trùng dữ liệu cũ.
+    // ========================================================================
+    public sealed class BigTradeLog
+    {
+        private readonly HashSet<string> _seen = new();
+        private readonly object _fileLock = new();
+        private bool _headerWritten;
+
+        public string FilePath { get; }
+
+        public BigTradeLog(string filePath) { FilePath = filePath; }
+
+        public int Count => _seen.Count;
+
+        public void Load()
+        {
+            _seen.Clear();
+            _headerWritten = false;
+            if (string.IsNullOrEmpty(FilePath) || !File.Exists(FilePath)) return;
+            bool first = true;
+            foreach (var line in File.ReadLines(FilePath))
+            {
+                if (first) { first = false; _headerWritten = true; continue; } // dòng header
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                var parts = line.Split(',');
+                if (parts.Length < 2) continue;
+                _seen.Add(parts[0] + "|" + parts[2]); // time_ticks|price
+            }
+        }
+
+        // Trả về true nếu vừa ghi mới (false nếu đã có từ trước -> bỏ qua, tránh trùng).
+        public bool TryAppend(long timeTicks, DateTime timeUtc, double price, double mot, double buy, double sell)
+        {
+            string key = timeTicks + "|" + price;
+            lock (_fileLock)
+            {
+                if (_seen.Contains(key)) return false;
+                _seen.Add(key);
+                if (string.IsNullOrEmpty(FilePath)) return true;
+                string dir = Path.GetDirectoryName(FilePath);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                if (!_headerWritten)
+                {
+                    File.AppendAllText(FilePath, "time_ticks,time_iso,price,mot,buy,sell" + Environment.NewLine);
+                    _headerWritten = true;
+                }
+                string line = string.Join(",", timeTicks, timeUtc.ToString("o"), price, mot, buy, sell);
+                File.AppendAllText(FilePath, line + Environment.NewLine);
+                return true;
+            }
+        }
+    }
 }

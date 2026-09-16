@@ -43,8 +43,19 @@ file (default glob `*.cs` trong thư mục) — không cần sửa gì thêm. N�
 `<Compile Include>`), vì `qw-build.sh` chỉ nhận 1 file nguồn.
 
 ## Test
-`tests/` (`OrderFlowBubblesTests`) test riêng `SignalCache.cs` — không cần SDK Quantower vì class này
-không phụ thuộc `TradingPlatform.BusinessLayer`. Chạy: `dotnet run --project quantower-orderflow-indicator/tests`.
+`tests/` (`OrderFlowBubblesTests`) test riêng `SignalCache.cs` (gồm cả `BigTradeLog`) — không cần SDK
+Quantower vì các class này không phụ thuộc `TradingPlatform.BusinessLayer`. Chạy:
+`dotnet run --project quantower-orderflow-indicator/tests`.
+
+## Log lệnh đơn thật (BigTradeLog, 2026-09-16)
+Chưa đo được ngưỡng "lệnh đơn bao nhiêu là to" bằng số liệu thật (mọi file export lịch sử đều có
+`MaxOneTradeVolume = 0` — feed chỉ cấp số này lúc đang chạy SỐNG). Indicator giờ tự ghi log mỗi lệnh
+đơn thật quan sát được (mọi giá trị, không chỉ ca nổ bóng) ra:
+```
+%AppData%\OrderFlowBubbles\bigtrade-log\<symbol>_<khung>.csv   (cột: time_ticks,time_iso,price,mot,buy,sell)
+```
+Chạy vài phiên rồi mở file này bằng Python/Excel để đo lại `BigTradeAbsFloor`/`BigTradeFixedContracts`
+cho chuẩn thay vì đoán.
 
 ## Bộ reference DLL lấy từ đâu (tái lập)
 DLL tham chiếu được trích **từ chính installer Quantower** (Windows-only, không có gói NuGet):

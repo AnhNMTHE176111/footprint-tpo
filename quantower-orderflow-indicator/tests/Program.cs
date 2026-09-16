@@ -158,6 +158,33 @@ static class Tests
         finally { File.Delete(path); }
     }
 
+    // [7] BigTradeLog: ghi 1 lan, doc lai (mo phong restart) khong ghi trung du lieu cu
+    static void BigTradeLogDedupSurvivesRestart()
+    {
+        Console.WriteLine("[7] BigTradeLog: khong ghi trung khi mo lai (dedup qua file)");
+        string path = Path.Combine(Path.GetTempPath(), "btl_test_" + Guid.NewGuid() + ".csv");
+        try
+        {
+            var log1 = new BigTradeLog(path);
+            log1.Load();
+            bool wrote1 = log1.TryAppend(1000, DateTime.UtcNow, 4327.0, 55, 40, 10);
+            Check(wrote1, "lan dau ghi thanh cong");
+            bool wrote2 = log1.TryAppend(1000, DateTime.UtcNow, 4327.0, 55, 40, 10);
+            Check(!wrote2, "ghi lai CUNG key (nen+gia) trong CUNG instance -> bi chan (dedup)");
+
+            // "khoi dong lai" -> instance moi doc lai file cu
+            var log2 = new BigTradeLog(path);
+            log2.Load();
+            Check(log2.Count == 1, "doc lai file thay dung 1 dong da ghi", $"count={log2.Count}");
+            bool wrote3 = log2.TryAppend(1000, DateTime.UtcNow, 4327.0, 999, 1, 1);
+            Check(!wrote3, "instance MOI cung chan ghi trung (da nap key tu file cu)");
+
+            bool wrote4 = log2.TryAppend(2000, DateTime.UtcNow, 4328.0, 60, 50, 5);
+            Check(wrote4, "nen/gia KHAC thi ghi duoc binh thuong");
+        }
+        finally { File.Delete(path); }
+    }
+
     static int Main()
     {
         InMemoryRoundtrip();
@@ -166,6 +193,7 @@ static class Tests
         EmptyBarIsCached();
         CorruptLineIsSkipped();
         FingerprintMismatchMeansMiss();
+        BigTradeLogDedupSurvivesRestart();
         Console.WriteLine(_fail == 0 ? "\n=== TAT CA PASS ===" : $"\n=== {_fail} FAIL ===");
         return _fail == 0 ? 0 : 1;
     }

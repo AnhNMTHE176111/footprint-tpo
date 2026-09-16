@@ -360,7 +360,14 @@ namespace OrderFlowBubbles
         // Bid/Ask) vì hai đại lượng khác hẳn quy mô: 1 lệnh đơn 40 hợp đồng mới đáng gọi là "to",
         // trong khi 1 ô Bid/Ask (cộng dồn nhiều lệnh) chỉ cần 10 đã là bất thường (xem đo lường 2026-09-15).
         [InputParameter("Big Trade · Số hợp đồng cố định cho LỆNH ĐƠN (khởi điểm, CHƯA đo — xem ghi chú)", 17, 1, 1000000, 1, 0)]
-        public double BigTradeFixedContracts { get; set; } = 40;
+        public double BigTradeFixedContracts { get; set; } = 50;
+
+        // Sàn tuyệt đối (người học chốt 2026-09-16): z-score tương đối một mình KHÔNG đủ — trong nến
+        // yên tĩnh, trung vị/độ lệch nhỏ khiến lệnh đơn chỉ 8-12 hợp đồng cũng đạt z≥3, nổ bóng "Big
+        // Trade" liên tục mà con số quá bé để coi là "to" theo nghĩa thông thường. Sàn này áp DÙ ĐANG
+        // Ở MODE NÀO (tương đối hay cố định) — dưới sàn thì không bao giờ được gọi là Big Trade.
+        [InputParameter("Big Trade · Sàn tuyệt đối tối thiểu (hợp đồng, áp mọi mode)", 18, 1, 1000000, 1, 0)]
+        public double BigTradeAbsFloor { get; set; } = 50;
 
         // ---------- 3) Big Delta profile (gạch ngang) ----------
         [InputParameter("Big Delta line · Bật", 70)]
@@ -479,7 +486,7 @@ namespace OrderFlowBubbles
                 AbsRangeRatio, AbsImpactZ, AbsSwingPeriod, AbsPocProminence, AbsDivergencePct,
                 AbsTwoSidedPct, AbsMultiBarLookback, AbsConfirmBars, AbsBreakTicks,
                 WNoResult, WProminent, WDivergence, WTwoSided, WMulti, WSwing,
-                BigTradeEnabled, BigZ, BigVolMult, BigTradeTopN, BigTradeRequireRealTrades, BigTradeSkipOnAbsorption, BigTradeFixedContracts,
+                BigTradeEnabled, BigZ, BigVolMult, BigTradeTopN, BigTradeRequireRealTrades, BigTradeSkipOnAbsorption, BigTradeFixedContracts, BigTradeAbsFloor,
                 DLineEnabled, DLineFloor, DLineZ, DLineTopN,
                 ExhaustionEnabled, ExhVolFadeRatio, ExhDeltaFadeRatio, ExhSwingLookback,
                 ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun,
@@ -762,7 +769,8 @@ namespace OrderFlowBubbles
                         bool multOk = BigVolMult <= 0 || metric >= BigVolMult * rr.Median;
                         // Ngưỡng cố định RIÊNG cho lệnh đơn (BigTradeFixedContracts) — KHÔNG dùng chung
                         // FixedThresholdContracts của ô Bid/Ask vì hai đại lượng khác quy mô hẳn nhau.
-                        bool bigHit = UseFixedThreshold ? metric >= BigTradeFixedContracts : (z >= BigZ && multOk);
+                        bool bigHit = metric >= BigTradeAbsFloor &&
+                            (UseFixedThreshold ? metric >= BigTradeFixedContracts : (z >= BigZ && multOk));
                         if (bigHit)
                         {
                             // Nói thẳng con số buy/sell của ô này, không dùng nhãn trừu tượng (đã bỏ

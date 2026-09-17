@@ -9,11 +9,14 @@ Mục tiêu cần đạt (đo trên log live, không phải backtest):
 - **R:R cố định 1:2**
 - **Tỷ lệ thắng ≥60%**
 - **15–20 lệnh/ngày**
+- **Risk 3-5%/lệnh**
 
-→ Kỳ vọng lời mỗi lệnh = 0.6×2 − 0.4×1 = **+0.8R/lệnh** ⇒ **+12R đến +16R/ngày** nếu đạt đủ 3 mục tiêu
-trên cùng lúc. Hiện tại (log 13/7→28/8) EntrySignal mới đạt ~1 lệnh/ngày (28 lệnh/28 phiên), winrate
-42.9%, R:R thật đang lệch giữa 2 kịch bản (1:1.5) — còn xa cả 3 mục tiêu, cần tăng cả **tần suất bắt
-lệnh** lẫn **độ chính xác** chứ không chỉ nới R:R.
+→ Kỳ vọng lời mỗi lệnh = 0.6×2 − 0.4×1 = **+0.8R/lệnh** ⇒ **+12R đến +16R/ngày**, **~+264R đến +352R/tháng**
+(22 ngày giao dịch) nếu đạt đủ 4 mục tiêu trên cùng lúc. Quy đổi ra % tài khoản (tính đơn giản, không
+cộng dồn lãi): risk 3% → **+792% đến +1.056%/tháng**; risk 5% → **+1.320% đến +1.760%/tháng**.
+Hiện tại (log 13/7→28/8) EntrySignal mới đạt ~1 lệnh/ngày (28 lệnh/28 phiên), winrate 42.9%, R:R thật
+đang lệch giữa 2 kịch bản (1:1.5) — còn xa cả 4 mục tiêu, cần tăng cả **tần suất bắt lệnh** lẫn **độ
+chính xác** chứ không chỉ nới R:R.
 
 ## Phát hiện then chốt (backtest 28 ngày dữ liệu thật)
 - Tín hiệu cơ học **thô** (bắn ở mọi vùng) **không có edge** — tệ hơn ngẫu nhiên (MFE/MAE 0.86 vs 1.05).

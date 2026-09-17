@@ -3,6 +3,18 @@
 Indicator M1 real-time gợi ý Entry/SL/TP cho vàng theo cách người dùng đánh (bias + vùng + footprint,
 2 kịch bản phá&hồi / chạm&đảo). **Thiết kế đầy đủ ở [PLAN.md](PLAN.md).** Chưa implement.
 
+## 🎯 QUY TẮC MỚI (chốt 2026-09-17): dồn toàn lực vào EntrySignal
+Người học dừng phát triển Runner CBR+VWAP và WyckoffRunner, **tập trung 100% vào EntrySignal**.
+Mục tiêu cần đạt (đo trên log live, không phải backtest):
+- **R:R cố định 1:2**
+- **Tỷ lệ thắng ≥60%**
+- **15–20 lệnh/ngày**
+
+→ Kỳ vọng lời mỗi lệnh = 0.6×2 − 0.4×1 = **+0.8R/lệnh** ⇒ **+12R đến +16R/ngày** nếu đạt đủ 3 mục tiêu
+trên cùng lúc. Hiện tại (log 13/7→28/8) EntrySignal mới đạt ~1 lệnh/ngày (28 lệnh/28 phiên), winrate
+42.9%, R:R thật đang lệch giữa 2 kịch bản (1:1.5) — còn xa cả 3 mục tiêu, cần tăng cả **tần suất bắt
+lệnh** lẫn **độ chính xác** chứ không chỉ nới R:R.
+
 ## Phát hiện then chốt (backtest 28 ngày dữ liệu thật)
 - Tín hiệu cơ học **thô** (bắn ở mọi vùng) **không có edge** — tệ hơn ngẫu nhiên (MFE/MAE 0.86 vs 1.05).
 - **HỢP LƯU ≥2 vùng chồng nhau = bộ lọc THẬT:** +0.30R@2R (74 lệnh), đơn điệu theo bậc confluence,

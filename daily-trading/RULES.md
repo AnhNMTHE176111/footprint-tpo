@@ -51,3 +51,20 @@ Hiện có 3 phiên tổng sai: 18/9 ghi +0R (thực +1R) · 24/9 ghi +1R (thự
 
 **Hai lệnh phá luật trong một phiên ⇒ tắt máy.** Chỉ số theo dõi duy nhất là
 **số lệnh phá luật/phiên**, không phải lãi lỗ.
+
+---
+
+## G. Bổ sung 2026-10-15 (từ `REVIEW-2026-10-15.md`, đề xuất — người học chốt)
+
+1. **Bài kiểm tra cơ chế trước khi gọi tên** (thay vì chỉ gọi tên):
+   - Nhịp hồi hình **V** (bật thẳng, nến dài, delta mạnh) ⇒ phe hồi đang thắng ⇒ **không** gọi là
+     "phá hồi" theo chiều cũ.
+   - **Bong bóng to** (≥100) ở đáy/đỉnh ⇒ phe đó đang hấp thụ ⇒ **không vào ngược** bong bóng.
+   - Thân nến + delta **tăng dần** = đà, **giảm dần** = hấp thụ. Nhầm hai cái này = lệnh hỏng.
+2. **Đặt SL:** sau cấu trúc (râu gần nhất / cạnh vùng) **+ đệm**, và **không ngắn hơn chiều cao
+   nến M1 lớn nhất trong 5 nến trước**. SL 1 giá khi nến đang cao 3 giá là tự nộp tiền.
+3. **Vào lại cùng vùng tối đa 2 lần.** Lần 3 = phá luật = tính vào ngắt mạch F.
+4. **Bias trước phiên:** một dòng đầu ngày — "ưu tiên buy/sell vì (TPO ngày/tuần, VWAP tuần)".
+   Lệnh ngược bias phải ghi lý do trước khi bấm.
+5. **Ghi sổ:** bảng 5 cột (giờ | hướng | setup | Đ/S | R) ngay dưới tiêu đề ngày; tiêu đề ngày
+   chỉ được điền sau khi cộng cột R.

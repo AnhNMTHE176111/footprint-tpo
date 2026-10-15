@@ -1,0 +1,562 @@
+<title>Hệ thống Đêm Vàng</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@87.5,500;87.5,700;87.5,800&family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: một cột đọc 72ch, thanh mục lục dính trên, hình minh hoạ nằm trong luồng đọc, không sidebar. */
+:root{
+  --bg:#f6f4ef; --paper:#fffdf8; --fg:#1d1b17; --muted:#6a655a; --line:#d9d3c6;
+  --accent:#9a6b12; --accent-soft:#f2e4c3;
+  --buy:#0f7f8f; --buy-soft:#d6eef1; --sell:#b8322e; --sell-soft:#f6dbd8;
+  --warn:#8a5a00; --warn-soft:#fbeccb; --ok:#2b6e3a; --ok-soft:#dcefdf;
+  --display:"Archivo","Be Vietnam Pro",system-ui,sans-serif;
+  --body:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15161a; --paper:#1d1f25; --fg:#ebe7df; --muted:#a19b8e; --line:#353840;
+  --accent:#e0b35a; --accent-soft:#3a3120;
+  --buy:#4fc3d2; --buy-soft:#15343a; --sell:#ef6f66; --sell-soft:#3e1f1e;
+  --warn:#f0c36b; --warn-soft:#3a2d12; --ok:#7fd194; --ok-soft:#1b3322; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#15161a; --paper:#1d1f25; --fg:#ebe7df; --muted:#a19b8e; --line:#353840;
+  --accent:#e0b35a; --accent-soft:#3a3120;
+  --buy:#4fc3d2; --buy-soft:#15343a; --sell:#ef6f66; --sell-soft:#3e1f1e;
+  --warn:#f0c36b; --warn-soft:#3a2d12; --ok:#7fd194; --ok-soft:#1b3322; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.6;margin:0}
+.wrap{max-width:860px;margin:0 auto;padding-block:0 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3,h4{font-family:var(--display);font-stretch:87.5%;line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:clamp(34px,6vw,54px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(24px,3.6vw,32px);font-weight:700;margin-top:64px;padding-top:28px;border-top:2px solid var(--fg)}
+h3{font-size:20px;font-weight:700;margin-top:34px}
+h4{font-size:16px;font-weight:700;margin-top:22px}
+p{margin:12px 0;max-width:72ch}
+ul,ol{margin:10px 0;padding-left:22px;max-width:72ch}
+li{margin:5px 0}
+li>ul,li>ol{margin-top:4px}
+b{font-weight:600}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.lead{font-size:18.5px;color:var(--fg);max-width:64ch}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+code,.mono{font-family:var(--mono);font-size:.92em}
+code{background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+
+header.hero{padding-block:56px 28px;display:grid;gap:14px}
+.hero .meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+nav.toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -16px;padding:8px max(16px,env(safe-area-inset-left,0px));overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+nav.toc a{display:inline-block;font-family:var(--mono);font-size:12.5px;color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:999px;margin-right:2px}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--fg);background:var(--accent-soft);outline:none}
+
+.edge{background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--accent);padding:20px 22px;margin:26px 0;border-radius:4px}
+.edge p{margin:6px 0}
+.edge .big{font-family:var(--display);font-stretch:87.5%;font-size:22px;font-weight:700;line-height:1.3}
+
+.rule{background:var(--paper);border:1px solid var(--line);padding:16px 18px;margin:16px 0;border-radius:4px}
+.rule.hard{border-left:5px solid var(--sell)}
+.rule.soft{border-left:5px solid var(--accent)}
+.rule .t{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.rule.hard .t{color:var(--sell)}
+
+.pill{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+.pill.buy{background:var(--buy-soft);color:var(--buy);border-color:transparent}
+.pill.sell{background:var(--sell-soft);color:var(--sell);border-color:transparent}
+.pill.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.pill.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.pill.no{background:var(--sell-soft);color:var(--sell);border-color:transparent}
+
+.tbl{overflow-x:auto;margin:16px 0}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:520px}
+th,td{text-align:left;vertical-align:top;padding:9px 10px;border-bottom:1px solid var(--line)}
+th{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:2px solid var(--fg)}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.hl td{background:var(--accent-soft)}
+
+figure{margin:22px 0;max-width:100%}
+figure svg{max-width:100%;height:auto;display:block;font-family:var(--body)}
+figure img{max-width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:3px}
+figcaption{font-size:14px;color:var(--muted);margin-top:8px;max-width:72ch}
+figcaption b{color:var(--fg)}
+.fig2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:640px){.fig2{grid-template-columns:1fr}}
+.fig2 figure{margin:0;min-width:0}
+
+.setup{border:1px solid var(--line);border-radius:4px;margin:22px 0;background:var(--paper)}
+.setup .head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px}
+.setup .head h3{margin:0;font-size:21px}
+.setup .body{padding:4px 18px 14px}
+.setup dl{display:grid;grid-template-columns:140px 1fr;gap:6px 14px;margin:10px 0}
+.setup dt{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.setup dd{margin:0}
+@media (max-width:520px){.setup dl{grid-template-columns:1fr}.setup dt{padding-top:8px}}
+
+.check{list-style:none;padding:0;margin:14px 0;counter-reset:q}
+.check li{counter-increment:q;display:grid;grid-template-columns:34px 1fr;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.check li::before{content:counter(q);font-family:var(--mono);font-weight:600;color:var(--accent);font-size:15px}
+.check .no{color:var(--sell);font-weight:600}
+
+.steps{display:grid;gap:12px;margin:16px 0}
+.step{display:grid;grid-template-columns:62px 1fr;gap:12px;align-items:start}
+.step .k{font-family:var(--mono);font-size:12.5px;color:var(--accent);font-weight:600;padding-top:3px}
+
+.note{font-size:14.5px;color:var(--muted);border-left:3px solid var(--line);padding-left:12px;margin:12px 0}
+.src{font-size:13.5px;color:var(--muted)}
+.src a{color:var(--muted)}
+a{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.journal{font-family:var(--mono);font-size:13px;background:var(--paper);border:1px solid var(--line);padding:14px 16px;white-space:pre;overflow-x:auto;border-radius:4px;line-height:1.5}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">GC / MGC · phiên Mỹ · TPO + VWAP + bong bóng dòng lệnh</div>
+  <h1>Hệ thống Đêm Vàng</h1>
+  <p class="lead">Một bộ luật hoàn chỉnh: nhìn gì trước phiên, đọc cấu trúc thế nào để có bias, bốn kịch bản trên M1, cách đặt SL, và các ngắt mạch. Mỗi luật ở đây đều trả lời trực tiếp một lỗi có thật trong nhật ký 16/9 → 15/10.</p>
+  <div class="meta"><span>bản v1 · 15/10/2026</span><span>đầu vào: 106 lệnh nhật ký · syllabus TPO · 8 phép đo trên 724.279 nến M1</span><span>giờ trong tài liệu = giờ Việt Nam</span></div>
+</header>
+
+<nav class="toc" aria-label="Mục lục">
+  <a href="#loi-the">Lợi thế</a><a href="#man-hinh">Màn hình</a><a href="#truoc-phien">Trước phiên</a><a href="#cau-truc">Cấu trúc &amp; bias</a><a href="#kiem-tra">4 bài kiểm tra</a><a href="#kich-ban">Kịch bản M1</a><a href="#sl">SL · TP</a><a href="#ngat-mach">Ngắt mạch</a><a href="#ghi-so">Ghi sổ</a><a href="#checklist">Checklist</a><a href="#bang-chung">Bằng chứng</a>
+</nav>
+
+<!-- ============ 0. LỢI THẾ ============ -->
+<h2 id="loi-the">0. Lợi thế của hệ thống này là gì</h2>
+<p>Lợi thế không nằm ở chỉ báo. Lợi thế nằm ở việc <b>chỉ vào lệnh khi ba thứ trùng nhau</b>, và đứng ngoài trong mọi trường hợp còn lại.</p>
+<div class="edge">
+  <p class="big">Vào lệnh tại một VÙNG đã kẻ sẵn từ trước phiên, sau khi phe ngược chiều đã THỬ và THẤT BẠI ở đó, với SL nằm NGOÀI vùng nhiễu của M1.</p>
+  <p class="small muted">Ba lệnh +3R tốt nhất trong nhật ký (13/10 20:10 · 6/10 20:25 · 5/10 21:07) đều có đủ ba thứ. 35 lệnh thua gần nhất thiếu ít nhất một.</p>
+</div>
+<p>Ba thành phần đó ứng với ba tầng công cụ:</p>
+<ul>
+  <li><b>TPO + VWAP</b> kẻ <b>địa điểm</b> (vùng) và cho <b>bias</b> (ưu tiên buy hay sell) — làm trước phiên.</li>
+  <li><b>M30 / M5</b> cho <b>chế độ thị trường</b>: đang cân bằng hay vừa phá khỏi cân bằng — quyết định bật kịch bản nào.</li>
+  <li><b>M1 + bong bóng</b> cho <b>thời điểm</b>: phe ngược đã thử và thất bại chưa, bằng nến xác nhận.</li>
+</ul>
+<figure>
+<svg viewBox="0 0 760 210" role="img" aria-label="Ba tầng: TPO và VWAP kẻ vùng và bias trước phiên; M30 xác định chế độ thị trường; M1 và bong bóng cho thời điểm vào lệnh. Mỗi tầng chỉ được mở khi tầng trên đã trả lời xong.">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+  <g fill="none" stroke="currentColor" stroke-width="1.4">
+    <rect x="20" y="40" width="210" height="110" rx="4"/>
+    <rect x="275" y="40" width="210" height="110" rx="4"/>
+    <rect x="530" y="40" width="210" height="110" rx="4"/>
+    <line x1="230" y1="95" x2="273" y2="95" marker-end="url(#ar)"/>
+    <line x1="485" y1="95" x2="528" y2="95" marker-end="url(#ar)"/>
+  </g>
+  <g font-size="12" fill="currentColor">
+    <text x="30" y="30" font-family="JetBrains Mono,monospace" font-size="11">TRƯỚC PHIÊN · 18:30–19:20</text>
+    <text x="285" y="30" font-family="JetBrains Mono,monospace" font-size="11">TRONG PHIÊN · M30 / M5</text>
+    <text x="540" y="30" font-family="JetBrains Mono,monospace" font-size="11">VÀO LỆNH · M1</text>
+    <text x="32" y="64" font-weight="700" font-size="14">TPO ngày · TPO 3 tuần · VWAP</text>
+    <text x="32" y="86">→ 3–5 vùng đã kẻ</text>
+    <text x="32" y="106">→ bias: BUY / SELL / KHÔNG</text>
+    <text x="32" y="126">→ vùng cấm (LVN, HVN 3 tuần)</text>
+    <text x="287" y="64" font-weight="700" font-size="14">Chế độ thị trường</text>
+    <text x="287" y="86">Cân bằng → chỉ fade cạnh</text>
+    <text x="287" y="106">Vừa phá → phá hồi / hấp thụ theo chiều</text>
+    <text x="287" y="126">Trend thin → không cản tàu</text>
+    <text x="542" y="64" font-weight="700" font-size="14">Bong bóng + nến xác nhận</text>
+    <text x="542" y="86">4 bài kiểm tra cơ chế</text>
+    <text x="542" y="106">SL ngoài nhiễu · R:R ≥ 1:2</text>
+    <text x="542" y="126">tối đa 2 lần / vùng</text>
+  </g>
+  <g font-size="11.5" fill="currentColor" opacity=".75">
+    <text x="252" y="88" text-anchor="middle">địa điểm</text>
+    <text x="507" y="88" text-anchor="middle">thời điểm</text>
+    <text x="380" y="190" text-anchor="middle">Tầng dưới chỉ được mở khi tầng trên đã trả lời xong. Không có vùng = không có lệnh.</text>
+  </g>
+</svg>
+<figcaption><b>Ba tầng quyết định.</b> Lỗi 2 tuần qua phần lớn sinh ra khi bỏ tầng 1 (không có bias, không có vùng) rồi đi thẳng vào tầng 3 đọc nến M1.</figcaption>
+</figure>
+
+<!-- ============ 1. MÀN HÌNH ============ -->
+<h2 id="man-hinh">1. Màn hình và công cụ</h2>
+<div class="tbl"><table>
+<tr><th>Chart</th><th>Khung</th><th>Bật gì</th><th>Dùng để</th></tr>
+<tr><td><b>A · Bản đồ</b></td><td>TPO ngày (session neo 19:20) + TPO gộp 3 tuần, bracket 30′</td><td>VA / POC / tail, naked POC, LVN–HVN ngày và 3 tuần, VWAP tuần</td><td>Kẻ vùng, đọc hình dạng profile, đọc “nợ” (single print, poor high/low)</td></tr>
+<tr><td><b>B · Chế độ</b></td><td>M30 (hoặc M5)</td><td>VWAP ngày + dải, VA Á/Âu/Mỹ (SessionZones), Cumulative Delta nếu có</td><td>Biết đang cân bằng hay vừa phá; công nhận acceptance (giá ở lại ngoài vùng)</td></tr>
+<tr><td><b>C · Vào lệnh</b></td><td>M1 footprint</td><td>Số delta, nến delta lớn, <b>Absorption</b> (tròn đặc), <b>Big Trade</b> (tròn mờ), DMA, VSA Volume</td><td>Bài kiểm tra cơ chế + nến xác nhận. Không dùng để tìm bias.</td></tr>
+</table></div>
+<h3>Đọc bong bóng đúng nghĩa</h3>
+<ul>
+  <li><b>Tròn đặc cyan ở đỉnh / đỏ ở đáy = hấp thụ</b>: một phe đánh market rất mạnh tại mức đó mà giá không đi. Vòng trắng = mức giữ được; mờ đi = mức đã vỡ. <b>Không vào ngược phe hấp thụ trong 10 nến kế tiếp.</b></li>
+  <li><b>Tròn mờ (halo) có số lớn (≥100) = lệnh đơn lớn / ô volume lớn</b>: ai đó to vừa vào ở đó. Giá sau đó <b>không rời khỏi mức</b> đó ⇒ người to đang bị kẹt hoặc đang hấp thụ ⇒ mức này thành vùng phòng thủ.</li>
+  <li><b>Thân nến tô xanh/đỏ = delta một chiều rõ rệt</b>. Chỉ là “nỗ lực”. Phải so với “kết quả” (giá có đi không) mới ra nghĩa.</li>
+  <li><b>DMA</b> dốc cùng chiều move = đà còn; DMA đi ngang khi giá còn chạy = đà đang cạn.</li>
+</ul>
+<p class="note">Bong bóng là <b>dữ liệu để kiểm tra</b>, không phải tín hiệu vào lệnh. Nhật ký 12/10 cho thấy: thấy bong bóng +237 ở đáy mà vẫn sell 4 lần, vì lúc đó bong bóng chỉ được nhìn chứ chưa được “hỏi”.</p>
+
+<!-- ============ 2. TRƯỚC PHIÊN ============ -->
+<h2 id="truoc-phien">2. Trước phiên (18:30–19:20): kẻ vùng và chốt bias</h2>
+<p>Làm xong mục này mới được mở M1. Kết quả là một <b>thẻ phiên</b> 5 dòng (mẫu ở mục 8). Không có thẻ phiên = không có lệnh đêm đó.</p>
+
+<h3>2.1 Sáu câu hỏi trên chart A, theo đúng thứ tự</h3>
+<div class="steps">
+  <div class="step"><div class="k">Q1</div><div><b>Hình dạng profile hôm qua và 3 tuần là gì?</b> D = đấu giá xong, chờ phá. P = cân bằng ở đỉnh, đuôi P là hỗ trợ. b = ngược lại. Thin/trend = chưa xong ở đâu, không đánh ngược. Chữ nhật = cân bằng rộng, nghiêng về phá một đầu.</div></div>
+  <div class="step"><div class="k">Q2</div><div><b>Tail có thật không?</b> Cực trị 1 TPO + volume thấp = từ chối thật. Cực trị có volume dày = mồi, không coi là đỉnh/đáy. Poor high/low (≥2 TPO) = nợ, sẽ bị test lại.</div></div>
+  <div class="step"><div class="k">Q3</div><div><b>Còn single print nào chưa lấp?</b> Nợ cũ hơn trả trước; trend ngày tăng thì nợ phía trên được trả trước. Đây là <b>mục tiêu</b> ưa thích của phiên.</div></div>
+  <div class="step"><div class="k">Q4</div><div><b>HVN / LVN nằm đâu?</b> Giá vào LVN ⇒ kỳ vọng chạy nhanh qua. Giá vào HVN ⇒ kỳ vọng đi ngang. HVN 3 tuần là vùng lớn; VWAP tuần là đường tham chiếu cả tuần.</div></div>
+  <div class="step"><div class="k">Q5</div><div><b>Giá đóng hôm qua nằm trong hay ngoài VA hôm qua?</b> Ngoài ⇒ VA đó không còn là giá trị đúng, giá đang đi tìm giá trị mới. Trong ⇒ cân bằng còn hiệu lực.</div></div>
+  <div class="step"><div class="k">Q6</div><div><b>Á và Âu hôm nay đã dựng range chưa?</b> Á dựng range cho Âu, Âu dựng range cho Mỹ. Cạnh VA Âu là <b>cạnh</b> mặc định để fade trước khi có phá.</div></div>
+</div>
+
+<h3>2.2 Ma trận bias</h3>
+<p>Bias chỉ lấy từ hai thứ lớn: <b>VWAP tuần</b> và <b>giá đóng hôm qua so với VA hôm qua</b>. Mọi thứ khác là chi tiết.</p>
+<div class="tbl"><table>
+<tr><th>Giá so với VWAP tuần</th><th>Đóng hôm qua so với VA</th><th>Bias</th><th>Được làm gì</th></tr>
+<tr><td>Trên</td><td>Trên hoặc trong, profile không phải b</td><td><span class="pill buy">BUY ưu tiên</span></td><td>Phá hồi buy, hấp thụ sell tại vùng, fade đáy VA Âu. <b>Không sell</b> trừ hấp thụ buy tại HVN 3 tuần/đỉnh có tail thật, cỡ nhỏ, 2R.</td></tr>
+<tr><td>Dưới</td><td>Dưới hoặc trong, profile không phải P</td><td><span class="pill sell">SELL ưu tiên</span></td><td>Gương ngược.</td></tr>
+<tr><td>Trên</td><td>Dưới (hoặc ngược lại)</td><td><span class="pill warn">KHÔNG bias</span></td><td>Chỉ fade hai cạnh VA Âu, mục tiêu 2R, cỡ lệnh một nửa. Không phá hồi.</td></tr>
+<tr><td>Giá nằm ngay VWAP tuần (±2 giá)</td><td>bất kỳ</td><td><span class="pill warn">CHỜ</span></td><td>Chờ 1 nến M5 đóng rõ một phía rồi mới chốt bias.</td></tr>
+</table></div>
+<div class="rule hard"><div class="t">Luật cứng</div>Lệnh <b>ngược bias</b> phải ghi lý do vào thẻ phiên <b>trước khi bấm</b>. Không ghi = phá luật, tính vào ngắt mạch.</div>
+
+<h3>2.3 Thứ tự ưu tiên vùng (từ phép đo, không từ sách)</h3>
+<p>Đo trên 724.279 nến M1 GC (8/2024 → 8/2026): tỉ lệ giá đảo chiều sau khi có cụm khối lượng lớn + delta cực đoan <b>tại từng loại vùng</b>, nền ngẫu nhiên 50%.</p>
+<div class="tbl"><table>
+<tr><th>Vùng</th><th>n</th><th>Đảo chiều</th><th>Kết luận cho hệ thống</th></tr>
+<tr class="hl"><td>VWAP tuần</td><td class="n">774</td><td class="n">53,8%</td><td><span class="pill ok">Vùng hạng 1</span> bắt đảo chiều / hấp thụ</td></tr>
+<tr class="hl"><td>VWAP ngày</td><td class="n">1.784</td><td class="n">52,9%</td><td><span class="pill ok">Vùng hạng 1</span></td></tr>
+<tr><td>naked POC</td><td class="n">180</td><td class="n">53,9%</td><td><span class="pill ok">Hạng 2</span> (n nhỏ, dùng như nam châm mục tiêu)</td></tr>
+<tr><td>HVN tuần</td><td class="n">427</td><td class="n">53,7%</td><td>Hạng 2</td></tr>
+<tr><td>Cạnh VA phiên trước</td><td class="n">1.703</td><td class="n">50,4%</td><td>Trung tính; chỉ fade khi đang trong chế độ cân bằng</td></tr>
+<tr><td>HVN ngày (khi giá vừa phá cực trị)</td><td class="n">309</td><td class="n">43,5%</td><td><span class="pill no">Không bắt đảo chiều</span> ở đây — nghiêng đi tiếp</td></tr>
+<tr><td>HVN 3 tuần</td><td class="n">608</td><td class="n">45,7%</td><td><span class="pill no">Không fade</span>; chỉ dùng làm mục tiêu hoặc vùng phá hồi</td></tr>
+<tr><td>Không ở vùng nào</td><td class="n">3.585</td><td class="n">47,4%</td><td><span class="pill no">Không có lệnh</span></td></tr>
+</table></div>
+<p class="note">Lệch 3–4 điểm so với 50% là nhỏ, nhưng là lệch <b>ổn định</b> trên hai nửa dữ liệu. Nó chưa phải lợi thế một mình; nó chỉ nói <b>ở đâu đáng kiểm tra tiếp</b>, và ở đâu không. Lệnh 1/10 sell 3 lần tại HVN ngày (ngay sau khi giá vừa phá xuống) là ví dụ đánh vào ô 43,5%.</p>
+
+<!-- ============ 3. CẤU TRÚC ============ -->
+<h2 id="cau-truc">3. Cấu trúc trong phiên: chế độ nào, kịch bản nào</h2>
+<p>Cùng một tín hiệu M1 mang nghĩa trái ngược tuỳ chế độ. Phải gọi tên chế độ <b>trước</b> khi gọi tên setup.</p>
+<figure>
+<svg viewBox="0 0 760 300" role="img" aria-label="Ba chế độ thị trường: cân bằng (giá dao động trong VA, chỉ fade cạnh), vừa phá khỏi cân bằng (giá rời VA và được chấp nhận, bật phá hồi và hấp thụ theo chiều), và trend thin (giá chạy một chiều, chỉ theo chiều sau nhịp hồi, không fade).">
+  <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+  <g fill="none" stroke="currentColor" stroke-width="1.3">
+    <!-- panel 1: balance -->
+    <rect x="20" y="40" width="220" height="200" rx="4" opacity=".5"/>
+    <rect x="40" y="110" width="180" height="60" fill="var(--accent-soft)" stroke="var(--accent)" stroke-dasharray="4 3"/>
+    <polyline points="40,140 60,118 80,160 100,122 120,165 140,115 160,162 180,120 200,158 220,125"/>
+    <!-- panel 2: after balance -->
+    <rect x="270" y="40" width="220" height="200" rx="4" opacity=".5"/>
+    <rect x="290" y="150" width="110" height="50" fill="var(--accent-soft)" stroke="var(--accent)" stroke-dasharray="4 3"/>
+    <polyline points="290,175 310,158 330,192 350,160 370,185 390,150 405,120 420,100 435,135 450,128 470,95 488,70"/>
+    <circle cx="435" cy="135" r="5" fill="var(--buy)" stroke="none"/>
+    <!-- panel 3: trend thin -->
+    <rect x="520" y="40" width="220" height="200" rx="4" opacity=".5"/>
+    <polyline points="540,220 560,200 580,210 600,170 620,180 640,135 660,145 680,100 700,110 720,65"/>
+    <circle cx="620" cy="180" r="5" fill="var(--buy)" stroke="none"/>
+    <circle cx="660" cy="145" r="5" fill="var(--buy)" stroke="none"/>
+    <circle cx="700" cy="110" r="5" fill="var(--buy)" stroke="none"/>
+    <line x1="560" y1="200" x2="580" y2="208" stroke="var(--sell)" stroke-width="2"/>
+  </g>
+  <g font-size="12" fill="currentColor">
+    <text x="30" y="30" font-family="JetBrains Mono,monospace" font-size="11">CÂN BẰNG</text>
+    <text x="280" y="30" font-family="JetBrains Mono,monospace" font-size="11">VỪA PHÁ KHỎI CÂN BẰNG</text>
+    <text x="530" y="30" font-family="JetBrains Mono,monospace" font-size="11">TREND THIN</text>
+    <text x="130" y="104" text-anchor="middle" font-size="11">VA Âu / range</text>
+    <text x="130" y="260" text-anchor="middle" font-weight="700">chỉ fade hai cạnh · 2R</text>
+    <text x="130" y="278" text-anchor="middle" font-size="11.5">giữa range: không có lệnh nào</text>
+    <text x="345" y="144" text-anchor="middle" font-size="11">VA cũ</text>
+    <text x="446" y="152" font-size="11">hồi hình U</text>
+    <text x="380" y="260" text-anchor="middle" font-weight="700">phá hồi · hấp thụ theo chiều</text>
+    <text x="380" y="278" text-anchor="middle" font-size="11.5">cần acceptance: 1 nến M5 đóng ngoài + retest giữ</text>
+    <text x="630" y="260" text-anchor="middle" font-weight="700">không cản tàu</text>
+    <text x="630" y="278" text-anchor="middle" font-size="11.5">chỉ vào theo chiều ở nhịp hồi; không fade đỉnh</text>
+    <text x="545" y="222" font-size="10.5" fill="var(--sell)">✕ fade</text>
+  </g>
+</svg>
+<figcaption><b>Công tắc chế độ.</b> Trong cân bằng, delta phân kỳ không dự báo gì. Ngay sau khi phá, leg đầu tăng mà delta âm là <b>đầu sóng</b> (chờ squeeze, không phải suy yếu). Ở cuối sóng mới là suy yếu.</figcaption>
+</figure>
+
+<h3>3.1 Cách công nhận một cú phá (acceptance)</h3>
+<ol>
+  <li>Giá đóng <b>1 nến M5 ngoài</b> cạnh VA Âu (hoặc ngoài IB 19:20–20:20).</li>
+  <li>Nhịp hồi về cạnh <b>giữ được</b>: không có nến M5 đóng ngược trở lại trong vùng.</li>
+  <li>Trên M1 tại cú retest có <b>delta cùng chiều phá</b> hoặc hấp thụ ngược chiều phá (phe ngược thử và thất bại).</li>
+</ol>
+<p>Thiếu bước 2 = chưa phải phá, chỉ là chạm. Nhật ký 29/9 20:44 (“phá hồi” sau +141, 2 nến) thiếu cả bước 2 và 3.</p>
+
+<h3>3.2 Ba quy ước về thời gian</h3>
+<ul>
+  <li><b>18:00–19:20</b>: hay có phá giả VA ngay trước giờ COMEX. Thấy phá giờ này: nghi trước, tin sau.</li>
+  <li><b>19:20–20:30</b>: vàng hay “mở ảo”; cú phá IB đáng tin đầu tiên thường rơi 20:20–21:30. Trước 20:30 chỉ fade cạnh, cỡ nhỏ.</li>
+  <li><b>Phá 2 lần</b>: lần 1 VA phá rồi chui lại ⇒ không đuổi; lần 2 thường là phá sạch ⇒ chờ retest rồi vào.</li>
+</ul>
+
+<!-- ============ 4. KIỂM TRA CƠ CHẾ ============ -->
+<h2 id="kiem-tra">4. Bốn bài kiểm tra cơ chế (bắt buộc trước khi gọi tên)</h2>
+<p>Lỗi số 1 của 2 tuần qua không phải “không gọi tên” mà là <b>gọi sai tên</b>: đà bị gọi là hấp thụ, bật hình V bị gọi là phá hồi, giữa range bị gọi là fade cạnh. Bốn câu dưới đây lọc tên sai trước khi nó thành lệnh.</p>
+
+<h3>4.1 Nhịp hồi là V hay U?</h3>
+<div class="fig2">
+<figure>
+<svg viewBox="0 0 360 220" role="img" aria-label="Nhịp hồi hình V: giá rơi mạnh rồi bật lên ngay bằng nến dài và delta ngược mạnh, dốc bật ngang bằng dốc rơi. Đây là phe hồi đang thắng, không phải retest.">
+  <g fill="none" stroke="currentColor" stroke-width="1.3">
+    <polyline points="20,40 60,60 90,80 120,150 140,190 160,120 180,70 220,50 260,45 320,40"/>
+  </g>
+  <g stroke="var(--buy)" stroke-width="7" stroke-linecap="round"><line x1="152" y1="178" x2="152" y2="130"/><line x1="170" y1="128" x2="170" y2="78"/></g>
+  <circle cx="140" cy="192" r="9" fill="var(--buy)"/>
+  <text x="140" y="196" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">+237</text>
+  <g font-size="12" fill="currentColor">
+    <text x="20" y="25" font-family="JetBrains Mono,monospace" font-size="11">HÌNH V</text>
+    <text x="200" y="100">bật dốc bằng lúc rơi</text>
+    <text x="200" y="116">nến dài, delta ngược mạnh</text>
+    <text x="200" y="132">bong bóng to ở đáy</text>
+    <text x="180" y="210" text-anchor="middle" font-weight="700" fill="var(--sell)">KHÔNG sell “phá hồi” vào đây</text>
+  </g>
+</svg>
+<figcaption><b>V = phe hồi đang thắng.</b> 12/10 21:15–21:35: đáy −237 có bong bóng +237 rồi +78, +103, bật thẳng; sell “phá hồi” 4 lần, −4R.</figcaption>
+</figure>
+<figure>
+<svg viewBox="0 0 360 220" role="img" aria-label="Nhịp hồi hình U: sau cú rơi, giá đi ngang và nhích lên bằng nhiều nến ngắn, delta yếu dần, rồi mới có nến xác nhận theo chiều cũ. Đây là retest hợp lệ.">
+  <g fill="none" stroke="currentColor" stroke-width="1.3">
+    <polyline points="20,40 60,60 90,80 120,150 140,185 160,180 180,172 200,168 220,160 240,150 260,155 280,170 300,195 320,210"/>
+  </g>
+  <g stroke="var(--buy)" stroke-width="5" stroke-linecap="round" opacity=".8"><line x1="165" y1="186" x2="165" y2="176"/><line x1="195" y1="176" x2="195" y2="164"/><line x1="235" y1="160" x2="235" y2="150"/></g>
+  <line x1="275" y1="160" x2="275" y2="178" stroke="var(--sell)" stroke-width="7" stroke-linecap="round"/>
+  <g font-size="12" fill="currentColor">
+    <text x="20" y="25" font-family="JetBrains Mono,monospace" font-size="11">HÌNH U</text>
+    <text x="170" y="100">≥ 3 nến ngắn, thoải</text>
+    <text x="170" y="116">delta hồi yếu dần</text>
+    <text x="170" y="132">rồi nến xác nhận theo chiều cũ</text>
+    <text x="180" y="210" text-anchor="middle" font-weight="700" fill="var(--ok)">retest hợp lệ → sell sau nến xác nhận</text>
+  </g>
+</svg>
+<figcaption><b>U = phe hồi yếu, phe cũ còn.</b> Quy tắc đếm: nhịp hồi ≥ 3 nến M1 và không có nến hồi nào dài bằng nến dài nhất của move trước.</figcaption>
+</figure>
+</div>
+
+<h3>4.2 Thân nến và delta: tăng dần hay giảm dần?</h3>
+<figure>
+<svg viewBox="0 0 760 240" role="img" aria-label="So sánh ba nến cuối của một move giảm. Bên trái: thân dài dần và delta âm tăng dần, nghĩa là đà, không bắt đáy. Bên phải: thân ngắn dần và delta âm giảm dần dù vẫn bán, nghĩa là hấp thụ, chờ nến xác nhận rồi buy.">
+  <g font-family="JetBrains Mono,monospace" font-size="11" fill="currentColor">
+    <text x="30" y="24">ĐÀ (momentum)</text><text x="400" y="24">HẤP THỤ (absorption)</text>
+  </g>
+  <!-- momentum: bodies growing -->
+  <g fill="var(--sell)" stroke="none">
+    <rect x="60" y="60" width="22" height="30"/><rect x="110" y="90" width="22" height="50"/><rect x="160" y="140" width="22" height="70"/>
+  </g>
+  <g stroke="currentColor" stroke-width="1"><line x1="71" y1="52" x2="71" y2="96"/><line x1="121" y1="84" x2="121" y2="146"/><line x1="171" y1="134" x2="171" y2="218"/></g>
+  <g font-size="12" fill="var(--sell)" text-anchor="middle" font-family="JetBrains Mono,monospace"><text x="71" y="230">−51</text><text x="121" y="230">−65</text><text x="171" y="230">−77</text></g>
+  <g font-size="12.5" fill="currentColor"><text x="210" y="100">thân dài dần</text><text x="210" y="118">|delta| tăng dần</text><text x="210" y="136">giá tạo đáy mới mỗi nến</text><text x="210" y="170" font-weight="700" fill="var(--sell)">= nỗ lực tăng, kết quả tăng</text><text x="210" y="188" font-weight="700">→ KHÔNG bắt đáy</text></g>
+  <!-- absorption: bodies shrinking, delta still negative -->
+  <g fill="var(--sell)" stroke="none">
+    <rect x="430" y="100" width="22" height="60"/><rect x="480" y="150" width="22" height="30"/><rect x="530" y="168" width="22" height="14"/>
+  </g>
+  <g stroke="currentColor" stroke-width="1"><line x1="441" y1="92" x2="441" y2="170"/><line x1="491" y1="142" x2="491" y2="196"/><line x1="541" y1="160" x2="541" y2="200"/></g>
+  <circle cx="541" cy="192" r="8" fill="var(--sell)"/>
+  <rect x="580" y="130" width="22" height="50" fill="var(--buy)"/><line x1="591" y1="122" x2="591" y2="188" stroke="currentColor" stroke-width="1"/>
+  <g font-size="12" fill="var(--sell)" text-anchor="middle" font-family="JetBrains Mono,monospace"><text x="441" y="230">−80</text><text x="491" y="230">−60</text><text x="541" y="230">−45</text></g>
+  <text x="591" y="230" font-size="12" fill="var(--buy)" text-anchor="middle" font-family="JetBrains Mono,monospace">+40</text>
+  <g font-size="12.5" fill="currentColor"><text x="615" y="100">thân ngắn dần</text><text x="615" y="118">vẫn bán, |delta| giảm</text><text x="615" y="136">giá không tạo đáy mới</text><text x="615" y="170" font-weight="700" fill="var(--ok)">= nỗ lực có, kết quả không</text><text x="615" y="188" font-weight="700">→ chờ nến xác nhận</text></g>
+</svg>
+<figcaption><b>Cùng là nến đỏ, hai nghĩa ngược nhau.</b> 30/9 22:10 buy “hấp thụ sell” khi chuỗi là −51, −65, −77 (thân dài dần): đó là đà. Luật: hấp thụ chỉ được gọi khi <b>cả thân lẫn |delta| giảm dần qua 3 nến</b> và giá không tạo cực trị mới.</figcaption>
+</figure>
+
+<h3>4.3 Bong bóng to gần nhất đứng về phe nào?</h3>
+<ul>
+  <li>Bong bóng đặc (hấp thụ) hoặc halo ≥100 ở <b>cực trị gần nhất</b> trong 10 nến: phe của bong bóng đang phòng thủ mức đó.</li>
+  <li><b>Không vào ngược phe bong bóng</b> chừng nào mức của nó còn giữ (vòng trắng còn). Mức vỡ (bong bóng mờ đi) thì phe đó đã thua, lúc đó mới được vào ngược.</li>
+  <li>Bong bóng ở <b>giữa</b> move (không ở cực trị) không có nghĩa phòng thủ; bỏ qua.</li>
+</ul>
+
+<h3>4.4 Giá đang ở cạnh hay ở lưng?</h3>
+<ul>
+  <li>Entry hợp lệ khi giá cách vùng đã kẻ <b>≤ 1 giá</b>, hoặc nến xác nhận có râu chạm vùng.</li>
+  <li>Giá đã đi ≥ 3 giá khỏi vùng mà chưa có nhịp hồi = ở lưng. Không vào. Không có nhịp hồi thì chấp nhận bỏ kèo.</li>
+</ul>
+<div class="rule hard"><div class="t">Luật cứng</div>Bốn câu trả lời phải ghi ngắn vào nhật ký <b>trước khi bấm</b> (ví dụ: <code>U · bb +103 giữ · delta giảm · ở cạnh</code>). Câu nào trả lời “không rõ” = không vào.</div>
+
+<!-- ============ 5. KỊCH BẢN M1 ============ -->
+<h2 id="kich-ban">5. Bốn kịch bản M1</h2>
+<p>Giữ bốn tên đã dùng, nhưng mỗi tên giờ có <b>bối cảnh bắt buộc</b>, <b>điều kiện loại bỏ</b> và <b>mục tiêu</b> riêng. Không có tên thứ năm. “Vào theo cảm giác” và “đánh tin” không phải kịch bản.</p>
+
+<div class="setup">
+  <div class="head"><h3>A · Phá hồi</h3><span class="pill">chế độ: vừa phá khỏi cân bằng</span><span class="pill ok">mục tiêu 3R</span></div>
+  <div class="body"><dl>
+    <dt>Bối cảnh</dt><dd>Acceptance đủ 3 bước (mục 3.1). Bias cùng chiều phá. Phá sau 20:30 đáng tin hơn.</dd>
+    <dt>Kiểm tra</dt><dd>Hồi hình <b>U</b> về cạnh vừa phá (≥3 nến). Tại cạnh: delta cùng chiều phá, hoặc bong bóng hấp thụ phe ngược.</dd>
+    <dt>Trigger</dt><dd>Nến M1 đóng theo chiều phá, thân ≥ nửa biên độ, delta cùng dấu. Vào ở giá đóng hoặc limit tại giữa thân.</dd>
+    <dt>SL</dt><dd>Sau râu nến xác nhận hoặc sau cạnh vùng (cái nào xa hơn) + 0,3 giá đệm. Kiểm tra luật nhiễu mục 6.</dd>
+    <dt>Loại bỏ</dt><dd>Hồi hình V · chỉ 1–2 nến · chưa có nến M5 đóng ngoài · phá trong 18:00–19:20 · đã vào 2 lần cùng vùng.</dd>
+  </dl></div>
+</div>
+
+<div class="setup">
+  <div class="head"><h3>B · Hấp thụ</h3><span class="pill">chế độ: giá tới vùng hạng 1–2</span><span class="pill ok">mục tiêu 3R</span></div>
+  <div class="body"><dl>
+    <dt>Bối cảnh</dt><dd>Giá tới VWAP tuần / VWAP ngày / naked POC / HVN tuần, <b>hoặc</b> cạnh VA Âu trong chế độ cân bằng. Không gọi hấp thụ ở HVN ngày ngay sau khi giá vừa phá cực trị, và không gọi ở HVN 3 tuần.</dd>
+    <dt>Kiểm tra</dt><dd>3 nến cuối: thân <b>và</b> |delta| giảm dần, không cực trị mới. Có bong bóng đặc/halo cùng phe với lệnh định vào ở cực trị. DMA đi ngang.</dd>
+    <dt>Trigger</dt><dd>Nến xác nhận ngược chiều move, delta đảo dấu ≥ 50% delta nến bán tháo lớn nhất. Ưu tiên vào ở <b>cú test lại</b> (hình U) hơn vào ngay nến xác nhận.</dd>
+    <dt>SL</dt><dd>Sau cực trị của cụm hấp thụ + 0,3 giá. Không đặt SL ở giữa cụm.</dd>
+    <dt>Loại bỏ</dt><dd>Thân dài dần (đà) · đang đồng thời phá VWAP/cạnh VA theo chiều move (đó là phá hồi, phải theo) · DMA còn dốc · ngay sau nến dài nhất phiên.</dd>
+  </dl></div>
+</div>
+
+<div class="setup">
+  <div class="head"><h3>C · Fade cạnh</h3><span class="pill">chế độ: cân bằng</span><span class="pill warn">mục tiêu 2R · cỡ nhỏ</span></div>
+  <div class="body"><dl>
+    <dt>Bối cảnh</dt><dd>Giá <b>ở đúng cạnh</b> VA Âu / range (≤1 giá), chưa có nến M5 đóng ngoài. Trước 20:30 đây là kịch bản duy nhất được bật.</dd>
+    <dt>Kiểm tra</dt><dd>Phá hụt: râu xuyên cạnh rồi đóng lại trong. Delta ủng hộ chiều vào. Có bong bóng cùng phe ở cạnh càng tốt.</dd>
+    <dt>Trigger</dt><dd>Nến M1 đóng lại trong range sau khi xuyên. Không có bong bóng và không có nến đóng lại = không vào.</dd>
+    <dt>SL</dt><dd>Sau râu phá hụt + 0,3 giá. TP = cạnh đối diện hoặc POC, cái nào gần hơn; tính R:R trước, dưới 1:2 thì bỏ.</dd>
+    <dt>Loại bỏ</dt><dd>Giá ở giữa range · nến cf thân ngắn hoặc râu ngược dài · đã bật sang chế độ “vừa phá” · vừa có nến dài nhất phiên tại cạnh (chờ nến sau).</dd>
+  </dl></div>
+</div>
+
+<div class="setup">
+  <div class="head"><h3>D · Trap (bẫy)</h3><span class="pill">chế độ: có move rõ + nhịp hồi</span><span class="pill ok">mục tiêu 2–3R</span></div>
+  <div class="body"><dl>
+    <dt>Bối cảnh</dt><dd>Một move rõ (≥ 5 giá) cùng chiều bias, rồi nhịp hồi ngược lên/xuống tới một vùng. <b>Không gọi trap trong sideway</b> (lỗi 24/9).</dd>
+    <dt>Kiểm tra</dt><dd>Ở đỉnh nhịp hồi: bong bóng cyan (buy market bị hấp thụ) hoặc nến tăng có delta dương nhưng đóng dưới nửa. Phe hồi “thử và thất bại”.</dd>
+    <dt>Trigger</dt><dd>Nến M1 đóng theo chiều move cũ, thân dài, delta cùng dấu.</dd>
+    <dt>SL</dt><dd>Sau đỉnh nhịp hồi + 0,3 giá.</dd>
+    <dt>Loại bỏ</dt><dd>Nhịp hồi đã đi quá 70% move trước (không còn là hồi) · không có bong bóng/delta thất bại ở đỉnh hồi.</dd>
+  </dl></div>
+</div>
+
+<h3>Xung đột giữa các tên</h3>
+<ul>
+  <li><b>Hấp thụ vs phá hồi cùng lúc ⇒ theo phá hồi.</b> Không cản tàu khi tàu vừa qua cạnh.</li>
+  <li><b>Fade cạnh vs vừa phá</b>: có 1 nến M5 đóng ngoài là tắt fade, chờ acceptance.</li>
+  <li><b>Sau nến dài nhất phiên</b> (bất kỳ chiều): không có kịch bản nào được bật trong 3 nến kế tiếp. Chờ hồi; không hồi thì bỏ.</li>
+</ul>
+
+<h3>Ca thật: đúng và sai cạnh nhau</h3>
+<div class="fig2">
+<figure><img src="he-thong-img/sai-sell-vao-bong-bong-237.png" alt="Chart M1 12/10 21:25: sell ngay sau nến −98 và bong bóng +237 ở đáy, giá bật lên hình V, SL">
+<figcaption><span class="pill no">SAI</span> <b>12/10 21:25.</b> Sell “phá hồi” khi đáy vừa in bong bóng +237 rồi +78, +103. Bật hình V. Phạm 4.1 và 4.3.</figcaption></figure>
+<figure><img src="he-thong-img/dung-pha-hoi-sau-129.png" alt="Chart M1 6/10 20:25: sau nến −129 phá cạnh VA, giá hồi hình U về cạnh rồi tiếp tục giảm tới 4185, TP 3R">
+<figcaption><span class="pill ok">ĐÚNG</span> <b>6/10 20:25.</b> Nến −129 phá cạnh, hồi thoải 3–4 nến, nến xác nhận giảm. Sell 4192,5 → 4185, +3R.</figcaption></figure>
+<figure><img src="he-thong-img/sai-da-tuong-la-hap-thu.png" alt="Chart M1 30/9 22:10: chuỗi nến giảm −51, −65, −77 thân dài dần, buy “hấp thụ sell” tại VWAP tuần, SL">
+<figcaption><span class="pill no">SAI</span> <b>30/9 22:10.</b> −51, −65, −77 thân dài dần = đà. Gọi là hấp thụ. Phạm 4.2.</figcaption></figure>
+<figure><img src="he-thong-img/dung-hap-thu-hinh-u.png" alt="Chart M1 5/10 19:30: sau cú rơi về 4179, giá đi ngang nhiều nến ngắn rồi nến xác nhận tăng, buy hấp thụ sell TP 2R">
+<figcaption><span class="pill ok">ĐÚNG</span> <b>5/10 19:30.</b> Đáy đi ngang bằng nến ngắn (hình U), rồi nến xác nhận. Buy → +2R. Chính bạn đã ghi “V/U” ở trang này.</figcaption></figure>
+<figure><img src="he-thong-img/sai-sl-qua-hep.png" alt="Chart M1 1/10 20:48: sell tại 4193,8 với SL 4195,0, cách 1,2 giá trong khi các nến quanh đó cao 2–3 giá, bị quét">
+<figcaption><span class="pill no">SAI</span> <b>1/10 20:48.</b> Sell 4193,8, SL 4195,0 (1,2 giá). Nến −78 trước đó cao 3 giá. Ý tưởng đúng (giá sau đó rơi 12 giá), SL sai.</figcaption></figure>
+<figure><img src="he-thong-img/dung-buy-hop-luu-lvn-poc.png" alt="Chart M1 13/10 20:10: buy tại hợp lưu LVN ngày và POC/HVN hôm qua sau nến xác nhận, giá chạy lên 4211, TP 3R">
+<figcaption><span class="pill ok">ĐÚNG</span> <b>13/10 20:10.</b> Vùng kẻ trước (LVN ngày + POC hôm qua), phe sell thử −49/−40 thất bại, nến xác nhận. +3R.</figcaption></figure>
+</div>
+
+<!-- ============ 6. SL / TP ============ -->
+<h2 id="sl">6. SL, TP và quản lý lệnh</h2>
+<p>Đây là chỗ mất tiền nhiều nhất và dễ sửa nhất: ≥ 9 lệnh trong 2 tuần bị quét SL rồi giá chạy tới TP. SL 1 giá khi nến M1 cao 3 giá không phải xui.</p>
+<figure>
+<svg viewBox="0 0 760 250" role="img" aria-label="Minh hoạ đặt SL cho lệnh sell tại cạnh vùng. SL hẹp 1 giá nằm trong râu của các nến M1 cao 2–3 giá nên bị quét. SL đúng nằm sau râu nến xác nhận cộng đệm, và không ngắn hơn nến M1 cao nhất trong 5 nến gần nhất.">
+  <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+  <!-- zone -->
+  <rect x="40" y="70" width="680" height="22" fill="var(--accent-soft)"/>
+  <text x="48" y="64" font-size="11" font-family="JetBrains Mono,monospace" fill="currentColor">VÙNG (VWAP tuần / cạnh VA)</text>
+  <!-- candles: wicks tall -->
+  <g stroke="currentColor" stroke-width="1.2">
+    <line x1="120" y1="40" x2="120" y2="150"/><line x1="170" y1="55" x2="170" y2="165"/><line x1="220" y1="45" x2="220" y2="140"/><line x1="270" y1="60" x2="270" y2="175"/><line x1="320" y1="50" x2="320" y2="190"/>
+  </g>
+  <g fill="var(--sell)"><rect x="112" y="95" width="16" height="45"/><rect x="212" y="90" width="16" height="42"/><rect x="312" y="96" width="16" height="80"/></g>
+  <g fill="var(--buy)"><rect x="162" y="100" width="16" height="55"/><rect x="262" y="105" width="16" height="60"/></g>
+  <!-- entry -->
+  <line x1="100" y1="118" x2="420" y2="118" stroke="currentColor" stroke-dasharray="3 3"/>
+  <text x="428" y="122" font-size="12" fill="currentColor">entry sell</text>
+  <!-- bad SL -->
+  <line x1="100" y1="100" x2="420" y2="100" stroke="var(--sell)" stroke-width="1.5"/>
+  <text x="428" y="104" font-size="12" fill="var(--sell)" font-weight="700">SL 1 giá — trong râu, bị quét</text>
+  <!-- good SL -->
+  <line x1="100" y1="34" x2="420" y2="34" stroke="var(--ok)" stroke-width="2"/>
+  <text x="428" y="38" font-size="12" fill="var(--ok)" font-weight="700">SL sau râu cao nhất + 0,3 giá</text>
+  <!-- noise bracket -->
+  <line x1="80" y1="40" x2="80" y2="190" stroke="currentColor" stroke-width="1" marker-end="url(#ar3)" marker-start="url(#ar3)"/>
+  <text x="76" y="215" font-size="11" fill="currentColor" text-anchor="start">nhiễu M1 = nến cao nhất trong 5 nến</text>
+  <text x="428" y="160" font-size="12" fill="currentColor">Khoảng SL hợp lệ > 4 giá?</text>
+  <text x="428" y="178" font-size="12" fill="currentColor">→ bỏ kèo, hoặc chờ hồi sâu hơn</text>
+  <text x="428" y="196" font-size="12" fill="currentColor">→ không bao giờ thu SL cho “vừa R”</text>
+</svg>
+<figcaption><b>SL lai: cấu trúc + sàn nhiễu.</b> Giống quy tắc “đặt ở mức cấu trúc rồi kiểm tra ≥1×ATR” của giới futures; ở đây ATR thay bằng nến M1 cao nhất trong 5 nến vì vào ở M1.</figcaption>
+</figure>
+
+<div class="rule hard"><div class="t">Luật SL — 3 điều kiện cùng lúc</div>
+<ol>
+  <li><b>Vị trí</b>: sau râu nến xác nhận <i>hoặc</i> sau mép xa của vùng, chọn cái <b>xa hơn</b>, cộng đệm 0,3 giá.</li>
+  <li><b>Sàn nhiễu</b>: khoảng SL ≥ biên độ nến M1 cao nhất trong 5 nến gần nhất. Ngắn hơn ⇒ đẩy SL ra, không đẩy được ⇒ bỏ.</li>
+  <li><b>Trần</b>: khoảng SL ≤ 4 giá (theo Corven 2–4 giá). Vượt ⇒ bỏ kèo hoặc chờ nhịp hồi sâu hơn. Không thu nhỏ SL để “đẹp R”.</li>
+</ol></div>
+
+<h3>TP và be hòa</h3>
+<div class="tbl"><table>
+<tr><th>Kịch bản</th><th>TP</th><th>Dời SL về hòa (be)</th><th>Đóng tay</th></tr>
+<tr><td>Phá hồi · Hấp thụ</td><td>3R, hoặc vùng kế tiếp nếu gần hơn (tính trước; dưới 1:2 thì bỏ)</td><td>Khi giá đạt <b>+1,5R</b> và có 1 nến M1 đóng ngoài vùng vào. Không be ở +1R.</td><td rowspan="2">Chỉ khi có <b>hấp thụ ngược chiều đe doạ TP</b> (bong bóng đặc ngược phe tại vùng kế tiếp). Phải gõ lý do vào nhật ký trước khi bấm. Râu dài, sốt ruột, “sợ mất” không phải lý do.</td></tr>
+<tr><td>Fade cạnh · Trap</td><td>2R hoặc cạnh đối diện / POC</td><td>Khi đạt +1R.</td></tr>
+</table></div>
+<p class="note">Vì sao be ở +1,5R thay vì +1R: trong 2 tuần có 5 lệnh be hòa bị quét ở +1R rồi giá đi tới TP. Be sớm biến lệnh thắng thành hòa với xác suất cao hơn biến lệnh thua thành hòa.</p>
+<p>Rủi ro mỗi lệnh giữ theo kế hoạch hiện có; tổng rủi ro mở cùng lúc = 1 lệnh. Không nhồi.</p>
+
+<!-- ============ 7. NGẮT MẠCH ============ -->
+<h2 id="ngat-mach">7. Giới hạn và ngắt mạch</h2>
+<div class="tbl"><table>
+<tr><th>Giới hạn</th><th>Ngưỡng</th><th>Lý do từ nhật ký</th></tr>
+<tr><td>Vào lại cùng vùng</td><td class="n">tối đa 2</td><td>1/10 ×3, 5/10 ×4, 12/10 ×4 cùng chỗ: 11/35 lệnh thua</td></tr>
+<tr><td>Lệnh phá luật trong phiên</td><td class="n">2 ⇒ tắt máy</td><td>Luật cũ có nhưng chưa từng áp dụng</td></tr>
+<tr><td>SL liên tiếp</td><td class="n">3 ⇒ tắt máy</td><td>1/10 bạn đã tự làm đúng; 5/10 thì không</td></tr>
+<tr><td>Lệnh trong 3 nến sau nến dài nhất phiên</td><td class="n">0</td><td>29/9, 30/9, 6/10, 12/10, 13/10</td></tr>
+<tr><td>Lệnh khi chưa có thẻ phiên</td><td class="n">0</td><td>Không ngày nào trong 2 tuần có bias ghi trước</td></tr>
+<tr><td>Đánh tin 19:30 / 20:30 / 21:00</td><td class="n">0</td><td>Lệnh +5R ngày 30/9 không lặp lại được; bỏ khỏi thống kê</td></tr>
+<tr><td>Lệnh giữa range (không ở cạnh)</td><td class="n">0</td><td>29/9, 12/10, 13/10</td></tr>
+</table></div>
+<p>Chỉ số theo dõi duy nhất của tuần: <b>số lệnh phá luật</b>. Lãi lỗ tuần là hệ quả, không phải mục tiêu.</p>
+
+<!-- ============ 8. GHI SỔ ============ -->
+<h2 id="ghi-so">8. Ghi sổ</h2>
+<p>Ghi sổ là chỗ yếu nhất suốt một tháng: tiêu đề ngày không khớp cộng tay, hai ngày có chart mà không có lệnh. Mẫu dưới đây gõ được trong 30 giây.</p>
+<h3>Thẻ phiên (điền trước 19:20)</h3>
+<div class="journal">NGÀY ........   VWAP tuần: giá TRÊN / DƯỚI   Đóng hqua vs VA: TRÊN / TRONG / DƯỚI
+BIAS: BUY / SELL / KHÔNG      Hình profile hqua: D P b B thin chữ-nhật
+VÙNG (≤5):  1) ........  2) ........  3) ........  4) ........  5) ........
+NỢ (SP / poor H-L): ........            VÙNG CẤM (HVN 3 tuần, LVN): ........
+KỊCH BẢN A: ..............................  KỊCH BẢN B: ..............................</div>
+<h3>Mỗi lệnh — 7 cột, ghi trước khi bấm</h3>
+<div class="journal">giờ   | hướng | tên   | chế độ      | 4 kiểm tra (V/U · bb · Δ · cạnh) | SL(giá) | R
+20:25 | sell  | phá hồi| vừa phá    | U · bb −129 giữ · Δ giảm · cạnh    | 2,4     | +3
+20:48 | sell  | hấp thụ| cân bằng   | V · bb +29 NGƯỢC · — · cạnh        | 1,2     | −1  ⚠ phá 4.1, 4.3, SL
+--------------------------------------------------------------------------------
+cộng tay cuối phiên: ...R   · lệnh phá luật: ...   · SL bị quét rồi chạy tới TP: ...</div>
+<h3>Cuối tuần — 4 con số</h3>
+<ul>
+  <li>Số lệnh phá luật / tổng lệnh (mục tiêu: 0).</li>
+  <li>Số lệnh SL bị quét rồi giá tới TP (mục tiêu: giảm về ≤ 1/tuần — đo xem luật SL mới có hiệu lực không).</li>
+  <li>Kết quả R theo <b>tên kịch bản</b> và theo <b>loại vùng</b> — để biết vùng nào, tên nào đang thực sự có lợi thế trên tài khoản của chính mình.</li>
+  <li>Số lệnh ngược bias và kết quả của chúng.</li>
+</ul>
+
+<!-- ============ 9. CHECKLIST ============ -->
+<h2 id="checklist">9. Checklist trước khi bấm</h2>
+<p>Tám câu. Bất kỳ câu nào trả lời “không” hoặc “không rõ” thì <span class="no">không vào</span>. Không có ngoại lệ, không có “lần này đặc biệt”.</p>
+<ol class="check">
+  <li><div>Đã có <b>thẻ phiên</b>, và lệnh này cùng chiều bias (hoặc đã ghi lý do ngược bias)?</div></li>
+  <li><div>Giá đang ở <b>vùng đã kẻ</b> (≤1 giá), vùng đó thuộc hạng 1–2 hoặc là cạnh VA Âu trong chế độ cân bằng?</div></li>
+  <li><div>Đã gọi tên <b>chế độ</b> (cân bằng / vừa phá / trend thin) và kịch bản này <b>được bật</b> trong chế độ đó?</div></li>
+  <li><div>Nhịp hồi là <b>U</b>, không phải V?</div></li>
+  <li><div><b>Bong bóng</b> to gần nhất ở cực trị cùng phe với lệnh, hoặc đã vỡ?</div></li>
+  <li><div>Thân nến + |delta| 3 nến cuối <b>đúng chiều kiểm tra</b> của tên đang gọi (hấp thụ: giảm dần; phá hồi/trap: nến xác nhận mạnh)?</div></li>
+  <li><div>Có <b>nến M1 đóng xác nhận</b>, và đây không phải 3 nến sau nến dài nhất phiên?</div></li>
+  <li><div><b>SL</b> qua cả 3 điều kiện (vị trí, sàn nhiễu, trần 4 giá), R:R ≥ 1:2 tính trước, và đây là lần ≤ 2 tại vùng này?</div></li>
+</ol>
+
+<!-- ============ 10. BẰNG CHỨNG ============ -->
+<h2 id="bang-chung">10. Luật nào đã đo, luật nào chưa</h2>
+<p>Để không tự lừa mình: hệ thống này trộn ba loại luật. Khi một luật chưa đo mà thua liên tục, hãy nghi luật trước khi nghi tay.</p>
+<div class="tbl"><table>
+<tr><th>Luật</th><th>Nguồn</th><th>Trạng thái</th></tr>
+<tr><td>Xếp hạng vùng (VWAP tuần/ngày tốt, HVN ngày sau phá xấu, không vùng = không lệnh)</td><td>Đo trên 724k nến M1, tách đôi thời gian</td><td><span class="pill ok">đã đo</span> lệch nhỏ nhưng ổn định</td></tr>
+<tr><td>Hấp thụ cần nến xác nhận delta đảo ≥50%</td><td>Đo: K1 từ 8% lên 25% khi có xác nhận</td><td><span class="pill ok">đã đo</span> nhưng chưa đủ mạnh để tự động hoá</td></tr>
+<tr><td>Hấp thụ ở cụm trơ trọi, không ở vùng</td><td>Đo: 47,4%, tệ hơn ngẫu nhiên</td><td><span class="pill no">đã đo — không dùng</span></td></tr>
+<tr><td>“Xanh đầu đỏ đít” như tín hiệu độc lập</td><td>Đo: xuất hiện ở 47% mọi nến, 50,2%</td><td><span class="pill no">đã đo — không mang thông tin</span> (chỉ dùng như mô tả, không như tín hiệu)</td></tr>
+<tr><td>Stacked imbalance theo chiều bias VWAP, giữa move</td><td>Đo: +3,7 / +8,2 điểm so đối chứng, chỉ chiều buy</td><td><span class="pill warn">đã đo — yếu, một chiều</span></td></tr>
+<tr><td>V/U · bong bóng cực trị · thân+delta giảm dần · SL sàn nhiễu · be ở 1,5R</td><td>Rút từ 56 lệnh nhật ký + cơ chế đấu giá</td><td><span class="pill warn">chưa đo</span> — đây là việc của 4 tuần tới, đo bằng chính nhật ký 7 cột</td></tr>
+<tr><td>Hình dạng profile, tail scam, fixer, phá 2 lần, 18–19h phá giả</td><td>Note thực chiến vàng + Corven</td><td><span class="pill warn">chưa đo</span> — dùng để đọc chart, không code thành tín hiệu</td></tr>
+</table></div>
+<p>Việc tiếp theo không phải thêm setup. Là chạy đúng 20 phiên với nhật ký 7 cột, rồi đếm: lệnh qua đủ 8 câu checklist thắng bao nhiêu, lệnh thiếu câu nào thua bao nhiêu. Lúc đó hệ thống này mới có số của riêng nó.</p>
+
+<p class="src" style="margin-top:40px">Nguồn ngoài repo đã đối chiếu: <a href="https://www.tradezella.com/blog/vwap-trading-strategy">TradeZella — VWAP pullback</a> · <a href="https://daytradingtoolkit.com/tapereadr/packs/vwap-decisions">TapeReadr — VWAP reclaim/retest, tối đa 2 lần/phiên</a> · <a href="https://www.luxalgo.com/library/concept/absorption.md">LuxAlgo — absorption</a> · <a href="https://www.luxalgo.com/library/concept/breakout-pullback-continuation.md">LuxAlgo — breakout-pullback-continuation</a> · <a href="https://capital.com/how-to-trade-the-break-retest">Capital.com — pullback dốc bằng breakout = phá hỏng</a> · <a href="https://www.luxalgo.com/library/concept/atr-based-stop-distance.md">LuxAlgo — SL cấu trúc kiểm tra ≥1×ATR</a> · <a href="https://nexusfi.com/a/risk-management/stop-loss-strategies">NexusFi — stop loss strategies</a>. Trong repo: <code>tpo/SYLLABUS-TPO.md</code>, <code>research/*.md</code>, <code>daily-trading/REVIEW-2026-10-15.md</code>, <code>so-tay-vang-mgc.html</code>.</p>
+</div>

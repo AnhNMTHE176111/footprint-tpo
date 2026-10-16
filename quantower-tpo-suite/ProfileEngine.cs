@@ -999,4 +999,105 @@ namespace TpoSuite
             });
         }
     }
+    // ========================================================================
+    //  ZonePolicy — LOẠI VÙNG NÀO ĐƯỢC VẼ, VẼ Ở LỚP NÀO (chốt 2026-10-17)
+    // ========================================================================
+    //  Tách khỏi SessionZones thành lớp thuần để test được không cần Quantower.
+    //  Căn cứ (đều có đối chứng ngẫu nhiên, nguồn dày 474–724k nến M1):
+    //   • VWAP tuần: đảo chiều 53,8% / 53,3% / 53,6% — ô duy nhất dương ở MỌI
+    //     phép đo (research/HAP-THU-TAI-VUNG-KET-QUA.md, DAC-DIEM-CA-DAO-CHIEU.md).
+    //   • VWAP ngày: 52,9% / 51,6%; hấp thụ đúng nghĩa xảy ra gần VWAP ngày nhiều
+    //     hơn ngẫu nhiên +29% (z=+3,6).
+    //   • HVN ngày/tuần: KHÔNG phải mốc phản ứng (5 cách đo, MEASURE-DENSE-RESULTS.md);
+    //     sau cú phá thì nghiêng ĐI TIẾP 56% ⇒ chỉ làm NỀN / mục tiêu, không canh fade.
+    //   • VAH/VAL: tự thân 50,4% (trung tính) nhưng là CẠNH range để gọi chế độ
+    //     cân bằng / vừa phá ⇒ giữ, chỉ của phiên ÂU (Âu dựng range cho Mỹ).
+    //   • BỎ mặc định: đỉnh/đáy phiên (backtest v2 −0,68, tệ nhất), naked POC phiên
+    //     (hai phép đo trái dấu 46,5% vs 53,9%), cụm POC / băng giá trị (n=10 / n=2,
+    //     bản chất là HVN), LVN tuần (chưa đo, trôi theo cửa sổ).
+    public sealed class ZoneFilter
+    {
+        public bool SessionHighLow = false;
+        public bool NakedPoc = false;
+        public bool PocClusters = false;   // gồm cả "cụm POC" và "băng giá trị"
+        public bool WeekLvn = false;
+        public bool VaEdgeEuropeOnly = true;
+    }
+
+    public static class ZonePolicy
+    {
+        // Loại vùng có được SINH ra không.
+        public static bool KeepType(string type, ZoneFilter f)
+        {
+            if (f == null) f = new ZoneFilter();
+            switch (type)
+            {
+                case "priorhl": return f.SessionHighLow;
+                case "naked_poc": return f.NakedPoc;
+                case "poc_cluster":
+                case "value_band": return f.PocClusters;
+                case "lvn_week": return f.WeekLvn;
+                default: return true;   // vwap_*, va_edge, hvn_*, lvn (ngày)
+            }
+        }
+
+        // true = lớp MỐC (đường đậm, có thể canh lệnh); false = lớp NỀN (dải mờ).
+        public static bool IsMarkerType(string type)
+        {
+            switch (type)
+            {
+                case "hvn_day":
+                case "hvn_week":
+                case "lvn":
+                case "lvn_week": return false;
+                default: return true;
+            }
+        }
+
+        // Vai trò trên bảng: "canh" = vùng canh đảo chiều/hấp thụ (chỉ VWAP),
+        // "canh_range" = cạnh range Âu, "nen" = HVN (đi tiếp/mục tiêu), "lvn",
+        // "khac" = loại cũ chỉ hiện khi người dùng tự bật lại.
+        public static string Role(string type)
+        {
+            switch (type)
+            {
+                case "vwap_week":
+                case "vwap_day": return "canh";
+                case "va_edge": return "canh_range";
+                case "hvn_day":
+                case "hvn_week": return "nen";
+                case "lvn":
+                case "lvn_week": return "lvn";
+                default: return "khac";
+            }
+        }
+
+        // Thứ hạng để sắp xếp/giành khe: VWAP tuần > VWAP ngày > cạnh range > còn lại.
+        public static double BaseStrength(string type)
+        {
+            switch (type)
+            {
+                case "vwap_week": return 95;
+                case "vwap_day": return 85;
+                case "va_edge": return 60;
+                default: return 40;
+            }
+        }
+
+        // Chỉ gộp hai vùng cùng lớp: không để dải nền HVN "nuốt" một mốc VWAP/cạnh
+        // range rồi kéo giãn Lo/Hi của mốc đó.
+        public static bool CanMerge(string typeA, string typeB) => IsMarkerType(typeA) == IsMarkerType(typeB);
+
+        // Chọn phiên lấy VAH/VAL: phiên ÂU đã đóng gần nhất (nhãn "AU"); nếu tắt
+        // VaEdgeEuropeOnly hoặc chưa có phiên Âu nào thì lấy phiên đóng gần nhất.
+        // Trả -1 nếu danh sách rỗng.
+        public static int VaEdgeSessionIndex(IList<string> labels, bool europeOnly)
+        {
+            if (labels == null || labels.Count == 0) return -1;
+            if (europeOnly)
+                for (int i = labels.Count - 1; i >= 0; i--)
+                    if (labels[i] == "AU") return i;
+            return labels.Count - 1;
+        }
+    }
 }

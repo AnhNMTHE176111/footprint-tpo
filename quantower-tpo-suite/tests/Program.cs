@@ -76,6 +76,37 @@ static class Tests
               new List<double>(), 0, 5, 20) == -1, "danh sach rong -> -1");
     }
 
+    // ---- 1b. ZonePolicy: loai vung nao duoc ve (v3, 2026-10-17) --------
+    static void ZonePolicyCases()
+    {
+        var def = new ZoneFilter();
+        Check(!ZonePolicy.KeepType("priorhl", def), "mac dinh BO dinh/day phien");
+        Check(!ZonePolicy.KeepType("naked_poc", def), "mac dinh BO naked POC phien");
+        Check(!ZonePolicy.KeepType("poc_cluster", def) && !ZonePolicy.KeepType("value_band", def), "mac dinh BO cum POC + bang gia tri");
+        Check(!ZonePolicy.KeepType("lvn_week", def), "mac dinh BO LVN tuan");
+        foreach (var t in new[] { "vwap_week", "vwap_day", "va_edge", "hvn_day", "hvn_week", "lvn" })
+            Check(ZonePolicy.KeepType(t, def), "mac dinh GIU " + t);
+        var on = new ZoneFilter { SessionHighLow = true, NakedPoc = true, PocClusters = true, WeekLvn = true };
+        Check(ZonePolicy.KeepType("priorhl", on) && ZonePolicy.KeepType("naked_poc", on)
+              && ZonePolicy.KeepType("value_band", on) && ZonePolicy.KeepType("lvn_week", on), "bat lai duoc tung loai cu");
+        Check(ZonePolicy.KeepType("priorhl", null) == false, "filter null -> dung mac dinh");
+
+        Check(!ZonePolicy.IsMarkerType("hvn_day") && !ZonePolicy.IsMarkerType("hvn_week"), "HVN ngay/tuan la lop NEN");
+        Check(ZonePolicy.IsMarkerType("vwap_week") && ZonePolicy.IsMarkerType("va_edge"), "VWAP + canh range la lop MOC");
+        Check(ZonePolicy.Role("vwap_week") == "canh" && ZonePolicy.Role("vwap_day") == "canh", "chi VWAP la VUNG CANH");
+        Check(ZonePolicy.Role("hvn_day") == "nen" && ZonePolicy.Role("va_edge") == "canh_range", "vai tro HVN / VA");
+        Check(ZonePolicy.BaseStrength("vwap_week") > ZonePolicy.BaseStrength("vwap_day")
+              && ZonePolicy.BaseStrength("vwap_day") > ZonePolicy.BaseStrength("va_edge"), "thu hang VWAP tuan > ngay > canh");
+        Check(!ZonePolicy.CanMerge("va_edge", "hvn_day"), "khong gop moc voi nen");
+        Check(ZonePolicy.CanMerge("hvn_day", "hvn_week"), "gop duoc hai nen");
+
+        var labs = new List<string> { "A", "AU", "MY", "A" };
+        Check(ZonePolicy.VaEdgeSessionIndex(labs, true) == 1, "VA lay phien AU gan nhat");
+        Check(ZonePolicy.VaEdgeSessionIndex(labs, false) == 3, "tat loc Au -> phien gan nhat");
+        Check(ZonePolicy.VaEdgeSessionIndex(new List<string> { "A", "MY" }, true) == 1, "chua co phien Au -> phien gan nhat");
+        Check(ZonePolicy.VaEdgeSessionIndex(new List<string>(), true) == -1, "rong -> -1");
+    }
+
     // ---- 2. chay tren DU LIEU THAT 2 nam ---------------------------------
     static void RealData()
     {
@@ -148,6 +179,7 @@ static class Tests
     {
         Console.WriteLine("=== Test ProfileEngine (chay that, khong phai ban sao) ===");
         UnitCases();
+        ZonePolicyCases();
         RealData();
         Console.WriteLine(_fail == 0 ? "\n=> TAT CA PASS" : $"\n=> CO {_fail} TEST HONG");
         return _fail == 0 ? 0 : 1;

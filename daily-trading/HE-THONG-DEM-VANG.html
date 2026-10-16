@@ -240,7 +240,7 @@ figcaption b{color:var(--fg)}
 <p>Lợi thế không nằm ở chỉ báo. Lợi thế nằm ở việc <b>chỉ vào lệnh khi ba thứ trùng nhau</b>, và đứng ngoài trong mọi trường hợp còn lại.</p>
 <div class="edge">
   <p class="big">Vào lệnh tại một VÙNG đã kẻ sẵn từ trước phiên, sau khi phe ngược chiều đã THỬ và THẤT BẠI ở đó, với SL nằm NGOÀI vùng nhiễu của M1.</p>
-  <p class="small">Ba lệnh +3R tốt nhất trong nhật ký (13/10 20:10 · 6/10 20:25 · 5/10 21:07) đều có đủ ba thứ. 35 lệnh thua gần nhất thiếu ít nhất một.</p>
+  <p class="small">Ba lệnh +3R tốt nhất trong nhật ký (13/10 20:10 · 6/10 20:24 · 5/10 21:36) đều có đủ ba thứ. Các lệnh thua đã rà trong bản đánh giá 15/10 đều thiếu ít nhất một.</p>
 </div>
 
 <div class="flow" role="group" aria-label="Ba tầng quyết định">
@@ -284,7 +284,7 @@ figcaption b{color:var(--fg)}
   <li><b>Thân nến tô xanh/đỏ = delta một chiều rõ rệt</b>. Đó chỉ là “nỗ lực”; phải so với “kết quả” (giá có đi không) mới ra nghĩa.</li>
   <li><b>DMA</b> dốc cùng chiều move = đà còn; DMA đi ngang khi giá còn chạy = đà đang cạn.</li>
 </ul>
-<p class="note">Bong bóng là <b>dữ liệu để kiểm tra</b>, không phải tín hiệu vào lệnh. Ngày 12/10 thấy bong bóng +237 ở đáy mà vẫn sell 4 lần, vì lúc đó bong bóng chỉ được nhìn chứ chưa được “hỏi”.</p>
+<p class="note">Bong bóng là <b>dữ liệu để kiểm tra</b>, không phải tín hiệu vào lệnh. Ngày 12/10 thấy nến −237 bị hấp thụ ở đáy (bong bóng đặc ngay dưới nến) mà vẫn sell 4 lần, vì lúc đó bong bóng chỉ được nhìn chứ chưa được “hỏi”.</p>
 
 <!-- ============ 2. TRƯỚC PHIÊN ============ -->
 <h2 id="truoc-phien">2. Trước phiên (18:30–19:20): kẻ vùng và chốt bias</h2>
@@ -305,7 +305,7 @@ figcaption b{color:var(--fg)}
 <div class="tbl" role="region" aria-label="Ma trận bias"><table>
 <thead><tr><th scope="col">Giá vs VWAP tuần</th><th scope="col">Đóng hôm qua vs VA</th><th scope="col">Bias</th><th scope="col">Được làm gì</th></tr></thead>
 <tbody>
-<tr><td data-label="VWAP tuần">Trên</td><td data-label="Đóng hôm qua">Trên hoặc trong; profile không phải b</td><td data-label="Bias"><span><span class="pill buy">BUY ưu tiên</span></span></td><td data-label="Làm gì">Phá hồi buy, hấp thụ sell tại vùng, fade đáy VA Âu. <b>Không sell</b>, trừ hấp thụ buy tại HVN 3 tuần hoặc đỉnh có tail thật, cỡ nhỏ, 2R.</td></tr>
+<tr><td data-label="VWAP tuần">Trên</td><td data-label="Đóng hôm qua">Trên hoặc trong; profile không phải b</td><td data-label="Bias"><span><span class="pill buy">BUY ưu tiên</span></span></td><td data-label="Làm gì">Phá hồi buy, hấp thụ sell tại vùng, fade đáy VA Âu. <b>Không sell</b>, trừ hấp thụ buy tại đỉnh có tail thật hoặc single print cũ phía trên, cỡ nhỏ, 2R. Không sell tại HVN 3 tuần (bảng 2.3).</td></tr>
 <tr><td data-label="VWAP tuần">Dưới</td><td data-label="Đóng hôm qua">Dưới hoặc trong; profile không phải P</td><td data-label="Bias"><span><span class="pill sell">SELL ưu tiên</span></span></td><td data-label="Làm gì">Gương ngược của dòng trên.</td></tr>
 <tr><td data-label="VWAP tuần">Trên (hoặc dưới)</td><td data-label="Đóng hôm qua">Ngược phía với VWAP tuần</td><td data-label="Bias"><span><span class="pill warn">KHÔNG bias</span></span></td><td data-label="Làm gì">Chỉ fade hai cạnh VA Âu, mục tiêu 2R, cỡ lệnh một nửa. Không phá hồi.</td></tr>
 <tr><td data-label="VWAP tuần">Sát VWAP tuần (±2 giá)</td><td data-label="Đóng hôm qua">Bất kỳ</td><td data-label="Bias"><span><span class="pill warn">CHỜ</span></span></td><td data-label="Làm gì">Chờ 1 nến M5 đóng rõ một phía rồi mới chốt bias.</td></tr>
@@ -313,20 +313,20 @@ figcaption b{color:var(--fg)}
 <div class="rule hard"><div class="t">Luật cứng</div><p>Lệnh <b>ngược bias</b> phải ghi lý do vào thẻ phiên <b>trước khi bấm</b>. Không ghi = phá luật, tính vào ngắt mạch.</p></div>
 
 <h3>2.3 Thứ tự ưu tiên vùng (từ phép đo, không từ sách)</h3>
-<p>Đo trên 724.279 nến M1 GC (8/2024 → 8/2026): tỉ lệ giá đảo chiều sau một cụm khối lượng lớn + delta cực đoan <b>tại từng loại vùng</b>. Nền ngẫu nhiên là 50%.</p>
+<p>Hai phép đo độc lập trên 724.279 nến M1 GC (8/2024 → 8/2026): tỉ lệ giá đảo chiều sau một cụm khối lượng lớn + delta cực đoan <b>tại từng loại vùng</b>. Nền ngẫu nhiên là 50%. Phép đo 1 neo tại nến sự kiện (HAP-THU-TAI-VUNG); phép đo 2 lọc lỏng hơn và neo sau nến kế tiếp (DAC-DIEM-CA-DAO-CHIEU). Chỉ ô <b>cùng dấu ở cả hai</b> mới được dùng làm luật.</p>
 <div class="tbl" role="region" aria-label="Xếp hạng vùng"><table>
-<thead><tr><th scope="col">Vùng</th><th scope="col">Số ca</th><th scope="col">Đảo chiều</th><th scope="col">Dùng thế nào</th></tr></thead>
+<thead><tr><th scope="col">Vùng</th><th scope="col">Số ca</th><th scope="col">Đảo chiều</th><th scope="col">Phép đo 2</th><th scope="col">Dùng thế nào</th></tr></thead>
 <tbody>
-<tr class="hl"><td data-label="Vùng">VWAP tuần</td><td class="n" data-label="Số ca">774</td><td class="n" data-label="Đảo chiều">53,8%</td><td data-label="Dùng"><span><span class="pill ok">Hạng 1</span> bắt đảo chiều / hấp thụ</span></td></tr>
-<tr class="hl"><td data-label="Vùng">VWAP ngày</td><td class="n" data-label="Số ca">1.784</td><td class="n" data-label="Đảo chiều">52,9%</td><td data-label="Dùng"><span><span class="pill ok">Hạng 1</span></span></td></tr>
-<tr><td data-label="Vùng">naked POC</td><td class="n" data-label="Số ca">180</td><td class="n" data-label="Đảo chiều">53,9%</td><td data-label="Dùng"><span><span class="pill ok">Hạng 2</span> số ca nhỏ; dùng làm nam châm mục tiêu</span></td></tr>
-<tr><td data-label="Vùng">HVN tuần</td><td class="n" data-label="Số ca">427</td><td class="n" data-label="Đảo chiều">53,7%</td><td data-label="Dùng"><span><span class="pill ok">Hạng 2</span></span></td></tr>
-<tr><td data-label="Vùng">Cạnh VA phiên trước</td><td class="n" data-label="Số ca">1.703</td><td class="n" data-label="Đảo chiều">50,4%</td><td data-label="Dùng">Trung tính; chỉ fade khi đang ở chế độ cân bằng</td></tr>
-<tr><td data-label="Vùng">HVN ngày, ngay sau khi phá cực trị</td><td class="n" data-label="Số ca">309</td><td class="n" data-label="Đảo chiều">43,5%</td><td data-label="Dùng"><span><span class="pill no">Không bắt đảo chiều</span> nghiêng đi tiếp</span></td></tr>
-<tr><td data-label="Vùng">HVN 3 tuần</td><td class="n" data-label="Số ca">608</td><td class="n" data-label="Đảo chiều">45,7%</td><td data-label="Dùng"><span><span class="pill no">Không fade</span> chỉ làm mục tiêu hoặc vùng phá hồi</span></td></tr>
-<tr><td data-label="Vùng">Không ở vùng nào</td><td class="n" data-label="Số ca">3.585</td><td class="n" data-label="Đảo chiều">47,4%</td><td data-label="Dùng"><span><span class="pill no">Không có lệnh</span></span></td></tr>
+<tr class="hl"><td data-label="Vùng">VWAP tuần</td><td class="n" data-label="Số ca">774</td><td class="n" data-label="Đảo chiều">53,8%</td><td class="n" data-label="Phép đo 2">53,3% (n=1.241)</td><td data-label="Dùng"><span><span class="pill ok">Hạng 1</span> bắt đảo chiều / hấp thụ; ô duy nhất dương ở cả hai phép đo</span></td></tr>
+<tr class="hl"><td data-label="Vùng">VWAP ngày</td><td class="n" data-label="Số ca">1.784</td><td class="n" data-label="Đảo chiều">52,9%</td><td class="n" data-label="Phép đo 2">50,7% (n=2.735)</td><td data-label="Dùng"><span><span class="pill warn">Hạng 2</span> chỉ phép đo 1 ủng hộ; cỡ lệnh nhỏ hơn</span></td></tr>
+<tr><td data-label="Vùng">naked POC</td><td class="n" data-label="Số ca">103</td><td class="n" data-label="Đảo chiều">46,5%</td><td class="n" data-label="Phép đo 2">53,9% (n=180)</td><td data-label="Dùng"><span><span class="pill warn">Trái dấu</span> số ca nhỏ; chỉ làm nam châm mục tiêu, không bắt đảo chiều</span></td></tr>
+<tr><td data-label="Vùng">HVN tuần</td><td class="n" data-label="Số ca">427</td><td class="n" data-label="Đảo chiều">53,7%</td><td class="n" data-label="Phép đo 2">50,0% (n=708)</td><td data-label="Dùng"><span><span class="pill warn">Chưa chắc</span> chỉ phép đo 1 ủng hộ; coi như trung tính</span></td></tr>
+<tr><td data-label="Vùng">Cạnh VA phiên trước</td><td class="n" data-label="Số ca">—</td><td class="n" data-label="Đảo chiều">—</td><td class="n" data-label="Phép đo 2">50,4% (n=1.703)</td><td data-label="Dùng">Trung tính; chỉ fade khi đang ở chế độ cân bằng</td></tr>
+<tr><td data-label="Vùng">HVN ngày, ngay sau khi phá cực trị</td><td class="n" data-label="Số ca">309</td><td class="n" data-label="Đảo chiều">43,5%</td><td class="n" data-label="Phép đo 2">49,7% (n=868)</td><td data-label="Dùng"><span><span class="pill no">Không bắt đảo chiều</span> phép đo 1 nghiêng đi tiếp, phép đo 2 trung tính</span></td></tr>
+<tr><td data-label="Vùng">HVN 3 tuần</td><td class="n" data-label="Số ca">217</td><td class="n" data-label="Đảo chiều">43,5%</td><td class="n" data-label="Phép đo 2">45,7% (n=608)</td><td data-label="Dùng"><span><span class="pill no">Không fade</span> chỉ làm mục tiêu hoặc vùng phá hồi</span></td></tr>
+<tr><td data-label="Vùng">Không ở vùng nào</td><td class="n" data-label="Số ca">3.585</td><td class="n" data-label="Đảo chiều">47,4%</td><td class="n" data-label="Phép đo 2">— (cùng dấu ở 4 cách cắt của phép đo 1)</td><td data-label="Dùng"><span><span class="pill no">Không có lệnh</span></span></td></tr>
 </tbody></table></div>
-<p class="note">Lệch 3–4 điểm so với 50% là nhỏ, nhưng <b>ổn định</b> trên hai nửa dữ liệu. Một mình nó chưa phải lợi thế; nó chỉ nói <b>ở đâu đáng kiểm tra tiếp</b>, và ở đâu không. Ba lệnh sell ngày 1/10 tại HVN ngày (ngay sau khi giá vừa phá xuống) là đánh vào đúng ô 43,5%.</p>
+<p class="note">Lệch 3–4 điểm so với 50% là nhỏ. Chỉ ba ô <b>cùng dấu ở cả hai phép đo</b> và ở hai nửa thời gian: VWAP tuần (đảo chiều), HVN 3 tuần và không-vùng (đi tiếp). VWAP ngày và HVN tuần chỉ dương ở một phép đo; naked POC trái dấu. Một mình bảng này chưa phải lợi thế; nó chỉ nói <b>ở đâu đáng kiểm tra tiếp</b>, và ở đâu không. Ba lệnh sell ngày 1/10 ngay sau khi giá phá xuống qua HVN ngày nằm đúng ô 43,5%: ô này nghiêng <b>đi tiếp</b>, tức hướng sell có số liệu ủng hộ; ba lệnh thua vì SL đặt ngay tại VWAP tuần (mục 6), không phải vì chọn sai ô.</p>
 
 <!-- ============ 3. CẤU TRÚC ============ -->
 <h2 id="cau-truc">3. Cấu trúc trong phiên: chế độ nào, kịch bản nào</h2>
@@ -390,19 +390,19 @@ figcaption b{color:var(--fg)}
 <h3>4.1 Nhịp hồi là V hay U?</h3>
 <div class="fig2">
 <figure>
-<svg viewBox="0 0 360 236" role="img" aria-label="Nhịp hồi hình V: giá rơi mạnh rồi bật lên ngay bằng nến dài và delta ngược mạnh, có bong bóng +237 ở đáy. Phe hồi đang thắng; không sell phá hồi vào đây.">
+<svg viewBox="0 0 360 236" role="img" aria-label="Nhịp hồi hình V: giá rơi mạnh rồi bật lên ngay bằng nến dài và delta ngược mạnh, nến −237 có bong bóng hấp thụ ở đáy. Phe hồi đang thắng; không sell phá hồi vào đây.">
   <polyline class="svg-ink" stroke-width="1.6" points="20,40 60,60 90,80 120,150 140,186 160,120 180,70 220,50 260,46 340,42"/>
   <line x1="152" y1="176" x2="152" y2="132" class="s-buy" stroke-width="7" stroke-linecap="round"/>
   <line x1="170" y1="124" x2="170" y2="80" class="s-buy" stroke-width="7" stroke-linecap="round"/>
   <circle cx="138" cy="192" r="11" class="c-buy"/>
-  <text x="114" y="197" font-size="12.5" text-anchor="end" font-weight="700" class="c-buy svg-mono">+237</text>
+  <text x="114" y="197" font-size="12.5" text-anchor="end" font-weight="700" class="c-sell svg-mono">−237</text>
   <text x="20" y="22" font-size="12" class="c-muted svg-mono">HÌNH V</text>
   <text x="196" y="100" font-size="13" class="c-ink">bật dốc bằng lúc rơi</text>
   <text x="196" y="118" font-size="13" class="c-ink">nến dài, delta ngược</text>
   <text x="196" y="136" font-size="13" class="c-ink">bong bóng to ở đáy</text>
   <text x="180" y="228" font-size="13" text-anchor="middle" font-weight="700" class="c-sell">KHÔNG sell “phá hồi” vào đây</text>
 </svg>
-<figcaption><b>V = phe hồi đang thắng.</b> Ngày 12/10 21:15–21:35, đáy −237 có bong bóng +237 rồi +78, +103, giá bật thẳng; sell “phá hồi” 4 lần, −4R.</figcaption>
+<figcaption><b>V = phe hồi đang thắng.</b> Ngày 12/10, nến −237 lúc 21:17 có bong bóng hấp thụ ngay dưới nến, rồi +40, +78, +103, giá bật thẳng; sell “phá hồi” 4 lần từ 21:26 đến 21:44, −4R.</figcaption>
 </figure>
 <figure>
 <svg viewBox="0 0 360 236" role="img" aria-label="Nhịp hồi hình U: sau cú rơi, giá đi ngang và nhích lên bằng nhiều nến ngắn, delta yếu dần, rồi mới có nến xác nhận theo chiều cũ. Đây là retest hợp lệ.">
@@ -432,7 +432,7 @@ figcaption b{color:var(--fg)}
   <g font-size="13" text-anchor="middle" class="c-sell svg-mono" font-weight="600"><text x="70" y="114">−51</text><text x="140" y="168">−65</text><text x="210" y="218">−77</text></g>
   <text x="290" y="60" font-size="13" text-anchor="end" font-weight="700" class="c-sell">→ KHÔNG bắt đáy</text>
 </svg>
-<figcaption><b>Đà: nỗ lực tăng, kết quả tăng.</b> Thân dài dần, |delta| tăng dần, đáy mới mỗi nến. Lệnh 30/9 22:10 buy “hấp thụ sell” đúng chuỗi −51, −65, −77 này.</figcaption>
+<figcaption><b>Đà: nỗ lực tăng, kết quả tăng.</b> |delta| tăng dần, đáy mới mỗi nến. Lệnh 30/9 22:05 buy “hấp thụ sell” vào ngay sau chuỗi −51, −65, −77 này.</figcaption>
 </figure>
 <figure>
 <svg viewBox="0 0 300 236" role="img" aria-label="Hấp thụ: ba nến đỏ thân ngắn dần, delta −80, −60, −45 giảm dần, giá không tạo đáy mới, bong bóng đỏ ở đáy, sau đó nến xanh +40 xác nhận.">
@@ -481,7 +481,7 @@ figcaption b{color:var(--fg)}
 <div class="setup">
   <div class="head"><h3>B · Hấp thụ</h3><div class="tags"><span class="pill">giá tới vùng hạng 1–2</span><span class="pill ok">mục tiêu 3R</span></div></div>
   <div class="body"><dl>
-    <dt>Bối cảnh</dt><dd>Giá tới VWAP tuần / VWAP ngày / naked POC / HVN tuần, <b>hoặc</b> cạnh VA Âu trong chế độ cân bằng. Không gọi hấp thụ ở HVN ngày ngay sau khi giá vừa phá cực trị, và không gọi ở HVN 3 tuần.</dd>
+    <dt>Bối cảnh</dt><dd>Giá tới VWAP tuần (tốt nhất), hoặc VWAP ngày / HVN tuần với cỡ lệnh nhỏ hơn (chỉ một phép đo ủng hộ), <b>hoặc</b> cạnh VA Âu trong chế độ cân bằng. Không gọi hấp thụ ở HVN ngày ngay sau khi giá vừa phá cực trị, và không gọi ở HVN 3 tuần.</dd>
     <dt>Kiểm tra</dt><dd>3 nến cuối: thân <b>và</b> |delta| giảm dần, không cực trị mới. Có bong bóng đặc/halo ở cực trị, cùng phe với lệnh định vào. DMA đi ngang.</dd>
     <dt>Trigger</dt><dd>Nến xác nhận ngược chiều move, delta đảo dấu ≥ 50% delta của nến bán tháo lớn nhất. Ưu tiên vào ở <b>cú test lại</b> (hình U) hơn vào ngay nến xác nhận.</dd>
     <dt>SL</dt><dd>Sau cực trị của cụm hấp thụ + 0,3 giá. Không đặt SL ở giữa cụm.</dd>
@@ -521,23 +521,23 @@ figcaption b{color:var(--fg)}
 <h3>Ca thật: đúng và sai cạnh nhau</h3>
 <p class="note">Bấm vào ảnh để mở bản đầy đủ và đọc số trên chart.</p>
 <div class="fig2 shots">
-<figure><a class="shot" href="he-thong-img/sai-sell-vao-bong-bong-237.png" target="_blank" rel="noopener"><img src="he-thong-img/sai-sell-vao-bong-bong-237.png" width="1610" height="885" loading="lazy" alt="Chart M1 ngày 12/10 lúc 21:25: sell ngay sau nến −98 và bong bóng +237 ở đáy, giá bật lên hình V, dính SL"></a>
-<figcaption><span class="pill no">SAI</span> <b>12/10 21:25.</b> Sell “phá hồi” khi đáy vừa in bong bóng +237 rồi +78, +103. Bật hình V. Phạm 4.1 và 4.3.</figcaption></figure>
-<figure><a class="shot" href="he-thong-img/dung-pha-hoi-sau-129.png" target="_blank" rel="noopener"><img src="he-thong-img/dung-pha-hoi-sau-129.png" width="1810" height="908" loading="lazy" alt="Chart M1 ngày 6/10 lúc 20:25: sau nến −129 phá cạnh VA, giá hồi thoải về cạnh rồi giảm tiếp tới 4185, chốt 3R"></a>
-<figcaption><span class="pill ok">ĐÚNG</span> <b>6/10 20:25.</b> Nến −129 phá cạnh, hồi thoải 3–4 nến, nến xác nhận giảm. Sell 4192,5 → 4185, +3R.</figcaption></figure>
-<figure><a class="shot" href="he-thong-img/sai-da-tuong-la-hap-thu.png" target="_blank" rel="noopener"><img src="he-thong-img/sai-da-tuong-la-hap-thu.png" width="1475" height="855" loading="lazy" alt="Chart M1 ngày 30/9 lúc 22:10: chuỗi nến giảm −51, −65, −77 thân dài dần, buy “hấp thụ sell” tại VWAP tuần, dính SL"></a>
-<figcaption><span class="pill no">SAI</span> <b>30/9 22:10.</b> −51, −65, −77 thân dài dần là đà, nhưng bị gọi là hấp thụ. Phạm 4.2.</figcaption></figure>
-<figure><a class="shot" href="he-thong-img/dung-hap-thu-hinh-u.png" target="_blank" rel="noopener"><img src="he-thong-img/dung-hap-thu-hinh-u.png" width="1841" height="860" loading="lazy" alt="Chart M1 ngày 5/10 lúc 19:25: sau cú rơi về 4179, đáy đi ngang bằng nến ngắn rồi đẩy lên; buy hấp thụ sell tại 4187, giá lên 4192, chốt 2R"></a>
-<figcaption><span class="pill ok">ĐÚNG</span> <b>5/10 19:25.</b> Đáy 4179 đi ngang bằng nến ngắn (+11, +22, +8) thay vì bật thẳng, rồi mới đẩy lên; vào ở cú test lại 4184–4187. Buy → 4192, +2R. Cùng trang nhật ký này bạn đã tự ghi định nghĩa V/U.</figcaption></figure>
-<figure><a class="shot" href="he-thong-img/sai-sl-qua-hep.png" target="_blank" rel="noopener"><img src="he-thong-img/sai-sl-qua-hep.png" width="1838" height="901" loading="lazy" alt="Chart M1 ngày 1/10 lúc 20:48: sell tại 4193,8 với SL 4195,0, cách 1,2 giá trong khi nến quanh đó cao 2–3 giá, bị quét"></a>
-<figcaption><span class="pill no">SAI</span> <b>1/10 20:48.</b> Sell 4193,8, SL 4195,0 (1,2 giá) trong khi nến −78 trước đó cao 3 giá. Ý tưởng đúng (giá sau đó rơi 12 giá), SL sai.</figcaption></figure>
+<figure><a class="shot" href="he-thong-img/sai-sell-vao-bong-bong-237.png" target="_blank" rel="noopener"><img src="he-thong-img/sai-sell-vao-bong-bong-237.png" width="1610" height="885" loading="lazy" alt="Chart M1 ngày 12/10 lúc 21:27: sell vào cú hồi sau khi nến −237 bị hấp thụ ở đáy, giá bật lên hình V, dính SL"></a>
+<figcaption><span class="pill no">SAI</span> <b>12/10 21:27.</b> Sell “phá hồi” 9 phút sau khi nến −237 bị hấp thụ ở đáy (bong bóng đặc ngay dưới nến), rồi +40, +78, +103. Bật hình V. Phạm 4.1 và 4.3.</figcaption></figure>
+<figure><a class="shot" href="he-thong-img/dung-pha-hoi-sau-129.png" target="_blank" rel="noopener"><img src="he-thong-img/dung-pha-hoi-sau-129.png" width="1810" height="908" loading="lazy" alt="Chart M1 ngày 6/10 lúc 20:24: sau hai nến −20, −75 phá cụm POC, giá hồi thoải 4 nến, sell ở nến xác nhận −16 tại 4193, giảm tới 4185, chốt 3R"></a>
+<figcaption><span class="pill ok">ĐÚNG</span> <b>6/10 20:24.</b> Nến −20, −75 phá cụm POC; hồi thoải 4 nến (+14, −43, −4, −1); nến xác nhận −16. Sell ≈4193 → 4185, +3R. Nến −129 đến sau khi vào 4 nến.</figcaption></figure>
+<figure><a class="shot" href="he-thong-img/sai-da-tuong-la-hap-thu.png" target="_blank" rel="noopener"><img src="he-thong-img/sai-da-tuong-la-hap-thu.png" width="1475" height="855" loading="lazy" alt="Chart M1 ngày 30/9 lúc 22:05: chuỗi nến giảm −51, −65, −77 rồi −65 đáy mới tại VWAP tuần, một nến +77 bật lên, buy “hấp thụ sell” ở lưng cú bật, dính SL"></a>
+<figcaption><span class="pill no">SAI</span> <b>30/9 22:05.</b> −51, −65, −77 rồi −65: |delta| không giảm, mỗi nến một đáy mới = đà bán. Một bong bóng ở đáy và một nến +77 chưa đủ “3 nến giảm dần” theo 4.2; vào ở lưng cú bật, SL nằm trên đáy bong bóng. Phạm 4.2.</figcaption></figure>
+<figure><a class="shot" href="he-thong-img/dung-hap-thu-hinh-u.png" target="_blank" rel="noopener"><img src="he-thong-img/dung-hap-thu-hinh-u.png" width="1841" height="860" loading="lazy" alt="Chart M1 ngày 5/10 lúc 19:25: sau cú rơi về 4179, đáy đi ngang bằng nến ngắn, test lại 4182,5 giữ được, buy 4186,8, giá lên 4192, chốt 2R"></a>
+<figcaption><span class="pill ok">ĐÚNG</span> <b>5/10 19:25.</b> Đáy 4179 đi ngang bằng nến ngắn, delta lẫn lộn (+25, +22, −27, +11) thay vì bật thẳng; cú test lại 4182,5 lúc 19:10–19:22 giữ được. Buy 4186,8 → 4192, +2R. Cùng trang nhật ký này bạn đã tự ghi định nghĩa V/U.</figcaption></figure>
+<figure><a class="shot" href="he-thong-img/sai-sl-qua-hep.png" target="_blank" rel="noopener"><img src="he-thong-img/sai-sl-qua-hep.png" width="1838" height="901" loading="lazy" alt="Chart M1 ngày 1/10 lúc 20:47: sell tại 4192,7 với SL 4194,8 đặt ngay tại VWAP tuần, dưới râu 4195,3 của nến trước; bị quét rồi giá rơi 10 giá"></a>
+<figcaption><span class="pill no">SAI</span> <b>1/10 20:47.</b> Sell ≈4192,7, SL ≈4194,8: đặt ngay tại VWAP tuần, dưới râu 4195,3 của nến 20:40, và ngắn hơn nến −78 (3,3 giá). Hai lệnh vào lại 20:50 và 20:57 cũng SL sát VWAP. Cả ba bị râu 21:00 quét rồi giá rơi 10 giá về 4182,8. Ý tưởng đúng, SL sai.</figcaption></figure>
 <figure><a class="shot" href="he-thong-img/dung-buy-hop-luu-lvn-poc.png" target="_blank" rel="noopener"><img src="he-thong-img/dung-buy-hop-luu-lvn-poc.png" width="1856" height="801" loading="lazy" alt="Chart M1 ngày 13/10 lúc 20:10: buy tại hợp lưu LVN ngày và POC/HVN hôm qua sau nến xác nhận, giá chạy lên 4211, chốt 3R"></a>
 <figcaption><span class="pill ok">ĐÚNG</span> <b>13/10 20:10.</b> Vùng kẻ trước (LVN ngày + POC hôm qua), phe sell thử −49/−40 thất bại, có nến xác nhận. +3R.</figcaption></figure>
 </div>
 
 <!-- ============ 6. SL / TP ============ -->
 <h2 id="sl">6. SL, TP và quản lý lệnh</h2>
-<p>Đây là chỗ mất tiền nhiều nhất và dễ sửa nhất: ≥ 9 lệnh trong hai tuần bị quét SL rồi giá chạy tới TP. SL 1 giá khi nến M1 đang cao 3 giá không phải xui.</p>
+<p>Đây là chỗ mất tiền nhiều nhất và dễ sửa nhất: 10 lệnh trong hai tuần bị quét SL hoặc điểm hòa rồi giá chạy tới TP. SL 2 giá đặt ngay tại VWAP tuần, khi nến M1 vừa in cao 3 giá và râu đã chạm qua đường đó, không phải xui.</p>
 <div class="fig2">
 <figure>
 <svg viewBox="0 0 380 250" role="img" aria-label="Lệnh sell tại vùng: SL hẹp 1 giá nằm trong râu của các nến M1 cao 2–3 giá nên bị quét; SL đúng nằm trên râu cao nhất cộng đệm.">
@@ -576,7 +576,7 @@ figcaption b{color:var(--fg)}
 <tr><td data-label="Kịch bản">Fade cạnh · Trap</td><td data-label="TP">2R, hoặc cạnh đối diện / POC</td><td data-label="Be hòa">Khi đạt +1R.</td></tr>
 </tbody></table></div>
 <div class="rule hard"><div class="t">Đóng tay</div><p>Chỉ khi có <b>hấp thụ ngược chiều đe doạ TP</b> (bong bóng đặc ngược phe tại vùng kế tiếp), và phải gõ lý do vào nhật ký trước khi bấm. Râu dài, sốt ruột, “sợ mất” không phải lý do.</p></div>
-<p class="note">Vì sao be ở +1,5R thay vì +1R: trong hai tuần có 5 lệnh be hòa bị quét ở +1R rồi giá đi tới TP. Be sớm biến lệnh thắng thành hòa nhiều hơn là biến lệnh thua thành hòa.</p>
+<p class="note">Vì sao be ở +1,5R thay vì +1R: trong một tháng nhật ký có 4 lệnh be hòa hoặc kéo SL sớm bị quét rồi giá đi tới TP (16/9 ×2, 30/9 21:27, 1/10 20:21) và 2 lệnh chạm 2R rồi quay về hòa (17/9, 21/9). Be sớm biến lệnh thắng thành hòa nhiều hơn là biến lệnh thua thành hòa.</p>
 <p>Rủi ro mỗi lệnh giữ theo kế hoạch hiện có; tổng rủi ro mở cùng lúc là 1 lệnh. Không nhồi.</p>
 
 <!-- ============ 7. NGẮT MẠCH ============ -->
@@ -584,7 +584,7 @@ figcaption b{color:var(--fg)}
 <div class="tbl" role="region" aria-label="Bảng ngắt mạch"><table>
 <thead><tr><th scope="col">Giới hạn</th><th scope="col">Ngưỡng</th><th scope="col">Lý do từ nhật ký</th></tr></thead>
 <tbody>
-<tr><td data-label="Giới hạn">Vào lại cùng vùng</td><td class="n" data-label="Ngưỡng">tối đa 2</td><td data-label="Lý do">1/10 ×3, 5/10 ×4, 12/10 ×4 cùng chỗ: 11/35 lệnh thua</td></tr>
+<tr><td data-label="Giới hạn">Vào lại cùng vùng</td><td class="n" data-label="Ngưỡng">tối đa 2</td><td data-label="Lý do">1/10 ×3, 5/10 ×3, 12/10 ×4 cùng chỗ: 10/35 lệnh thua</td></tr>
 <tr><td data-label="Giới hạn">Lệnh phá luật trong phiên</td><td class="n" data-label="Ngưỡng">2 ⇒ tắt máy</td><td data-label="Lý do">Luật cũ có nhưng chưa từng áp dụng</td></tr>
 <tr><td data-label="Giới hạn">SL liên tiếp</td><td class="n" data-label="Ngưỡng">3 ⇒ tắt máy</td><td data-label="Lý do">1/10 bạn đã tự làm đúng; 5/10 thì không</td></tr>
 <tr><td data-label="Giới hạn">Lệnh trong 3 nến sau nến dài nhất phiên</td><td class="n" data-label="Ngưỡng">0</td><td data-label="Lý do">29/9, 30/9, 6/10, 12/10, 13/10</td></tr>
@@ -644,8 +644,8 @@ cộng tay cuối phiên: ...R · lệnh phá luật: ... · SL bị quét rồi
 <div class="tbl" role="region" aria-label="Bảng trạng thái kiểm định"><table>
 <thead><tr><th scope="col">Luật</th><th scope="col">Nguồn</th><th scope="col">Trạng thái</th></tr></thead>
 <tbody>
-<tr><td data-label="Luật">Xếp hạng vùng (VWAP tuần/ngày tốt, HVN ngày sau phá xấu, không vùng = không lệnh)</td><td data-label="Nguồn">Đo trên 724k nến M1, tách đôi thời gian</td><td data-label="Trạng thái"><span><span class="pill ok">đã đo</span> lệch nhỏ nhưng ổn định</span></td></tr>
-<tr><td data-label="Luật">Hấp thụ cần nến xác nhận delta đảo ≥ 50%</td><td data-label="Nguồn">Đo: đảo chiều thẳng từ 8% lên 25% khi có xác nhận</td><td data-label="Trạng thái"><span><span class="pill ok">đã đo</span> chưa đủ mạnh để tự động hoá</span></td></tr>
+<tr><td data-label="Luật">Xếp hạng vùng (VWAP tuần tốt; HVN 3 tuần, HVN ngày sau phá và không vùng = đi tiếp)</td><td data-label="Nguồn">Đo trên 724k nến M1, hai phép đo độc lập, tách đôi thời gian</td><td data-label="Trạng thái"><span><span class="pill ok">đã đo</span> chỉ 3 ô cùng dấu ở cả hai phép đo; VWAP ngày, HVN tuần, naked POC chưa chắc</span></td></tr>
+<tr><td data-label="Luật">Hấp thụ cần nến xác nhận delta đảo ≥ 50%</td><td data-label="Nguồn">Đo lần 1 cho 8% → 25%; đo lại (neo sau nến xác nhận) thì hướng vẫn 50/50</td><td data-label="Trạng thái"><span><span class="pill warn">chưa chứng minh</span> giữ như luật cơ chế để không vào ở lưng; không coi là lợi thế đã đo</span></td></tr>
 <tr><td data-label="Luật">Hấp thụ ở cụm trơ trọi, không ở vùng</td><td data-label="Nguồn">Đo: 47,4%, tệ hơn ngẫu nhiên</td><td data-label="Trạng thái"><span><span class="pill no">không dùng</span></span></td></tr>
 <tr><td data-label="Luật">“Xanh đầu đỏ đít” như tín hiệu độc lập</td><td data-label="Nguồn">Đo: xuất hiện ở 47% mọi nến, kết quả 50,2%</td><td data-label="Trạng thái"><span><span class="pill no">không mang thông tin</span> chỉ để mô tả</span></td></tr>
 <tr><td data-label="Luật">Stacked imbalance theo chiều bias VWAP, giữa move</td><td data-label="Nguồn">Đo: +3,7 / +8,2 điểm so đối chứng, chỉ chiều buy</td><td data-label="Trạng thái"><span><span class="pill warn">yếu, một chiều</span></span></td></tr>

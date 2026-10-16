@@ -252,7 +252,10 @@ namespace SessionZonesNs
             {
                 var srcAgg = HistoricalData?.Aggregation as HistoryAggregationTime;
                 var histType = srcAgg?.HistoryType ?? HistoryType.Last;
-                _hd30 = Symbol.GetHistory(Period30, histType, DateTime.UtcNow.AddDays(-45));
+                // Neo theo nến mới nhất của CHART (Market Replay ở quá khứ) — ZonePolicy.AuxHistoryFrom.
+                DateTime? lastBar = HistoricalData != null && HistoricalData.Count > 0
+                    ? HistoricalData[0, SeekOriginHistory.End]?.TimeLeft : null;
+                _hd30 = Symbol.GetHistory(Period30, histType, ZonePolicy.AuxHistoryFrom(lastBar, DateTime.UtcNow, 45));
                 _ownHd30 = true;
                 _hd30.NewHistoryItem += OnHd30NewBar;
                 var prog = _hd30.CalculateVolumeProfile(new VolumeAnalysisCalculationParameters { CalculatePriceLevels = true });
@@ -309,7 +312,15 @@ namespace SessionZonesNs
                 _digits = Math.Max(0, (int)Math.Round(-Math.Log10(tick)));
                 var hd = _hd30;
                 if (hd == null) return;
-                int n = hd.Count; if (n == 0) return;
+                int n = hd.Count;
+                if (n == 0)
+                {
+                    // Không im lặng: báo thẳng trên chart thay vì để trống (sự cố replay 2026-10-17).
+                    lock (_sync) _render = new ZoneRenderState { Zones = new List<Zone>(), NowPrice = 0, Tick = tick,
+                        Panel = new List<(string, Color)> { ("PHIÊN HÔM NAY", Color.White),
+                            ("⚠ Chưa có nến M30 nào cho symbol này (Market Replay chưa có dữ liệu trong khoảng 45 ngày trước nến cuối?).", Color.Orange) } };
+                    return;
+                }
                 double rowStep = tick * Math.Max(1, RowTicks);
 
                 // gộp block phiên: đổi label HOẶC gap > GapMinutes → block mới

@@ -105,6 +105,12 @@ static class Tests
         Check(ZonePolicy.VaEdgeSessionIndex(labs, false) == 3, "tat loc Au -> phien gan nhat");
         Check(ZonePolicy.VaEdgeSessionIndex(new List<string> { "A", "MY" }, true) == 1, "chua co phien Au -> phien gan nhat");
         Check(ZonePolicy.VaEdgeSessionIndex(new List<string>(), true) == -1, "rong -> -1");
+
+        var now = new DateTime(2026, 10, 17, 0, 0, 0, DateTimeKind.Utc);
+        var replay = new DateTime(2026, 8, 5, 6, 0, 0, DateTimeKind.Utc);
+        Check(ZonePolicy.AuxHistoryFrom(replay, now, 45) == replay.AddDays(-45), "replay: neo nen cuoi cua chart", ZonePolicy.AuxHistoryFrom(replay, now, 45).ToString("u"));
+        Check(ZonePolicy.AuxHistoryFrom(null, now, 45) == now.AddDays(-45), "khong co nen chart -> dong ho that");
+        Check(ZonePolicy.AuxHistoryFrom(now.AddDays(1), now, 45) == now.AddDays(-45), "nen chart o tuong lai -> dong ho that");
     }
 
     // ---- 2. chay tren DU LIEU THAT 2 nam ---------------------------------

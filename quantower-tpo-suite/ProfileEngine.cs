@@ -1091,6 +1091,16 @@ namespace TpoSuite
         // Chọn phiên lấy VAH/VAL: phiên ÂU đã đóng gần nhất (nhãn "AU"); nếu tắt
         // VaEdgeEuropeOnly hoặc chưa có phiên Âu nào thì lấy phiên đóng gần nhất.
         // Trả -1 nếu danh sách rỗng.
+        // Mốc bắt đầu xin history M30 phụ. Neo vào NẾN MỚI NHẤT CỦA CHART, không neo
+        // vào đồng hồ thật: ở Market Replay, chart đang ở quá khứ (vd 5/8) nên
+        // "UtcNow − 45 ngày" rơi sau toàn bộ dữ liệu replay ⇒ 0 nến (sự cố 2026-10-17).
+        // Không có nến chart (null) ⇒ dùng đồng hồ thật như cũ.
+        public static DateTime AuxHistoryFrom(DateTime? lastChartBarUtc, DateTime nowUtc, int days)
+        {
+            DateTime anchor = lastChartBarUtc.HasValue && lastChartBarUtc.Value < nowUtc ? lastChartBarUtc.Value : nowUtc;
+            return anchor.AddDays(-Math.Abs(days));
+        }
+
         public static int VaEdgeSessionIndex(IList<string> labels, bool europeOnly)
         {
             if (labels == null || labels.Count == 0) return -1;

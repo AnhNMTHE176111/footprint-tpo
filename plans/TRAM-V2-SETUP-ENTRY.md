@@ -82,3 +82,10 @@ Thứ tự: **Hướng** (buy / sell, nút đôi) · **Vùng** (chọn từ th�
 - `store` version 2, migrate từ v1: giữ thẻ phiên, vùng, sổ; bỏ `regime`, `setup` cũ, `open` cũ (lệnh mở cũ chuyển thành dòng Sổ chưa có kết quả).
 - `engine` mới gọn: `evaluate(night, now, settings, news)` → `{ common:[{id, ok, auto, reason}], blocks:{A..D:{done, total, missing[], order, autoChecks}}, entry: {scen}|null, breaker }`. Bỏ danh sách luật DIS_/NO_ cũ; giữ hàm tính SL/R:R/cỡ lệnh, lịch tin, giờ mùa đông, nightKey.
 - Test: viết lại test engine theo checklist (mỗi ô tự kiểm một test; ENTRY chỉ khi đủ; phá luật đếm đúng; migrate v1 → v2; 5 ca thật cũ A1–A5 thành 5 ca tick tay ra ENTRY / thiếu ô đúng). e2e: tick đủ khối B tới ENTRY bằng chuột thật; dropdown vùng hiện định nghĩa khi rê và khi dùng phím; 4 khối luôn mở, không khối nào có trạng thái "tắt"; 390 px không tràn.
+
+## 7. Chốt sau 3 biên bản kiểm tra (20/10, người học chưa phản hồi — Claude chọn theo đề xuất, đổi được)
+- **Ngược bias (HT 2.2 thắng HT 9):** chỉ khối B được ngược bias, và chỉ khi tick ô "vùng có tail thật hoặc single print đúng phía"; TP 2R, cỡ ½, lý do bắt buộc. Khối A, C, D ngược bias ⇒ ô tự kiểm "Cùng chiều bias" đỏ. Bias KHÔNG ⇒ A, B, D có ô tự kiểm đỏ "bias KHÔNG: chỉ fade cạnh"; bias CHỜ ⇒ cả 4 khối đỏ ô đó.
+- **Khối B bắt buộc hồi hình U** (HT 9 câu 4 thắng chữ "ưu tiên" ở 5·B).
+- **Ô tự kiểm thay tick tay** khi máy tính được: giá cách vùng ≤ 1 giá (từ giá vào + vùng), giờ phá ngoài 18:00–19:20 (giờ hiện tại khi tick ô nến M5), bias cùng chiều (từ hướng + bias), lần ≤ 2 tại vùng, SL sai phía. Giá vào cách vùng > 3 giá ⇒ đỏ "ở lưng".
+- **Gọn hơn khi trade M1:** khối không làm thu gọn thành một dòng (bấm để mở; đang làm khối nào thì khối đó mở); ghi lệnh xong giữ vị trí cuộn và giữ tick bối cảnh, chỉ xóa nhóm Điểm vào + giá; lệnh đang mở có nút kết quả ngay trên thanh dưới (TP · SL · Hòa · Đóng tay) không phải sang Sổ.
+- **Điện thoại:** chạm lần đầu vào loại vùng chỉ hiện định nghĩa, chạm lần hai mới chọn.

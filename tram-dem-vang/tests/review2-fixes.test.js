@@ -175,9 +175,9 @@ test('USER-TEST 5 · kế hoạch ngược bias: "sell ở VAH Âu" khi bias BUY
 });
 
 // ---------- mục 7 · đánh số câu hỏi ----------
-test('mục 7 · câu hỏi đánh số theo HT 2.1: Q1, Q1′, Q2a, Q2b, Q3, Q4, Q5, Q6; tiêu đề "Sáu câu hỏi"', () => {
+test('mục 7 · câu hỏi đánh số theo HT 2.1: Q1, Q1′, Q2a, Q2b, Q3, Q4, Q5, Q6; tiêu đề "Ba câu hỏi" (QĐ-23: màn hình chỉ còn Q1, Q5, VWAP tuần; dữ liệu và chữ của các câu khác vẫn giữ để đọc dữ liệu cũ)', () => {
   assert.deepEqual(C.questions.map((q) => q.num), ['Q1', 'Q1′', 'Q2a', 'Q2b', 'Q3', 'Q4', 'Q5', 'Q6']);
-  assert.match(C.ui.t1Title2, /Sáu câu hỏi/);
+  assert.match(C.ui.t1Title2, /Ba câu hỏi/);
   assert.match(C.ui.need_q5, /^Q5 /); assert.match(C.ui.need_q6, /^Q6 /);
 });
 

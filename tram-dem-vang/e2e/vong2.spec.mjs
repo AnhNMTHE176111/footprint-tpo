@@ -58,8 +58,8 @@ test('v2-1 · từ dữ liệu trống: tầng 0 → 1 → 2 (cú phá mới) �
     await page.waitForSelector('[data-tier="1"]');
     // tầng 1: tám câu hỏi có số, VWAP tuần chọn bằng hai ô số
     assert.match(await page.textContent('[data-ctl="q1"] .ctl-label'), /^Q1 · Hình dạng profile hôm qua/);
-    assert.match(await page.textContent('[data-ctl="q6"] .ctl-label'), /^Q6 · /);
-    await page.click(seg('q1', 'D')); await page.click(seg('q5', 'below')); await page.click(seg('q6', 'yes'));
+    assert.equal(await page.locator('[data-ctl="q6"]').count(), 0);   // QĐ-23: Q6 không còn hỏi
+    await page.click(seg('q1', 'D')); await page.click(seg('q5', 'below'));
     await fillNum(page, 'pricenow', '4200'); await fillNum(page, 'vwapprice', '4210');
     assert.equal(await page.getAttribute(seg('vwapW', 'below'), 'aria-pressed'), 'true');
     assert.match(await page.textContent('[data-testid="bias-big"]'), /SELL/);
@@ -67,7 +67,8 @@ test('v2-1 · từ dữ liệu trống: tầng 0 → 1 → 2 (cú phá mới) �
     assert.equal(await page.locator('[data-zone]').count(), 4);
     assert.equal(await page.inputValue('[data-id="zprice"]'), '');   // ô giá về rỗng sau khi thêm (REVIEW mục 21)
     // kế hoạch ngược bias: chỉ cảnh báo, vẫn chốt được
-    const plan1 = page.locator('.plans .field.txt').first();
+    await page.click('.plans summary');
+    const plan1 = page.locator('[data-testid="plan-note"]');
     await plan1.fill('buy ở VWAP tuần'); await plan1.press('Tab');
     await page.click('[data-testid="lock-card"]');
     await page.waitForSelector('[data-tier="2"]');
@@ -125,7 +126,7 @@ test('v2-3 · Từ điển mở từ thanh trạng thái và từ nút "?"; 0 h�
     const g = await page.textContent('[data-testid="glossary"]');
     for (const w of ['bias', 'naked POC', 'tail thật', 'be (hòa vốn)', 'acceptance']) assert.ok(g.includes(w), w);
     await page.keyboard.press('Escape');
-    await page.click('[data-tier-btn="1"]'); await page.click('[data-ctl="q1"] .help'); await page.click('.pop .glossbtn');
+    await page.click('[data-tier-btn="1"]'); await page.click('[data-ctl="q1"] .help'); await page.click('[data-ctl="q1"] .pop .glossbtn');
     assert.equal(await page.locator('[data-testid="glossary"]').count(), 1);
     await page.keyboard.press('Escape');
     await page.click('[data-tier-btn="3"]'); await walkB(page);

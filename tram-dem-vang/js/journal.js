@@ -94,12 +94,16 @@
     var a = card.answers || {}, missing = [];
     if (!a.q1) missing.push('q1');
     if (!a.q5) missing.push('q5');
-    if (!a.q6) missing.push('q6');
     if (!a.vwapW) missing.push('vwapW');
     if (!(card.zones || []).length) missing.push('zones');
     return { ok: missing.length === 0, missing: missing };
   }
-  function lockCard(night, nowMs) { night.card.lockedAt = hm(nowMs); return night.card.lockedAt; }
+  // Chốt thẻ: Q6 (Âu đã dựng range) không còn hỏi; suy từ việc thẻ có vùng cạnh hay không, giữ trong dữ liệu cho tương thích
+  function lockCard(night, nowMs) {
+    var zs = (night.card.zones || []).map(function (z) { return R.enrichZone(z, night.card.answers); });
+    if (!night.card.answers.q6) night.card.answers.q6 = zs.some(function (z) { return R.hasFlag(z, 'edge'); }) ? 'yes' : 'no';
+    night.card.lockedAt = hm(nowMs); return night.card.lockedAt;
+  }
   var FREE_EDITS = ['q6', 'vahEu', 'valEu', 'ibHigh', 'ibLow'];
   // Trước 19:20 (mùa đông 20:20): sửa Q6 / VA Âu / IB không để vết. Sau đó mỗi lần sửa ghi lại giờ sửa;
   // đang canh kèo thì phải xác nhận.

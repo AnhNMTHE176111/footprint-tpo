@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Deploy Trạm Đêm Vàng lên GitHub Pages: https://anhnmthe176111.github.io/tram-dem-vang/
 #  - tăng APP_VERSION (rules.js + sw.js) để service worker đổi cache; đặt BUMP=0 để bỏ qua
-#  - sao chép toàn bộ app (KHÔNG chép tests, e2e, node_modules, docs, scripts) + .nojekyll vào bản clone repo Pages
+#  - sao chép toàn bộ app (KHÔNG chép tests, e2e, node_modules, docs, scripts) + .github (workflow lịch tin Forex Factory) + .nojekyll vào bản clone repo Pages
+#  - KHÔNG ghi đè data/ (data/ff.json do GitHub Actions tạo, QĐ-22)
 #  - commit + push nhánh main
 # Dùng:  DEPLOY_DIR=/đường/dẫn/clone ./deploy.sh      (mặc định: $HOME/.tram-dem-vang-pages)
 set -euo pipefail
@@ -31,8 +32,9 @@ git -C "$DEST" checkout -B main >/dev/null 2>&1 || true
 git -C "$DEST" pull --ff-only origin main >/dev/null 2>&1 || true
 
 # xóa bản cũ (giữ .git) rồi chép bản mới
-find "$DEST" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+find "$DEST" -mindepth 1 -maxdepth 1 ! -name .git ! -name data -exec rm -rf {} +
 cp -r index.html manifest.webmanifest sw.js css js icons img "$DEST/"
+rm -rf "$DEST/.github" && cp -r .github "$DEST/.github"
 touch "$DEST/.nojekyll"
 
 cd "$DEST"

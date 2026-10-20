@@ -53,6 +53,10 @@ export async function openPage(browser, state, opts) {
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.type() + ': ' + m.text()); });
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   await page.clock.setFixedTime(new Date(opts.now || NOW));
+  // lịch tin Forex Factory: mặc định một bản mới, rỗng (không tin) để thanh trạng thái không đỏ; opts.feed = null ⇒ không có lịch; hoặc truyền sự kiện
+  const nowMs = new Date(opts.now || NOW).getTime();
+  const feed = opts.feed === null ? null : (opts.feed || { fetchedAt: new Date(nowMs - 10 * 60000).toISOString(), events: [] });
+  if (feed) await context.addInitScript((f) => { try { localStorage.setItem('tdv.ff.v1', f); } catch (e) { /* bỏ qua */ } }, JSON.stringify(feed));
   if (state) {
     await context.addInitScript((s) => { try { if (!localStorage.getItem('tdv.v1')) localStorage.setItem('tdv.v1', s); } catch (e) { /* bỏ qua */ } }, JSON.stringify(state));
   }

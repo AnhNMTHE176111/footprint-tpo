@@ -94,6 +94,11 @@
       'aria-label': opt.label || null, dataset: opt.id ? { id: opt.id } : null,
       oninput: function () { var v = J.parseNum(inp.value); inp.classList.toggle('invalid', v === null && /\S/.test(inp.value) && inp.value.trim() !== '-'); onInput(v, inp); },
       onchange: function () { held(function () { var v = J.parseNum(inp.value); inp.classList.toggle('invalid', v === null && /\S/.test(inp.value)); if (v !== null) inp.value = fmtIn(v); if (opt.onCommit) opt.onCommit(v, inp); }); } });
+    if (opt.onEnter) inp.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault(); e.stopPropagation();
+      var v = J.parseNum(inp.value); onInput(v, inp); opt.onEnter(v, inp);
+    });
     var wrap = h('span', { class: 'numwrap' }, inp, opt.unit ? h('span', { class: 'unit', text: opt.unit }) : null);
     wrap.input = inp;
     return wrap;

@@ -119,24 +119,22 @@
   }
 
   // ================= TẦNG 1 =================
+  // Thu gọn (QĐ-23): một dòng gợi ý kẻ chart · ba câu (hình hôm qua, đóng so với VA, giá so với VWAP tuần) · bias · vùng thêm nhanh · một ô ghi chú · chốt.
+  // Q6 suy từ vùng cạnh (engine không dùng Q6); Q3 nợ suy từ vùng single print / poor high-low; Q2 "tail thật?" nằm ngay trên dòng vùng High / Low hôm qua.
+  var QUICK_ZONES = ['vwapW', 'vwapD', 'vahEu', 'valEu', 'pocCluster', 'hvnW', 'hvn3w', 'lvn', 'highY', 'lowY', 'sp', 'nakedPoc', 'ibHigh', 'ibLow', 'rangeEdge', 'poorHigh', 'poorLow'];
+  function zoneOrder() { return QUICK_ZONES.concat(R.ZONE_ORDER.filter(function (t) { return QUICK_ZONES.indexOf(t) < 0; })); }
+  var TAIL_FROM = { highY: 'q2top', lowY: 'q2bot' };
+
   function tier1(app) {
     var night = app.night, card = night.card, a = card.answers, res = app.res;
-    var el = h('div', { class: 'tier', 'data-tier': '1' });
+    var el = h('div', { class: 'tier t1min', 'data-tier': '1' });
     el.appendChild(lead(T('t1Lead')));
+    el.appendChild(h('p', { class: 'muted small drawhint', text: T('t1Draw') }));
 
-    // 1a — kẻ trên chart
-    var drawn = card.drawn || {};
-    var list = h('ul', { class: 'ticks' });
-    C.drawItems.forEach(function (txt, i) {
-      var id = 'draw' + i;
-      list.appendChild(h('li', {}, h('label', { class: 'tick', for: id }, h('input', { type: 'checkbox', id: id, checked: drawn[i] ? true : null,
-        onchange: function (e) { app.update(function (n) { n.card.drawn = n.card.drawn || {}; n.card.drawn[i] = e.target.checked; }, { keep: true }); } }), h('span', { text: txt }))));
-    });
-    el.appendChild(section(T('t1Title1'), list, { cls: 'collapsible' }));
-
-    // 1b — sáu câu hỏi
+    // ----- ba câu hỏi -----
     var qbox = h('div', { class: 'qgrid' });
-    C.questions.forEach(function (q, qi) {
+    ['q1', 'q5'].forEach(function (qid) {
+      var q = C.questions.filter(function (x) { return x.id === qid; })[0];
       qbox.appendChild(h('div', { class: 'ctl', 'data-ctl': q.id },
         h('div', { class: 'ctl-label' }, h('span', { text: T('qPrefix', { n: q.num, label: q.label }) }), ui.helpBtn(q.help)),
         seg(q.options, a[q.id] === undefined ? null : a[q.id], function (v) {
@@ -144,28 +142,24 @@
           app.cardEdit(q.id, T('editQ', { q: q.label, v: lbl }), function (n) { if (v === null) delete n.card.answers[q.id]; else n.card.answers[q.id] = v; });
         })));
     });
-    el.appendChild(section(T('t1Title2'), qbox));
-
-    // 1c — bias
     var vw = h('div', { class: 'ctl', 'data-ctl': 'vwapW' },
       h('div', { class: 'ctl-label' }, h('span', { text: T('vwapQ') }), ui.helpBtn({ text: T('vwapHelp'), ref: 'ma-tran-bias' })),
-      seg(C.vwapOpts, a.vwapW || null, function (v) {
-        var lbl = v ? C.vwapOpts.filter(function (o) { return o.v === v; })[0].label : '—';
-        app.cardEdit('vwapW', T('editQ', { q: T('vwapQ'), v: lbl }), function (n) { if (v === null) delete n.card.answers.vwapW; else n.card.answers.vwapW = v; });
-      }));
-    var vwapNums = h('div', { class: 'row wrap vwapnums' },
-      h('label', { class: 'mini-l' }, T('vwapNowL'), numInput(a.priceNow === undefined ? null : a.priceNow, function () {}, { id: 'pricenow', label: T('vwapNowL'), onCommit: function (v) { setVwapNums(app, 'priceNow', v); } })),
-      h('label', { class: 'mini-l' }, T('vwapPriceL'), numInput(a.vwapPrice === undefined ? null : a.vwapPrice, function () {}, { id: 'vwapprice', label: T('vwapPriceL'), onCommit: function (v) { setVwapNums(app, 'vwapPrice', v); } })),
-      h('span', { class: 'muted', text: (typeof a.priceNow === 'number' && typeof a.vwapPrice === 'number') ? T('vwapAutoHint', { v: C.vwapOpts.filter(function (o) { return o.v === vwapSide(a.priceNow, a.vwapPrice); })[0].label }) : T('vwapAutoNeed') }));
-    vw.appendChild(vwapNums);
-    var biasBox = [vw];
+      h('div', { class: 'row wrap vwapnums' },
+        h('label', { class: 'mini-l' }, T('vwapNowL'), numInput(a.priceNow === undefined ? null : a.priceNow, function () {}, { id: 'pricenow', label: T('vwapNowL'), onCommit: function (v) { setVwapNums(app, 'priceNow', v); } })),
+        h('label', { class: 'mini-l' }, T('vwapPriceL'), numInput(a.vwapPrice === undefined ? null : a.vwapPrice, function () {}, { id: 'vwapprice', label: T('vwapPriceL'), onCommit: function (v) { setVwapNums(app, 'vwapPrice', v); } })),
+        seg(C.vwapOpts, a.vwapW || null, function (v) {
+          var lbl = v ? C.vwapOpts.filter(function (o) { return o.v === v; })[0].label : '—';
+          app.cardEdit('vwapW', T('editQ', { q: T('vwapQ'), v: lbl }), function (n) { if (v === null) delete n.card.answers.vwapW; else n.card.answers.vwapW = v; });
+        }, { cls: 'small' })));
+    qbox.appendChild(vw);
     if (a.vwapW === 'near') {
-      biasBox.push(h('div', { class: 'ctl', 'data-ctl': 'recheck' },
+      qbox.appendChild(h('div', { class: 'ctl', 'data-ctl': 'recheck' },
         h('div', { class: 'ctl-label', text: T('recheck') }),
         seg([{ v: 'above', label: T('rcAbove') }, { v: 'below', label: T('rcBelow') }], card.bias.rechecked || null, function (v) {
           app.cardEdit('bias', T('editRecheck'), function (n) { if (v === null) delete n.card.bias.rechecked; else n.card.bias.rechecked = v; });
         })));
     }
+    var biasBox = [qbox];
     biasBox.push(h('div', { class: 'biasline' }, h('span', { class: 'ctl-label', text: T('biasIs') }),
       h('span', { class: 'bigchip ' + ui.dirCls(res.bias), 'data-testid': 'bias-big', text: ui.biasText(res.bias) }),
       res.biasOverridden ? chip(T('overridden'), 'warn') : null,
@@ -177,50 +171,53 @@
         }),
         card.bias.override ? textInput(card.bias.reason || '', function (v) { app.cardEdit('bias', T('editOverrideReason'), function (n) { n.card.bias.reason = v; }); }, { placeholder: T('overridePh'), label: T('overridePh') }) : null,
         card.bias.override && !(card.bias.reason && card.bias.reason.trim()) ? banner(T('overrideNeed'), 'warn') : null)));
-    el.appendChild(section(T('t1Title3'), biasBox, { help: { text: T('t1BiasHelp'), ref: 'ma-tran-bias' } }));
+    el.appendChild(section(T('t1Title2'), biasBox, { help: { text: T('t1BiasHelp'), ref: 'ma-tran-bias' } }));
 
-    // 1d — vùng
+    // ----- vùng: hàng thêm nhanh + danh sách gọn -----
+    var zf = app.ui.zoneForm = app.ui.zoneForm || { type: 'vwapW', price: null, priceTo: null, side: 'upper', note: '' };
+    var needSide = (R.ZONE_TYPES[zf.type] || {}).needSide;
+    var full = res.zones.length >= R.T.zonesMax;
+    function addZone() {
+      if (zf.price === null) { app.toast(T('needPrice')); return; }
+      if (full) { app.toast(T('zonesFull')); return; }
+      var type = zf.type, side = (R.ZONE_TYPES[type] || {}).needSide ? zf.side : undefined, zp = zf.price, zpTo = zf.priceTo;
+      zf.price = null; zf.priceTo = null;
+      app.cardEdit(type, T('addedZone', { t: C.zoneTypes[type].label }), function (n) {
+        var z = { id: J.newZoneId(n.card), type: type, price: zp, note: '' };
+        if (zpTo !== null) z.priceTo = zpTo;
+        if (side) z.side = side;
+        n.card.zones.push(z);
+      });
+    }
+    var sel = h('select', { class: 'field', 'aria-label': T('zoneType'), 'data-testid': 'zone-type', onchange: function (e) { zf.type = e.target.value; app.render({ keep: false }); } },
+      zoneOrder().map(function (t) { return h('option', { value: t, selected: zf.type === t ? true : null, text: C.zoneTypes[t].label + ' · ' + C.zoneTypes[t].rank }); }));
+    var priceIn = numInput(zf.price, function (v) { zf.price = v; }, { placeholder: T('price'), label: T('price'), id: 'zprice', onEnter: addZone });
+    var addRow = h('div', { class: 'zform' }, sel, priceIn,
+      numInput(zf.priceTo, function (v) { zf.priceTo = v; }, { placeholder: T('priceTo'), label: T('priceTo'), onEnter: addZone }),
+      needSide ? seg(SIDE_OPTS, zf.side, function (v) { zf.side = v || 'upper'; app.render({ keep: false }); }, { noToggle: true, cls: 'small' }) : null,
+      btn(T('addZone'), addZone, 'primary', { disabled: full ? true : null, 'data-testid': 'add-zone' }));
+
     var zbox = h('div', { class: 'zones' });
     res.zones.forEach(function (z) {
-      var tdef = R.ZONE_TYPES[z.type] || {};
-      var flags = z.flags.map(function (f) { return chip(C.flagText[f] || f, 'mini'); });
+      var tdef = R.ZONE_TYPES[z.type] || {}, tf = TAIL_FROM[z.type];
       var row = h('div', { class: 'zrow', 'data-zone': z.id },
         h('span', { class: 'zid', text: z.id }),
         h('span', { class: 'zname', text: C.zoneTypes[z.type] ? C.zoneTypes[z.type].label : z.type }),
         numInput(z.price, function () {}, { label: T('price'), onCommit: function (v) { app.cardEdit(z.type, T('editZone', { z: z.id }), function (n) { zoneOf(n, z.id).price = v; }); } }),
-        numInput(z.priceTo === undefined ? null : z.priceTo, function () {}, { label: T('priceTo'), placeholder: T('priceTo'), onCommit: function (v) { app.cardEdit(z.type, T('editZone', { z: z.id }), function (n) { var zz = zoneOf(n, z.id); if (v === null) delete zz.priceTo; else zz.priceTo = v; }); } }),
+        z.priceTo !== undefined && z.priceTo !== null ? numInput(z.priceTo, function () {}, { label: T('priceTo'), placeholder: T('priceTo'), onCommit: function (v) { app.cardEdit(z.type, T('editZone', { z: z.id }), function (n) { var zz = zoneOf(n, z.id); if (v === null) delete zz.priceTo; else zz.priceTo = v; }); } }) : null,
         tdef.needSide ? seg(SIDE_OPTS, z.side || null, function (v) { app.cardEdit(z.type, T('editZone', { z: z.id }), function (n) { zoneOf(n, z.id).side = v; }); }, { cls: 'small', noToggle: true }) : null,
-        h('span', { class: 'zflags' }, flags),
+        h('span', { class: 'zrank', text: C.zoneTypes[z.type] ? C.zoneTypes[z.type].rank : '' }),
+        tf ? h('span', { class: 'tailq', 'data-ctl': tf }, h('span', { class: 'muted small', text: T('tailQ') }), ui.helpBtn(C.questions.filter(function (x) { return x.id === tf; })[0].help),
+          seg([{ v: true, label: T('yes') }, { v: false, label: T('no') }], a[tf] === 'tail' ? true : (a[tf] ? false : null), function (v) {
+            app.cardEdit(tf, T('editQ', { q: T('tailQ'), v: v === null ? '—' : v ? T('yes') : T('no') }), function (n) { if (v === null) delete n.card.answers[tf]; else n.card.answers[tf] = v ? 'tail' : 'normal'; });
+          }, { cls: 'small' })) : null,
         btn('✕', function () {
           if (app.night.trades.some(function (t) { return t.zoneId === z.id && (t.flags || []).indexOf('paper') < 0; })) { app.toast(T('zoneHasTrades')); return; }
           app.cardEdit(z.type, T('delZone', { z: z.id }), function (n) { n.card.zones = n.card.zones.filter(function (q) { return q.id !== z.id; }); }); }, 'ghost small', { 'aria-label': T('remove') }));
       zbox.appendChild(row);
     });
     if (!res.zones.length) zbox.appendChild(h('p', { class: 'muted', text: T('noZones') }));
-
-    var zf = app.ui.zoneForm = app.ui.zoneForm || { type: 'vwapW', price: null, priceTo: null, side: 'upper', note: '' };
-    var needSide = (R.ZONE_TYPES[zf.type] || {}).needSide;
-    var sel = h('select', { class: 'field', 'aria-label': T('zoneType'), onchange: function (e) { zf.type = e.target.value; app.render({ keep: false }); } },
-      R.ZONE_ORDER.map(function (t) { return h('option', { value: t, selected: zf.type === t ? true : null, text: C.zoneTypes[t].label + ' · ' + C.zoneTypes[t].rank }); }));
-    var full = res.zones.length >= R.T.zonesMax;
-    var addRow = h('div', { class: 'zform' }, sel,
-      numInput(zf.price, function (v) { zf.price = v; }, { placeholder: T('price'), label: T('price'), id: 'zprice' }),
-      numInput(zf.priceTo, function (v) { zf.priceTo = v; }, { placeholder: T('priceTo'), label: T('priceTo') }),
-      needSide ? seg(SIDE_OPTS, zf.side, function (v) { zf.side = v || 'upper'; app.render({ keep: false }); }, { noToggle: true, cls: 'small' }) : null,
-      btn(T('addZone'), function () {
-        if (zf.price === null) { app.toast(T('needPrice')); return; }
-        if (full) { app.toast(T('zonesFull')); return; }
-        var type = zf.type, side = (R.ZONE_TYPES[type] || {}).needSide ? zf.side : undefined, zp = zf.price, zpTo = zf.priceTo;
-        zf.price = null; zf.priceTo = null;
-        app.cardEdit(type, T('addedZone', { t: C.zoneTypes[type].label }), function (n) {
-          var z = { id: J.newZoneId(n.card), type: type, price: zp, note: '' };
-          if (zpTo !== null) z.priceTo = zpTo;
-          if (side) z.side = side;
-          n.card.zones.push(z);
-        });
-      }, 'primary', { disabled: full ? true : null }));
     var zcount = res.zones.length;
-    // sao chép VWAP tuần, HVN 3 tuần và Q1′ từ đêm trước cùng tuần (USER-TEST-2 mục 5)
     var src = J.prevCardSource(app.state, app.key);
     var copyRow = src ? h('div', { class: 'row copyrow' },
       btn(T('copyPrev', { key: src }), function () {
@@ -228,20 +225,24 @@
           var det = J.copyFromPrevDetail(n, app.state.nights[src]);
           app.toast(det.n ? T('copyPrevDone', { list: det.items.join(' · ') }) : T('copyPrevNone'));
         });
-      }, 'ghost', { 'data-testid': 'copy-prev' }), h('span', { class: 'muted', text: T('copyPrevHint') })) : null;
-    el.appendChild(section(T('t1Title4', { n: zcount }), [copyRow, zbox, addRow, zcount > 0 && zcount < R.T.zonesMin ? banner(T('zonesFew'), 'warn') : null, full ? banner(T('zonesFull'), 'info') : null],
+      }, 'ghost small', { 'data-testid': 'copy-prev' })) : null;
+    el.appendChild(section(T('t1Title4', { n: zcount }), [copyRow, addRow, zbox, zcount > 0 && zcount < R.T.zonesMin ? banner(T('zonesFew'), 'warn') : null, full ? banner(T('zonesFull'), 'info') : null],
       { help: { text: T('t1ZoneHelp'), ref: 'xep-hang-vung' } }));
 
-    // 1e — kế hoạch + chốt
+    // ----- ghi chú kế hoạch (một ô, gập) + chốt -----
     // cảnh báo kế hoạch ngược bias hiện NGAY khi gõ, nằm sát nút chốt (USER-TEST-2 mục 5)
-    var planTxt = { plan1: card.plan1 || '', plan2: card.plan2 || '' };
+    var noteOld = [card.plan1, card.plan2, card.cancelWhen].filter(Boolean).join('\n');
+    var noteTxt = card.planNote !== undefined ? card.planNote : noteOld;
+    var planTxt = { plan1: noteTxt, plan2: '' };
     var conflictBox = h('div', { class: 'conflictslot', 'data-testid': 'plan-conflict-slot' });
-    function paintConflict() { 
+    function paintConflict() {
       ui.clear(conflictBox);
       if (J.planConflict(planTxt, app.res.bias)) conflictBox.appendChild(h('div', { class: 'banner warn strong', role: 'alert', 'data-testid': 'plan-conflict', text: T('planConflict', { b: ui.biasText(app.res.bias) }) }));
     }
-    var plans = h('div', { class: 'plans' },
-      planField(app, 'plan1', T('plan1'), function (v) { planTxt.plan1 = v; paintConflict(); }), planField(app, 'plan2', T('plan2'), function (v) { planTxt.plan2 = v; paintConflict(); }), planField(app, 'cancelWhen', T('cancelWhen')));
+    var ta = h('textarea', { class: 'field txt plannote', rows: '3', maxlength: '600', 'aria-label': T('planNote'), 'data-testid': 'plan-note', placeholder: T('planNotePh'), value: noteTxt,
+      oninput: function (e) { planTxt.plan1 = e.target.value; paintConflict(); },
+      onchange: function (e) { var v = e.target.value; app.hold(function () { app.update(function (n) { n.card.planNote = v; }, { keep: true }); }); } });
+    var notes = h('details', { class: 'fold plans', open: noteTxt ? true : null }, h('summary', { text: T('addNote') }), h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('planNote') }), ta));
     var chk = J.canLockCard(card);
     var lockBox = h('div', { class: 'lockbox' });
     lockBox.appendChild(conflictBox);
@@ -260,7 +261,7 @@
       lockBox.appendChild(btn(T('toTier2'), function () { app.go(2); }, 'primary'));
       lockBox.appendChild(h('span', { class: 'muted', text: T('editAfterLock') }));
     }
-    el.appendChild(section(T('t1Title5'), [plans, lockBox], { help: { text: T('t1CardHelp'), ref: 'the-phien' } }));
+    el.appendChild(section(T('t1Title5'), [notes, lockBox], { help: { text: T('t1CardHelp'), ref: 'the-phien' } }));
     return el;
   }
   // VWAP tuần: giá hiện tại so với VWAP tuần ⇒ Trên / Dưới / Sát (±2 giá)
@@ -273,10 +274,6 @@
     });
   }
   function zoneOf(n, id) { return n.card.zones.filter(function (z) { return z.id === id; })[0]; }
-  function planField(app, field, label, onTxt) {
-    return h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: label }),
-      textInput(app.night.card[field] || '', function (v) { app.update(function (n) { n.card[field] = v; }, { keep: true }); }, { max: 200, label: label, onInput: onTxt }));
-  }
 
   // ================= TẦNG 2 =================
   function tier2(app) {

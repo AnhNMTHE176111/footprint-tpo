@@ -78,6 +78,11 @@ for (const f of uiFiles) {
   const src = readFileSync(f, 'utf8');
   for (const m of src.matchAll(/\bT\('([A-Za-z0-9_]+)'(?!\s*\+)/g)) used.add(m[1]);
 }
+// T(cond ? 'a' : 'b', ...): cả hai khóa đều được dùng và đều phải tồn tại (sự cố "⟦halfNoteMin⟧" 2026-10-20)
+for (const f of uiFiles) {
+  const src = readFileSync(f, 'utf8');
+  for (const m of src.matchAll(/\bT\(\s*[^'")]*?\?\s*'([A-Za-z0-9_]+)'\s*:\s*'([A-Za-z0-9_]+)'/g)) { used.add(m[1]); used.add(m[2]); }
+}
 const dynamic = [];
 ['NO_CARD', 'BIAS_WAIT', 'OPEN_TRADE', 'NO_OPEN'].forEach((c) => dynamic.push('lock_' + c));
 ['NO_CARD', 'BIAS_WAIT', 'OPEN_TRADE'].forEach((c) => dynamic.push('lockGo_' + c));

@@ -85,9 +85,9 @@
       return h('div', { class: 'crow' }, h('span', { class: 'clabel', text: label }), h('span', { class: 'cval' + (cls ? ' ' + cls : '') }, value));
     }
     root_.appendChild(row(T('cardDate'), time.pad(p.d) + '/' + time.pad(p.m) + '/' + p.y));
-    root_.appendChild(row(T('cardVwap'), a.vwapW ? C.vwapOpts.filter(function (o) { return o.v === a.vwapW; })[0].label : '—'));
-    root_.appendChild(row(T('cardClose'), optLabel('q5', a.q5)));
-    root_.appendChild(row(T('cardShape'), optLabel('q1', a.q1)));
+    if (a.vwapW) root_.appendChild(row(T('cardVwap'), C.vwapOpts.filter(function (o) { return o.v === a.vwapW; })[0].label));
+    if (a.q5) root_.appendChild(row(T('cardClose'), optLabel('q5', a.q5)));
+    if (a.q1) root_.appendChild(row(T('cardShape'), optLabel('q1', a.q1)));
     root_.appendChild(row(T('cardBias'), h('span', { class: 'cardbias ' + ui.dirCls(res.bias), 'data-testid': 'card-bias', text: ui.biasText(res.bias) + (res.biasOverridden ? ' ' + T('overridden') : '') })));
     root_.appendChild(row(T('cardMode'), C.modes[res.regime.effective] + (res.regime.dir ? ' ' + (res.regime.dir === 'up' ? T('dirUp') : T('dirDown')) : '')));
 
@@ -101,10 +101,13 @@
     root_.appendChild(h('div', { class: 'cblock' }, h('div', { class: 'clabel', text: T('cardZones') }), zonesBox));
 
     var debts = res.zones.filter(function (z) { return z.type === 'sp' || z.type === 'poorHigh' || z.type === 'poorLow' || z.type === 'nakedPoc'; });
-    root_.appendChild(row(T('cardDebt'), debts.length ? debts.map(ui.zoneLabel).join(' · ') : (a.q3 ? optLabel('q3', a.q3) : '—')));
+    // NỢ và VÙNG CẤM chỉ hiện khi có; nợ suy từ vùng single print / poor high-low / naked POC (Q3 cũ chỉ còn đọc từ dữ liệu cũ)
+    if (debts.length) root_.appendChild(row(T('cardDebt'), debts.map(ui.zoneLabel).join(' · ')));
+    else if (a.q3 && a.q3 !== 'none') root_.appendChild(row(T('cardDebt'), optLabel('q3', a.q3)));
     var banned = res.zones.filter(function (z) { return z.flags.indexOf('banned') >= 0; });
-    root_.appendChild(row(T('cardBanned'), banned.length ? banned.map(ui.zoneLabel).join(' · ') : '—'));
+    if (banned.length) root_.appendChild(row(T('cardBanned'), banned.map(ui.zoneLabel).join(' · ')));
     if (night.t0.note) root_.appendChild(row(T('cardNote'), night.t0.note));
+    if (card.planNote) root_.appendChild(row(T('cardPlanNote'), card.planNote));
     if (card.plan1) root_.appendChild(row(T('cardPlan1'), card.plan1));
     if (card.plan2) root_.appendChild(row(T('cardPlan2'), card.plan2));
     if (card.cancelWhen) root_.appendChild(row(T('cardCancel'), card.cancelWhen));

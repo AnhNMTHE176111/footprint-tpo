@@ -189,11 +189,13 @@ test('v4-10 · mùa đông (03/11 21:00): bước Bấm đã điền đủ vừa
   const st = buildState('B'); st.nights['2026-11-03'] = st.nights[KEY]; delete st.nights[KEY];
   await withPage(st, { now: NOW_WINTER }, async ({ page }) => {
     assert.match(await page.textContent('.statusbar'), /Mỹ mùa đông \+1h/);
-    assert.equal(await page.locator('.notice').count(), 0);
+    // REVIEW-4 mục 1: thẻ đổi neo session hiện suốt tuần đầu mùa đông (03/11 nằm trong 01/11–08/11)
+    assert.equal(await page.locator('.notice').count(), 1);
+    assert.match(await page.textContent('.notice'), /19:20 sang 20:20/);
     await page.click('[data-tier-btn="3"]'); await walkB(page);
     assert.equal(await verdict(page), 'ENTRY');
     await settle(page);
-    const [sh, ih, sbh] = await page.evaluate(() => [document.documentElement.scrollHeight, window.innerHeight, document.getElementById('status').offsetHeight]);
+    const [sh, ih, sbh] = await page.evaluate(() => [document.documentElement.scrollHeight, window.innerHeight, document.querySelector('#status .statusbar').offsetHeight]);
     const parts = await page.evaluate(() => ['#status', '#tiers', '#main', '.vbar', '.vnotes'].map((s) => { const e = document.querySelector(s); return s + '=' + (e ? e.offsetHeight : '-'); }).join(' '));
     assert.ok(sh <= ih, `đông: scrollHeight ${sh} > innerHeight ${ih} ${parts}`);
     assert.ok(sbh <= 60, 'thanh trên mùa đông ' + sbh);
@@ -206,7 +208,7 @@ test('v4-11 · ENTRY: chữ ≥ 32 px trên máy tính, vẫn vừa một màn; 
     await settle(page);
     const fs = await page.$eval('.ebig', (e) => parseFloat(getComputedStyle(e).fontSize));
     assert.ok(fs >= 32, 'cỡ chữ ENTRY ' + fs);
-    assert.match(await page.textContent('[data-testid="entry-text"]'), /1 hợp đồng = cỡ đầy, rủi ro 23 \$/);
+    assert.match(await page.textContent('[data-testid="entry-text"]'), /1 hợp đồng = cỡ đủ, rủi ro 23 \$/);
     const [sh, ih] = await page.evaluate(() => [document.documentElement.scrollHeight, window.innerHeight]);
     assert.ok(sh <= ih, `scrollHeight ${sh} > innerHeight ${ih}`);
   });

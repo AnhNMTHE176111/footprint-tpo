@@ -116,12 +116,18 @@ test('parse và định dạng giờ', () => {
 });
 
 // ---------- thẻ phiên ----------
-test('thẻ phiên: chốt cần Q1, Q5, Q6, VWAP tuần, ≥ 1 vùng', () => {
+test('thẻ phiên: chốt cần Q1, Q5, VWAP tuần, ≥ 1 vùng (QĐ-23: Q6 không còn hỏi, suy từ vùng cạnh khi chốt)', () => {
   const card = J.newNight().card;
-  assert.deepEqual(J.canLockCard(card).missing, ['q1', 'q5', 'q6', 'vwapW', 'zones']);
-  Object.assign(card.answers, { q1: 'D', q5: 'in', q6: 'yes', vwapW: 'above' });
+  assert.deepEqual(J.canLockCard(card).missing, ['q1', 'q5', 'vwapW', 'zones']);
+  Object.assign(card.answers, { q1: 'D', q5: 'in', vwapW: 'above' });
   card.zones.push({ id: 'z1', type: 'vwapW', price: 4180 });
   assert.equal(J.canLockCard(card).ok, true);
+  const n = J.newNight(); n.card = card;
+  J.lockCard(n, Date.UTC(2026, 9, 13, 11, 0));
+  assert.equal(card.answers.q6, 'no');                        // chưa có vùng cạnh
+  const n2 = J.newNight(); n2.card.answers = { q1: 'D', q5: 'in', vwapW: 'above' }; n2.card.zones = [{ id: 'z1', type: 'vahEu', price: 4190 }];
+  J.lockCard(n2, Date.UTC(2026, 9, 13, 11, 0));
+  assert.equal(n2.card.answers.q6, 'yes');
 });
 test('thẻ phiên: vết trước / sau 19:20 (mùa hè)', () => {
   const key = '2026-10-13', n = mk('B');

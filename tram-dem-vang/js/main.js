@@ -378,9 +378,12 @@
         none.hidden = any;
       } });
     document.querySelectorAll('.pop').forEach(function (p) { p.setAttribute('hidden', ''); });
-    var bd = openModal(h('div', { class: 'dlg glossarybox', 'data-testid': 'glossary' }, h('h3', { text: T('glossaryTitle') }), h('p', { class: 'muted', text: T('glossaryHint') }), search, dl, none,
-      h('div', { class: 'actions' }, btn(T('close'), function () { closeModal(false); }, 'primary'))));
+    var bd = openModal(h('div', { class: 'dlg glossarybox', 'data-testid': 'glossary' },
+      h('div', { class: 'ghead' }, h('h3', { text: T('glossaryTitle') }), h('button', { type: 'button', class: 'gclose', 'aria-label': T('close'), text: '✕', onclick: function () { closeModal(false); } }),
+        h('p', { class: 'muted', text: T('glossaryHint') }), search), dl, none));
+    bd.classList.add('gloss-modal');
     var box = bd.querySelector('.glossarybox');
+    search.focus();
     if (root.innerWidth <= 600) search.blur();   // điện thoại: không tự bật bàn phím che nửa danh sách
     box.scrollTop = 0; bd.querySelector('.modal').scrollTop = 0;
     var hit = key && items.filter(function (it) { return it.g.key === key; })[0];

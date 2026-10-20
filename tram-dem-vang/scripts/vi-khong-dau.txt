@@ -80,3 +80,5 @@ forex
 factory
 eur
 gbp
+
+usd

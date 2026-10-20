@@ -44,7 +44,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .clock { font-size: 18px; font-variant-numeric: tabular-nums; }
 .phase { color: var(--muted); font-size: 13px; }
 .statusbar.bad .phase, .statusbar.warn .phase { color: inherit; opacity: .85; }
-.notice { padding: 6px 16px; background: var(--accent-bg); color: var(--accent-text); font-size: 13px; border-top: 1px solid var(--line); }
+.notice { padding: 2px 16px; line-height: 1.35; background: var(--accent-bg); color: var(--accent-text); font-size: 13px; border-top: 1px solid var(--line); }
 
 .chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel2); font-size: 13px; line-height: 1.6; white-space: nowrap; }
 .chip.good { border-color: var(--go); color: var(--go); }
@@ -356,3 +356,74 @@ html { scroll-padding-bottom: calc(var(--vbar-h, 120px) + 16px); scroll-padding-
 }
 .statusbar .glossary-btn { padding: 0 10px; min-height: 26px; }
 .statusbar .clock { font-size: 16px; }
+
+/* ===== vòng 5: thanh cuộn mảnh, Từ điển dạng thẻ, hộp "?" gọn, chip gọn, tầng 0 tối giản ===== */
+* { scrollbar-width: thin; scrollbar-color: rgba(163, 172, 186, .35) transparent; }
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: rgba(163, 172, 186, .35); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(163, 172, 186, .6); }
+
+.gloss-modal .modal { width: min(420px, 100%); padding: 0; display: flex; flex-direction: column; overflow: hidden; max-height: 88vh; }
+.glossarybox { max-height: none; overflow: auto; padding: 0 16px 16px; flex: 1 1 auto; }
+.glossarybox .ghead { position: sticky; top: 0; z-index: 3; background: var(--panel); padding: 14px 0 8px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; border-bottom: 1px solid var(--line); }
+.glossarybox .ghead h3 { margin: 0 40px 2px 0; font-size: 17px; }
+.glossarybox .ghead p { font-size: 13px; margin: 0 0 8px; }
+.gclose { position: absolute; top: 10px; right: 12px; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: var(--muted); font-size: 14px; line-height: 1; padding: 0; }
+.gclose:hover { color: var(--text); }
+.gsearch { margin: 0; position: static; width: 100%; }
+.glossary { margin: 8px 0 0; }
+.glossary dt { margin: 0; padding: 12px 14px 0; background: var(--panel2); border: 1px solid var(--line); border-bottom: 0; border-radius: 10px 10px 0 0; font-size: 15px; font-weight: 700; color: var(--accent); scroll-margin-top: 150px; }
+.glossary dd { margin: 0 0 10px; padding: 4px 14px 12px; background: var(--panel2); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 10px 10px; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.glossary dt[hidden], .glossary dd[hidden] { display: none; }
+.glossary dt.hl { background: var(--accent-bg); color: var(--accent-text); border-radius: 10px 10px 0 0; padding: 12px 14px 0; }
+.glossary dd.hl { background: var(--accent-bg); color: var(--text); border-radius: 0 0 10px 10px; padding: 4px 14px 12px; }
+@media (max-width: 600px) {
+  .gloss-modal.backdrop { padding: 0; }
+  .gloss-modal .modal { width: 100%; height: 100%; max-height: 100%; border-radius: 0; border: 0; }
+}
+.pop { padding: 12px 14px; line-height: 1.5; font-size: 14px; background: var(--panel2); border: 1px solid var(--line); border-left: 3px solid var(--accent); color: var(--muted); }
+.pop p + p { margin-top: 6px; }
+
+/* chip gọn: nền tối, viền mảnh, chữ 12px; chỉ trạng thái xấu mới có màu */
+.chip { font-size: 12px; padding: 0 8px; line-height: 1.7; background: var(--panel2); border: 1px solid var(--line); color: var(--muted); }
+.chip.good, .chip.warn, .chip.dir-buy, .chip.dir-sell { border-color: var(--line); background: var(--panel2); }
+.chip.good { color: var(--text); } .chip.warn { color: var(--accent); }
+.chip.bad { border-color: var(--no); color: var(--no); background: transparent; }
+.notice.bad { background: var(--no-bg); color: var(--no-text); }
+
+/* tầng 0 */
+.t0min .panel.news { padding: 10px 12px; }
+.nhead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.nhead .ptitle { margin: 0; }
+.small { font-size: 12px; }
+.nlist { display: flex; flex-direction: column; }
+.nrow { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px dashed var(--line); }
+.nrow.dim { opacity: .55; }
+.nrow.off .ntitle { text-decoration: line-through; color: var(--muted); }
+.ntime { font-weight: 700; font-variant-numeric: tabular-nums; }
+.nname { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+.ntitle { overflow-wrap: anywhere; }
+.nnums { font-size: 12px; text-align: right; white-space: nowrap; }
+.nctl { display: inline-flex; gap: 4px; }
+.ccy { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+.imp { font-size: 11px; border-radius: 999px; padding: 0 8px; border: 1px solid; line-height: 1.6; }
+.imp.high { color: var(--no); border-color: var(--no); }
+.imp.med { color: var(--accent); border-color: var(--accent); }
+.ndrow { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.fold.manual { margin-top: 8px; }
+.fold.manual > summary { cursor: pointer; font-size: 13px; color: var(--muted); text-decoration: underline; list-style: none; }
+.fold.manual > summary::-webkit-details-marker { display: none; }
+@media (max-width: 600px) {
+  .nrow { grid-template-columns: 48px minmax(0, 1fr) auto; }
+  .nnums { grid-column: 2 / 4; grid-row: 2; text-align: left; white-space: normal; }
+}
+
+/* tầng 1 gọn */
+.drawhint { margin: 0 0 8px; }
+.zform { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 6px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.zform select.field { max-width: 100%; }
+.zrank { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; white-space: nowrap; }
+.tailq { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.plannote { width: 100%; resize: vertical; min-height: 64px; font: inherit; }
+.copyrow { margin-bottom: 4px; }

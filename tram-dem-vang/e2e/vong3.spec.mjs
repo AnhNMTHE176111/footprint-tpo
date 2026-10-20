@@ -83,7 +83,7 @@ test('v3-3 · lần đầu mở: hộp hỏi vốn và % rủi ro (mặc định
     assert.equal(st.settings.capital, 3500); assert.equal(st.settings.riskPct, 1.5); assert.equal(st.settings.sizeAsked, true);
   });
 });
-test('v3-4 · QĐ-21 với cài đặt mặc định: B lúc 20:24, SL 2,3 giá ⇒ ENTRY "1 hợp đồng = cỡ đầy, rủi ro 23 $"; vốn 1000 $ ⇒ KHÔNG VÀO nói SL tối đa, nút Đổi vốn sửa được', async () => {
+test('v3-4 · QĐ-21 với cài đặt mặc định: B lúc 20:24, SL 2,3 giá ⇒ ENTRY "1 hợp đồng = cỡ đủ, rủi ro 23 $"; vốn 1000 $ ⇒ KHÔNG VÀO nói SL tối đa, nút Đổi vốn sửa được', async () => {
   const st = buildState('B'); st.settings.capital = 1000;
   await withPage(st, { now: NOW_2024 }, async ({ page }) => {
     await page.click('[data-tier-btn="3"]'); await walkB(page);
@@ -93,12 +93,12 @@ test('v3-4 · QĐ-21 với cài đặt mặc định: B lúc 20:24, SL 2,3 giá 
     await page.click('[data-testid="btn-capital"]');
     await page.fill('[data-id="cap-dlg"]', '2000'); await page.click('[data-testid="cap-save"]');
     assert.equal(await verdict(page), 'ENTRY');
-    assert.match(await page.textContent('[data-testid="entry-text"]'), /1 hợp đồng = cỡ đầy, rủi ro 23 \$/);
+    assert.match(await page.textContent('[data-testid="entry-text"]'), /1 hợp đồng = cỡ đủ, rủi ro 23 \$/);
   });
   await withPage(buildState('B'), { now: NOW_2024 }, async ({ page }) => {   // vốn mặc định 2000 $, không đổi gì
     await page.click('[data-tier-btn="3"]'); await walkB(page);
     assert.equal(await verdict(page), 'ENTRY');
-    assert.match(await page.textContent('[data-testid="entry-text"]'), /1 hợp đồng = cỡ đầy, rủi ro 23 \$/);
+    assert.match(await page.textContent('[data-testid="entry-text"]'), /1 hợp đồng = cỡ đủ, rủi ro 23 \$/);
   });
 });
 
@@ -114,8 +114,9 @@ test('v3-5 · Từ điển: mở ở đầu, có ô tìm; "?" của câu hỏi m
     await page.fill('[data-testid="glossary-search"]', 'xyzxyz');
     assert.equal(await page.locator('.glossarybox p.muted:not([hidden])').count() >= 1, true);
     await page.keyboard.press('Escape');
-    // từ "?" của Q2a (Đỉnh hôm qua) ⇒ mục "mồi"
-    await page.click('[data-tier-btn="1"]'); await page.click('[data-ctl="q2top"] .help'); await page.click('[data-ctl="q2top"] .pop .glossbtn');
+    // từ "?" của "Tail thật?" trên dòng High hôm qua ⇒ mục "mồi"
+    await page.click('[data-tier-btn="1"]'); await page.selectOption('.zform select', 'highY'); await page.fill('[data-id="zprice"]', '4210'); await page.press('[data-id="zprice"]', 'Enter');
+    await page.waitForSelector('[data-ctl="q2top"] .help'); await page.click('[data-ctl="q2top"] .help'); await page.click('[data-ctl="q2top"] .pop .glossbtn');
     await page.waitForSelector('.glossary dt.hl');
     assert.equal(await page.textContent('.glossary dt.hl'), 'mồi');
     const vis = await page.evaluate(() => { const r = document.querySelector('.glossary dt.hl').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; });
@@ -173,7 +174,8 @@ test('v3-8 · kế hoạch ngược bias: cảnh báo vàng hiện ngay khi gõ,
   await withPage(st, null, async ({ page }) => {
     await page.click('[data-tier-btn="1"]');
     assert.equal(await page.locator('[data-testid="plan-conflict"]').count(), 0);
-    await page.fill('.plans .field.txt >> nth=0', 'sell ở VAH Âu');        // KHÔNG rời ô
+    await page.click('.plans summary');
+    await page.fill('[data-testid="plan-note"]', 'sell ở VAH Âu');        // KHÔNG rời ô
     await page.waitForSelector('[data-testid="plan-conflict"]');
     const adj = await page.evaluate(() => { const b = document.querySelector('[data-testid="plan-conflict"]'); const n = b.parentElement.nextElementSibling; return n && n.getAttribute('data-testid'); });
     assert.equal(adj, 'lock-card');

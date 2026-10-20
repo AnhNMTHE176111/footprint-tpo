@@ -1,5 +1,6 @@
-/* Trạm Đêm Vàng — ENGINE thuần: (nights, nightKey, now, settings) → phán quyết.
- * Không đụng DOM, không đọc đồng hồ máy. Danh sách luật nằm ở rules.js. */
+/* Trạm Đêm Vàng — ENGINE thuần (v2): (night, now, settings, news) → checklist.
+ * Không đụng DOM, không đọc đồng hồ máy. Không khóa gì: chỉ chấm ô tự kiểm, đếm ô đã tick, tính SL / R:R / cỡ lệnh.
+ * Thứ tự ô trong mỗi khối: hướng, vùng, (lý do ngược bias), bối cảnh, kiểm tra, điểm vào, giá, ô SL, ô tự kiểm. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(function (n) { return require('./' + n + '.js'); });
   else { root.TDV = root.TDV || {}; root.TDV.engine = factory(function (n) { return root.TDV[n]; }); }
@@ -8,46 +9,39 @@
   var R = dep('rules'), time = dep('time'), N = dep('news');
   var T = R.T, EPS = R.EPS, num = R.num;
 
-  // Lệnh đóng có tính là SL (cộng chuỗi) không? Một định nghĩa duy nhất (REVIEW-3 mục 1, quyết định chủ plan):
-  //  · R ≤ −0,2 ⇒ SL (kể cả đóng tay), hoặc kind SL mà chưa dời be ⇒ SL: cộng chuỗi
-  //  · R trong (−0,2; +0,2) ⇒ hòa: reset chuỗi · R ≥ +0,2 ⇒ thắng: reset chuỗi
-  //  · kind SL sau be (beStop) ⇒ hòa (nếu gõ giá thoát xấu làm R còn ≤ −0,2 thì vẫn là SL)
+  // Lệnh đóng có tính là SL (cộng chuỗi) không? Một định nghĩa duy nhất:
+  //  · R ≤ −0,2 ⇒ SL (kể cả đóng tay) · R trong (−0,2; +0,2) ⇒ hòa, reset chuỗi · R ≥ +0,2 ⇒ thắng, reset chuỗi
+  //  · chưa có R (dữ liệu cũ): kind SL ⇒ SL
   var SL_R = -0.2;
   function isSLTrade(t) {
     var ex = t.exit;
     if (!ex) return false;
-    if (ex.kind === 'SL' && !ex.beStop) return true;
-    return typeof t.r === 'number' && t.r <= SL_R + 1e-9;
+    if (typeof t.r === 'number') return t.r <= SL_R + 1e-9;
+    return ex.kind === 'SL' && !ex.beStop;
   }
+  function isPaper(t) { return (t.flags || []).indexOf('paper') >= 0; }
 
   function countTrades(night) {
     var trades = (night && night.trades) || [];
     var ruleBreaks = 0;
-    trades.forEach(function (t) {
-      if ((t.flags || []).indexOf('paper') >= 0) return;
-      if ((t.flags || []).indexOf('RULE_BREAK') >= 0) ruleBreaks++;
-    });
-    // chuỗi SL: đếm từ cuối, bỏ lệnh luyện mắt và lệnh chưa đóng; chỉ SL (R ≤ −0,2) cộng chuỗi, TP / hòa reset (QĐ-10)
+    trades.forEach(function (t) { if (!isPaper(t) && (t.flags || []).indexOf('RULE_BREAK') >= 0) ruleBreaks++; });
+    // chuỗi SL: đếm từ cuối, bỏ lệnh luyện mắt và lệnh chưa đóng; chỉ SL cộng chuỗi, TP / hòa reset (QĐ-10)
     var streak = 0;
     for (var i = trades.length - 1; i >= 0; i--) {
       var t = trades[i];
-      if ((t.flags || []).indexOf('paper') >= 0) continue;
-      if (!t.exit) continue;
+      if (isPaper(t) || !t.exit) continue;
       if (isSLTrade(t)) streak++; else break;
     }
     return { ruleBreaks: ruleBreaks, slStreak: streak };
   }
 
+  // mọi dòng Sổ chưa nhập kết quả, ở mọi đêm (lệnh qua đêm vẫn chặn đêm sau), cũ trước
   function findOpen(nights) {
-    var found = null;
+    var out = [];
     Object.keys(nights || {}).sort().forEach(function (k) {
-      var n = nights[k];
-      if (n && n.open) {
-        var tr = (n.trades || []).filter(function (t) { return t.id === n.open.tradeId; })[0] || null;
-        found = { nightKey: k, open: n.open, trade: tr };
-      }
+      ((nights[k] && nights[k].trades) || []).forEach(function (t) { if (!t.exit) out.push({ nightKey: k, trade: t }); });
     });
-    return found;
+    return out;
   }
 
   // vùng kế tiếp theo hướng lệnh; bỏ vùng vào, vùng cùng cụm (cách vùng vào ≤ 1 giá) và LVN (QĐ-20)
@@ -62,24 +56,22 @@
     return best;
   }
 
-  function computeCalc(c) {
-    var s = c.setup, cc = s.calc || {};
-    var entry = num(cc.entry), sl = num(cc.sl), tp = num(cc.tp);
+  // o = {scen, side, zone, zones, entry, sl, tp, c6}
+  function computeCalc(o) {
+    var entry = num(o.entry), sl = num(o.sl), tp = num(o.tp), c6 = num(o.c6);
     var out = { entry: entry, sl: sl, tp: tp, numsOk: false, slDist: null, risk: null, slSideOk: true, floorOk: true, capOk: true,
-      rr: null, tpSuggested: null, tpUsed: null, nextZone: null, nextRRok: true, tpPastOk: true, targetR: null, size: null };
-    out.targetR = (c.scen === 'B' && c.counter && c.exempt9) ? 2 : (R.TARGET_R[c.scen] || 3);
-    if (entry === null || sl === null || !c.side) return out;
+      rr: null, tpSuggested: null, tpUsed: null, nextZone: null, nextRRok: true, tpPastOk: true, targetR: R.TARGET_R[o.scen] || 3, size: null };
+    if (entry === null || sl === null || !o.side) return out;
     out.numsOk = true;
     var risk = Math.abs(entry - sl);
     out.risk = risk;
     out.slDist = R.round1(risk);
-    out.slSideOk = c.side === 'buy' ? sl < entry - EPS : sl > entry + EPS;
-    var c6 = num(c.s.c6);
+    out.slSideOk = o.side === 'buy' ? sl < entry - EPS : sl > entry + EPS;
     out.floorOk = !(c6 > 0) || c6 > T.c6Max || out.slDist >= c6 - EPS;
     out.capOk = out.slDist <= T.slCap + EPS;
     if (risk <= EPS) { out.slSideOk = false; return out; }
-    var nz = nextZoneFor(c.zones, c.side, entry, c.zone);
-    var dirMul = c.side === 'buy' ? 1 : -1;
+    var nz = nextZoneFor(o.zones || [], o.side, entry, o.zone);
+    var dirMul = o.side === 'buy' ? 1 : -1;
     var sug = entry + dirMul * out.targetR * risk;
     if (nz) {
       var dist = Math.abs(nz.edge - entry);
@@ -92,7 +84,7 @@
     var reward = dirMul * (out.tpUsed - entry);
     out.rr = R.round2(reward / risk);
     if (nz) {
-      var over = c.side === 'buy' ? out.tpUsed - nz.edge : nz.edge - out.tpUsed;
+      var over = o.side === 'buy' ? out.tpUsed - nz.edge : nz.edge - out.tpUsed;
       out.tpPastOk = R.round2(over) <= T.tpPastTol + EPS;
     }
     return out;
@@ -100,15 +92,13 @@
 
   // cỡ lệnh MGC (làm tròn xuống); null khi chưa cài vốn / rủi ro
   // QĐ-21: cỡ chuẩn = floor(vốn × % / (SL × 10 $)); cỡ ½ = floor(½ × số $ / (SL × 10 $)),
-  // nhưng cỡ chuẩn ≥ 1 mà ½ ra 0 thì lấy 1 hợp đồng (sizeMinOne). Cỡ chuẩn < 1 ⇒ 0 (NO_SIZE_ZERO).
-  function sizeFor(c, settings) {
-    var cl = c.calc;
+  // nhưng cỡ chuẩn ≥ 1 mà ½ ra 0 thì lấy 1 hợp đồng (sizeMinOne). Cỡ chuẩn < 1 ⇒ 0 (không đủ vốn).
+  function sizeFor(cl, half, settings) {
     if (!cl || !cl.numsOk || !(cl.slDist > 0)) return null;
     var cap = num(settings.capital), rp = num(settings.riskPct);
     if (!(cap > 0 && rp > 0)) return null;
     var per = cl.slDist * T.tickValue;
     var fullUsd = cap * rp / 100;
-    var half = c.halfs.length > 0;
     var riskUsd = fullUsd * (half ? 0.5 : 1);
     var full = Math.floor(fullUsd / per + 1e-9);
     var n = Math.floor(riskUsd / per + 1e-9);
@@ -122,132 +112,127 @@
     return n;
   }
 
-  function evaluate(input) {
-    var settings = input.settings || {};
+  function evalBlock(id, c) {
+    var bs = (c.se.blocks && c.se.blocks[id]) || {};
+    var ticks = bs.ticks || {};
+    var side = bs.side === 'buy' || bs.side === 'sell' ? bs.side : null;
+    var zone = bs.zoneId ? (c.zoneById[bs.zoneId] || null) : null;
+    var counter = !!side && R.isCounter(c.bias, side);
+    var reasonOk = !!(bs.reason && String(bs.reason).trim());
+    var zoneN = zone ? c.trades.filter(function (t) { return t.zoneId === zone.id && !isPaper(t); }).length : 0;
+    var cl = computeCalc({ scen: id, side: side, zone: zone, zones: c.zones, entry: bs.entry, sl: bs.sl, tp: bs.tp, c6: bs.c6 });
+    var c6 = num(bs.c6);
+    var c6ok = c6 !== null && c6 > 0 && c6 <= T.c6Max;
+
+    // cỡ ½: lý do theo QĐ-19 / QĐ-21 và bảng 2.3
+    var halfs = [];
+    if (c.bias === 'KHÔNG') halfs.push('BIAS_NONE');
+    if (id === 'C') halfs.push('SCENARIO_C');
+    if (counter) halfs.push('COUNTER_BIAS');
+    if (c.newsDay) halfs.push('NEWS_DAY');
+    if (id === 'B' && zone && R.hasFlag(zone, 'r2') && !R.hasFlag(zone, 'r1')) halfs.push('B_RANK2');
+    if (c.nowMin < c.nyseMin) halfs.push('BEFORE_2030');
+    halfs = R.HALF_ORDER.filter(function (x) { return halfs.indexOf(x) >= 0; });
+    cl.size = sizeFor(cl, halfs.length > 0, c.settings);
+
+    // ô tự kiểm: ok true / false / null (chưa đủ số liệu để kiểm)
+    var autos = [];
+    autos.push({ id: 'zone2', ok: zone ? zoneN < T.zoneMax : null, reason: zone && zoneN >= T.zoneMax ? 'zone2' : null });
+    var slKnown = cl.numsOk && cl.slDist > 0;
+    var floor = { id: 'slFloor', ok: null, reason: null };
+    if (slKnown && !cl.slSideOk) { floor.ok = false; floor.reason = 'slSide'; }
+    else if (slKnown && c6ok) { floor.ok = cl.floorOk; floor.reason = cl.floorOk ? null : 'slFloor'; }
+    autos.push(floor);
+    var cap = { id: 'slCap', ok: null, reason: null };
+    if (slKnown && cl.slSideOk) { cap.ok = cl.capOk; cap.reason = cl.capOk ? null : 'slCap'; }
+    autos.push(cap);
+    var rr = { id: 'rr', ok: null, reason: null };
+    if (slKnown && cl.slSideOk && cl.rr !== null) {
+      if (cl.rr < T.rrMin - EPS) { rr.ok = false; rr.reason = 'rr'; }
+      else if (cl.nextZone && !cl.nextRRok) { rr.ok = false; rr.reason = 'rrNext'; }
+      else if (!cl.tpPastOk) { rr.ok = false; rr.reason = 'tpPast'; }
+      else rr.ok = true;
+    }
+    autos.push(rr);
+    var size = { id: 'size', ok: null, reason: null };
+    if (slKnown && cl.slSideOk) {
+      if (cl.size === null) size.reason = 'noCapital';
+      else { size.ok = cl.sizeFull >= 1; size.reason = size.ok ? null : 'size'; }
+    }
+    autos.push(size);
+    if (counter) autos.push({ id: 'counter', ok: reasonOk, reason: reasonOk ? null : 'counter' });
+
+    var items = [];
+    items.push({ id: 'side', group: 'pick', ok: !!side });
+    items.push({ id: 'zone', group: 'pick', ok: !!zone });
+    if (counter) items.push({ id: 'counter', group: 'pick', ok: reasonOk });
+    R.tickIds(id).forEach(function (t) { items.push({ id: t.id, group: t.group, ok: !!ticks[t.id] }); });
+    items.push({ id: 'nums', group: 'num', ok: num(bs.entry) !== null && num(bs.sl) !== null && c6ok });
+    autos.forEach(function (a) { if (a.id !== 'counter') items.push({ id: a.id, group: 'auto', ok: a.ok === true }); });
+
+    var done = items.filter(function (i) { return i.ok; }).length;
+    var missing = items.filter(function (i) { return !i.ok; }).map(function (i) { return i.id; });
+    return {
+      id: id, done: done, total: items.length, complete: missing.length === 0, missing: missing, order: items.map(function (i) { return i.id; }), items: items,
+      autoChecks: autos, side: side, zone: zone, counter: counter, zoneN: zoneN, nth: zoneN + 1, calc: cl, c6ok: c6ok,
+      halfs: halfs, half: halfs.length > 0, touch: (c.se.touch && c.se.touch[id]) || 0,
+      active: Object.keys(ticks).some(function (k) { return ticks[k]; }) || !!side || !!zone
+    };
+  }
+
+  function evaluate(night, now, settings, news, extra) {
+    extra = extra || {};
+    settings = settings || {};
+    night = night || {};
     var useDst = settings.dstShift !== false;
-    var nights = input.nights || {};
-    var key = input.nightKey;
-    var nowMs = +input.now;
-    var night = nights[key] || {};
-    var t0 = night.t0 || {}, card = night.card || {}, setup = night.setup || {}, regimeSt = night.regime || {};
+    var nowMs = +now;
+    var key = extra.key || time.nightKey(nowMs, useDst);
+    var t0 = night.t0 || {}, card = night.card || {}, se = night.se || {};
     var nowMin = time.nightMinutes(nowMs, key);
 
     var b = R.effectiveBias(card);
-    var reg = R.effectiveRegime(regimeSt);
-    var breakout = regimeSt.breakout || {};
     var zones = (card.zones || []).map(function (z) { return R.enrichZone(z, card.answers); });
     var zoneById = {}; zones.forEach(function (z) { zoneById[z.id] = z; });
-    var scen = R.SCENARIOS.indexOf(setup.scenario) >= 0 ? setup.scenario : null;
-    var zoneId = setup.zoneId;
-    if (scen === 'A' && reg.effective === 'broken' && breakout.edgeZoneId) zoneId = breakout.edgeZoneId;
-    var zone = zoneId ? (zoneById[zoneId] || null) : null;
-
-    var side = null;
-    if (scen === 'A' || scen === 'D') side = R.dirToSide(reg.dir);
-    else if (scen === 'C') side = zone ? (zone.sideKind === 'upper' ? 'sell' : zone.sideKind === 'lower' ? 'buy' : null) : null;
-    else if (scen === 'B') side = setup.side === 'buy' || setup.side === 'sell' ? setup.side : null;
-
-    var counter = !!side && R.isCounter(b.value, side);
-    var exempt9 = false;
-    if (scen === 'B' && counter && zone) {
-      var need = side === 'sell' ? 'upper' : 'lower';
-      exempt9 = (R.hasFlag(zone, 'tail') || R.hasFlag(zone, 'sp')) && zone.sideKind === need;
-    }
-
     var trades = night.trades || [];
     var cnt = countTrades(night);
-    var zoneN = zoneId ? trades.filter(function (t) { return t.zoneId === zoneId && (t.flags || []).indexOf('paper') < 0; }).length : 0;
-    var openInfo = findOpen(nights);
-
-    var news = input.news || null;
+    var opens = findOpen(extra.nights || (night.trades ? { x: night } : {}));
     t0 = Object.assign({}, t0, { newsDay: R.effectiveNewsDay(t0, news) });
     var windows = R.effectiveWindows(t0, key, news);
     var newsHit = time.hitWindow(windows, nowMin, key, useDst);
-    var untilMs = num(regimeSt.longestBarUntil);
     var nyseMin = time.markMin(R.MARKS.nyse, key, useDst);
     var comexMin = time.markMin(R.MARKS.comex, key, useDst);
-    var breakMin = breakout.at ? time.baseMinute(breakout.at) : null;
+    var breakerOff = cnt.ruleBreaks >= T.breakLimit || cnt.slStreak >= T.slStreakLimit;
 
-    var c = {
-      sizeOf: function () { return sizeFor(c, settings); },
-      key: key, nowMs: nowMs, nowMin: nowMin, useDst: useDst, settings: settings,
-      night: night, t0: t0, card: card, setup: setup, s: setup, trades: trades,
-      bias: b.value, biasAuto: b.auto, biasOverridden: b.overridden,
-      regime: reg, breakout: breakout, zones: zones, zone: zone, hasEdge: zones.some(function (z) { return R.hasFlag(z, 'edge'); }),
-      scen: scen, side: side, counter: counter, exempt9: exempt9,
-      counts: { ruleBreaks: cnt.ruleBreaks, slStreak: cnt.slStreak, zoneN: zoneN },
-      open: openInfo, newsHit: newsHit,
-      longestBarActive: untilMs !== null && nowMs < untilMs,
-      nyseMin: nyseMin, comexMin: comexMin, breakMin: breakMin,
-      earlyBreak: breakMin !== null && breakMin >= 18 * 60 && breakMin < comexMin,
-      reasons: [], shadow: [], missing: [], halfs: [], offs: [], blocked: false
-    };
-    c.calc = computeCalc(c);
-    // B5 tự kiểm (QĐ-25): điền slPos hiệu lực vào bản sao của setup để mọi luật, tám chấm và sổ dùng một nguồn
-    var slp = R.derivedSlPos(c);
-    if (slp) { setup = Object.assign({}, setup, { slPos: slp }); c.setup = setup; c.s = setup; }
+    var common = [
+      { id: 'card', auto: true, ok: !!card.lockedAt, reason: card.lockedAt ? null : 'card' },
+      { id: 'news', auto: true, ok: !newsHit, reason: newsHit ? 'news' : null },
+      { id: 'breaker', auto: true, ok: !breakerOff, reason: !breakerOff ? null : (cnt.ruleBreaks >= T.breakLimit ? 'breakerRule' : 'breakerSl') },
+      { id: 'open', auto: true, ok: opens.length === 0, reason: opens.length ? 'open' : null },
+      { id: 'longest', auto: false, ok: !!(se.common && se.common.longest), reason: se.common && se.common.longest ? null : 'longest' }
+    ];
+    var commonOk = common.every(function (x) { return x.ok; });
 
-    var enabled = { A: null, B: null, C: null, D: null };
-    var locked = false;
-    function push(list, code) { if (list.indexOf(code) < 0) list.push(code); }
+    var c = { se: se, zones: zones, zoneById: zoneById, trades: trades, bias: b.value, newsDay: t0.newsDay, nowMin: nowMin, nyseMin: nyseMin, settings: settings };
+    var blocks = {};
+    R.SCENARIOS.forEach(function (s) { blocks[s] = evalBlock(s, c); });
 
-    R.RULES.forEach(function (rule) {
-      var e = rule.effect;
-      if (e === 'DISABLE') {
-        R.SCENARIOS.forEach(function (s) {
-          if (rule.scope.indexOf(s) < 0 || enabled[s]) return;
-          if (rule.when(c, s)) {
-            enabled[s] = rule.code;
-            if (scen === s && !c.blocked) { push(c.reasons, rule.code); c.blocked = true; }
-          }
-        });
-      } else if (e === 'OFF') {
-        if (rule.when(c)) push(c.offs, rule.code);
-      } else if (e === 'LOCK') {
-        if (rule.when(c)) locked = true;
-      } else if (e === 'HALF') {
-        if (rule.when(c)) push(c.halfs, rule.code);
-      } else if (e === 'NO' || e === 'WAIT') {
-        if (rule.scope !== 'ALL' && (!scen || rule.scope.indexOf(scen) < 0)) return;
-        // kịch bản đã bị tắt (DIS_*): phán quyết không đổi, nhưng mọi luật NO vẫn được xét và ghi vào danh sách phụ
-        // để "Tôi vẫn vào" ghi đủ mã luật đã phạm (REVIEW-3 mục 5, QĐ-20)
-        if (c.blocked) { if (e === 'NO' && rule.when(c)) push(c.shadow, rule.code); return; }
-        if (rule.when(c)) push(e === 'NO' ? c.reasons : c.missing, rule.code);
-      }
-    });
-
-    // cỡ lệnh MGC
-    var half = c.halfs.length > 0;
-    c.calc.size = sizeFor(c, settings);
-
-    // tám chấm (HT 9)
-    var cl = c.calc, s = setup;
-    var zoneGroup = ['NO_BIAS_NONE_EDGE', 'NO_BANNED_ZONE', 'NO_MID_RANGE', 'NO_C_NOT_EDGE', 'NO_PENDING_ACCEPT', 'NO_B_RANK', 'NO_FIGHT_BREAK'];
-    var c4ok = scen === 'B' ? s.c4 === 'same' : (s.c4 === 'same' || s.c4 === 'none' || s.c4 === 'oppBroken');
-    var dots = [false, false, false, false, false, false, false, false];
-    if (scen) {
-      var counterOk = !counter || (scen === 'B' && exempt9 && !!(s.counterBiasReason && String(s.counterBiasReason).trim()));
-      dots[0] = !!card.lockedAt && !!side && (b.value === 'BUY' || b.value === 'SELL' || (b.value === 'KHÔNG' && scen === 'C')) && counterOk;
-      dots[1] = !!zone && s.c5 === 'near' && !zoneGroup.some(function (code) { return c.reasons.indexOf(code) >= 0; });
-      dots[2] = enabled[scen] === null;
-      dots[3] = scen === 'C' ? true : s.b1 === 'U';
-      dots[4] = c4ok;
-      dots[5] = scen === 'B' ? s.b2 === 'down' : s.b3 === 'ok';
-      dots[6] = s.b3 === 'ok' && !c.longestBarActive;
-      dots[7] = s.slPos === 'right' && cl.numsOk && cl.slSideOk && cl.floorOk && num(s.c6) > 0 && num(s.c6) <= T.c6Max && cl.capOk && cl.rr !== null && cl.rr >= T.rrMin - EPS && cl.nextRRok && cl.tpPastOk && zoneN < T.zoneMax;
+    // ENTRY: khối đủ ô (và ô chung đạt); nhiều khối cùng đủ thì lấy khối người dùng chạm cuối
+    var entry = null;
+    var cands = R.SCENARIOS.filter(function (s) { return blocks[s].complete; });
+    if (commonOk && cands.length) {
+      cands.sort(function (x, y) { return blocks[y].touch - blocks[x].touch || R.SCENARIOS.indexOf(x) - R.SCENARIOS.indexOf(y); });
+      var eb = blocks[cands[0]];
+      entry = { scen: eb.id, side: eb.side, zone: eb.zone, calc: eb.calc, half: eb.half, halfs: eb.halfs, counter: eb.counter, paper: t0.alert === false };
     }
-
-    var verdict, reasons;
-    if (c.offs.length) { verdict = 'OFF'; reasons = c.offs.slice(); }
-    else if (locked) { verdict = 'LOCKED'; reasons = ['LOCK_OPEN_TRADE']; }
-    else if (c.reasons.length) { verdict = 'NO'; reasons = c.reasons.slice(); }
-    else if (c.missing.length) { verdict = 'WAIT'; reasons = []; }
-    else { verdict = 'ENTRY'; reasons = []; }
-
-    var l3 = null;
-    if (openInfo) l3 = 'OPEN_TRADE';
-    else if (!card.lockedAt) l3 = 'NO_CARD';
-    else if (!b.value || b.value === 'CHỜ') l3 = 'BIAS_WAIT';
+    // khối đang làm (cho dòng CHỜ): khối chạm cuối, không có thì khối nhiều ô nhất đã đụng tới
+    var focus = null, best = -1;
+    R.SCENARIOS.forEach(function (s) {
+      var bl = blocks[s];
+      if (!bl.active) return;
+      var score = bl.touch * 1000 + bl.done;
+      if (score > best) { best = score; focus = s; }
+    });
+    if (se.last && blocks[se.last] && blocks[se.last].active) focus = se.last;
 
     var warnings = [];
     var nyseRange = time.windowRange(R.NYSE_WARN, key, useDst);
@@ -258,15 +243,14 @@
     if (fxHit) warnings.push('WARN_FX_NEWS');
 
     return {
-      verdict: verdict, reasons: reasons, ruleReasons: c.reasons.concat(c.shadow.filter(function (x) { return c.reasons.indexOf(x) < 0; })), missing: c.missing.slice(), dots: dots, dotsLit: dots.filter(Boolean).length,
-      order: R.RULE_ORDER, enabled: enabled, half: { on: half, reasons: c.halfs.slice() },
-      regime: { effective: reg.effective, dir: reg.dir }, bias: b.value, biasAuto: b.auto, biasOverridden: b.overridden,
-      scenario: scen, side: side, zone: zone, zones: zones, counter: counter, exempt9: exempt9, calc: cl,
-      slPos: setup.slPos || null, ext: num(setup.ext), counts: c.counts, open: openInfo, locks: { tier3: l3 }, warnings: warnings,
-      paper: t0.alert === false, newsHit: newsHit, fxNews: fxHit, newsDay: t0.newsDay, longestBarActive: c.longestBarActive,
-      nowMin: nowMin, nyseMin: nyseMin, comexMin: comexMin
+      common: common, commonOk: commonOk, blocks: blocks, entry: entry, focus: focus,
+      breaker: { off: breakerOff, ruleBreaks: cnt.ruleBreaks, slStreak: cnt.slStreak },
+      counts: { ruleBreaks: cnt.ruleBreaks, slStreak: cnt.slStreak },
+      bias: b.value, biasAuto: b.auto, biasOverridden: b.overridden, zones: zones,
+      open: opens[0] || null, opens: opens, warnings: warnings, paper: t0.alert === false,
+      newsHit: newsHit, fxNews: fxHit, newsDay: t0.newsDay, nowMin: nowMin, nyseMin: nyseMin, comexMin: comexMin
     };
   }
 
-  return { evaluate: evaluate, countTrades: countTrades, isSLTrade: isSLTrade, findOpen: findOpen, computeCalc: computeCalc, nextZoneFor: nextZoneFor };
+  return { evaluate: evaluate, countTrades: countTrades, isSLTrade: isSLTrade, findOpen: findOpen, computeCalc: computeCalc, nextZoneFor: nextZoneFor, sizeFor: sizeFor };
 });

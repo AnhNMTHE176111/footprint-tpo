@@ -1,12 +1,12 @@
-/* Trạm Đêm Vàng — LƯU TRỮ: localStorage["tdv.v1"], migrate, xuất / nhập JSON (gộp theo trades.id). */
+/* Trạm Đêm Vàng — LƯU TRỮ: localStorage["tdv.v1"] (dữ liệu version 2), migrate v1 → v2, xuất / nhập JSON (gộp theo trades.id). */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(function (n) { return require('./' + n + '.js'); });
   else { root.TDV = root.TDV || {}; root.TDV.store = factory(function (n) { return root.TDV[n]; }); }
 })(this, function (dep) {
   'use strict';
   var J = dep('journal'), time = dep('time');
-  var KEY = 'tdv.v1';
-  var VERSION = 1;
+  var KEY = 'tdv.v1';   // khóa localStorage giữ nguyên để bản cũ tự được nâng lên v2
+  var VERSION = 2;
 
   function defaultSettings() {
     return { theme: 'dark', guideLevel: 'new', capital: 2000, riskPct: 2, dstShift: true, shortcuts: true, lastExportAt: null, sizeAsked: false };

@@ -121,12 +121,13 @@ test('khi lịch ok: 19:30 mặc định không tự bật nữa; khung tự sin
 test('engine: CPI 19:30 ⇒ 19:20 trong khung giờ cấm (NO_NEWS_WINDOW) + cỡ ½ vì ngày tin lớn; tắt khung ⇒ hết chặn', () => {
   const n = night([ev('CPI m/m', 'USD', '2026-10-21T08:30:00-04:00', 'High')]);
   const base = () => mk('A', (x) => { x.t0.windows = R.defaultWindows(false); });
-  const run = (nightObj, hm, news) => engine.evaluate({ nights: { [KEY]: nightObj }, nightKey: KEY, now: vn(KEY, hm), settings: SETTINGS, news });
+  const run = (nightObj, hm, news) => engine.evaluate(nightObj, vn(KEY, hm), SETTINGS, news, { key: KEY, nights: { [KEY]: nightObj } });
   let r = run(base(), '19:20', n);
   assert.ok(r.newsHit && r.newsHit.src === 'ff');
-  assert.ok(r.reasons.indexOf('NO_NEWS_WINDOW') >= 0);
+  assert.equal(r.common.filter((x) => x.id === 'news')[0].ok, false);
+  assert.equal(r.entry, null);
   assert.equal(r.newsDay, true);
-  assert.ok(r.half.reasons.indexOf('NEWS_DAY') >= 0);
+  assert.equal(r.blocks.A.halfs.indexOf('NEWS_DAY') >= 0, true);
   r = run(base(), '19:10', n);   // trước 19:15 (−15′)
   assert.equal(r.newsHit, null);
   const off = base(); off.t0.newsOverrides = { [n.windows[0].id]: { on: false, offAt: '18:50' } };
@@ -146,10 +147,10 @@ test('engine: không có lịch cho đêm này ⇒ dùng mặc định cũ (th�
   const thu = '2026-10-22';
   const stale = N.forNight(feedOf([ev('CPI m/m', 'USD', '2026-10-15T08:30:00-04:00', 'High')], '2026-10-15T01:00:00Z'), thu, vn(thu, '19:20').getTime(), true);
   const x = mk('A', (m) => { m.t0.windows = R.defaultWindows(true); });
-  let r = engine.evaluate({ nights: { [thu]: x }, nightKey: thu, now: vn(thu, '19:20'), settings: SETTINGS, news: stale });
+  let r = engine.evaluate(x, vn(thu, '19:20'), SETTINGS, stale, { key: thu, nights: { [thu]: x } });
   assert.ok(r.newsHit && r.newsHit.id === 'w1930');
   const fx = night([ev('ECB Press Conference', 'EUR', '2026-10-21T08:45:00-04:00', 'High')]);
-  r = engine.evaluate({ nights: { [KEY]: mk('A') }, nightKey: KEY, now: vn(KEY, '19:40'), settings: SETTINGS, news: fx });
+  { const a = mk('A'); r = engine.evaluate(a, vn(KEY, '19:40'), SETTINGS, fx, { key: KEY, nights: { [KEY]: a } }); }
   assert.ok(r.warnings.indexOf('WARN_FX_NEWS') >= 0);
   assert.equal(r.newsHit, null);
 });
@@ -166,23 +167,12 @@ test('lưu / đọc bản gần nhất ở localStorage; chọn bản mới hơn
   assert.equal(N.loadStored(st), null);
 });
 
-test('REVIEW-4 mục 3 · sửa cạnh / hướng TRƯỚC khi công nhận giữ nguyên giờ phá đã gõ; sau công nhận mới là cú phá mới', () => {
-  const now = Date.UTC(2026, 9, 13, 14, 30);   // 21:30 VN
-  const n = mk('A', (m) => { m.regime.breakout = { dir: 'down', edgeZoneId: 'z2', at: '19:00', nth: 1, step1: false, step2: false }; });
-  assert.equal(J.setBreakoutField(n, 'edgeZoneId', 'z3', now), false);
-  assert.deepEqual([n.regime.breakout.edgeZoneId, n.regime.breakout.at], ['z3', '19:00']);
-  assert.equal(J.setBreakoutField(n, 'dir', 'up', now), false);
-  assert.equal(n.regime.breakout.at, '19:00');
-  n.regime.breakout.step1 = true;
-  assert.equal(J.setBreakoutField(n, 'dir', 'down', now), true);
-  assert.equal(n.regime.breakout.at, '21:30');
-});
-
 test('lịch ok mà đêm không có tin USD cao/vừa ⇒ không có khung giờ cấm nào, không cảnh báo NYSE (sửa 20/10)', () => {
   const n = night([ev('German PPI m/m', 'EUR', '2026-10-21T02:00:00-04:00', 'Low')]);
   const t0 = { touched: true, windows: R.defaultWindows(true) };
   assert.deepEqual(R.effectiveWindows(t0, KEY, n).filter((w) => w.on), []);
-  const r = engine.evaluate({ nights: { [KEY]: mk('C', (x) => { x.t0 = t0; }) }, nightKey: KEY, now: vn(KEY, '20:30'), settings: SETTINGS, news: n });
-  assert.ok(r.reasons.indexOf('NO_NEWS_WINDOW') < 0);
+  const c = mk('C', (x) => { x.t0 = t0; });
+  const r = engine.evaluate(c, vn(KEY, '20:30'), SETTINGS, n, { key: KEY, nights: { [KEY]: c } });
+  assert.equal(r.common.filter((x) => x.id === 'news')[0].ok, true);
   assert.ok(r.warnings.indexOf('WARN_NYSE') < 0);
 });

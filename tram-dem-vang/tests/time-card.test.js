@@ -149,7 +149,9 @@ test('thẻ phiên: sửa khi đang canh kèo (sau 19:20) ⇒ cần xác nhận;
   const n = mk('B');
   const late = time.nightMinutes(vn(key, '20:40').getTime(), key);
   assert.equal(J.cardEditPolicy(n, 'q1', late, key, true).confirm, true);
-  n.setup = {};
+  const open = mk('B', { trades: [{ id: 'm', flags: [], exit: null }] });     // đang có lệnh mở ⇒ không hỏi nữa
+  assert.equal(J.cardEditPolicy(open, 'q1', late, key, true).confirm, false);
+  n.se.blocks = {};                                                            // chưa tick ô nào ⇒ chưa canh kèo
   assert.equal(J.cardEditPolicy(n, 'q1', late, key, true).confirm, false);
   const early = time.nightMinutes(vn(key, '19:00').getTime(), key);
   assert.equal(J.cardEditPolicy(mk('B'), 'q1', early, key, true).confirm, false);
@@ -157,26 +159,11 @@ test('thẻ phiên: sửa khi đang canh kèo (sau 19:20) ⇒ cần xác nhận;
   assert.deepEqual(J.cardEditPolicy(n, 'q1', late, key, true), { log: false, confirm: false });
 });
 test('thẻ phiên: applyCardEdit ghi lại giờ sửa đúng', () => {
-  const key = '2026-10-13', n = mk('B'); n.setup = {};
+  const key = '2026-10-13', n = mk('B');
   const at = vn(key, '20:40');
   J.applyCardEdit(n, 'q1', 'Q1 đổi thành b', at.getTime(), time.nightMinutes(at.getTime(), key), key, true);
   assert.deepEqual(n.card.edits, [{ at: '20:40', what: 'Q1 đổi thành b' }]);
   const early = vn(key, '19:00');
   J.applyCardEdit(n, 'q6', 'Q6', early.getTime(), time.nightMinutes(early.getTime(), key), key, true);
   assert.equal(n.card.edits.length, 1);
-});
-test('chế độ: đổi chế độ ghi regime.log; chui lại trong ⇒ cân bằng, lần phá kế = 2', () => {
-  const n = J.newNight(); const at = vn('2026-10-13', '20:40').getTime();
-  J.setRegimeMode(n, 'broken', at);
-  n.regime.breakout.step1 = true; n.regime.breakout.step2 = true;
-  J.breakoutFailed(n, at + 60000);
-  assert.equal(n.regime.mode, 'balanced'); assert.equal(n.regime.breakout.nth, 2); assert.equal(n.regime.breakout.step1, false);
-  assert.deepEqual(n.regime.log.map((x) => x.mode), ['broken', 'balanced']);
-  J.setRegimeMode(n, 'balanced', at);
-  assert.equal(n.regime.log.length, 2);
-});
-test('đổi kịch bản: giữ C4–C6, xóa C7 và bước Bấm', () => {
-  const s = { scenario: 'B', zoneId: 'z1', side: 'buy', c4: 'same', c4num: 5, c5: 'near', c6: 2, c7: { dma: 'flat' }, b1: 'U', b2: 'down', b3: 'ok', slPos: 'right', calc: { entry: 1 } };
-  const t = J.changeScenario(s, 'A');
-  assert.deepEqual(t, { scenario: 'A', zoneId: 'z1', c4: 'same', c4num: 5, c5: 'near', c6: 2 });
 });

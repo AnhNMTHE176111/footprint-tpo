@@ -276,7 +276,7 @@
       main.appendChild(h('div', { class: 'vtext', text: T('vLocked') }));
     }
     // KHÔNG VÀO vì 0 hợp đồng: có nút mở thẳng hộp chỉnh vốn (QĐ-21)
-    if (v === 'NO' && res.reasons.indexOf('NO_SIZE_ZERO') >= 0) actions.appendChild(btn(T('capChange'), function () { app.openCapital(false); }, 'ghost', { 'data-testid': 'btn-capital' }));
+    if ((v === 'NO' && res.reasons.indexOf('NO_SIZE_ZERO') >= 0) || (v === 'WAIT' && res.missing.indexOf('WAIT_CAPITAL') >= 0)) actions.appendChild(btn(T('capChange'), function () { app.openCapital(false); }, 'ghost', { 'data-testid': 'btn-capital' }));
     if (v === 'NO' || v === 'OFF' || v === 'WAIT') {
       var can = !!res.side && cc.numsOk;
       actions.appendChild(btn(T('forceBtn'), function () { app.forceEnter(); }, 'danger', { 'data-testid': 'btn-force', disabled: can ? null : true, title: can ? null : T('forceNeed') }));

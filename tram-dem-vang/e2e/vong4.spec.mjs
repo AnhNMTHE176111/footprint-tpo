@@ -283,6 +283,7 @@ test('v4-16 · thiếu vốn ⇒ CHỜ "Cài vốn", bấm vào mở hộp vốn
   await withPage(st, null, async ({ page }) => {
     await page.click('[data-tier-btn="3"]'); await walkB(page);
     assert.equal(await verdict(page), 'WAIT');
+    assert.equal(await page.locator('[data-testid="btn-capital"]').count(), 1);   // nút "Đổi vốn" cũng có ở trạng thái CHỜ
     await mclick(page, '[data-code="WAIT_CAPITAL"]');
     await page.waitForSelector('[data-testid="capital-dlg"]');
     await page.fill('[data-id="cap-dlg"]', '2000'); await mclick(page, '[data-testid="cap-save"]');

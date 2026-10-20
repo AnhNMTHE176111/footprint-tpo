@@ -298,7 +298,10 @@
     badTime: 'Giờ chưa đúng dạng giờ:phút.', newsDay: 'Hôm nay có tin lớn (NFP, CPI)',
     t0Note: 'Kịch bản nền (tùy chọn)', t0NotePh: 'Một dòng',
     t0Done: 'Xong tầng 0 — sang kẻ vùng',
-    newsChip: 'Tin kế {hm} · {name} · còn {min}′', newsAgeChip: 'Lịch tin lúc {hm}', fxChip: 'Tin {ccy} mức cao {hm}',
+    priceFar: 'Giá lệch quá {n} giá so với giá vào dự kiến {ref}. Kiểm lại, có thể bạn gõ đè lên số cũ.', priceDigits: 'Giá có quá 6 chữ số. Kiểm lại, có thể bạn gõ đè lên số cũ.',
+    quickPh: 'Gõ nhanh: vwapw 4205, vah 4199, val 4185, hvn 4195', quickHint: 'Enter để thêm. Mã: vwapw vwapd vah val poc hvn hvn3 lvn high low npoc ibh ibl ph pl; spu spl reu rel (u trên, l dưới); hvn 4195-4197 cho vùng.',
+    quickBad: 'Không hiểu: {list}.', quickFull: 'Chỉ còn chỗ cho {n} vùng.',
+    newsChip: 'Tin kế {hm} · {name} · còn {min}′', fxChip: 'Tin {ccy} mức cao {hm}',
     // --- tầng 1 ---
     t1Lead: 'Kẻ vùng trên chart A rồi chốt thẻ phiên. Không có thẻ phiên thì không có lệnh.',
     t1Draw: 'Kẻ trên chart A: High · VAH · POC · VAL · Low hôm qua · VWAP tuần và ngày · HVN / LVN · nợ (single print, poor high / low) · VAH Âu, VAL Âu.',
@@ -327,9 +330,9 @@
     boStep2: 'Hồi về cạnh giữ được', needStep1: 'Cần bước 1 trước', boFailed: 'Chui lại trong (phá hụt)', 
     effective: 'Chế độ đang áp dụng',
     t2Title2: 'Nến dài nhất phiên', longestBar: 'Vừa có nến dài nhất phiên', reopenAt: 'Mở lại {hm}', clearLongest: 'Bỏ khóa',
-    longestHint: 'Ba nến sau nến dài nhất: không kịch bản nào được bật. Chờ hồi; không hồi thì bỏ.',
+    
     t2LongestHelp: 'Sau nến dài nhất phiên (bất kỳ chiều), công cụ khóa ba phút. Hết khóa mới xét kèo.',
-    t2Title3: 'Kịch bản nào đang bật', enabled: 'bật', tableNote: 'Công cụ duyệt từng hàng của bảng bật kịch bản; mã đầu tiên tắt là mã hiển thị.',
+    t2Title3: 'Kịch bản nào đang bật', enabled: 'bật', 
     t2TableHelp: 'Mỗi kịch bản có điều kiện chế độ riêng. Cú phá chưa công nhận thì phá hồi chưa bật.', toTier3: 'Sang tầng 3 — kèo',
     lock_NO_CARD: 'Chưa chốt thẻ phiên — không có thẻ thì không có lệnh.', lock_BIAS_WAIT: 'Bias đang CHỜ — chốt lại bias ở tầng 1 trước.',
     lock_OPEN_TRADE: 'Đang có lệnh mở — tầng 3 khóa cho tới khi đóng lệnh.', lock_NO_OPEN: 'Chưa có lệnh nào đang mở.',
@@ -437,10 +440,11 @@
     { key: 'vwap', term: 'VWAP tuần', def: 'Giá trung bình theo khối lượng tính từ đầu tuần, là đường mốc cả tuần. Giá cách VWAP tuần không quá 2 giá là "sát": bias CHỜ.' },
     { key: 'mo-ao', term: 'mở ảo', def: 'Hệ thống: khoảng {comex} đến {nyse} vàng hay chạy giả, cú phá chưa đáng tin; cú phá đáng tin thường rơi vào {real1} đến {real2}; trước {nyse} chỉ fade cạnh, cỡ nhỏ. Công cụ: không tắt kịch bản, chỉ giảm cỡ còn ½ (QĐ-19, quyết định của công cụ, chưa đo).' },
     { key: 'r', term: 'R', def: 'R là khoảng rủi ro của lệnh: giá vào trừ SL. Lãi 1R bằng đúng khoảng đó, 3R gấp ba. Ví dụ: sell 4193,0, SL 4195,4 (2,4 giá) thì 1R = 2,4 giá và TP 3R ở 4185,8.' },
-    { key: 'hinh-dang', term: 'hình dạng profile (D, P, b, B, thin, chữ nhật)', def: 'D: đấu giá xong, chờ phá. P: cân bằng ở đỉnh, đuôi là hỗ trợ; b ngược lại. B: trang Hệ thống chưa mô tả riêng. thin: mỏng, một chiều, chưa xong, không đánh ngược. Chữ nhật: cân bằng rộng, sẽ phá một đầu.' },
+    { key: 'hinh-dang', term: 'hình dạng profile (D, P, b, B, thin, chữ nhật)', def: 'D: đấu giá xong, chờ phá. P: cân bằng ở đỉnh, đuôi là hỗ trợ; b ngược lại. B: hai phân phối (hai cụm khối lượng); trang Hệ thống không định nghĩa hình B. thin: mỏng, một chiều, chưa xong, không đánh ngược. Chữ nhật: cân bằng rộng, sẽ phá một đầu.' },
     { key: 'va', term: 'VA / VAH / VAL / POC', def: 'VA là vùng giá trị của một phiên. VAH là mép trên, VAL là mép dưới, POC là mức giá giao dịch nhiều nhất. Giá đóng hôm qua ngoài VA hôm qua là giá đang tìm giá trị mới; trong VA là cân bằng còn hiệu lực. VAH Âu và VAL Âu là hai cạnh mặc định để fade. (Định nghĩa TPO chuẩn; trang Hệ thống không định nghĩa.)' },
     { key: 'pha-gia', term: 'phá giả', def: 'Từ 18:00 đến {comex} hay có cú phá VA ngay trước giờ COMEX mà không đi tiếp. Thấy phá giờ này: nghi trước, tin sau. Công cụ tắt phá hồi (A) nếu giờ phá nằm trong khoảng đó.' },
-    { key: 'khung-gio-cam', term: 'khung giờ cấm', def: 'Khoảng quanh giờ tin lớn: mặc định {news1} (trước 15′, sau 15′, hạng 1; tự bật vào thứ Năm và ngày có tin) và {core} (trước 5′, sau 5′, hạng 2). Trong khoảng đó mọi kịch bản đều KHÔNG VÀO; lệnh đang mở thì đóng sạch trước khung giờ hạng 1.' }
+    { key: 'khung-gio-cam', term: 'khung giờ cấm (còn gọi cửa sổ cấm)', def: 'Khoảng quanh giờ tin lớn, tự lấy từ lịch Forex Factory: tin USD mức cao trước 15′ sau 15′ (hạng 1), mức vừa trước 5′ sau 5′ (hạng 2). Luôn có thêm {core} ±5′. Lịch cũ hơn 2 giờ thì dùng mặc định: {news1} ±15′ vào thứ Năm. Trong khoảng đó mọi kịch bản đều KHÔNG VÀO; lệnh đang mở thì đóng sạch trước khung giờ hạng 1.' },
+    { key: 'sl-bi-quet', term: 'SL bị quét', def: 'SL bị chạm rồi giá quay lại chạy tới TP. Sổ đếm số lệnh như vậy để biết SL có đặt quá sát không (HT mục 6, 8). Lệnh vẫn tính là SL, không đổi kết quả.' }
   ];
 
   // thay {comex} {nyse} {real1} {real2} {fomcFlat} bằng giờ đã dịch theo mùa (xem time.textVars); biến lạ giữ nguyên

@@ -190,6 +190,44 @@
     setRegimeMode(night, 'balanced', nowMs);
   }
 
+  // Kiểm giá limit / giá khớp gõ nhầm (USER-TEST-4: "41824182"): quá 6 chữ số, hoặc lệch quá 20 giá so với giá vào dự kiến ⇒ chặn
+  function priceProblem(price, ref) {
+    var p = R.num(price), r = R.num(ref);
+    if (p === null) return null;
+    if (String(Math.floor(Math.abs(p))).length > 6) return 'priceDigits';
+    if (r !== null && Math.abs(p - r) > 20) return 'priceFar';
+    return null;
+  }
+  // Gõ nhanh nhiều vùng một lần (QĐ-23 ≤ 10 thao tác cho 4 vùng): "vwapw 4205, vah 4199, val 4185, hvn 4195-4197".
+  // Mỗi mục = mã loại + giá (+ "-giá" cho vùng có khoảng). Loại cần phía thêm u (trên) hoặc l (dưới) sau mã: spu 4210, rel 4170.
+  var QUICK_ALIAS = {
+    vwapw: 'vwapW', vwapt: 'vwapW', vwapd: 'vwapD', vwapn: 'vwapD', vah: 'vahEu', vaheu: 'vahEu', val: 'valEu', valeu: 'valEu',
+    poc: 'pocCluster', pocc: 'pocCluster', hvn: 'hvnW', hvnw: 'hvnW', hvn3: 'hvn3w', hvn3w: 'hvn3w', hvnd: 'hvnDay', lvn: 'lvn',
+    high: 'highY', hy: 'highY', low: 'lowY', ly: 'lowY', npoc: 'nakedPoc', naked: 'nakedPoc', ibh: 'ibHigh', ibl: 'ibLow', ph: 'poorHigh', pl: 'poorLow'
+  };
+  var QUICK_SIDED = { sp: 'sp', re: 'rangeEdge' };
+  // → { zones: [{type, price, priceTo?, side?}], bad: ['mục không hiểu', ...] }
+  function parseQuickZones(text) {
+    var out = { zones: [], bad: [] };
+    String(text || '').split(/[,;\n]+/).forEach(function (part) {
+      var t = part.trim().toLowerCase();
+      if (!t) return;
+      var m = /^([a-z0-9]+)\s*[:=]?\s*(-?\d+(?:[.,]\d+)?)(?:\s*[-–]\s*(\d+(?:[.,]\d+)?))?$/.exec(t);
+      if (!m) { out.bad.push(part.trim()); return; }
+      var code = m[1], type = QUICK_ALIAS[code], side;
+      if (!type) {
+        var base = code.slice(0, -1), sd = code.slice(-1);
+        if (QUICK_SIDED[base] && (sd === 'u' || sd === 'l')) { type = QUICK_SIDED[base]; side = sd === 'u' ? 'upper' : 'lower'; }
+      }
+      if (!type) { out.bad.push(part.trim()); return; }
+      var z = { type: type, price: parseNum(m[2]) };
+      if (m[3]) z.priceTo = parseNum(m[3]);
+      if (side) z.side = side;
+      if (z.price === null) { out.bad.push(part.trim()); return; }
+      out.zones.push(z);
+    });
+    return out;
+  }
   // ===== kèo =====
   // "Kèo mới" (QĐ-25): giữ C1–C3 (kịch bản, hướng của B, vùng) và C6; xóa mọi câu trả lời quan sát (C4, C5, C7, B1, B2, B3, cực trị, giá). "Xóa hết" = setup rỗng.
   function newSetupKeep(setup) {
@@ -452,7 +490,7 @@
     fmt: fmt, fmtTrim: fmtTrim, fmtR: fmtR, fmtSigned: fmtSigned, parseNum: parseNum, hm: hm,
     newNight: newNight, normalizeNight: normalizeNight, ensureNight: ensureNight,
     planConflict: planConflict, prevCardSource: prevCardSource, copyFromPrev: copyFromPrev, copyFromPrevDetail: copyFromPrevDetail, setBreakoutField: setBreakoutField, newZoneId: newZoneId, canLockCard: canLockCard, lockCard: lockCard, cardEditPolicy: cardEditPolicy, applyCardEdit: applyCardEdit,
-    setRegimeMode: setRegimeMode, breakoutFailed: breakoutFailed, changeScenario: changeScenario, newSetupKeep: newSetupKeep,
+    setRegimeMode: setRegimeMode, breakoutFailed: breakoutFailed, changeScenario: changeScenario, newSetupKeep: newSetupKeep, priceProblem: priceProblem, parseQuickZones: parseQuickZones,
     createTrade: createTrade, forceCodes: forceCodes, tradeById: tradeById, fillLimit: fillLimit, cancelLimit: cancelLimit,
     computeR: computeR, beStatus: beStatus, markBE: markBE, closeTrade: closeTrade, recomputeTally: recomputeTally,
     manualTally: manualTally, tallyMismatch: tallyMismatch, checksOf: checksOf, warnLine: warnLine, rowOf: rowOf,

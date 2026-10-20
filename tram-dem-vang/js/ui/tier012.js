@@ -197,6 +197,27 @@
       needSide ? seg(SIDE_OPTS, zf.side, function (v) { zf.side = v || 'upper'; app.render({ keep: false }); }, { noToggle: true, cls: 'small' }) : null,
       btn(T('addZone'), addZone, 'primary', { disabled: full ? true : null, 'data-testid': 'add-zone' }));
 
+    // gõ nhanh nhiều vùng một lần: "vwapw 4205, vah 4199, val 4185" + Enter (QĐ-23: bốn vùng chỉ một thao tác)
+    function addQuick(text) {
+      var q = J.parseQuickZones(text);
+      if (q.bad.length) { app.toast(T('quickBad', { list: q.bad.join(' · ') })); return false; }
+      if (!q.zones.length) return false;
+      var room = R.T.zonesMax - res.zones.length;
+      if (q.zones.length > room) { app.toast(T('quickFull', { n: room })); return false; }
+      app.cardEdit('quick', T('addedZone', { t: q.zones.length + ' vùng' }), function (n) {
+        q.zones.forEach(function (z0) {
+          var z = { id: J.newZoneId(n.card), type: z0.type, price: z0.price, note: '' };
+          if (z0.priceTo !== undefined) z.priceTo = z0.priceTo;
+          if (z0.side) z.side = z0.side;
+          n.card.zones.push(z);
+        });
+      });
+      return true;
+    }
+    var quick = h('input', { type: 'text', class: 'field txt quickzones', 'data-testid': 'quick-zones', placeholder: T('quickPh'), 'aria-label': T('quickPh'), autocomplete: 'off', disabled: full ? true : null,
+      onkeydown: function (e) { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); addQuick(quick.value); } } });
+    var quickRow = h('div', { class: 'quickrow' }, quick, h('span', { class: 'muted small', text: T('quickHint') }));
+
     var zbox = h('div', { class: 'zones' });
     res.zones.forEach(function (z) {
       var tdef = R.ZONE_TYPES[z.type] || {}, tf = TAIL_FROM[z.type];
@@ -226,7 +247,7 @@
           app.toast(det.n ? T('copyPrevDone', { list: det.items.join(' · ') }) : T('copyPrevNone'));
         });
       }, 'ghost small', { 'data-testid': 'copy-prev' })) : null;
-    el.appendChild(section(T('t1Title4', { n: zcount }), [copyRow, addRow, zbox, zcount > 0 && zcount < R.T.zonesMin ? banner(T('zonesFew'), 'warn') : null, full ? banner(T('zonesFull'), 'info') : null],
+    el.appendChild(section(T('t1Title4', { n: zcount }), [copyRow, quickRow, addRow, zbox, zcount > 0 && zcount < R.T.zonesMin ? banner(T('zonesFew'), 'warn') : null, full ? banner(T('zonesFull'), 'info') : null],
       { help: { text: T('t1ZoneHelp'), ref: 'xep-hang-vung' } }));
 
     // ----- ghi chú kế hoạch (một ô, gập) + chốt -----

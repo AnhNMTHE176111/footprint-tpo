@@ -50,10 +50,13 @@
 
     if (op.status === 'pending') {
       var fillP = app.ui.fillPrice === undefined ? op.limitPrice : app.ui.fillPrice;
-      el.appendChild(section(T('t4Pending'), h('div', { class: 'row wrap' },
+      el.appendChild(section(T('t4Pending'), [h('div', { class: 'row wrap' },
         h('label', { class: 'mini-l' }, T('fillPrice'), numInput(fillP, function (v) { app.ui.fillPrice = v; }, { id: 'fillprice', label: T('fillPrice') })),
-        btn(T('filled'), function () { var p = app.ui.fillPrice === undefined ? op.limitPrice : app.ui.fillPrice; app.ui.fillPrice = undefined; app.update(function (n) { J.fillLimit(n, p); }, { key: key }); }, 'primary', { 'data-testid': 'btn-filled' }),
-        btn(T('cancelLimit'), function () { app.update(function (n) { J.cancelLimit(n); }, { key: key }); app.toast(T('cancelledToast')); app.go(3); }, 'ghost', { 'data-testid': 'btn-cancel-limit' }))));
+        btn(T('filled'), function () { var p = app.ui.fillPrice === undefined ? op.limitPrice : app.ui.fillPrice;
+          var bad = J.priceProblem(p, t.entryPlanned !== undefined && t.entryPlanned !== null ? t.entryPlanned : op.limitPrice);
+          if (bad) { var eb = document.querySelector('[data-testid="fill-err"]'); if (eb) { ui.clear(eb).appendChild(banner(T(bad, { n: 20, ref: J.fmt(t.entryPlanned) }), 'bad')); } return; }
+          app.ui.fillPrice = undefined; app.update(function (n) { J.fillLimit(n, p); }, { key: key }); }, 'primary', { 'data-testid': 'btn-filled' }),
+        btn(T('cancelLimit'), function () { app.update(function (n) { J.cancelLimit(n); }, { key: key }); app.toast(T('cancelledToast')); app.go(3); }, 'ghost', { 'data-testid': 'btn-cancel-limit' })), h('div', { 'data-testid': 'fill-err' })]));
       return el;
     }
 
@@ -161,7 +164,15 @@
       mism ? chip(T('mismatch'), 'bad') : null,
       chip(T('breaksN', { n: J.ruleBreakCount(night) }), J.ruleBreakCount(night) ? 'bad' : ''),
       chip(T('sweptN', { n: J.sweptCount(night) }), ''),
-      btn(T('endNight'), function () { app.update(function (n) { n.tally.closedAt = app.nowMs; }, { key: key }); app.toast(T('endedToast')); }, 'primary', { disabled: manual === null || manual === undefined ? true : null, title: manual === null || manual === undefined ? T('endNeed') : null }));
+      // Nút luôn bấm được (USER-TEST-4 b1): nút xám nuốt cú bấm đầu sau khi gõ "Bạn cộng". Đọc thẳng giá trị trong ô lúc bấm, không chờ sự kiện change.
+      btn(T('endNight'), function () {
+        var inp = document.querySelector('[data-id="manual"]');
+        var typed = inp && /\S/.test(inp.value) ? J.parseNum(inp.value) : null;
+        var v = typed !== null ? typed : (manual === undefined ? null : manual);
+        if (v === null) { app.toast(T('endNeed')); if (inp) inp.focus(); return; }
+        app.update(function (n) { if (typed !== null) J.manualTally(n, typed, app.nowMs); n.tally.closedAt = app.nowMs; }, { key: key });
+        app.toast(T('endedToast'));
+      }, 'primary', { 'data-testid': 'btn-end-night' }));
     var tradeExtrasList = night.trades.filter(function (t) { return t.exit; }).map(function (t) { return h('div', { class: 'tx' }, h('span', { class: 'muted', text: t.time + ' ' + J.rowOf(t).name }), tradeExtras(app, t, key)); });
     el.appendChild(section(T('t5Tonight', { key: key }), [h('div', { class: 'tablewrap' }, tbl), h('p', { class: 'muted legend', text: C.journal.mdLegend }), foot, tradeExtrasList.length ? h('details', { class: 'fold' }, h('summary', { text: T('afterClose') }), tradeExtrasList) : null], { help: { text: T('t5Help'), ref: 'nhat-ky-lenh' } }));
 

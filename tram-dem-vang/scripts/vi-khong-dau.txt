@@ -82,3 +82,14 @@ eur
 gbp
 
 usd
+gian
+quan
+ibh
+ibl
+npoc
+rel
+reu
+spl
+spu
+vwapd
+vwapw

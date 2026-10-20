@@ -89,7 +89,7 @@ const dynamic = [];
 ['q1', 'q5', 'q6', 'vwapW', 'zones'].forEach((c) => dynamic.push('need_' + c));
 for (let i = 0; i < 11; i++) dynamic.push('key' + i);
 for (let i = 1; i <= 7; i++) dynamic.push('jh' + i);
-dynamic.push('chipOpen', 'chipOpenPaper');
+dynamic.push('chipOpen', 'chipOpenPaper', 'priceFar', 'priceDigits', 'copyShape');
 dynamic.forEach((k) => used.add(k));
 for (const k of used) if (!(k in C.ui)) errors.push(`(e) thiếu khóa chữ ui.${k} (được gọi trong js/ui hoặc js/main.js)`);
 const unused = Object.keys(C.ui).filter((k) => !used.has(k));

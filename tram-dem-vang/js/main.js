@@ -190,13 +190,18 @@
     var segEl = ui.seg([{ v: 'market', label: 'market' }, { v: 'limit', label: 'limit' }], kind, function (v) { kind = v || 'market'; refreshHint(); markSel(); }, { noToggle: true, label: T('enterKind') });
     function markSel() { segEl.querySelectorAll('.opt').forEach(function (b) { var on = b.dataset.v === kind; b.classList.toggle('sel', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); }
     var hint = h('p', { class: 'muted' });
+    var warnBox = h('div', { class: 'priceerr', 'data-testid': 'price-err' });
     function refreshHint() { hint.textContent = kind === 'market' ? T('enterMarketHint') : T('enterLimitHint'); }
     refreshHint();
     var content = h('div', { class: 'dlg' }, h('h3', { text: T('enterTitle') }),
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('enterKind') }), segEl),
-      h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('enterPrice') }), priceWrap), hint,
+      h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('enterPrice') }), priceWrap), hint, warnBox,
       h('div', { class: 'actions' }, btn(T('cancel'), function () { closeModal(false); }, 'ghost'),
-        btn(T('enterConfirm'), function () { closeModal(true); app.enter({ kind: kind, price: price }); }, 'primary big', { 'data-testid': 'enter-confirm' })));
+        btn(T('enterConfirm'), function () {
+          var bad = J.priceProblem(price, res.calc.entry);
+          if (bad) { ui.clear(warnBox).appendChild(ui.banner(T(bad, { n: 20, ref: J.fmt(res.calc.entry) }), 'bad')); return; }
+          closeModal(true); app.enter({ kind: kind, price: price });
+        }, 'primary big', { 'data-testid': 'enter-confirm' })));
     openModal(content);
   };
   app.enter = function (o) {

@@ -189,8 +189,11 @@ test('v3-9 · bước Bấm đã điền đủ vừa một màn 1366×768, ở 2
     await withPage(buildState('B'), now ? { now } : null, async ({ page }) => {
       await page.click('[data-tier-btn="3"]'); await walkB(page);
       assert.equal(await verdict(page), 'ENTRY');
+      // chờ ResizeObserver cập nhật --vbar-h (đệm đáy theo chiều cao thanh phán quyết) rồi mới đo
+      await page.waitForFunction(() => parseInt(getComputedStyle(document.documentElement).getPropertyValue('--vbar-h'), 10) === document.getElementById('verdict').offsetHeight);
       const [sh, ih, sbh] = await page.evaluate(() => [document.documentElement.scrollHeight, window.innerHeight, document.getElementById('status').offsetHeight]);
-      assert.ok(sh <= ih, `scrollHeight ${sh} > innerHeight ${ih} (now=${now})`);
+      const parts = await page.evaluate(() => ['#status', '#tiers', '#main', '.vbar', '.vnotes'].map((s) => { const e = document.querySelector(s); return s + '=' + (e ? e.offsetHeight : '-'); }).join(' ') + ' pad=' + getComputedStyle(document.getElementById('app')).paddingBottom);
+      assert.ok(sh <= ih, `scrollHeight ${sh} > innerHeight ${ih} (now=${now}) ${parts}`);
       assert.ok(sbh <= 90, 'thanh trạng thái ' + sbh);
     });
   }

@@ -6,7 +6,7 @@
 })(this, function (dep) {
   'use strict';
 
-  var APP_VERSION = '1.0.2';
+  var APP_VERSION = '1.0.3';
   var EPS = 1e-9;
 
   var T = {

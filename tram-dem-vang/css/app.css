@@ -194,8 +194,8 @@ select.field { min-width: 180px; }
 .vbar.paper { background: var(--view); color: #fff; }
 .vmain { flex: 1 1 320px; min-width: 0; }
 .vtext { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
-.vtext.entry .ebig { font-size: 34px; font-weight: 800; letter-spacing: .5px; }
-.vtext.entry .erest { font-size: 20px; }
+.vtext.entry .ebig { font-size: 30px; font-weight: 800; letter-spacing: .5px; }
+.vtext.entry .erest { font-size: 17px; }
 .vitem { background: rgba(0, 0, 0, .12); border: 1px dashed currentColor; border-radius: 6px; padding: 0 8px; color: inherit; min-height: 28px; }
 .vact { display: flex; gap: 10px; flex-wrap: wrap; }
 .vbar .btn.primary { background: #fff; color: #05120a; border-color: #fff; }

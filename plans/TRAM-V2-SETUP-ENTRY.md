@@ -89,3 +89,7 @@ Thứ tự: **Hướng** (buy / sell, nút đôi) · **Vùng** (chọn từ th�
 - **Ô tự kiểm thay tick tay** khi máy tính được: giá cách vùng ≤ 1 giá (từ giá vào + vùng), giờ phá ngoài 18:00–19:20 (giờ hiện tại khi tick ô nến M5), bias cùng chiều (từ hướng + bias), lần ≤ 2 tại vùng, SL sai phía. Giá vào cách vùng > 3 giá ⇒ đỏ "ở lưng".
 - **Gọn hơn khi trade M1:** khối không làm thu gọn thành một dòng (bấm để mở; đang làm khối nào thì khối đó mở); ghi lệnh xong giữ vị trí cuộn và giữ tick bối cảnh, chỉ xóa nhóm Điểm vào + giá; lệnh đang mở có nút kết quả ngay trên thanh dưới (TP · SL · Hòa · Đóng tay) không phải sang Sổ.
 - **Điện thoại:** chạm lần đầu vào loại vùng chỉ hiện định nghĩa, chạm lần hai mới chọn.
+
+## 8. Bỏ ô giá (người học yêu cầu 21/10)
+- Bỏ ô "Giá vào, SL, TP, biên độ nến M1" và máy tính cỡ lệnh. Luật SL (HT 6) giữ nguyên nhưng thành checkbox người tick: SL không ngắn hơn nến M1 lớn nhất 5 nến · SL không quá 4 giá · R:R ít nhất 1:2. "Giá cách vùng ≤ 1 giá" và "SL đúng phía" cũng tick tay.
+- Sổ ghi R bằng nút nhanh (+3 · +2 · +1 · 0 · −1) hoặc ô số; ngắt mạch tính theo R như cũ.

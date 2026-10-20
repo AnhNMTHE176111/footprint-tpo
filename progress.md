@@ -176,6 +176,13 @@ GCQ23 26/7 cây 12:30 V:1004→5857, delta −186/−275/−158 mà giá không 
 dưới 680px, chạm ảnh để phóng to, tiến độ từng buổi lưu bằng localStorage.
 ⚠️ Deploy từ repo RIÊNG `so-tay-vang-mgc` (thư mục `/tpo/`) — **push repo học KHÔNG tự cập nhật trang này**.
 
+## 2026-10-20 — Trạm Đêm Vàng: công cụ checklist chạy theo Hệ thống Đêm Vàng (web tĩnh + PWA)
+Người học yêu cầu một công cụ checklist hằng đêm để quen hệ thống: kẻ vùng → tick → chế độ → kịch bản → ENTRY khi đủ điều kiện; UI/UX ưu tiên vì dùng mỗi đêm.
+- **Plan:** `plans/CHECKLIST-DEM-VANG-plan.md` bản 4 (3 vòng review Fable: 39 → 22 → 18 mục). Có **21 quyết định QĐ-n** ghi chỗ Hệ thống tự mâu thuẫn, đáng chú ý: QĐ-19 *trước 20:30 không tắt A/B/D, chỉ cỡ ½* (vì 2/3 lệnh +3R tốt nhất của HT nằm trước 20:30); QĐ-3 *POC hôm qua chưa chạm = naked POC, chỉ mục tiêu*; QĐ-9 *ngược bias chỉ B tại tail thật / single print đúng phía, 2R, ½*; QĐ-21 *cỡ ½ không chia được ⇒ 1 hợp đồng*.
+- **Mã:** `tram-dem-vang/` (JS thuần, không module để mở file://; engine = danh sách luật có thứ tự `OFF_*/DIS_*/NO_*/WAIT_*`; 6 tầng; sổ 7 cột đúng mẫu HT 8; Từ điển). Test: node:test + Playwright + lint chữ. Link: https://anhnmthe176111.github.io/tram-dem-vang/ (repo `AnhNMTHE176111/tram-dem-vang`, deploy bằng `tram-dem-vang/deploy.sh`).
+- **Quy trình implement (4 vòng):** Sonnet implement → Opus review + Sonnet đóng vai trader 1 tháng dùng thử → Sonnet sửa. Biên bản `tram-dem-vang/docs/{IMPL,REVIEW,USER-TEST}-n.md`. Review: 34 (7 sai luật) → 16 (3) → 16 (2) → vòng 4 nghiệm thu. Trader mới: 3,5 → 4,0 → 4,4 /5. Số thao tác tới ENTRY: 42 → 35 (đêm sau 29).
+- ⚠️ **Việc người học cần làm:** mở link, nhập vốn + % rủi ro lần đầu; ngày 01/11 đổi neo session TPO/SessionZones 19:20 → 20:20 (công cụ sẽ nhắc). Luật nào muốn đổi thì sửa QĐ trong plan trước rồi mới sửa code.
+
 ## ❓ Câu hỏi mở / điểm cần làm rõ
 - **Hỏi tiếp bạn trader về IB break (còn lại từ bộ câu hỏi 2026-07-13):** (b) xác nhận "đấu giá thật/uy tín" bằng gì — delta/volume follow-through trên footprint, hay chỉ cần giá trụ ngoài biên ~30′? (c) phá hụt (failed break): fade ngược về mép kia hay đứng ngoài? *(Câu (a) đã chốt: "Phá biên rồi chờ test" → entry = retest biên vừa phá.)*
 - ✅ **ĐÃ KHÓA (2026-06-09):** chiều công thức Delta. Khởi động Bài 2 trả lời đúng hoàn toàn: `Delta = (mua chủ động) − (bán chủ động)`, Delta −320 → phe bán áp đảo. Không còn là điểm yếu.

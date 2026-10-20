@@ -201,7 +201,7 @@ test('B5 "chưa chắc" ⇒ CHỜ', () => assert.equal(go('A', { setup: { slPos:
 test('NO_SL_FLOOR: SL 2,4 < nến 3,3', () => assert.deepEqual(go('A', { setup: { c6: 3.3 } }).reasons, ['NO_SL_FLOOR']));
 test('NO_SL_FLOOR: SL đúng bằng nến thì qua', () => assert.equal(go('A', { setup: { c6: 2.4 } }).verdict, 'ENTRY'));
 test('NO_SL_CAP: SL 4,1 giá; 4,0 thì qua', () => {
-  assert.deepEqual(go('A', { setup: { calc: { entry: 4193, sl: 4197.1, tp: 4180 } } }).reasons, ['NO_SL_CAP']);
+  assert.equal(go('A', { setup: { calc: { entry: 4193, sl: 4197.1, tp: 4180 } } }).reasons[0], 'NO_SL_CAP');
   assert.equal(go('A', { setup: { calc: { entry: 4193, sl: 4197.0, tp: 4185 } } }).verdict, 'ENTRY');
 });
 test('NO_RR: R:R dưới 1:2', () => assert.deepEqual(go('A', { setup: { calc: { entry: 4193, sl: 4195.4, tp: 4189 } } }).reasons, ['NO_RR']));
@@ -224,9 +224,10 @@ test('TP trống ⇒ dùng TP gợi ý; gợi ý kéo về vùng kế tiếp n�
   const near = go('A', { zones: [{ id: 'z1', type: 'vwapW', price: 4205 }, { id: 'z2', type: 'hvnW', price: 4195 }, { id: 'z3', type: 'valEu', price: 4186 }], setup: { calc: { entry: 4193, sl: 4195.4, tp: null } } });
   assert.equal(near.calc.tpSuggested, 4186);
 });
-test('R:R và TP chỉ xét khi các luật phía trước đã qua', () => {
+test('R:R luôn được xét dù đã có mã NO khác (QĐ-20)', () => {
   const r = go('A', { setup: { b1: 'V', calc: { entry: 4193, sl: 4195.4, tp: 4189 } } });
-  assert.deepEqual(r.reasons, ['NO_V_PULLBACK']);
+  assert.equal(r.reasons[0], 'NO_V_PULLBACK');
+  assert.ok(r.reasons.includes('NO_RR'));
 });
 
 // ---------- khóa, CHỜ, ENTRY ----------

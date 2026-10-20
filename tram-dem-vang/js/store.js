@@ -18,7 +18,7 @@
     if (!raw || typeof raw !== 'object') return defaultState();
     var out = { version: VERSION, settings: Object.assign(defaultSettings(), raw.settings || {}), nights: {} };
     var src = raw.nights && typeof raw.nights === 'object' ? raw.nights : {};
-    Object.keys(src).forEach(function (k) { out.nights[k] = J.normalizeNight(src[k]); });
+    Object.keys(src).forEach(function (k) { out.nights[k] = J.normalizeNight(src[k], k); });
     return out;
   }
 

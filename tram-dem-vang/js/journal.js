@@ -32,24 +32,24 @@
   function hm(ms) { var p = time.vnParts(+ms); return time.pad(p.hh) + ':' + time.pad(p.mm); }
 
   // ===== đêm mới =====
-  function newNight() {
+  function newNight(key) {
     return {
-      t0: { alert: null, touched: false, windows: R.defaultWindows(), newsDay: false, note: '' },
+      t0: { alert: null, touched: false, windows: R.defaultWindows(key ? time.isThursday(key) : false), newsDay: false, note: '' },
       card: { answers: {}, bias: {}, zones: [], plan1: '', plan2: '', cancelWhen: '', lockedAt: null, edits: [], drawn: {} },
       regime: { mode: 'balanced', thinDir: null, breakout: { dir: null, edgeZoneId: null, at: null, nth: 1, step1: false, step2: false }, longestBarUntil: null, log: [] },
       setup: {}, open: null, trades: [], tally: { machine: 0, manual: null, closedAt: null }
     };
   }
   // điền các trường còn thiếu (dùng khi migrate / nhập JSON)
-  function normalizeNight(n) {
-    var d = newNight(), o = n || {};
+  function normalizeNight(n, key) {
+    var d = newNight(key), o = n || {};
     var out = {
       t0: Object.assign({}, d.t0, o.t0 || {}),
       card: Object.assign({}, d.card, o.card || {}),
       regime: Object.assign({}, d.regime, o.regime || {}),
       setup: o.setup || {}, open: o.open || null, trades: o.trades || [], tally: Object.assign({}, d.tally, o.tally || {})
     };
-    out.t0.windows = (o.t0 && o.t0.windows) || R.defaultWindows();
+    out.t0.windows = (o.t0 && o.t0.windows) || R.defaultWindows(key ? time.isThursday(key) : false);
     out.card.answers = (o.card && o.card.answers) || {};
     out.card.bias = (o.card && o.card.bias) || {};
     out.card.zones = (o.card && o.card.zones) || [];
@@ -59,7 +59,7 @@
     return out;
   }
   function ensureNight(state, key) {
-    if (!state.nights[key]) state.nights[key] = newNight();
+    if (!state.nights[key]) state.nights[key] = newNight(key);
     return state.nights[key];
   }
 
@@ -99,13 +99,18 @@
   // ===== chế độ =====
   function setRegimeMode(night, mode, nowMs) {
     if (night.regime.mode === mode) return;
+    // vào "Vừa phá" là một cú phá MỚI: xóa bước 1, bước 2, hướng, cạnh; giờ phá = lúc bấm (REVIEW-1 mục 1)
+    if (mode === 'broken') {
+      var old = night.regime.breakout || {};
+      night.regime.breakout = { dir: null, edgeZoneId: null, at: hm(nowMs), nth: old.nth || 1, step1: false, step2: false };
+    }
     night.regime.mode = mode;
     night.regime.log.push({ at: hm(nowMs), mode: mode });
   }
   // "Chui lại trong (phá hụt)": về Cân bằng, lần phá kế = 2
   function breakoutFailed(night, nowMs) {
     var bo = night.regime.breakout;
-    bo.step1 = false; bo.step2 = false; bo.nth = 2;
+    bo.step1 = false; bo.step2 = false; bo.nth = 2; bo.dir = null; bo.edgeZoneId = null; bo.at = null;
     setRegimeMode(night, 'balanced', nowMs);
   }
 
@@ -244,7 +249,7 @@
       var ref = C.codes[code] && C.codes[code].htRef;
       if (!ref) return;
       if (ref === '6') { hasSL = true; return; }
-      var label = /^4\.\d$/.test(ref) ? ref : W.section + ' ' + ref;
+      var label = /^4\.\d$/.test(ref) || /^ST/.test(ref) ? ref : W.section + ' ' + ref;
       if (!seen[label]) { seen[label] = 1; items.push(label); }
     });
     if (!items.length && !hasSL) return '';

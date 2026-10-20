@@ -22,13 +22,14 @@
 
     // cửa sổ cấm
     var list = h('div', { class: 'windows' });
-    (t0.windows || []).forEach(function (w) {
+    R.effectiveWindows(t0, key).forEach(function (w) {
       var r = time.windowRange(w, key, useDst);
       var isDefault = w.id === 'w1930' || w.id === 'w2100';
       var label = T('windowLabel', { hm: time.fmtMin(r.center), before: w.minutesBefore || 0, after: w.minutesAfter || 0, rank: w.rank });
       var row = h('div', { class: 'wrow' + (w.on ? '' : ' off') },
         h('span', { class: 'wlabel', text: label + (w.kind === 'fomc' ? ' · FOMC' : '') }),
         w.offAt ? h('span', { class: 'muted', text: T('offAt', { hm: w.offAt }) }) : null,
+        w.auto ? h('span', { class: 'muted', text: T('autoOn') }) : null,
         btn(w.on ? T('on') : T('off'), function () {
           if (w.on) {
             app.confirm({ title: T('offConfirmTitle'), text: T('offConfirmText', { hm: time.fmtMin(r.center) }), ok: T('offConfirmOk'), danger: true }).then(function (ok) {
@@ -52,13 +53,13 @@
       btn(T('add'), function () {
         var m = time.parseHM(f.at);
         if (m === null) { app.toast(T('badTime')); return; }
-        app.update(function (n) { n.t0.windows.push({ id: 'w' + Date.now().toString(36), kind: 'custom', rank: f.rank, at: time.fmtMin(m), tz: 'ET', minutesBefore: f.before || 0, minutesAfter: f.after || 0, on: true }); });
+        app.update(function (n) { n.t0.windows.push({ id: 'w' + Date.now().toString(36), kind: 'custom', rank: f.rank, at: time.fmtMin(m), tz: 'VN', minutesBefore: f.before || 0, minutesAfter: f.after || 0, on: true }); });
         f.at = '';
       }),
       btn(T('addFomc'), function () {
         app.update(function (n) { n.t0.windows.push({ id: 'fomc' + Date.now().toString(36), kind: 'fomc', rank: 2, at: '01:00', tz: 'ET', minutesBefore: 0, minutesAfter: 30, on: true }); });
       }, 'ghost'));
-    el.appendChild(section(T('t0Title2'), [list, form, banner(T('t0WinNote'), 'info')], { help: { text: T('t0WinHelp'), ref: 'xung-dot' } }));
+    el.appendChild(section(T('t0Title2'), [list, form, banner(T('t0WinNote', { a: time.fmtMin(time.markMin({ at: '19:30', tz: 'ET' }, key, useDst)), b: time.fmtMin(time.markMin({ at: '21:00', tz: 'ET' }, key, useDst)) }), 'info')], { help: { text: T('t0WinHelp'), ref: 'xung-dot' } }));
 
     el.appendChild(section(T('t0Title3'), [
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('newsDay') }),
@@ -211,7 +212,6 @@
       if (!v) return;
       app.update(function (n) {
         J.setRegimeMode(n, v, app.nowMs);
-        if (v === 'broken' && !n.regime.breakout.at) n.regime.breakout.at = J.hm(app.nowMs);
       });
     }, { cls: 'big', noToggle: true, label: T('t2Mode') });
     var body = [modeSeg];

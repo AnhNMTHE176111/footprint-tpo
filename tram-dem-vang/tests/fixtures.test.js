@@ -37,11 +37,14 @@ function a2() {
     setup: { scenario: 'A', zoneId: 'z1', c4: 'oppHold', c4num: 103, c5: 'near', c6: 2.0, b1: 'V', b3: 'ok', slPos: 'right', calc: { entry: 4188.0, sl: 4190.3, tp: 4181.0 } }
   });
 }
-test('A2 · 12/10 21:27 — A sell ⇒ KHÔNG VÀO [NO_BUBBLE_AGAINST, NO_V_PULLBACK]', () => {
+test('A2 · 12/10 21:27 — A sell ⇒ KHÔNG VÀO [NO_BUBBLE_AGAINST, NO_V_PULLBACK, NO_RR, NO_TP_PAST_ZONE] (QĐ-20)', () => {
   const r = run('2026-10-12', '21:27', a2());
   assert.equal(r.bias, 'SELL');
   assert.equal(r.verdict, 'NO');
-  assert.deepEqual(r.reasons, ['NO_BUBBLE_AGAINST', 'NO_V_PULLBACK']);
+  assert.deepEqual(r.reasons, ['NO_BUBBLE_AGAINST', 'NO_V_PULLBACK', 'NO_RR', 'NO_TP_PAST_ZONE']);
+  assert.deepEqual(r.reasons.slice(0, 2), ['NO_BUBBLE_AGAINST', 'NO_V_PULLBACK']);
+  const wl = require('../js/journal.js').warnLine({ ruleCodes: r.reasons });
+  assert.equal(wl, 'phạm 4.3, 4.1 và luật SL');
 });
 
 function a3(slPos) {
@@ -52,15 +55,15 @@ function a3(slPos) {
     setup: { scenario: 'A', zoneId: 'z2', c4: 'none', c5: 'near', c6: 3.3, b1: 'U', b3: 'ok', slPos, calc: { entry: 4192.7, sl: 4194.8, tp: 4182.7 } }
   });
 }
-test('A3a · 1/10 20:47 — A sell ⇒ KHÔNG VÀO [NO_SL_FLOOR]', () => {
+test('A3a · 1/10 20:47 — A sell ⇒ KHÔNG VÀO [NO_SL_FLOOR, NO_TP_PAST_ZONE]', () => {
   const r = run('2026-10-01', '20:47', a3('right'));
   assert.equal(r.verdict, 'NO');
-  assert.deepEqual(r.reasons, ['NO_SL_FLOOR']);
+  assert.deepEqual(r.reasons, ['NO_SL_FLOOR', 'NO_TP_PAST_ZONE']);
   assert.equal(r.calc.slDist, 2.1);
 });
-test('A3b · 1/10 20:47 — biến thể SL sai chỗ ⇒ [NO_SL_POS, NO_SL_FLOOR]', () => {
+test('A3b · 1/10 20:47 — biến thể SL sai chỗ ⇒ [NO_SL_POS, NO_SL_FLOOR, NO_TP_PAST_ZONE]', () => {
   const r = run('2026-10-01', '20:47', a3('wrong'));
-  assert.deepEqual(r.reasons, ['NO_SL_POS', 'NO_SL_FLOOR']);
+  assert.deepEqual(r.reasons, ['NO_SL_POS', 'NO_SL_FLOOR', 'NO_TP_PAST_ZONE']);
 });
 
 function a4(regime) {
@@ -81,7 +84,11 @@ test('A4a · 13/10 20:10 — B buy cân bằng ⇒ ENTRY ½ (B_RANK2 + BEFORE_20
   assert.deepEqual(r.half.reasons, ['B_RANK2', 'BEFORE_2030']);
   assert.equal(r.calc.rr, 3);
   assert.equal(r.calc.tpSuggested, 4183.9);
-  assert.equal(r.calc.size, 0); // 2000 × 2% × ½ = 20 $; 1 hợp đồng rủi ro 23 $ ⇒ làm tròn xuống 0
+  assert.equal(r.calc.size, 8); // 20000 × 2% × ½ = 200 $ / 23 $ mỗi hợp đồng
+});
+test('A4a với vốn 2000 $ ⇒ 0 hợp đồng ⇒ NO_SIZE_ZERO (QĐ-20)', () => {
+  const r = run('2026-10-13', '20:10', a4({ mode: 'balanced' }), { dstShift: true, capital: 2000, riskPct: 2 });
+  assert.equal(r.verdict, 'NO'); assert.deepEqual(r.reasons, ['NO_SIZE_ZERO']); assert.equal(r.calc.size, 0);
 });
 test('A4b · biến thể broken ⇒ NO_FIGHT_BREAK', () => {
   const r = run('2026-10-13', '20:10', a4({ mode: 'broken', breakout: { dir: 'down', edgeZoneId: 'z1', at: '20:00', step1: true, step2: true } }));

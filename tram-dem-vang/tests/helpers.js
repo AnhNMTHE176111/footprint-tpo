@@ -8,7 +8,7 @@ function vn(date, hm) { // '2026-10-06', '20:24' → Date
   const [h, mi] = hm.split(':').map(Number);
   return new Date(Date.UTC(y, m - 1, d, h - 7, mi));
 }
-const SETTINGS = { dstShift: true, capital: 2000, riskPct: 2 };
+const SETTINGS = { dstShift: true, capital: 20000, riskPct: 2 };
 function t0Default(over) {
   return Object.assign({ alert: true, touched: true, newsDay: false, windows: [
     { id: 'w1930', kind: 'news', rank: 1, at: '19:30', tz: 'ET', minutesBefore: 15, minutesAfter: 15, on: false },

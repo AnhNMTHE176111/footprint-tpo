@@ -39,11 +39,24 @@
   };
 
   // Cửa sổ cấm mặc định (QĐ-6)
-  function defaultWindows() {
+  // 19:30 mặc định chỉ bật thứ Năm (on1930); ngoài ra engine tự coi là bật khi chưa qua tầng 0 hoặc ngày có tin (effectiveWindows)
+  function defaultWindows(on1930) {
     return [
-      { id: 'w1930', kind: 'news', rank: 1, at: '19:30', tz: 'ET', minutesBefore: 15, minutesAfter: 15, on: true },
+      { id: 'w1930', kind: 'news', rank: 1, at: '19:30', tz: 'ET', minutesBefore: 15, minutesAfter: 15, on: !!on1930 },
       { id: 'w2100', kind: 'news', rank: 2, at: '21:00', tz: 'ET', minutesBefore: 5, minutesAfter: 5, on: true }
     ];
+  }
+  // Cửa sổ hiệu lực: 19:30 bật khi w.on, hoặc (chưa bị người dùng tắt tay) khi chưa qua tầng 0 / ngày có tin lớn
+  function effectiveWindows(t0, key) {
+    var t = t0 || {};
+    var list = t.windows;
+    if (!list) { var th = key ? dep('time').isThursday(key) : false; list = defaultWindows(th); }
+    return list.map(function (w) {
+      if (w.id !== 'w1930') return w;
+      var on = !!w.on || (!w.offAt && (!t.touched || !!t.newsDay));
+      if (on === !!w.on) return w;
+      var o = {}; for (var k in w) o[k] = w[k]; o.on = on; o.auto = true; return o;
+    });
   }
   var NYSE_WARN = { at: '20:30', tz: 'ET', minutesBefore: 5, minutesAfter: 5 };
 
@@ -183,6 +196,7 @@
     { code: 'WAIT_SCENARIO', scope: 'ALL', effect: 'WAIT', when: function (c) { return !c.scen; } },
     { code: 'NO_COUNTER_BIAS_SCENARIO', scope: 'ACD', effect: 'NO', when: function (c) { return c.counter; } },
     { code: 'NO_COUNTER_BIAS_ZONE', scope: 'B', effect: 'NO', when: function (c) { return c.counter && !c.exempt9; } },
+    { code: 'NO_BIAS_NONE_EDGE', scope: 'C', effect: 'NO', when: function (c) { return c.bias === 'KHÔNG' && !!c.zone && c.zone.type !== 'vahEu' && c.zone.type !== 'valEu'; } },
     { code: 'WAIT_COUNTER_REASON', scope: 'B', effect: 'WAIT', when: function (c) { return c.counter && c.exempt9 && !(c.setup.counterBiasReason && String(c.setup.counterBiasReason).trim()); } },
     { code: 'WAIT_ZONE', scope: 'ABCD', effect: 'WAIT', when: function (c) { return !c.zone; } },
     { code: 'WAIT_SIDE', scope: 'ABCD', effect: 'WAIT', when: function (c) { return !c.side; } },
@@ -190,7 +204,7 @@
     { code: 'NO_BANNED_ZONE', scope: 'B', effect: 'NO', when: function (c) { return !!c.zone && (hasFlag(c.zone, 'noB') || hasFlag(c.zone, 'banned')); } },
     { code: 'NO_MID_RANGE', scope: 'BC', effect: 'NO', when: function (c) {
       var z = c.zone, e = c.regime.effective;
-      if (!z || c.counter || (e !== 'balanced' && e !== 'pending')) return false;
+      if (!z || c.counter || e !== 'balanced') return false;
       if (c.scen === 'C') return !hasFlag(z, 'edge') && !hasFlag(z, 'edgeOuter');
       if (hasFlag(z, 'edge')) return false;
       return (hasFlag(z, 'r1') || hasFlag(z, 'r2')) && !coincidesEdge(c, z);
@@ -252,18 +266,19 @@
     { code: 'NO_SL_SIDE', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && !c.calc.slSideOk; } },
     { code: 'NO_SL_FLOOR', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && num(c.s.c6) > 0 && !c.calc.floorOk; } },
     { code: 'NO_SL_CAP', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && !c.calc.capOk; } },
-    // R:R và TP chỉ xét khi mọi thứ phía trước đã qua (QĐ-16)
+    // R:R, TP, cỡ lệnh: luôn xét (QĐ-20) để ruleCodes đủ; chỉ cần số liệu hợp lệ
     { code: 'NO_RR', scope: 'ABCD', effect: 'NO', when: function (c) {
-      if (c.reasons.length || !c.calc.numsOk) return false;
+      if (!c.calc.numsOk || !c.calc.slSideOk || c.calc.rr === null) return false;
       return c.calc.rr < T.rrMin - EPS || (c.calc.nextZone && !c.calc.nextRRok);
     } },
-    { code: 'NO_TP_PAST_ZONE', scope: 'ABCD', effect: 'NO', when: function (c) { return !c.reasons.length && c.calc.numsOk && !c.calc.tpPastOk; } }
+    { code: 'NO_TP_PAST_ZONE', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && c.calc.slSideOk && c.calc.rr !== null && !c.calc.tpPastOk; } },
+    { code: 'NO_SIZE_ZERO', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && c.calc.slSideOk && c.sizeOf() === 0; } }
   ];
   var RULE_ORDER = RULES.map(function (r) { return r.code; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
 
   return {
     APP_VERSION: APP_VERSION, T: T, EPS: EPS, TARGET_R: TARGET_R, BE_R: BE_R, HALF_ORDER: HALF_ORDER, SCENARIOS: SCENARIOS,
-    MARKS: MARKS, NYSE_WARN: NYSE_WARN, defaultWindows: defaultWindows, ZONE_TYPES: ZONE_TYPES, ZONE_ORDER: ZONE_ORDER,
+    MARKS: MARKS, NYSE_WARN: NYSE_WARN, defaultWindows: defaultWindows, effectiveWindows: effectiveWindows, ZONE_TYPES: ZONE_TYPES, ZONE_ORDER: ZONE_ORDER,
     RULES: RULES, RULE_ORDER: RULE_ORDER, enrichZone: enrichZone, zoneGap: zoneGap, hasFlag: hasFlag, coincidesEdge: coincidesEdge,
     autoBias: autoBias, effectiveBias: effectiveBias, effectiveRegime: effectiveRegime, dirToSide: dirToSide, isCounter: isCounter,
     against: against, isScenIn: isScenIn, num: num, round1: round1, round2: round2

@@ -77,6 +77,7 @@
     DIS_EARLY_BREAK: { text: 'Cú phá trong 18:00–19:20 hay là phá giả — nghi trước, tin sau.', htRef: '3.2' },
     NO_COUNTER_BIAS_SCENARIO: { text: 'Ngược bias — kịch bản này không được ngược bias.', htRef: '2.2' },
     NO_COUNTER_BIAS_ZONE: { text: 'Ngược bias chỉ được ở High / Low hôm qua có tail thật hoặc single print đúng phía.', htRef: '2.2' },
+    NO_BIAS_NONE_EDGE: { text: 'Bias KHÔNG: chỉ fade hai cạnh VA Âu (VAH Âu, VAL Âu).', htRef: '2.2' },
     NO_ZONE_3RD: { text: 'Đã vào 2 lần ở vùng này — không có lần thứ ba.', htRef: '7' },
     NO_BANNED_ZONE: { text: 'Không hấp thụ ở HVN ngày, HVN 3 tuần hay LVN.', htRef: '2.3' },
     NO_MID_RANGE: { text: 'Giữa range không có lệnh — chỉ làm tại cạnh.', htRef: '7' },
@@ -97,6 +98,7 @@
     NO_SL_CAP: { text: 'Khoảng SL quá 4 giá — bỏ kèo hoặc chờ hồi sâu hơn.', htRef: '6' },
     NO_RR: { text: 'R:R dưới 1:2 — bỏ kèo.', htRef: '6' },
     NO_TP_PAST_ZONE: { text: 'TP vượt vùng kế tiếp quá 0,5 giá — kéo TP về vùng đó.', htRef: '6' },
+    NO_SIZE_ZERO: { text: 'Rủi ro cho phép chưa đủ 1 hợp đồng MGC với SL này — giảm SL hoặc bỏ kèo.', htRef: 'ST §6' },
 
     WAIT_SCENARIO: { text: 'Chọn kịch bản', ctl: 'c1' },
     WAIT_ZONE: { text: 'Chọn vùng', ctl: 'c3' },
@@ -122,7 +124,7 @@
   // mã → ô điều khiển để bấm vào xem / sửa (NO_UNCLEAR chọn theo ô đang "không rõ")
   var ctlMap = {
     NO_BUBBLE_AGAINST: 'c4', NO_BACK: 'c5', NO_DMA_SLOPE: 'c7', NO_D_NO_MOVE: 'c7', NO_D_DEEP: 'c7', NO_V_PULLBACK: 'b1', NO_MOMENTUM: 'b2',
-    NO_SL_POS: 'b5', NO_SL_SIDE: 'b4', NO_SL_FLOOR: 'b4', NO_SL_CAP: 'b4', NO_RR: 'b4', NO_TP_PAST_ZONE: 'b4', NO_ZONE_3RD: 'c3', NO_BANNED_ZONE: 'c3',
+    NO_SL_POS: 'b5', NO_SL_SIDE: 'b4', NO_SL_FLOOR: 'b4', NO_SL_CAP: 'b4', NO_RR: 'b4', NO_TP_PAST_ZONE: 'b4', NO_SIZE_ZERO: 'b4', NO_BIAS_NONE_EDGE: 'c3', NO_ZONE_3RD: 'c3', NO_BANNED_ZONE: 'c3',
     NO_MID_RANGE: 'c3', NO_PENDING_ACCEPT: 'c3', NO_B_RANK: 'c3', NO_FIGHT_BREAK: 'c3', NO_COUNTER_BIAS_SCENARIO: 'c2', NO_COUNTER_BIAS_ZONE: 'c2',
     DIS_LONGEST_BAR: 'c1', DIS_NOT_BROKEN: 'c1', DIS_PENDING_ACCEPT: 'c1', DIS_NO_MOVE: 'c1', DIS_M5_OUTSIDE: 'c1', DIS_USE_D: 'c1', DIS_THIN_NO_FADE: 'c1',
     DIS_BREAK_AGAINST_BIAS: 'c1', DIS_EARLY_BREAK: 'c1', DIS_BIAS_NONE: 'c1', DIS_NO_EDGE: 'c1'
@@ -274,8 +276,8 @@
     windowLabel: '{hm} (−{before}′ / +{after}′) · hạng {rank}', offAt: 'đã tắt lúc {hm}',
     offConfirmTitle: 'Tắt cửa sổ cấm?', offConfirmText: 'Tắt cửa sổ {hm} sẽ ghi vết giờ tắt. Chắc chắn?', offConfirmOk: 'Tắt cửa sổ',
     nyseRow: 'NYSE mở {hm} (±5′): chỉ cảnh báo, không đánh tin', alwaysOn: 'luôn bật',
-    addWindow: 'Thêm cửa sổ', timePh: 'giờ:phút', rank1: 'Hạng 1', rank2: 'Hạng 2', minBefore: 'phút trước', minAfter: 'phút sau', addFomc: 'Thêm FOMC 01:00',
-    badTime: 'Giờ chưa đúng dạng giờ:phút.', t0WinNote: 'Mặc định: 19:30 ±15′ và 21:00 ±5′ đều bật. Có FOMC thì đóng sạch trước 00:45.',
+    addWindow: 'Thêm cửa sổ', timePh: 'giờ VN (hh:mm)', rank1: 'Hạng 1', rank2: 'Hạng 2', minBefore: 'phút trước', minAfter: 'phút sau', addFomc: 'Thêm FOMC 01:00',
+    badTime: 'Giờ chưa đúng dạng giờ:phút.', autoOn: '(tự bật)', t0WinNote: 'Mặc định: {b} ±5′ luôn bật. {a} ±15′ tự bật vào thứ Năm, ngày có tin lớn, hoặc khi chưa xong tầng 0. Có FOMC thì đóng sạch trước 00:45.',
     t0Title3: 'Ngày tin và kịch bản nền', newsDay: 'Hôm nay có tin lớn (NFP, CPI)', t0Note: 'Kịch bản nền ban ngày (tùy chọn)', t0NotePh: 'Một dòng',
     t0Done: 'Xong tầng 0 — sang kẻ vùng',
     // --- tầng 1 ---

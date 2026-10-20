@@ -21,7 +21,7 @@
       var t = trades[i];
       if ((t.flags || []).indexOf('paper') >= 0) continue;
       if (!t.exit) continue;
-      var isSL = t.exit.kind === 'SL' || (t.exit.kind === 'MANUAL' && typeof t.r === 'number' && t.r < 0);
+      var isSL = t.exit.kind === 'SL' || (typeof t.r === 'number' && t.r < 0);
       if (isSL) streak++; else break;
     }
     return { ruleBreaks: ruleBreaks, slStreak: streak };
@@ -39,10 +39,12 @@
     return found;
   }
 
-  function nextZoneFor(zones, side, entry, entryZoneId) {
+  // vùng kế tiếp theo hướng lệnh; bỏ vùng vào, vùng cùng cụm (cách vùng vào ≤ 1 giá) và LVN (QĐ-20)
+  function nextZoneFor(zones, side, entry, entryZone) {
     var best = null;
     zones.forEach(function (z) {
-      if (z.lo === null || z.id === entryZoneId) return;
+      if (z.lo === null || z.type === 'lvn') return;
+      if (entryZone && (z.id === entryZone.id || R.zoneGap(z, entryZone) <= T.nearGap + EPS)) return;
       if (side === 'sell' && z.hi < entry - EPS) { if (!best || z.hi > best.edge) best = { zone: z, edge: z.hi }; }
       if (side === 'buy' && z.lo > entry + EPS) { if (!best || z.lo < best.edge) best = { zone: z, edge: z.lo }; }
     });
@@ -65,7 +67,7 @@
     out.floorOk = !(c6 > 0) || out.slDist >= c6 - EPS;
     out.capOk = out.slDist <= T.slCap + EPS;
     if (risk <= EPS) { out.slSideOk = false; return out; }
-    var nz = nextZoneFor(c.zones, c.side, entry, c.zone && c.zone.id);
+    var nz = nextZoneFor(c.zones, c.side, entry, c.zone);
     var dirMul = c.side === 'buy' ? 1 : -1;
     var sug = entry + dirMul * out.targetR * risk;
     if (nz) {
@@ -83,6 +85,17 @@
       out.tpPastOk = R.round2(over) <= T.tpPastTol + EPS;
     }
     return out;
+  }
+
+  // cỡ lệnh MGC (làm tròn xuống); null khi chưa cài vốn / rủi ro
+  function sizeFor(c, settings) {
+    var cl = c.calc;
+    if (!cl || !cl.numsOk || !(cl.slDist > 0)) return null;
+    var cap = num(settings.capital), rp = num(settings.riskPct);
+    if (!(cap > 0 && rp > 0)) return null;
+    var riskUsd = cap * rp / 100 * (c.halfs.length > 0 ? 0.5 : 1);
+    cl.riskUsd = R.round2(riskUsd);
+    return Math.floor(riskUsd / (cl.slDist * T.tickValue) + 1e-9);
   }
 
   function evaluate(input) {
@@ -122,7 +135,7 @@
     var zoneN = zoneId ? trades.filter(function (t) { return t.zoneId === zoneId && (t.flags || []).indexOf('paper') < 0; }).length : 0;
     var openInfo = findOpen(nights);
 
-    var windows = t0.windows || R.defaultWindows();
+    var windows = R.effectiveWindows(t0, key);
     var newsHit = time.hitWindow(windows, nowMin, key, useDst);
     var untilMs = num(regimeSt.longestBarUntil);
     var nyseMin = time.markMin(R.MARKS.nyse, key, useDst);
@@ -130,6 +143,7 @@
     var breakMin = breakout.at ? time.baseMinute(breakout.at) : null;
 
     var c = {
+      sizeOf: function () { return sizeFor(c, settings); },
       key: key, nowMs: nowMs, nowMin: nowMin, useDst: useDst, settings: settings,
       night: night, t0: t0, card: card, setup: setup, s: setup, trades: trades,
       bias: b.value, biasAuto: b.auto, biasOverridden: b.overridden,
@@ -173,18 +187,11 @@
 
     // cỡ lệnh MGC
     var half = c.halfs.length > 0;
-    if (c.calc.numsOk && c.calc.slDist > 0) {
-      var cap = num(settings.capital), rp = num(settings.riskPct);
-      if (cap > 0 && rp > 0) {
-        var riskUsd = cap * rp / 100 * (half ? 0.5 : 1);
-        c.calc.riskUsd = R.round2(riskUsd);
-        c.calc.size = Math.floor(riskUsd / (c.calc.slDist * T.tickValue) + 1e-9);
-      }
-    }
+    c.calc.size = sizeFor(c, settings);
 
     // tám chấm (HT 9)
     var cl = c.calc, s = setup;
-    var zoneGroup = ['NO_BANNED_ZONE', 'NO_MID_RANGE', 'NO_PENDING_ACCEPT', 'NO_B_RANK', 'NO_FIGHT_BREAK'];
+    var zoneGroup = ['NO_BIAS_NONE_EDGE', 'NO_BANNED_ZONE', 'NO_MID_RANGE', 'NO_PENDING_ACCEPT', 'NO_B_RANK', 'NO_FIGHT_BREAK'];
     var c4ok = scen === 'B' ? s.c4 === 'same' : (s.c4 === 'same' || s.c4 === 'none' || s.c4 === 'oppBroken');
     var dots = [false, false, false, false, false, false, false, false];
     if (scen) {
@@ -214,7 +221,7 @@
     var warnings = [];
     var nyseRange = time.windowRange(R.NYSE_WARN, key, useDst);
     if (nowMin >= nyseRange.from - EPS && nowMin <= nyseRange.to + EPS) warnings.push('WARN_NYSE');
-    if (nowMin < nyseMin) warnings.push('WARN_BEFORE_2030');
+    if (nowMin >= time.markMin(R.MARKS.prep, key, useDst) && nowMin < nyseMin) warnings.push('WARN_BEFORE_2030');
     if (card.lockedAt && zones.length < T.zonesMin) warnings.push('WARN_FEW_ZONES');
 
     return {

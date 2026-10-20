@@ -22,7 +22,7 @@
     app.key = time.nightKey(app.nowMs, app.useDst);
     if (state.nights[app.key]) { app.night = state.nights[app.key]; app._draft = null; }
     else {
-      if (!app._draft || app._draft.key !== app.key) app._draft = { key: app.key, n: J.newNight() };
+      if (!app._draft || app._draft.key !== app.key) app._draft = { key: app.key, n: J.newNight(app.key) };
       app.night = app._draft.n;
     }
     app.nowMin = time.nightMinutes(app.nowMs, app.key);
@@ -37,7 +37,7 @@
     opts = opts || {};
     compute();
     var key = opts.key || app.key;
-    if (!state.nights[key]) { state.nights[key] = key === app.key ? app.night : J.newNight(); app._draft = null; }
+    if (!state.nights[key]) { state.nights[key] = key === app.key ? app.night : J.newNight(key); app._draft = null; }
     fn(state.nights[key], state);
     persist();
     app.render(opts);

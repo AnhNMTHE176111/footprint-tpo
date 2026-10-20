@@ -63,7 +63,7 @@ test('ngày chuyển giờ: hiện thẻ thông báo', () => {
   assert.match(C.notices.US_SWITCH, /IB = 20:20–21:20/);
 });
 test('cửa sổ ±15′ (19:30) và ±5′ (21:00); mùa đông +1h', () => {
-  const w = R.defaultWindows();
+  const w = R.defaultWindows(true);
   const hit = (key, hm) => !!time.hitWindow(w, time.nightMinutes(vn(key, hm).getTime(), key), key, true);
   assert.equal(hit('2026-10-13', '19:14'), false);
   assert.equal(hit('2026-10-13', '19:15'), true);
@@ -77,7 +77,7 @@ test('cửa sổ ±15′ (19:30) và ±5′ (21:00); mùa đông +1h', () => {
 });
 test('thứ Năm', () => { assert.equal(time.isThursday('2026-10-15'), true); assert.equal(time.isThursday('2026-10-14'), false); });
 test('cửa sổ kế tiếp và đếm ngược', () => {
-  const key = '2026-10-13', w = R.defaultWindows();
+  const key = '2026-10-13', w = R.defaultWindows(true);
   const nw = time.nextWindow(w, 20 * 60 + 14, key, true);
   assert.equal(nw.w.id, 'w2100'); assert.equal(nw.startsIn, 41);
   assert.equal(time.nextWindow(w, 22 * 60, key, true), null);

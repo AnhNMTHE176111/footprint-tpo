@@ -1,7 +1,7 @@
 /* Trạm Đêm Vàng — thanh trạng thái (luôn thấy) + thẻ phiên (cột phải). */
 (function (root) {
   'use strict';
-  var TDV = root.TDV, ui = TDV.ui, C = TDV.content, J = TDV.journal, time = TDV.time;
+  var TDV = root.TDV, ui = TDV.ui, C = TDV.content, J = TDV.journal, R = TDV.rules, time = TDV.time;
   var T = ui.T, h = ui.h, chip = ui.chip;
 
   function optLabel(qid, v) {
@@ -16,7 +16,7 @@
     var warn = res.warnings.indexOf('WARN_NYSE') >= 0 || res.warnings.indexOf('WARN_BEFORE_2030') >= 0;
     var phase = time.phaseAt(app.nowMin, key, useDst);
     var band = time.bandAt(app.nowMin, key, useDst);
-    var next = time.nextWindow(night.t0.windows || [], app.nowMin, key, useDst);
+    var next = time.nextWindow(R.effectiveWindows(night.t0, key), app.nowMin, key, useDst);
     var bar = h('div', { class: 'statusbar' + (hit ? ' bad' : warn ? ' warn' : '') });
 
     bar.appendChild(h('strong', { class: 'clock', 'data-testid': 'clock', text: T('clock', { hm: J.hm(app.nowMs) }) }));

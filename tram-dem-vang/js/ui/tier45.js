@@ -43,7 +43,7 @@
       kv(T('kvSize'), t.size === null || t.size === undefined ? '—' : String(t.size)), kv(T('kvTime'), t.time));
     el.appendChild(section(T('t4Title'), [head, grid, h('p', { class: 'muted', text: T('noSlEdit') })]));
 
-    var dl = time.flatDeadline(nightObj.t0.windows, nowMinO, key, app.useDst);
+    var dl = time.flatDeadline(R.effectiveWindows(nightObj.t0, key), nowMinO, key, app.useDst);
     if (dl && !paper) el.appendChild(banner(T('flatBefore', { hm: time.fmtMin(dl.at), min: Math.max(0, Math.ceil(dl.at - nowMinO)) }), dl.at - nowMinO <= 15 ? 'bad' : 'warn'));
     if (nowMinO >= time.markMin(R.MARKS.globexMaint, key, app.useDst)) el.appendChild(banner(T('maintNote'), 'warn'));
 

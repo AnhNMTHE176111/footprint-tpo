@@ -10,39 +10,86 @@
   function lead(text) { return h('p', { class: 'lead', text: text }); }
 
   // ================= TẦNG 0 =================
+  // Tối giản (QĐ-22): một câu tỉnh táo · khối "Tin tối nay" tự lấy từ Forex Factory (kèm các dòng mờ mặc định) · một ô kịch bản nền.
+  // Thêm khung giờ tay / FOMC / ngày tin lớn ghi tay gập trong "Thêm tay…".
+  function impChip(imp) { return h('span', { class: 'imp ' + (imp === 'High' ? 'high' : 'med'), text: imp === 'High' ? T('impHigh') : T('impMed') }); }
+  function toggleWin(app, w, hmShown) {
+    function setOn(n, on) {
+      if (w.src === 'ff') {
+        n.t0.newsOverrides = n.t0.newsOverrides || {};
+        if (on) delete n.t0.newsOverrides[w.id]; else n.t0.newsOverrides[w.id] = { on: false, offAt: J.hm(app.nowMs) };
+      } else {
+        var x = n.t0.windows.filter(function (z) { return z.id === w.id; })[0];
+        if (!x) return;
+        x.on = on; if (on) delete x.offAt; else x.offAt = J.hm(app.nowMs);
+      }
+    }
+    if (w.on) {
+      app.confirm({ title: T('offConfirmTitle'), text: T('offConfirmText', { hm: hmShown }), ok: T('offConfirmOk'), danger: true }).then(function (ok) {
+        if (ok) app.update(function (n) { setOn(n, false); });
+      });
+    } else app.update(function (n) { setOn(n, true); });
+  }
+
   function tier0(app) {
-    var night = app.night, t0 = night.t0, key = app.key, useDst = app.useDst;
-    var el = h('div', { class: 'tier', 'data-tier': '0' });
+    var night = app.night, t0 = night.t0, key = app.key, useDst = app.useDst, news = app.news || { status: 'none', events: [], skipped: [] };
+    var el = h('div', { class: 'tier t0min', 'data-tier': '0' });
     el.appendChild(lead(T('t0Lead')));
 
-    var q1 = h('div', { class: 'ctl', 'data-ctl': 't0alert' },
+    el.appendChild(h('div', { class: 'ctl', 'data-ctl': 't0alert' },
       h('div', { class: 'ctl-label' }, h('span', { text: T('t0Alert') })),
-      seg(YESNO, t0.alert === null || t0.alert === undefined ? null : t0.alert, function (v) { app.update(function (n) { n.t0.alert = v; }); }));
-    el.appendChild(section(T('t0Title1'), [q1, t0.alert === false ? banner(T('t0ViewOnly'), 'warn') : null]));
+      seg(YESNO, t0.alert === null || t0.alert === undefined ? null : t0.alert, function (v) { app.update(function (n) { n.t0.alert = v; }); })));
+    if (t0.alert === false) el.appendChild(banner(T('t0ViewOnly'), 'warn'));
 
-    // khung giờ cấm
-    var list = h('div', { class: 'windows' });
-    R.effectiveWindows(t0, key).forEach(function (w) {
-      var r = time.windowRange(w, key, useDst);
-      var isDefault = w.id === 'w1930' || w.id === 'w2100';
-      var label = T('windowLabel', { hm: time.fmtMin(r.center), before: w.minutesBefore || 0, after: w.minutesAfter || 0, rank: w.rank });
-      var row = h('div', { class: 'wrow' + (w.on ? '' : ' off') },
-        h('span', { class: 'wlabel', text: label + (w.kind === 'fomc' ? ' · FOMC' : '') }),
-        w.offAt ? h('span', { class: 'muted', text: T('offAt', { hm: w.offAt }) }) : null,
-        w.auto ? h('span', { class: 'muted', text: T('autoOn') }) : null,
-        btn(w.on ? T('on') : T('off'), function () {
-          if (w.on) {
-            app.confirm({ title: T('offConfirmTitle'), text: T('offConfirmText', { hm: time.fmtMin(r.center) }), ok: T('offConfirmOk'), danger: true }).then(function (ok) {
-              if (ok) app.update(function (n) { var x = n.t0.windows.filter(function (z) { return z.id === w.id; })[0]; x.on = false; x.offAt = J.hm(app.nowMs); });
-            });
-          } else app.update(function (n) { var x = n.t0.windows.filter(function (z) { return z.id === w.id; })[0]; x.on = true; delete x.offAt; });
-        }, 'sw ' + (w.on ? 'on' : 'off')),
-        isDefault ? null : btn('✕', function () { app.update(function (n) { n.t0.windows = n.t0.windows.filter(function (z) { return z.id !== w.id; }); }); }, 'ghost small', { 'aria-label': T('remove') }));
-      list.appendChild(row);
+    // ----- Tin tối nay -----
+    var ok = news.status === 'ok';
+    var wins = R.effectiveWindows(t0, key, news);
+    var winById = {}; wins.forEach(function (w) { winById[w.id] = w; });
+    var rows = [];
+    news.events.forEach(function (e) {
+      var w = ok ? winById[e.id] : null;
+      var nums = h('span', { class: 'nnums muted', text: T('newsNums', { f: e.forecast || '—', p: e.previous || '—', a: e.actual || '—' }) });
+      var ctl = e.warnOnly ? h('span', { class: 'muted small', text: T('warnOnlyTag') })
+        : (w ? btn(w.on ? T('on') : T('off'), function () { toggleWin(app, w, e.hm); }, 'sw ' + (w.on ? 'on' : 'off'), { 'aria-label': e.title + ' ' + e.hm }) : null);
+      rows.push({ nm: e.nightMin, el: h('div', { class: 'nrow' + (w && !w.on ? ' off' : '') + (ok ? '' : ' dim'), 'data-news': e.id },
+        h('span', { class: 'ntime', text: e.hm }),
+        h('span', { class: 'nname' }, h('span', { class: 'ntitle', text: e.title }), e.warnOnly ? h('span', { class: 'ccy', text: e.country }) : null, impChip(e.impact)),
+        nums, ctl) });
     });
-    var nyse = time.windowRange(R.NYSE_WARN, key, useDst);
-    list.appendChild(h('div', { class: 'wrow warnrow' }, h('span', { class: 'wlabel', text: T('nyseRow', { hm: time.fmtMin(nyse.center) }) }), chip(T('alwaysOn'), 'warn')));
+    // dòng mờ: mặc định (21:00, 19:30 nếu có), khung thêm tay, NYSE
+    wins.filter(function (w) { return w.src !== 'ff'; }).forEach(function (w) {
+      var r = time.windowRange(w, key, useDst);
+      var name = w.id === 'w2100' ? T('rowCore') : w.id === 'w1930' ? T('row1930') : w.kind === 'fomc' ? T('rowFomc') : T('rowCustom');
+      var isDefault = w.id === 'w1930' || w.id === 'w2100';
+      rows.push({ nm: r.center, el: h('div', { class: 'nrow dim' + (w.on ? '' : ' off') },
+        h('span', { class: 'ntime', text: time.fmtMin(r.center) }),
+        h('span', { class: 'nname' }, h('span', { class: 'ntitle', text: name }), h('span', { class: 'muted small', text: T('winShort', { n: w.minutesBefore || 0 }) })),
+        h('span', { class: 'nnums muted', text: w.offAt ? T('offAt', { hm: w.offAt }) : '' }),
+        h('span', { class: 'nctl' },
+          btn(w.on ? T('on') : T('off'), function () { toggleWin(app, w, time.fmtMin(r.center)); }, 'sw ' + (w.on ? 'on' : 'off'), { 'aria-label': name + ' ' + time.fmtMin(r.center) }),
+          isDefault ? null : btn('✕', function () { app.update(function (n) { n.t0.windows = n.t0.windows.filter(function (z) { return z.id !== w.id; }); }); }, 'ghost small', { 'aria-label': T('remove') }))) });
+    });
+    var ny = time.windowRange(R.NYSE_WARN, key, useDst);
+    rows.push({ nm: ny.center, el: h('div', { class: 'nrow dim' }, h('span', { class: 'ntime', text: time.fmtMin(ny.center) }),
+      h('span', { class: 'nname' }, h('span', { class: 'ntitle', text: T('nyseRow') })), h('span', { class: 'nnums' }), chip(T('alwaysOn'), 'mini')) });
+    rows.sort(function (a, b) { return a.nm - b.nm; });
 
+    var hm = news.fetchedAt ? J.hm(Date.parse(news.fetchedAt)) : null;
+    var head = h('div', { class: 'nhead' }, h('h3', { class: 'ptitle' }, h('span', { text: T('newsTitle') })),
+      hm ? h('span', { class: 'muted small', 'data-testid': 'news-updated', text: T('newsUpdated', { hm: hm }) }) : h('span', { class: 'muted small', text: T('newsNoFeed') }));
+    var nd = app.res.newsDay, ndRow = null;
+    if (nd) ndRow = h('div', { class: 'ndrow', 'data-testid': 'newsday-tag' }, chip(T('newsDayTag'), 'warn'),
+      btn(T('newsDayOffBtn'), function () { app.update(function (n) { n.t0.newsDaySet = true; n.t0.newsDay = false; }); }, 'ghost small'));
+    else if (t0.newsDaySet && ok && news.newsDay) ndRow = h('div', { class: 'ndrow' }, h('span', { class: 'muted small', text: T('newsDayOff') }),
+      btn(T('newsDayOnBtn'), function () { app.update(function (n) { n.t0.newsDaySet = false; n.t0.newsDay = false; }); }, 'ghost small'));
+    var list = h('div', { class: 'nlist', 'data-testid': 'news-list' }, rows.map(function (r) { return r.el; }));
+    var body = [head, ndRow];
+    if (news.status === 'stale') body.push(h('p', { class: 'muted small', text: T('newsStaleNote', { min: news.ageMin }) }));
+    if (ok && !news.events.length) body.push(h('p', { class: 'muted small', text: T('newsNone') }));
+    if (news.skipped && news.skipped.length) body.push(h('p', { class: 'muted small', text: T('newsSkipped', { list: news.skipped.join(', ') }) }));
+    body.push(list);
+
+    // gập: thêm khung giờ tay, FOMC, ngày tin lớn ghi tay
     var f = app.ui.winForm = app.ui.winForm || { at: '', rank: 2, before: 5, after: 5 };
     var form = h('div', { class: 'wform' },
       h('span', { class: 'ctl-label', text: T('addWindow') }),
@@ -58,15 +105,14 @@
       }),
       btn(T('addFomc', { fomc: time.fmtMin(time.markMin({ at: '01:00', tz: 'ET' }, key, useDst)) }), function () {
         app.update(function (n) { n.t0.windows.push({ id: 'fomc' + Date.now().toString(36), kind: 'fomc', rank: 2, at: '01:00', tz: 'ET', minutesBefore: 0, minutesAfter: 30, on: true }); });
-      }, 'ghost'));
-    el.appendChild(section(T('t0Title2'), [list, form, banner(T('t0WinNote', { a: time.fmtMin(time.markMin({ at: '19:30', tz: 'ET' }, key, useDst)), b: time.fmtMin(time.markMin({ at: '21:00', tz: 'ET' }, key, useDst)) }), 'info')], { help: { text: T('t0WinHelp'), ref: 'xung-dot' } }));
-
-    el.appendChild(section(T('t0Title3'), [
+      }, 'ghost'),
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('newsDay') }),
-        seg(YESNO.map(function (o) { return { v: o.v, label: o.label }; }), !!t0.newsDay, function (v) { app.update(function (n) { n.t0.newsDay = !!v; }); }, { noToggle: true })),
-      h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('t0Note') }),
-        textInput(t0.note, function (v) { app.update(function (n) { n.t0.note = v; }, { keep: true }); }, { placeholder: T('t0NotePh'), max: 160 }))
-    ]));
+        seg(YESNO.map(function (o) { return { v: o.v, label: o.label }; }), !!app.res.newsDay, function (v) { app.update(function (n) { n.t0.newsDaySet = true; n.t0.newsDay = !!v; }); }, { noToggle: true })));
+    body.push(h('details', { class: 'fold manual' }, h('summary', { text: T('addManual') }), form));
+    el.appendChild(h('section', { class: 'panel news' }, body));
+
+    el.appendChild(h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('t0Note') }),
+      textInput(t0.note, function (v) { app.update(function (n) { n.t0.note = v; }, { keep: true }); }, { placeholder: T('t0NotePh'), max: 160 })));
 
     el.appendChild(h('div', { class: 'actions' }, btn(T('t0Done'), function () { app.update(function (n) { n.t0.touched = true; }); app.go(1); }, 'primary')));
     return el;

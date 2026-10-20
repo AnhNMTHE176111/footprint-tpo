@@ -1,7 +1,7 @@
 /* Trạm Đêm Vàng — dây nối: trạng thái, vẽ lại, điều hướng tầng, hộp thoại, phím tắt, service worker. */
 (function (root) {
   'use strict';
-  var TDV = root.TDV, ui = TDV.ui, C = TDV.content, J = TDV.journal, R = TDV.rules, E = TDV.engine, S = TDV.store, time = TDV.time;
+  var TDV = root.TDV, ui = TDV.ui, C = TDV.content, J = TDV.journal, R = TDV.rules, E = TDV.engine, S = TDV.store, time = TDV.time, N = TDV.news;
   var T = ui.T, h = ui.h, btn = ui.btn;
 
   var memory = {}, memStorage = { getItem: function (k) { return k in memory ? memory[k] : null; }, setItem: function (k, v) { memory[k] = String(v); } };
@@ -9,6 +9,7 @@
   try { storage = root.localStorage; storage.getItem('x'); } catch (e) { storage = memStorage; }
 
   var state = S.load(storage);
+  var feed = N.loadStored(storage);   // lịch tin Forex Factory bản gần nhất (data/ff.json) — mở file:// vẫn có
   var app = { state: state, ui: { sub: 'canh' }, tier: null, _draft: null, _lastKey: null, panelEl: null };
   TDV.app = app;
 
@@ -28,7 +29,9 @@
     app.nowMin = time.nightMinutes(app.nowMs, app.key);
     var nights = state.nights;
     if (!nights[app.key]) { nights = Object.assign({}, nights); nights[app.key] = app.night; }
-    app.res = E.evaluate({ nights: nights, nightKey: app.key, now: app.nowMs, settings: state.settings });
+    app.feed = feed;
+    app.news = N.forNight(feed, app.key, app.nowMs, app.useDst);
+    app.res = E.evaluate({ nights: nights, nightKey: app.key, now: app.nowMs, settings: state.settings, news: app.news });
   }
   function persist() {
     var ok = S.save(storage, state);
@@ -418,6 +421,25 @@
     $('cardtoggle').setAttribute('aria-expanded', on ? 'true' : 'false');
   };
 
+  // ---------- lịch tin Forex Factory (QĐ-22): tải ./data/ff.json lúc mở và mỗi 5′ khi tab hiện ----------
+  var newsAt = 0;
+  function fetchNews() {
+    if (!root.fetch || root.location.protocol === 'file:') return;
+    if (document.visibilityState === 'hidden') return;
+    newsAt = Date.now();
+    root.fetch('./data/ff.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (f) {
+        if (!N.validFeed(f)) return;
+        var nf = N.newer(f, feed);
+        if (JSON.stringify(nf) === JSON.stringify(feed)) return;
+        feed = nf; N.saveStored(storage, nf);
+        render({ keep: true });
+      })
+      .catch(function () { /* mất mạng: giữ bản đã lưu */ });
+  }
+  app.fetchNews = fetchNews;
+
   // ---------- khởi động ----------
   function boot() {
     compute();
@@ -429,6 +451,9 @@
     $('skip').textContent = T('skip');
     render();
     if (!state.settings.sizeAsked) app.openCapital(true);
+    fetchNews();
+    setInterval(fetchNews, 300000);
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && Date.now() - newsAt > 60000) fetchNews(); });
     setInterval(function () {
       compute();
       var sig = JSON.stringify([app.res.enabled, !!app.res.newsHit, app.res.longestBarActive, app.res.locks.tier3]);

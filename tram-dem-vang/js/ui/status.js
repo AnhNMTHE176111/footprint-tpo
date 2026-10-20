@@ -1,7 +1,7 @@
 /* Trạm Đêm Vàng — thanh trạng thái (luôn thấy) + thẻ phiên (cột phải). */
 (function (root) {
   'use strict';
-  var TDV = root.TDV, ui = TDV.ui, C = TDV.content, J = TDV.journal, R = TDV.rules, time = TDV.time;
+  var TDV = root.TDV, ui = TDV.ui, C = TDV.content, J = TDV.journal, R = TDV.rules, time = TDV.time, N = TDV.news;
   var T = ui.T, h = ui.h, chip = ui.chip;
 
   function optLabel(qid, v) {
@@ -16,7 +16,7 @@
     var warn = res.warnings.indexOf('WARN_NYSE') >= 0 || res.warnings.indexOf('WARN_BEFORE_2030') >= 0;
     var phase = time.phaseAt(app.nowMin, key, useDst);
     var band = time.bandAt(app.nowMin, key, useDst);
-    var next = time.nextWindow(R.effectiveWindows(night.t0, key), app.nowMin, key, useDst);
+    var next = time.nextWindow(R.effectiveWindows(night.t0, key, app.news), app.nowMin, key, useDst);
     var bar = h('div', { class: 'statusbar' + (hit ? ' bad' : warn ? ' warn' : '') });
     // điện thoại: hàng đầu chỉ có giờ, bias và nút "Trạng thái"; mọi chip còn lại nằm trong khung mở xuống (USER-TEST-3 d1).
     // Máy tính: hai khung này là display: contents nên bố cục như cũ.
@@ -37,12 +37,18 @@
       bar.appendChild(chip(T('inWindow', { hm: time.fmtMin(r.center), left: Math.max(0, Math.ceil(r.to - app.nowMin)) }), 'bad'));
     } else if (res.warnings.indexOf('WARN_NYSE') >= 0) {
       bar.appendChild(chip(C.warnText.WARN_NYSE, 'warn'));
+    } else if (res.fxNews) {
+      bar.appendChild(chip(T('fxChip', { ccy: res.fxNews.country, hm: time.fmtMin(res.fxNews.center) }), 'warn'));
+    } else if (app.news && app.news.status === 'ok' && N.nextEvent(app.news, app.nowMin)) {
+      var ne = N.nextEvent(app.news, app.nowMin);
+      bar.appendChild(chip(T('newsChip', { hm: ne.hm, name: ne.title, min: Math.ceil(ne.nightMin - app.nowMin) }), '', null));
     } else if (next) {
       var rr = time.windowRange(next.w, key, useDst);
       bar.appendChild(chip(T('nextWindow', { hm: time.fmtMin(rr.center), min: Math.ceil(next.startsIn) }), ''));
     } else {
       bar.appendChild(chip(T('noWindow'), ''));
     }
+    if (app.news && app.news.fetchedAt) bar.appendChild(chip(T('newsAgeChip', { hm: J.hm(Date.parse(app.news.fetchedAt)) }), 'zero'));
     // chữ ngắn trên thanh; câu đầy đủ nằm trong "?" (REVIEW-2 mục 12, mục 10)
     if (early && !hit) { bar.appendChild(chip(T('warnShort'), 'warn')); bar.appendChild(ui.qd19Help()); }
 
@@ -57,6 +63,7 @@
     if (notes.some(function (n) { return n.id === 'US_WINTER'; })) { bar.appendChild(chip(T('winterChip'), 'warn')); bar.appendChild(ui.helpBtn({ text: C.notices.US_WINTER, ref: 'thoi-gian' })); }
 
     bar.appendChild(h('button', { type: 'button', class: 'btn small ghost glossary-btn', 'data-testid': 'glossary-btn', text: T('glossaryBtn'), onclick: function () { app.openGlossary(); } }));
+    if (!app.news || app.news.status !== 'ok') wrap.appendChild(h('div', { class: 'notice bad', role: 'alert', 'data-testid': 'news-stale', text: T('newsStaleBar') }));
     notes.forEach(function (n) { if (n.id !== 'US_WINTER') wrap.appendChild(h('div', { class: 'notice', text: C.notices[n.id] })); });
     return wrap;
   }

@@ -44,7 +44,7 @@
     el.appendChild(section(T('t4Title'), [head, grid, op.beDone ? null : h('p', { class: 'muted', text: T('noSlEdit') })]));
 
     if (op.beDone) el.appendChild(banner(T('beReminder', { entry: J.fmt(t.entry) }), 'warn'));
-    var dl = time.flatDeadline(R.effectiveWindows(nightObj.t0, key), nowMinO, key, app.useDst);
+    var dl = time.flatDeadline(R.effectiveWindows(nightObj.t0, key, key === app.key ? app.news : null), nowMinO, key, app.useDst);
     if (dl && !paper) el.appendChild(banner(T('flatBefore', { hm: time.fmtMin(dl.at), min: Math.max(0, Math.ceil(dl.at - nowMinO)) }), dl.at - nowMinO <= 15 ? 'bad' : 'warn'));
     if (nowMinO >= time.markMin(R.MARKS.globexMaint, key, app.useDst)) el.appendChild(banner(T('maintNote'), 'warn'));
 

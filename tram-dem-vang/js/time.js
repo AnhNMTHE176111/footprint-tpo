@@ -124,7 +124,8 @@
       if (!r) return;
       var isFomc = w.kind === 'fomc';
       if (w.rank !== 1 && !isFomc) return;
-      var dl = r.from - (isFomc ? 15 : 0);
+      // khung tự sinh từ lịch có flatBefore riêng (FOMC / họp báo / Chủ tịch Fed: đóng sạch trước giờ tin − 15′)
+      var dl = typeof w.flatBefore === 'number' ? r.center - w.flatBefore : r.from - (isFomc ? 15 : 0);
       if (dl > nowMin - 1e-9 && (!best || dl < best.at)) best = { at: dl, w: w };
     });
     return best;
@@ -156,9 +157,10 @@
     return null;
   }
 
-  // thẻ thông báo giờ mùa đông
+  // thẻ thông báo giờ mùa đông. Thẻ đổi giờ (US_SWITCH, LDN_SWITCH và hai thẻ quay lại) hiện suốt 8 đêm kể từ ngày đổi giờ
+  // (Chủ nhật đổi giờ + cả tuần giao dịch đầu tiên), để không bị lỡ vì ngày đổi giờ rơi vào Chủ nhật không có phiên (REVIEW-4 mục 1).
   function notices(key, useDst) {
-    var out = [], s = shiftsForNight(key, useDst), prev = shiftsForNight(addDays(key, -1), useDst);
+    var out = [], s = shiftsForNight(key, useDst), prev = shiftsForNight(addDays(key, -8), useDst);
     if (s.us === 1) out.push({ id: 'US_WINTER' });
     if (s.us === 1 && prev.us === 0) out.push({ id: 'US_SWITCH' });
     if (s.us === 0 && prev.us === 1) out.push({ id: 'US_SWITCH_BACK' });

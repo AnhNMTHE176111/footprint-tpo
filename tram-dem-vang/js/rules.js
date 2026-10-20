@@ -47,17 +47,38 @@
       { id: 'w2100', kind: 'news', rank: 2, at: '21:00', tz: 'ET', minutesBefore: 5, minutesAfter: 5, on: true }
     ];
   }
-  // Khung giờ áp dụng: 19:30 bật khi w.on, hoặc (chưa bị người dùng tắt tay) khi chưa qua tầng 0 / ngày có tin lớn
-  function effectiveWindows(t0, key) {
+  // newsDay hiệu lực: người dùng đã chọn tay (newsDaySet) thì theo tay; không thì theo lịch Forex Factory khi lịch còn mới (QĐ-22)
+  function effectiveNewsDay(t0, news) {
+    var t = t0 || {};
+    if (t.newsDaySet) return !!t.newsDay;
+    if (news && news.status === 'ok' && news.newsDay) return true;
+    return !!t.newsDay;
+  }
+  // Khung giờ áp dụng: khung nhập tay / mặc định + khung tự sinh từ lịch (news.windows, khi lịch còn mới).
+  // 19:30 mặc định: bật khi w.on, hoặc (chưa bị tắt tay) khi chưa qua tầng 0 / ngày có tin lớn. Khi lịch có dữ liệu thì 19:30 mặc định
+  // không còn tự bật (chỉ có khung riêng của tin có thật). Khung tự sinh tắt được: t0.newsOverrides[id] = { on: false, offAt }.
+  function effectiveWindows(t0, key, news) {
     var t = t0 || {};
     var list = t.windows;
     if (!list) { var th = key ? dep('time').isThursday(key) : false; list = defaultWindows(th); }
-    return list.map(function (w) {
+    var ok = !!(news && news.status === 'ok');
+    var nd = effectiveNewsDay(t, news);
+    var out = list.filter(function (w) { return !(ok && w.id === 'w1930'); }).map(function (w) {
       if (w.id !== 'w1930') return w;
-      var on = !!w.on || (!w.offAt && (!t.touched || !!t.newsDay));
+      var on = !!w.on || (!w.offAt && (!t.touched || !!nd));
       if (on === !!w.on) return w;
       var o = {}; for (var k in w) o[k] = w[k]; o.on = on; o.auto = true; return o;
     });
+    if (ok) {
+      var ov = t.newsOverrides || {};
+      news.windows.forEach(function (w) {
+        var x = {}; for (var k in w) x[k] = w[k];
+        var o = ov[w.id];
+        if (o && o.on === false) { x.on = false; if (o.offAt) x.offAt = o.offAt; }
+        out.push(x);
+      });
+    }
+    return out;
   }
   var NYSE_WARN = { at: '20:30', tz: 'ET', minutesBefore: 5, minutesAfter: 5 };
 
@@ -297,7 +318,7 @@
 
   return {
     APP_VERSION: APP_VERSION, T: T, EPS: EPS, TARGET_R: TARGET_R, BE_R: BE_R, HALF_ORDER: HALF_ORDER, SCENARIOS: SCENARIOS,
-    MARKS: MARKS, NYSE_WARN: NYSE_WARN, defaultWindows: defaultWindows, effectiveWindows: effectiveWindows, ZONE_TYPES: ZONE_TYPES, ZONE_ORDER: ZONE_ORDER,
+    MARKS: MARKS, NYSE_WARN: NYSE_WARN, defaultWindows: defaultWindows, effectiveWindows: effectiveWindows, effectiveNewsDay: effectiveNewsDay, ZONE_TYPES: ZONE_TYPES, ZONE_ORDER: ZONE_ORDER,
     RULES: RULES, RULE_ORDER: RULE_ORDER, enrichZone: enrichZone, zoneGap: zoneGap, hasFlag: hasFlag, coincidesEdge: coincidesEdge,
     autoBias: autoBias, effectiveBias: effectiveBias, effectiveRegime: effectiveRegime, dirToSide: dirToSide, isCounter: isCounter,
     against: against, isScenIn: isScenIn, num: num, round1: round1, round2: round2

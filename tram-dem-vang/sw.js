@@ -3,7 +3,7 @@ const APP_VERSION = '1.0.5';
 const CACHE = 'tdv-' + APP_VERSION;
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
-  'js/rules.js', 'js/time.js', 'js/content.js', 'js/engine.js', 'js/journal.js', 'js/store.js',
+  'js/rules.js', 'js/time.js', 'js/news.js', 'js/content.js', 'js/engine.js', 'js/journal.js', 'js/store.js',
   'js/ui/dom.js', 'js/ui/status.js', 'js/ui/tier012.js', 'js/ui/tier3.js', 'js/ui/tier45.js', 'js/main.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png'
 ];
@@ -17,6 +17,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  if (new URL(req.url).pathname.endsWith('/data/ff.json')) return;   // lịch tin luôn lấy từ mạng, không qua cache của service worker
   e.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => {
     if (hit) return hit;
     return fetch(req).then((res) => {

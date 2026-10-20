@@ -76,3 +76,7 @@ minh
 quanh
 quay
 khung
+forex
+factory
+eur
+gbp

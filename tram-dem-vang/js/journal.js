@@ -36,7 +36,7 @@
   // ===== đêm mới =====
   function newNight(key) {
     return {
-      t0: { alert: null, touched: false, windows: R.defaultWindows(key ? time.isThursday(key) : false), newsDay: false, note: '' },
+      t0: { alert: null, touched: false, windows: R.defaultWindows(key ? time.isThursday(key) : false), newsDay: false, newsDaySet: false, newsOverrides: {}, note: '' },
       card: { answers: {}, bias: {}, zones: [], zoneSeq: 0, plan1: '', plan2: '', cancelWhen: '', lockedAt: null, edits: [], drawn: {} },
       regime: { mode: 'balanced', thinDir: null, breakout: { dir: null, edgeZoneId: null, at: null, nth: 1, step1: false, step2: false }, longestBarUntil: null, log: [] },
       setup: {}, open: null, trades: [], tally: { machine: 0, manual: null, closedAt: null }
@@ -171,7 +171,8 @@
   function setBreakoutField(night, field, v, nowMs) {
     var bo = night.regime.breakout, old = bo[field];
     bo[field] = v;
-    if (old !== v && ((old !== null && old !== undefined) || bo.step1 || bo.step2)) {
+    // chỉ khi ĐÃ công nhận (bước 1 hoặc 2) mới là cú phá mới; sửa chọn nhầm trước khi công nhận thì giữ giờ phá đã gõ (REVIEW-4 mục 3)
+    if (old !== v && (bo.step1 || bo.step2)) {
       bo.step1 = false; bo.step2 = false; bo.at = hm(nowMs);
       (night.regime.log = night.regime.log || []).push({ at: hm(nowMs), mode: night.regime.mode, reset: field });
       return true;

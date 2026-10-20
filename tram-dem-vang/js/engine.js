@@ -5,7 +5,7 @@
   else { root.TDV = root.TDV || {}; root.TDV.engine = factory(function (n) { return root.TDV[n]; }); }
 })(this, function (dep) {
   'use strict';
-  var R = dep('rules'), time = dep('time');
+  var R = dep('rules'), time = dep('time'), N = dep('news');
   var T = R.T, EPS = R.EPS, num = R.num;
 
   // Lệnh đóng có tính là SL (cộng chuỗi) không? Một định nghĩa duy nhất (REVIEW-3 mục 1, quyết định chủ plan):
@@ -159,7 +159,9 @@
     var zoneN = zoneId ? trades.filter(function (t) { return t.zoneId === zoneId && (t.flags || []).indexOf('paper') < 0; }).length : 0;
     var openInfo = findOpen(nights);
 
-    var windows = R.effectiveWindows(t0, key);
+    var news = input.news || null;
+    t0 = Object.assign({}, t0, { newsDay: R.effectiveNewsDay(t0, news) });
+    var windows = R.effectiveWindows(t0, key, news);
     var newsHit = time.hitWindow(windows, nowMin, key, useDst);
     var untilMs = num(regimeSt.longestBarUntil);
     var nyseMin = time.markMin(R.MARKS.nyse, key, useDst);
@@ -249,6 +251,8 @@
     if (nowMin >= nyseRange.from - EPS && nowMin <= nyseRange.to + EPS) warnings.push('WARN_NYSE');
     if (nowMin >= time.markMin(R.MARKS.prep, key, useDst) && nowMin < nyseMin) warnings.push('WARN_BEFORE_2030');
     if (card.lockedAt && zones.length < T.zonesMin) warnings.push('WARN_FEW_ZONES');
+    var fxHit = N.hitWarn(news, nowMin);
+    if (fxHit) warnings.push('WARN_FX_NEWS');
 
     return {
       verdict: verdict, reasons: reasons, ruleReasons: c.reasons.concat(c.shadow.filter(function (x) { return c.reasons.indexOf(x) < 0; })), missing: c.missing.slice(), dots: dots, dotsLit: dots.filter(Boolean).length,
@@ -256,7 +260,7 @@
       regime: { effective: reg.effective, dir: reg.dir }, bias: b.value, biasAuto: b.auto, biasOverridden: b.overridden,
       scenario: scen, side: side, zone: zone, zones: zones, counter: counter, exempt9: exempt9, calc: cl,
       counts: c.counts, open: openInfo, locks: { tier3: l3 }, warnings: warnings,
-      paper: t0.alert === false, newsHit: newsHit, longestBarActive: c.longestBarActive,
+      paper: t0.alert === false, newsHit: newsHit, fxNews: fxHit, newsDay: t0.newsDay, longestBarActive: c.longestBarActive,
       nowMin: nowMin, nyseMin: nyseMin, comexMin: comexMin
     };
   }

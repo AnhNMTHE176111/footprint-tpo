@@ -55,8 +55,11 @@ test('ngày chuyển giờ: hiện thẻ thông báo', () => {
   const ids = (k) => time.notices(k, true).map((n) => n.id);
   assert.deepEqual(ids('2026-10-24'), []);
   assert.deepEqual(ids('2026-10-25'), ['LDN_SWITCH']);
-  assert.deepEqual(ids('2026-11-01'), ['US_WINTER', 'US_SWITCH']);
-  assert.deepEqual(ids('2026-11-02'), ['US_WINTER']);
+  assert.deepEqual(ids('2026-11-01'), ['US_WINTER', 'US_SWITCH', 'LDN_SWITCH']);
+  assert.deepEqual(ids('2026-11-02'), ['US_WINTER', 'US_SWITCH']);   // thứ Hai: đêm giao dịch đầu tiên sau khi Mỹ đổi giờ (REVIEW-4 mục 1)
+  assert.deepEqual(ids('2026-11-08'), ['US_WINTER', 'US_SWITCH']);   // còn hiện suốt tuần đầu mùa đông
+  assert.deepEqual(ids('2026-11-09'), ['US_WINTER']);
+  assert.deepEqual(ids('2027-03-15'), ['US_SWITCH_BACK']);
   assert.deepEqual(ids('2027-03-14'), ['US_SWITCH_BACK']);
   assert.deepEqual(ids('2027-03-28'), ['LDN_SWITCH_BACK']);
   assert.match(C.notices.US_SWITCH, /19:20 sang 20:20/);

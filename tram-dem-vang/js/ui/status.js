@@ -20,6 +20,7 @@
     var bar = h('div', { class: 'statusbar' + (hit ? ' bad' : warn ? ' warn' : '') });
 
     bar.appendChild(h('strong', { class: 'clock', 'data-testid': 'clock', text: T('clock', { hm: J.hm(app.nowMs) }) }));
+    bar.appendChild(chip(T('biasChip', { v: ui.biasText(res.bias) }), 'bias ' + ui.dirCls(res.bias)));
     bar.appendChild(h('span', { class: 'phase', text: C.phases[phase.id] + (band ? ' · ' + C.bands[band.id] : '') }));
     if (hit) {
       var r = time.windowRange(hit, key, useDst);
@@ -34,7 +35,6 @@
     }
     if (res.warnings.indexOf('WARN_BEFORE_2030') >= 0 && !hit) bar.appendChild(chip(C.warnText.WARN_BEFORE_2030, 'warn'));
 
-    bar.appendChild(chip(T('biasChip', { v: ui.biasText(res.bias) }), 'bias ' + ui.dirCls(res.bias)));
     var rb = res.counts.ruleBreaks, ss = res.counts.slStreak;
     bar.appendChild(chip(T('chipBreaks', { n: rb }), rb >= 2 ? 'bad' : rb ? 'warn' : 'zero'));
     bar.appendChild(chip(T('chipStreak', { n: ss }), ss >= 3 ? 'bad' : ss ? 'warn' : 'zero'));

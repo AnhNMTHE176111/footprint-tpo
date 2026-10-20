@@ -239,7 +239,7 @@ kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4
 /* ----- điện thoại ----- */
 @media (max-width: 900px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
-  .card { position: fixed; right: 0; top: 0; bottom: 0; width: min(88vw, 340px); max-height: none; border-radius: 0; z-index: 70; transform: translateX(105%); transition: transform .2s; padding-top: 16px; }
+  .card { position: fixed; right: 0; top: 0; bottom: 0; width: min(88vw, 340px); max-height: none; border-radius: 0; z-index: 70; transform: translateX(105%); transition: transform .2s; padding-top: 52px; }
   .card.open { transform: none; box-shadow: var(--shadow); }
   .cardtoggle { display: block; position: fixed; right: 8px; top: 6px; z-index: 80; font-size: 13px; background: var(--panel2); border: 1px solid var(--accent); color: var(--text); border-radius: 999px; padding: 8px 14px; box-shadow: var(--shadow); }
   .cardclose { display: inline-block; margin-left: auto; min-width: 44px; min-height: 36px; border: 1px solid var(--line); background: var(--panel2); border-radius: 8px; }
@@ -252,7 +252,7 @@ kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4
   .vtext.entry .erest { font-size: 16px; }
   .vbar { padding: 10px 12px; gap: 8px; }
   .vbar .btn.big { width: 100%; }
-  .statusbar { padding: 6px 110px 6px 12px; }
+  .statusbar { padding: 6px 12px; margin-right: 108px; }
   .clock { font-size: 16px; }
   .tierbtn { padding: 6px 2px; gap: 2px; flex-direction: column; min-height: 50px; }
   .tierbtn .tname { font-size: 11px; max-width: 100%; }
@@ -273,7 +273,8 @@ kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4
 .banner.savefail { margin: 0; border-radius: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 @media (max-width: 600px) {
   .chip.zero, .statusbar .phase { display: none; }
-  .statusbar { flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding-right: 110px; }
+  .statusbar { flex-wrap: nowrap; overflow-x: auto; gap: 8px; }
+  .clock { white-space: nowrap; flex: none; }
   .statusbar .chip, .statusbar .btn { flex: none; }
   .vbar .dots { display: none; }
 }

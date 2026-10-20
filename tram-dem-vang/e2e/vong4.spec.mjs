@@ -288,7 +288,9 @@ test('v4-15 · Sổ: chú giải cột "4 kiểm tra" dưới bảng; chip đủ
     await page.fill('[data-testid="glossary-search"]', 'pha gia');
     assert.ok((await page.$$eval('.glossary dt:not([hidden])', (els) => els.map((e) => e.textContent))).includes('phá giả'));
     await page.fill('[data-testid="glossary-search"]', 'khung gio cam');
-    assert.match(await page.textContent('.glossary dd:not([hidden])'), /19:30.*21:00/);
+    assert.match(await page.textContent('.glossary dd:not([hidden])'), /Forex Factory.*21:00.*19:30/);   // QĐ-22: khung giờ tự lấy từ lịch, mặc định cũ là dự phòng
+    await page.fill('[data-testid="glossary-search"]', 'cua so');                                    // tên cũ "cửa sổ cấm" vẫn tìm ra (USER-TEST-4 b6)
+    assert.ok((await page.$$eval('.glossary dt:not([hidden])', (els) => els.map((e) => e.textContent))).some((t) => /khung giờ cấm/.test(t)));
   });
 });
 

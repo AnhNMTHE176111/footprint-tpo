@@ -19,6 +19,7 @@ async function get(url) {
   for (let i = 1; i <= RETRIES; i++) {
     try {
       const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (tram-dem-vang)', Accept: 'application/json' } });
+      if (res.status === 404) { console.log(`${url}: 404 (feed chưa phát hành, không thử lại)`); return null; }
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length) return data;

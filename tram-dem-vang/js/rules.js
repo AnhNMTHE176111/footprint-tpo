@@ -6,7 +6,7 @@
 })(this, function (dep) {
   'use strict';
 
-  var APP_VERSION = '1.0.5';
+  var APP_VERSION = '1.0.6';
   var EPS = 1e-9;
 
   var T = {
@@ -328,10 +328,6 @@
       return c.calc.rr < T.rrMin - EPS || (c.calc.nextZone && !c.calc.nextRRok);
     } },
     { code: 'NO_TP_PAST_ZONE', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && c.calc.slSideOk && c.calc.rr !== null && !c.calc.tpPastOk; } },
-    // thiếu vốn hoặc % rủi ro: không tính được số hợp đồng ⇒ CHỜ, trỏ tới nút "Đổi vốn" (REVIEW-3 mục 6)
-    { code: 'WAIT_CAPITAL', scope: 'ABCD', effect: 'WAIT', when: function (c) {
-      return c.calc.numsOk && c.calc.slSideOk && !(num(c.settings.capital) > 0 && num(c.settings.riskPct) > 0);
-    } },
     // thiếu vốn hoặc % rủi ro: không tính được số hợp đồng ⇒ CHỜ, trỏ tới nút "Đổi vốn" (REVIEW-3 mục 6)
     { code: 'WAIT_CAPITAL', scope: 'ABCD', effect: 'WAIT', when: function (c) {
       return c.calc.numsOk && c.calc.slSideOk && !(num(c.settings.capital) > 0 && num(c.settings.riskPct) > 0);

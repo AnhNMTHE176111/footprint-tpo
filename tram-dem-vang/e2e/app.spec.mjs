@@ -196,6 +196,12 @@ test('8 · "Tôi vẫn vào (phá luật)" hai lần ⇒ TẮT MÁY', async () =
     await page.click(seg('b1', 'V'));                             // V ⇒ KHÔNG VÀO
     assert.equal(await verdict(page), 'NO');
     for (let i = 0; i < 2; i++) {
+      if (i > 0) { // lệnh đầu đã ghi ⇒ tầng 3 về "Kèo mới"; làm lại kèo
+        await page.click('[data-tier-btn="3"]'); await page.waitForSelector(seg('c1', 'A'));
+        assert.equal(await page.getAttribute(seg('c1', 'A'), 'aria-pressed'), 'false');
+        await walkA(page); await page.click(seg('b1', 'V'));
+        assert.equal(await verdict(page), 'NO');
+      }
       await page.click('[data-testid="btn-force"]');
       await page.click('[data-testid="dlg-ok"]');
       await page.waitForSelector('[data-tier="4"]');
@@ -203,7 +209,6 @@ test('8 · "Tôi vẫn vào (phá luật)" hai lần ⇒ TẮT MÁY', async () =
       await page.click('.seg.close [data-v="SL"]');
       await page.click('[data-testid="btn-close-confirm"]');
       await page.waitForSelector('[data-tier="5"]');
-      if (i === 0) { await page.click('[data-tier-btn="3"]'); await page.waitForSelector('[data-testid="verdict"]'); assert.equal(await verdict(page), 'NO'); }
     }
     assert.match(await page.textContent('[data-testid="journal"]'), /⚠ dòng/);
     await page.click('[data-tier-btn="3"]');

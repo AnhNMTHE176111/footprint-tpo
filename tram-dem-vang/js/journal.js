@@ -148,6 +148,7 @@
       flags: flags, counterBiasReason: res.counter ? (s.counterBiasReason || '') : '', ruleCodes: codes, sweptThenTP: null, notes: ''
     };
     night.trades.push(trade);
+    night.setup = {}; // kèo đã ghi sổ ⇒ tầng 3 về "Kèo mới"; tải lại không hiện ENTRY cũ (USER-TEST mục 3)
     night.open = { tradeId: trade.id, status: isMarket ? 'filled' : 'pending', beAt: null, beDone: false, outsideZoneBar: false, limitPrice: isMarket ? null : fill };
     return trade;
   }
@@ -165,6 +166,7 @@
     if (!night.open) return;
     night.trades = night.trades.filter(function (t) { return t.id !== night.open.tradeId; });
     night.open = null;
+    night.setup = {};
   }
 
   function computeR(trade, price) {

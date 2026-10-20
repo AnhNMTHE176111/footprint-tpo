@@ -173,6 +173,7 @@ select.field { min-width: 180px; }
 .czone { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 13px; padding: 2px 0; }
 .cfoot { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .cardtoggle { display: none; }
+.cardclose, .cardscrim { display: none; }
 
 /* ----- thanh phán quyết dính đáy ----- */
 .verdict { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; }
@@ -233,7 +234,9 @@ kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4
   .layout { grid-template-columns: minmax(0, 1fr); }
   .card { position: fixed; right: 0; top: 0; bottom: 0; width: min(88vw, 340px); max-height: none; border-radius: 0; z-index: 70; transform: translateX(105%); transition: transform .2s; padding-top: 16px; }
   .card.open { transform: none; box-shadow: var(--shadow); }
-  .cardtoggle { display: block; position: fixed; right: 8px; top: 6px; z-index: 50; font-size: 13px; background: var(--panel2); border: 1px solid var(--accent); color: var(--text); border-radius: 999px; padding: 8px 14px; box-shadow: var(--shadow); }
+  .cardtoggle { display: block; position: fixed; right: 8px; top: 6px; z-index: 80; font-size: 13px; background: var(--panel2); border: 1px solid var(--accent); color: var(--text); border-radius: 999px; padding: 8px 14px; box-shadow: var(--shadow); }
+  .cardclose { display: inline-block; margin-left: auto; min-width: 44px; min-height: 36px; border: 1px solid var(--line); background: var(--panel2); border-radius: 8px; }
+  .cardscrim.on { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, .5); z-index: 65; }
   .qgrid { grid-template-columns: minmax(0, 1fr); }
   .kvgrid, .kvgrid.wide { grid-template-columns: minmax(0, 1fr); }
   .pop { position: fixed; left: 12px; right: 12px; top: auto; bottom: 100px; width: auto; }

@@ -24,11 +24,13 @@ test('1 lệnh phá luật chưa tắt máy', () => {
 });
 test('"Tôi vẫn vào" ×2 ⇒ TẮT MÁY (đi qua journal thật)', () => {
   const n = mk('A', { setup: { b1: 'V' } });
+  const saved = JSON.parse(JSON.stringify(n.setup));
   const t1 = enterVia(n, { ruleBreak: true });
+  assert.deepEqual(n.setup, {});                       // ghi lệnh xong ⇒ về "Kèo mới" (USER-TEST mục 3)
   assert.ok(t1.flags.includes('RULE_BREAK')); assert.deepEqual(t1.ruleCodes, ['NO_V_PULLBACK']);
   J.closeTrade(n, { kind: 'SL', nowMs: NOW.getTime(), nowMin: NOWMIN + 5 });
-  assert.equal(evalNight(n).verdict, 'NO');
-  n.setup.zoneId = 'z2';
+  assert.equal(evalNight(n).verdict, 'WAIT');          // setup trống ⇒ CHỜ chọn kịch bản
+  n.setup = saved; n.setup.zoneId = 'z2';
   enterVia(n, { ruleBreak: true });
   J.closeTrade(n, { kind: 'BE', nowMs: NOW.getTime(), nowMin: NOWMIN + 9 });
   const r = evalNight(n);

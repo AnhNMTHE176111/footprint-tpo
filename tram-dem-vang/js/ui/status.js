@@ -52,7 +52,7 @@
     var res = app.res, night = app.night, card = night.card, a = card.answers || {};
     var p = time.parseKey(app.key);
     var root_ = h('div', { class: 'cardbox' });
-    root_.appendChild(h('h3', { class: 'ptitle', text: T('cardTitle') }));
+    root_.appendChild(h('h3', { class: 'ptitle' }, h('span', { text: T('cardTitle') }), h('button', { type: 'button', class: 'cardclose', 'aria-label': T('close'), text: '✕', onclick: function () { app.toggleCard(false); } })));
     function row(label, value, cls) {
       return h('div', { class: 'crow' }, h('span', { class: 'clabel', text: label }), h('span', { class: 'cval' + (cls ? ' ' + cls : '') }, value));
     }

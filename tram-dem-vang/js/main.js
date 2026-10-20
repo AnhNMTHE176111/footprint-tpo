@@ -113,7 +113,7 @@
     var res = freshEnterCtx();
     if (res.verdict !== 'ENTRY') { render(); return; }
     app.update(function (n) { J.createTrade(n, res, { kind: o.kind, price: o.price, paper: !!o.paper || res.paper, ruleBreak: false, nowMs: app.nowMs, nowMin: app.nowMin }); });
-    app.ui.curPrice = null; app.ui.fillPrice = undefined; app.ui.closeKind = null;
+    app.ui.curPrice = null; app.ui.fillPrice = undefined; app.ui.closeKind = null; app.ui.sub = 'canh'; app.ui.canhDone = false;
     app.go(4);
     app.toast(o.paper || res.paper ? T('enteredPaper') : T('entered'));
   };
@@ -127,7 +127,7 @@
       compute();
       var r2 = app.res;
       app.update(function (n) { J.createTrade(n, r2, { kind: 'market', price: r2.calc.entry, paper: paper, ruleBreak: true, nowMs: app.nowMs, nowMin: app.nowMin }); });
-      app.ui.curPrice = null; app.ui.closeKind = null;
+      app.ui.curPrice = null; app.ui.closeKind = null; app.ui.sub = 'canh'; app.ui.canhDone = false;
       app.go(4);
       app.toast(paper ? T('enteredPaper') : T('forcedToast'));
     });
@@ -214,6 +214,7 @@
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       if (modalStack.length) { closeModal(false); return; }
+      if ($('card').classList.contains('open')) { app.toggleCard(false); return; }
       if (isTyping(e.target)) e.target.blur();
       return;
     }
@@ -247,12 +248,23 @@
     openModal(h('div', { class: 'dlg' }, h('h3', { text: T('keysTitle') }), rows, h('div', { class: 'actions' }, btn(T('close'), function () { closeModal(false); }, 'primary'))));
   }
 
+  // ngăn thẻ phiên trên điện thoại: mở / đóng bằng nút, nút ✕, chạm ra ngoài, Esc (REVIEW-1 mục 2)
+  app.toggleCard = function (open) {
+    var el = $('card');
+    var on = open === undefined ? !el.classList.contains('open') : !!open;
+    el.classList.toggle('open', on);
+    $('cardscrim').classList.toggle('on', on);
+    $('cardtoggle').textContent = on ? T('close') : T('cardToggle');
+    $('cardtoggle').setAttribute('aria-expanded', on ? 'true' : 'false');
+  };
+
   // ---------- khởi động ----------
   function boot() {
     compute();
     app.tier = suggestTier();
     $('cardtoggle').textContent = T('cardToggle');
-    $('cardtoggle').addEventListener('click', function () { $('card').classList.toggle('open'); });
+    $('cardtoggle').addEventListener('click', function () { app.toggleCard(); });
+    $('cardscrim').addEventListener('click', function () { app.toggleCard(false); });
     document.title = T('appTitle');
     $('skip').textContent = T('skip');
     render();

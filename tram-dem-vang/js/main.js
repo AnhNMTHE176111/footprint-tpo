@@ -9,6 +9,8 @@
   try { storage = root.localStorage; storage.getItem('x'); } catch (e) { storage = memStorage; }
 
   var state = S.load(storage);
+  // dữ liệu v1 cũ: lưu lại ngay dạng v2 (chỉ khi phiên bản khác, để không bắn sự kiện storage sang thẻ khác khi không đổi gì)
+  try { var rawSaved = storage.getItem(S.KEY); if (rawSaved && JSON.parse(rawSaved).version !== S.VERSION) S.save(storage, state); } catch (e) { /* bỏ qua */ }
   var feed = N.loadStored(storage);   // lịch tin Forex Factory bản gần nhất (data/ff.json) — mở file:// vẫn có
   var app = { state: state, ui: {}, tier: null, _draft: null, _lastKey: null, panelEl: null };
   TDV.app = app;

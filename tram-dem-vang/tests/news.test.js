@@ -105,8 +105,8 @@ test('khi lịch ok: 19:30 mặc định không tự bật nữa; khung tự sin
   const n = night([ev('CPI m/m', 'USD', '2026-10-21T08:30:00-04:00', 'High')]);
   const t0 = { touched: true, windows: R.defaultWindows(true) };
   let wins = R.effectiveWindows(t0, KEY, n);
-  assert.deepEqual(wins.map((w) => w.id).filter((x) => x === 'w1930'), []);
-  assert.equal(wins.length, 2);
+  assert.deepEqual(wins.map((w) => w.id).filter((x) => x === 'w1930' || x === 'w2100'), []);
+  assert.equal(wins.length, 1);   // chỉ còn khung của tin thật (CPI)
   const id = n.windows[0].id;
   wins = R.effectiveWindows(Object.assign({ newsOverrides: { [id]: { on: false, offAt: '19:10' } } }, t0), KEY, n);
   const w = wins.filter((x) => x.id === id)[0];
@@ -171,4 +171,13 @@ test('REVIEW-4 mục 3 · sửa cạnh / hướng TRƯỚC khi công nhận gi�
   n.regime.breakout.step1 = true;
   assert.equal(J.setBreakoutField(n, 'dir', 'down', now), true);
   assert.equal(n.regime.breakout.at, '21:30');
+});
+
+test('lịch ok mà đêm không có tin USD cao/vừa ⇒ không có khung giờ cấm nào, không cảnh báo NYSE (sửa 20/10)', () => {
+  const n = night([ev('German PPI m/m', 'EUR', '2026-10-21T02:00:00-04:00', 'Low')]);
+  const t0 = { touched: true, windows: R.defaultWindows(true) };
+  assert.deepEqual(R.effectiveWindows(t0, KEY, n).filter((w) => w.on), []);
+  const r = engine.evaluate({ nights: { [KEY]: mk('C', (x) => { x.t0 = t0; }) }, nightKey: KEY, now: vn(KEY, '20:30'), settings: SETTINGS, news: n });
+  assert.ok(r.reasons.indexOf('NO_NEWS_WINDOW') < 0);
+  assert.ok(r.warnings.indexOf('WARN_NYSE') < 0);
 });

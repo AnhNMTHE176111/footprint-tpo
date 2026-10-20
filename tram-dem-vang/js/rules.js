@@ -6,7 +6,7 @@
 })(this, function (dep) {
   'use strict';
 
-  var APP_VERSION = '1.0.6';
+  var APP_VERSION = '1.0.7';
   var EPS = 1e-9;
 
   var T = {
@@ -39,7 +39,7 @@
     thin: { at: '23:00', tz: 'VN' }, settle: { at: '00:30', tz: 'ET' }, globexMaint: { at: '04:00', tz: 'ET' }
   };
 
-  // Khung giờ cấm mặc định (QĐ-6)
+  // Khung giờ cấm mặc định (QĐ-6) — chỉ dùng khi KHÔNG có lịch tin; có lịch thì chỉ tin thật tạo khung (QĐ-22, sửa 20/10)
   // 19:30 mặc định chỉ bật thứ Năm (on1930); ngoài ra engine tự coi là bật khi chưa qua tầng 0 hoặc ngày có tin (effectiveWindows)
   function defaultWindows(on1930) {
     return [
@@ -63,7 +63,7 @@
     if (!list) { var th = key ? dep('time').isThursday(key) : false; list = defaultWindows(th); }
     var ok = !!(news && news.status === 'ok');
     var nd = effectiveNewsDay(t, news);
-    var out = list.filter(function (w) { return !(ok && w.id === 'w1930'); }).map(function (w) {
+    var out = list.filter(function (w) { return !(ok && (w.id === 'w1930' || w.id === 'w2100')); }).map(function (w) {
       if (w.id !== 'w1930') return w;
       var on = !!w.on || (!w.offAt && (!t.touched || !!nd));
       if (on === !!w.on) return w;

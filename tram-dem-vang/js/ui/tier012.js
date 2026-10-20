@@ -70,7 +70,7 @@
           isDefault ? null : btn('✕', function () { app.update(function (n) { n.t0.windows = n.t0.windows.filter(function (z) { return z.id !== w.id; }); }); }, 'ghost small', { 'aria-label': T('remove') }))) });
     });
     var ny = time.windowRange(R.NYSE_WARN, key, useDst);
-    rows.push({ nm: ny.center, el: h('div', { class: 'nrow dim' }, h('span', { class: 'ntime', text: time.fmtMin(ny.center) }),
+    if (news.status !== 'ok') rows.push({ nm: ny.center, el: h('div', { class: 'nrow dim' }, h('span', { class: 'ntime', text: time.fmtMin(ny.center) }),
       h('span', { class: 'nname' }, h('span', { class: 'ntitle', text: T('nyseRow') })), h('span', { class: 'nnums' }), chip(T('alwaysOn'), 'mini')) });
     rows.sort(function (a, b) { return a.nm - b.nm; });
 

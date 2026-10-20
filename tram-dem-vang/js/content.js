@@ -284,7 +284,7 @@
     t0Lead: 'Làm trước 18:00, xong trong một phút.',
     t0Alert: 'Tỉnh táo, không bực dọc?',
     t0ViewOnly: 'Cả đêm chỉ xem: ENTRY hiện xám, không vào lệnh thật. Bạn vẫn ghi kèo luyện mắt để có số R.',
-    newsTitle: 'Tin tối nay', newsUpdated: 'cập nhật lúc {hm}', newsNone: 'Tối nay không có tin USD mức cao hoặc vừa.', newsNoFeed: 'Chưa có lịch tin.',
+    newsTitle: 'Tin tối nay', newsUpdated: 'cập nhật lúc {hm}', newsNone: 'Tối nay không có tin USD mức cao hoặc vừa.', newsNoFeed: 'Chưa tải được lịch tin — đang dùng mốc mặc định.',
     newsStaleBar: 'Lịch tin chưa cập nhật — tự kiểm Forex Factory. Đang dùng khung giờ mặc định.',
     newsStaleNote: 'Lịch cũ {min}′: các dòng tin chỉ để xem, không còn tự chặn.',
     impHigh: 'cao', impMed: 'vừa', warnOnlyTag: 'chỉ cảnh báo', newsNums: 'dự báo {f} · kỳ trước {p} · thực tế {a}',

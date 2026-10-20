@@ -48,6 +48,7 @@ export function buildState(kind, extra) {
 export async function openPage(browser, state, opts) {
   opts = opts || {};
   const context = await browser.newContext({ viewport: opts.viewport || { width: 1366, height: 768 } });
+  await context.route('**/data/ff.json*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));   // e2e không gọi lịch thật trên Pages; lịch gieo qua localStorage
   const page = await context.newPage();
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.type() + ': ' + m.text()); });

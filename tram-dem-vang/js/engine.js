@@ -251,7 +251,7 @@
 
     var warnings = [];
     var nyseRange = time.windowRange(R.NYSE_WARN, key, useDst);
-    if (nowMin >= nyseRange.from - EPS && nowMin <= nyseRange.to + EPS) warnings.push('WARN_NYSE');
+    if (!(news && news.status === 'ok') && nowMin >= nyseRange.from - EPS && nowMin <= nyseRange.to + EPS) warnings.push('WARN_NYSE');
     if (nowMin >= time.markMin(R.MARKS.prep, key, useDst) && nowMin < nyseMin) warnings.push('WARN_BEFORE_2030');
     if (card.lockedAt && zones.length < T.zonesMin) warnings.push('WARN_FEW_ZONES');
     var fxHit = N.hitWarn(news, nowMin);

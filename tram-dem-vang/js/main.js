@@ -445,10 +445,11 @@
   // ---------- lịch tin Forex Factory (QĐ-22): tải ./data/ff.json lúc mở và mỗi 5′ khi tab hiện ----------
   var newsAt = 0;
   function fetchNews() {
-    if (!root.fetch || root.location.protocol === 'file:') return;
+    if (!root.fetch) return;
     if (document.visibilityState === 'hidden') return;
     newsAt = Date.now();
-    root.fetch('./data/ff.json?t=' + Date.now(), { cache: 'no-store' })
+    var base = root.location.protocol === 'file:' ? 'https://anhnmthe176111.github.io/tram-dem-vang/' : './';   // mở file local: lấy lịch từ Pages (có CORS *)
+    root.fetch(base + 'data/ff.json?t=' + Date.now(), { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (f) {
         if (!N.validFeed(f)) return;

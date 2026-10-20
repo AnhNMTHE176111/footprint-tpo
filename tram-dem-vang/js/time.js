@@ -170,7 +170,7 @@
   // giờ dùng trong chữ hiển thị, đã cộng giờ mùa đông: {comex} {nyse} {real1} {real2} {fomcFlat}
   function textVars(key, useDst) {
     var f = function (at, tz) { return fmtMin(markMin({ at: at, tz: tz }, key, useDst)); };
-    return { comex: f('19:20', 'ET'), nyse: f('20:30', 'ET'), real1: f('20:20', 'ET'), real2: f('21:30', 'ET'),
+    return { comex: f('19:20', 'ET'), nyse: f('20:30', 'ET'), real1: f('20:20', 'ET'), real2: f('21:30', 'ET'), news1: f('19:30', 'ET'), core: f('21:00', 'ET'),
       fomcFlat: fmtMin(markMin({ at: '01:00', tz: 'ET' }, key, useDst) - 15) };
   }
 

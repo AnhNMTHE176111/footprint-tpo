@@ -30,11 +30,22 @@
   }
 
   // tô sáng ô còn thiếu đầu tiên
-  function applyNeed(el, res) {
+  function applyNeed(el, res, scroll) {
     el.querySelectorAll('.ctl.need').forEach(function (n) { n.classList.remove('need'); });
     var first = res.missing[0];
     var id = first && C.codes[first] && C.codes[first].ctl;
-    if (id) { var t = el.querySelector('[data-ctl="' + id + '"]'); if (t) t.classList.add('need'); }
+    if (id) {
+      var t = el.querySelector('[data-ctl="' + id + '"]');
+      if (t) {
+        t.classList.add('need');
+        // ô cần làm nằm dưới thanh phán quyết cố định thì cuộn nó lên trên thanh (REVIEW-3 mục 14)
+        if (scroll && t.isConnected) {
+          var vb = document.getElementById('verdict'), top = vb ? vb.getBoundingClientRect().top : window.innerHeight;
+          var r = t.getBoundingClientRect();
+          if (r.bottom > top - 4 && r.top < window.innerHeight) { try { t.scrollIntoView({ block: 'nearest' }); } catch (e) { /* bỏ qua */ } }
+        }
+      }
+    }
   }
 
   function calcBox(app) {
@@ -60,10 +71,10 @@
     probs.forEach(function (p) { box.appendChild(h('div', { class: 'prob', text: '⚠ ' + p })); });
     var s = app.settings;
     var half = res.half.on;
-    var sizeTxt = cc.size === null ? T('sizeNoCfg') : (cc.size === 0 ? T('sizeZero') : cc.sizeMinOne ? T('sizeMinOne') : T('sizeN', { n: cc.size }));
+    var sizeTxt = cc.size === null ? T('sizeNoCfg') : (cc.size === 0 ? T('sizeZero') : cc.sizeMinOne ? T('sizeMinOne', { usd: J.fmtTrim(cc.realUsd) }) : T('sizeN', { n: cc.size }));
     var money = function (v) { return v === undefined ? '—' : String(v).replace('.', ','); };
     box.appendChild(h('details', { class: 'fold' }, h('summary', { text: T('sizeTitle') + ' · ' + sizeTxt }),
-      h('p', { class: 'muted', text: T('sizeCalc', { cap: s.capital, pct: String(s.riskPct).replace('.', ','), full: money(cc.fullUsd), per: J.fmt(cc.slDist * R.T.tickValue, 0) }) + (half ? ' ' + T('sizeHalf', { why: ui.halfWhy(res), usd: money(cc.riskUsd) }) : '') })));
+      h('p', { class: 'muted', text: T('sizeCalc', { cap: s.capital, pct: String(s.riskPct).replace('.', ','), full: money(cc.fullUsd), per: J.fmt(cc.slDist * R.T.tickValue, 0) }) + (half ? ' ' + (cc.sizeMinOne ? T('sizeHalfMin', { why: ui.halfWhy(res), real: J.fmtTrim(cc.realUsd) }) : T('sizeHalf', { why: ui.halfWhy(res), usd: money(cc.riskUsd) })) : '') })));
     return box;
   }
 
@@ -80,17 +91,21 @@
     }
 
     function set(fn, keep) { app.update(function (n) { fn(n.setup, n); n.setup.updatedAt = app.nowMs; }, { keep: !!keep }); }
+    // Canh đủ ⇒ tự sang Bấm ĐÚNG MỘT LẦN cho mỗi kèo; sửa Canh sau đó không nhảy nữa (USER-TEST-3 d8)
     var filled = canhFilled(res, st);
-    if (filled && !app.ui.canhDone) { app.ui.sub = 'bam'; }
-    app.ui.canhDone = filled;
+    if (!scen || app.ui.jumpScen !== scen) { app.ui.jumpDone = false; app.ui.jumpNote = false; }
+    app.ui.jumpScen = scen || null;
+    if (filled && !app.ui.jumpDone) { app.ui.sub = 'bam'; app.ui.jumpDone = true; app.ui.jumpNote = true; }
     var sub = app.ui.sub || 'canh';
 
     // ----- đầu trang: tab Canh / Bấm + kèo mới -----
     var missCanh = 0, missBam = 0;
     res.missing.concat(res.reasons).forEach(function (c) { var id = ctlOf(c, st); if (id) { if (ctlGroup(id) === 'bam') missBam++; else missCanh++; } });
     el.appendChild(h('div', { class: 't3head' },
-      seg([{ v: 'canh', label: T('tabCanh') }, { v: 'bam', label: T('tabBam') }], sub, function (v) { app.ui.sub = v || sub; app.render({ keep: false }); }, { noToggle: true, cls: 'tabs', label: T('tabLabel') }),
-      h('span', { class: 'muted', text: sub === 'canh' ? T('canhHint') : T('bamHint') }),
+      seg([{ v: 'canh', label: T('tabCanh') }, { v: 'bam', label: T('tabBam') }], sub, function (v) { app.ui.sub = v || sub; app.ui.jumpNote = false; app.render({ keep: false }); }, { noToggle: true, cls: 'tabs', label: T('tabLabel') }),
+      sub === 'bam' && app.ui.jumpNote
+        ? h('span', { class: 'jumpnote' }, h('span', { class: 'muted', text: T('jumpNote') + ' ' }), btn(T('backCanh'), function () { app.ui.sub = 'canh'; app.ui.jumpNote = false; app.render({ keep: false }); }, 'small primary', { 'data-testid': 'back-canh' }))
+        : h('span', { class: 'muted', text: sub === 'canh' ? T('canhHint') : T('bamHint') }),
       btn(T('newSetup'), function () { app.ui.sub = 'canh'; app.update(function (n) { n.setup = {}; }); app.toast(T('newSetupDone')); }, 'ghost', { 'data-testid': 'new-setup', title: 'N' })));
 
     if (scen && st.updatedAt && app.nowMs - st.updatedAt > R.T.idleMinutes * 60000) el.appendChild(banner(T('idleNote'), 'warn'));
@@ -149,14 +164,15 @@
         else {
           // hướng của A, D lấy từ chế độ (tầng 2); của C lấy từ phía của vùng (tầng 1): luôn chỉ đường tới ô chọn thật (REVIEW-2 mục 2, 13)
           var toTier = scen === 'C' ? 1 : 2;
-          c2body = h('div', { class: 'autochip' }, h('span', { class: 'muted', text: scen === 'C' ? (res.zone ? T('sideNeedZone') : T('sideAfterZone')) : T('sideNeedRegime') }),
-            scen === 'C' && !res.zone ? null : btn(toTier === 1 ? T('goTier1') : T('goTier2'), function () { app.go(toTier); }, 'small', { 'data-testid': 'go-tier-' + toTier }));
+          var noSideEver = scen === 'C' && res.zone && !(R.ZONE_TYPES[res.zone.type] || {}).needSide;   // vd HVN: không bao giờ có phía
+          c2body = h('div', { class: 'autochip' }, h('span', { class: 'muted', text: scen === 'C' ? (res.zone ? (noSideEver ? T('sideNoneZone') : T('sideNeedZone')) : T('sideAfterZone')) : T('sideNeedRegime') }),
+            (scen === 'C' && !res.zone) || noSideEver ? null : btn(toTier === 1 ? T('goTier1') : T('goTier2'), function () { app.go(toTier); }, 'small', { 'data-testid': 'go-tier-' + toTier }));
         }
       }
       var c2 = ctl('c2', C.controls.c2.label, C.controls.c2.help, c2body, { note: res.counter ? C.qd['QĐ-9'] + ' (' + C.unmeasured + ')' : null });
       if (res.counter) {
         c2.appendChild(h('div', { class: 'counter' }, chip(T('counterBias', { tp: res.exempt9 ? T('counterOk') : T('counterBad') }), res.exempt9 ? 'warn' : 'bad'),
-          textInput(st.counterBiasReason || '', function (v) { set(function (s0) { s0.counterBiasReason = v; }); }, { placeholder: T('counterPh'), label: T('counterPh') })));
+          res.exempt9 ? textInput(st.counterBiasReason || '', function (v) { set(function (s0) { s0.counterBiasReason = v; }); }, { placeholder: T('counterPh'), label: T('counterPh') }) : null));
       }
       el.appendChild(c2);
 
@@ -211,6 +227,7 @@
     var calc = calcBox(app);
     el.appendChild(calc);
     applyNeed(el, res);
+    el._needScroll = function () { applyNeed(el, app.res, true); };
     el._live = function (a2) {
       var nb = calcBox(a2);
       calc.replaceWith(nb); calc = nb;
@@ -231,7 +248,7 @@
 
     if (v === 'ENTRY') {
       var big = (res.paper ? T('entryView') : 'ENTRY') + ' ' + (res.side ? res.side.toUpperCase() : '');
-      var sizePart = cc.sizeMinOne ? T('sizeMinOne') : (half ? T('sizeHalfShort') : T('sizeFull')) + (cc.size === null || cc.size === undefined ? '' : ' · ' + T('sizeN', { n: cc.size }));
+      var sizePart = cc.sizeMinOne ? T('sizeMinOne', { usd: J.fmtTrim(cc.realUsd) }) : (half ? T('sizeHalfShort') : T('sizeFull')) + (cc.size === null || cc.size === undefined ? '' : ' · ' + T('sizeN', { n: cc.size }));
       var rest = ' ' + J.fmt(cc.entry) + ' · SL ' + J.fmt(cc.sl) + ' (' + T('slGia', { v: J.fmt(cc.slDist) }) + ') · TP ' + J.fmt(cc.tpUsed) + ' · 1:' + J.fmtTrim(cc.rr) + ' · ' + sizePart;
       if (res.counter) rest += ' · ' + T('counterTag');
       main.appendChild(h('div', { class: 'vtext entry', 'data-testid': 'entry-text' }, h('span', { class: 'ebig', text: big }), h('span', { class: 'erest', text: rest })));
@@ -242,7 +259,7 @@
       var list = h('span', { class: 'vlist' });
       items.forEach(function (c, i) {
         var ctlId = C.codes[c] && C.codes[c].ctl;
-        list.appendChild(h('button', { type: 'button', class: 'vitem', 'data-code': c, onclick: function () { if (c === 'WAIT_REGIME_DIR') app.go(2); else app.focusCtl(ctlId); }, text: ui.codeText(c) }));
+        list.appendChild(h('button', { type: 'button', class: 'vitem', 'data-code': c, onclick: function () { if (c === 'WAIT_REGIME_DIR') app.go(2); else if (c === 'WAIT_CAPITAL') app.openCapital(false); else app.focusCtl(ctlId); }, text: ui.codeText(c) }));
         if (i < items.length - 1) list.appendChild(document.createTextNode(' · '));
       });
       main.appendChild(h('div', { class: 'vtext' }, h('b', { text: T('vWait') }), ' ', T('missingLabel'), ' ', list));
@@ -266,7 +283,7 @@
     }
     var notes = h('div', { class: 'vnotes' });
     if (half && v !== 'OFF') {
-      notes.appendChild(chip(T('halfNote', { why: ui.halfWhy(res) }), 'warn'));
+      notes.appendChild(chip(T(cc.sizeMinOne ? 'halfNoteMin' : 'halfNote', { why: ui.halfWhy(res) }), 'warn'));
       if (res.half.reasons.indexOf('BEFORE_2030') >= 0) notes.appendChild(ui.qd19Help());
     }
     if (res.warnings.indexOf('WARN_NYSE') >= 0) notes.appendChild(chip(C.warnText.WARN_NYSE, 'warn'));

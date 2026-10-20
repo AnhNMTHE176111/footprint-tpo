@@ -215,7 +215,7 @@ test('8 · "Tôi vẫn vào (phá luật)" hai lần ⇒ TẮT MÁY', async () =
     await page.waitForSelector('[data-testid="verdict"]');
     assert.equal(await verdict(page), 'OFF');
     assert.match(await page.textContent('[data-testid="verdict"]'), /TẮT MÁY/);
-    assert.match(await page.textContent('.statusbar'), /Phá luật 2\/2/);
+    assert.match(await page.textContent('.statusbar'), /Phá luật 2 trên 2/);
     const bg = await page.$eval('[data-testid="verdict"]', (e) => getComputedStyle(e).backgroundColor);
     assert.equal(bg, 'rgb(0, 0, 0)');
   });
@@ -230,12 +230,12 @@ test('9b · chế độ chỉ xem: ENTRY xám, ghi kèo luyện mắt, không c�
     assert.equal(bg, 'rgb(107, 114, 128)');
     await page.click('[data-testid="btn-paper"]');
     await page.waitForSelector('[data-tier="4"]');
-    assert.match(await page.textContent('.statusbar'), /Lệnh mở 1\/1 \(luyện mắt\)/);
+    assert.match(await page.textContent('.statusbar'), /Lệnh mở 1 trên 1 \(luyện mắt\)/);
     await page.click('.seg.close [data-v="SL"]');
     await page.click('[data-testid="btn-close-confirm"]');
     await page.waitForSelector('[data-tier="5"]');
     assert.match(await page.textContent('[data-testid="journal"] tbody tr'), /phá hồi \(luyện mắt\)/);
-    assert.match(await page.textContent('.statusbar'), /SL liên tiếp 0\/3/);
+    assert.match(await page.textContent('.statusbar'), /SL liên tiếp 0 trên 3/);
     assert.match(await page.textContent('.jfoot'), /Máy cộng: 0 R/);
     assert.deepEqual(errors, []);
   });

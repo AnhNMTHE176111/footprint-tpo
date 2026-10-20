@@ -41,7 +41,7 @@
       kv(T('kvSl'), op.beDone ? T('beMoveTo', { sl: J.fmt(t.sl), entry: J.fmt(t.entry) }) + ' · ' + T('beDone') : J.fmt(t.sl)),
       kv(T('kvTp'), J.fmt(t.tp)), kv(T('kvRr'), '1:' + J.fmtTrim(t.rrPlanned)),
       kv(T('kvSize'), t.size === null || t.size === undefined ? '—' : String(t.size)), kv(T('kvTime'), t.time));
-    el.appendChild(section(T('t4Title'), [head, grid, h('p', { class: 'muted', text: T('noSlEdit') })]));
+    el.appendChild(section(T('t4Title'), [head, grid, op.beDone ? null : h('p', { class: 'muted', text: T('noSlEdit') })]));
 
     if (op.beDone) el.appendChild(banner(T('beReminder', { entry: J.fmt(t.entry) }), 'warn'));
     var dl = time.flatDeadline(R.effectiveWindows(nightObj.t0, key), nowMinO, key, app.useDst);
@@ -163,7 +163,7 @@
       chip(T('sweptN', { n: J.sweptCount(night) }), ''),
       btn(T('endNight'), function () { app.update(function (n) { n.tally.closedAt = app.nowMs; }, { key: key }); app.toast(T('endedToast')); }, 'primary', { disabled: manual === null || manual === undefined ? true : null, title: manual === null || manual === undefined ? T('endNeed') : null }));
     var tradeExtrasList = night.trades.filter(function (t) { return t.exit; }).map(function (t) { return h('div', { class: 'tx' }, h('span', { class: 'muted', text: t.time + ' ' + J.rowOf(t).name }), tradeExtras(app, t, key)); });
-    el.appendChild(section(T('t5Tonight', { key: key }), [h('div', { class: 'tablewrap' }, tbl), foot, tradeExtrasList.length ? h('details', { class: 'fold' }, h('summary', { text: T('afterClose') }), tradeExtrasList) : null], { help: { text: T('t5Help'), ref: 'nhat-ky-lenh' } }));
+    el.appendChild(section(T('t5Tonight', { key: key }), [h('div', { class: 'tablewrap' }, tbl), h('p', { class: 'muted legend', text: C.journal.mdLegend }), foot, tradeExtrasList.length ? h('details', { class: 'fold' }, h('summary', { text: T('afterClose') }), tradeExtrasList) : null], { help: { text: T('t5Help'), ref: 'nhat-ky-lenh' } }));
 
     // --- tuần ---
     var w = J.weekStats(st, key);
@@ -206,15 +206,21 @@
     // --- cài đặt ---
     var s0 = st.settings;
     function setS(fn) { app.updateState(fn, {}); }
+    // vốn và % rủi ro chỉ ghi khi là số lớn hơn 0; xóa trắng hoặc gõ sai thì trả lại số cũ (REVIEW-3 mục 6)
+    function commitMoney(field, v, inp) {
+      if (v > 0) { app.updateState(function (s) { s.settings[field] = v; }, { keep: true }); return; }
+      inp.value = ui.fmtIn(app.state.settings[field]); inp.classList.remove('invalid');
+      app.toast(T('capBad'));
+    }
     el.appendChild(section(T('t5Settings'), [
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setTheme') }),
         seg([{ v: 'dark', label: T('themeDark') }, { v: 'light', label: T('themeLight') }], s0.theme, function (v) { setS(function (s) { s.settings.theme = v || 'dark'; }); }, { noToggle: true })),
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setGuide') }),
         seg([{ v: 'new', label: T('guideNew') }, { v: 'quen', label: T('guideQuen') }], s0.guideLevel, function (v) { setS(function (s) { s.settings.guideLevel = v || 'new'; }); }, { noToggle: true })),
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setCapital') }),
-        numInput(s0.capital, function (v) { app.updateState(function (s) { s.settings.capital = v; }, { keep: true }); }, { unit: '$', id: 'capital', label: T('setCapital') })),
+        numInput(s0.capital, function () {}, { unit: '$', id: 'capital', label: T('setCapital'), onCommit: function (v, inp) { commitMoney('capital', v, inp); } })),
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setRisk') }),
-        numInput(s0.riskPct, function (v) { app.updateState(function (s) { s.settings.riskPct = v; }, { keep: true }); }, { unit: '%', id: 'riskpct', label: T('setRisk') })),
+        numInput(s0.riskPct, function () {}, { unit: '%', id: 'riskpct', label: T('setRisk'), onCommit: function (v, inp) { commitMoney('riskPct', v, inp); } })),
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label' }, h('span', { text: T('setDst') }), ui.helpBtn({ text: T('setDstHelp'), ref: 'thoi-gian' })),
         seg([{ v: true, label: T('yes') }, { v: false, label: T('no') }], s0.dstShift !== false, function (v) { setS(function (s) { s.settings.dstShift = !!v; }); }, { noToggle: true })),
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setKeys') }),

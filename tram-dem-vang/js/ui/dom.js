@@ -62,7 +62,12 @@
       } });
     return h('span', { class: 'helpwrap' }, btn, pop);
   }
-  document.addEventListener('click', function () { document.querySelectorAll('.pop').forEach(function (p) { p.setAttribute('hidden', ''); }); });
+  // bấm ra ngoài thì đóng mọi khung "?". Chạy ở pha bắt (trước các nút) để vẽ lại do cú bấm đó không khôi phục lại khung cũ (REVIEW-3 mục 3)
+  document.addEventListener('click', function (e) {
+    if (e.target && e.target.closest && e.target.closest('.help')) return;
+    document.querySelectorAll('.pop').forEach(function (p) { p.setAttribute('hidden', ''); });
+    document.querySelectorAll('.help[aria-expanded="true"]').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+  }, true);
 
   // nhóm nút chọn (3 trạng thái); đáp án xấu tô đỏ khi được chọn; bấm lại để bỏ chọn
   function seg(options, value, onPick, opt) {

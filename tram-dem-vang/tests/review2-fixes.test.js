@@ -99,10 +99,12 @@ test('mục 3 · "Chạm SL" khi CHƯA be ⇒ −1R, cộng chuỗi', () => {
   assert.equal(t.exit.beStop, undefined); assert.equal(t.r, -1);
   assert.equal(engine.countTrades(n).slStreak, 1);
 });
-test('mục 3 · "Về hòa" trượt giá R trong [−0,2; +0,2] không cộng chuỗi; R ≤ −0,5 thì cộng', () => {
+test('mục 3 · "Về hòa" trượt giá R trong (−0,2; +0,2) là hòa, reset chuỗi; R ≤ −0,2 thì cộng (REVIEW-3 mục 1)', () => {
   const be = (r) => closed('BE', r);
   assert.equal(engine.countTrades({ trades: [be(-0.04)] }).slStreak, 0);
-  assert.equal(engine.countTrades({ trades: [closed('SL', -1), closed('SL', -1), be(-0.2)] }).slStreak, 0);
+  assert.equal(engine.countTrades({ trades: [closed('SL', -1), closed('SL', -1), be(-0.19)] }).slStreak, 0);
+  assert.equal(engine.countTrades({ trades: [closed('SL', -1), closed('SL', -1), be(0.19)] }).slStreak, 0);
+  assert.equal(engine.countTrades({ trades: [closed('SL', -1), be(-0.2)] }).slStreak, 2);
   assert.equal(engine.countTrades({ trades: [closed('SL', -1), be(-0.5)] }).slStreak, 2);
   const sb = closed('SL', 0); sb.exit.beStop = true;
   assert.equal(engine.countTrades({ trades: [closed('SL', -1), closed('SL', -1), sb] }).slStreak, 0);

@@ -59,8 +59,46 @@
   // phím Tab: ô kế tiếp nhận focus ngay sau change ⇒ vẽ lại tại đó (ô mới đã focus nên được giữ lại), xong trước khi người dùng gõ tiếp
   document.addEventListener('focusin', function () { if (!hold.ptr) flushHold(); }, true);
 
+  // ----- giữ trạng thái mở / đóng của khung "?" và mục thu gọn qua mỗi lần vẽ lại (REVIEW-3 mục 3) -----
+  // Cú bấm "?" hoặc tiêu đề mục thu gọn ngay sau khi gõ số xảy ra TRƯỚC lần vẽ bù (hoãn), nên DOM bị thay làm mất trạng thái.
+  var UI_ROOTS = ['status', 'main', 'verdict', 'card'];
+  function rootOf(el) { for (var i = 0; i < UI_ROOTS.length; i++) { var r = $(UI_ROOTS[i]); if (r && r.contains(el)) return r; } return null; }
+  function uiKey(el, sel) { var r = rootOf(el); if (!r) return null; return r.id + ':' + [].slice.call(r.querySelectorAll(sel)).indexOf(el); }
+  function snapUi() {
+    var s = { pops: [], details: [], panel: app.panelEl && app.panelEl.getAttribute ? app.panelEl.getAttribute('data-tier') : null, key: app._lastKey };
+    document.querySelectorAll('.pop:not([hidden])').forEach(function (p) { var k = uiKey(p, '.pop'); if (k) s.pops.push(k); });
+    document.querySelectorAll('details[open]').forEach(function (d) {
+      var k = uiKey(d, 'details'), sm = d.querySelector('summary');
+      if (k) s.details.push({ k: k, t: sm ? sm.textContent.slice(0, 8) : '' });
+    });
+    return s;
+  }
+  function restoreUi(s) {
+    // chỉ khôi phục khi vẫn đang ở cùng tầng và cùng đêm: đổi tầng thì để mọi thứ đóng
+    var cur = app.panelEl && app.panelEl.getAttribute ? app.panelEl.getAttribute('data-tier') : null;
+    if (s.panel !== cur || s.key !== app.key) return;
+    function find(k, sel) { var m = /^(\w+):(\d+)$/.exec(k); if (!m) return null; var r = $(m[1]); return r ? r.querySelectorAll(sel)[+m[2]] || null : null; }
+    s.pops.forEach(function (k) {
+      var p = find(k, '.pop'); if (!p) return;
+      p.removeAttribute('hidden');
+      var b = p.parentNode && p.parentNode.querySelector('.help'); if (b) b.setAttribute('aria-expanded', 'true');
+    });
+    s.details.forEach(function (x) {
+      var d = find(x.k, 'details'), sm = d && d.querySelector('summary');
+      if (d && (!sm || sm.textContent.slice(0, 8) === x.t)) d.setAttribute('open', '');
+    });
+  }
+  // nút đang focus bằng bàn phím (Tab): khóa = ô điều khiển gần nhất + data-v / data-testid / chữ (REVIEW-3 mục 15)
+  function btnKey(b) {
+    var c = b.closest('[data-ctl]');
+    return JSON.stringify([c ? c.getAttribute('data-ctl') : '', b.getAttribute('data-v') || '', b.getAttribute('data-testid') || '', b.textContent.slice(0, 20)]);
+  }
   function snapFocus() {
     var a = document.activeElement, main = $('main');
+    if (a && a.tagName === 'BUTTON' && main && main.contains(a)) {
+      var vis = false; try { vis = a.matches(':focus-visible'); } catch (e) { /* trình duyệt cũ */ }
+      return vis ? { btn: btnKey(a) } : null;
+    }
     if (!a || !main.contains(a) || !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return null;
     var all = [].slice.call(main.querySelectorAll('input, textarea, select'));
     var s = { i: all.indexOf(a), id: a.dataset ? a.dataset.id || null : null, label: a.getAttribute('aria-label'), start: null, end: null };
@@ -70,6 +108,11 @@
   function restoreFocus(s) {
     if (!s) return;
     var main = $('main'), el = null;
+    if (s.btn) {
+      var bs = main.querySelectorAll('button');
+      for (var bi = 0; bi < bs.length; bi++) if (btnKey(bs[bi]) === s.btn) { try { bs[bi].focus({ preventScroll: true }); } catch (e) { /* bỏ qua */ } return; }
+      return;
+    }
     if (s.id) el = main.querySelector('[data-id="' + s.id + '"]');
     if (!el) { var c = main.querySelectorAll('input, textarea, select')[s.i]; if (c && c.getAttribute('aria-label') === s.label) el = c; }
     if (!el) return;
@@ -157,7 +200,7 @@
     var res = freshEnterCtx();
     if (res.verdict !== 'ENTRY') { render(); return; }
     app.update(function (n) { J.createTrade(n, res, { kind: o.kind, price: o.price, paper: !!o.paper || res.paper, ruleBreak: false, nowMs: app.nowMs, nowMin: app.nowMin }); });
-    app.ui.curPrice = null; app.ui.fillPrice = undefined; app.ui.closeKind = null; app.ui.sub = 'canh'; app.ui.canhDone = false;
+    app.ui.curPrice = null; app.ui.fillPrice = undefined; app.ui.closeKind = null; app.ui.sub = 'canh'; app.ui.jumpDone = false; app.ui.jumpNote = false;
     app.go(4);
     app.toast(o.paper || res.paper ? T('enteredPaper') : T('entered'));
   };
@@ -172,7 +215,7 @@
       compute();
       var r2 = app.res;
       app.update(function (n) { J.createTrade(n, r2, { kind: 'market', price: r2.calc.entry, paper: paper, ruleBreak: true, nowMs: app.nowMs, nowMin: app.nowMin }); });
-      app.ui.curPrice = null; app.ui.closeKind = null; app.ui.sub = 'canh'; app.ui.canhDone = false;
+      app.ui.curPrice = null; app.ui.closeKind = null; app.ui.sub = 'canh'; app.ui.jumpDone = false; app.ui.jumpNote = false;
       app.go(4);
       app.toast(paper ? T('enteredPaper') : T('forcedToast'));
     });
@@ -183,6 +226,7 @@
     app.tier = 3;
     render();
     var t = document.querySelector('[data-ctl="' + id + '"]');
+    // scroll-padding-bottom của html chừa chỗ cho thanh phán quyết khi cuộn tới ô
     if (t) { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); t.classList.add('flash'); setTimeout(function () { t.classList.remove('flash'); }, 1200); }
   };
 
@@ -224,6 +268,11 @@
     opts = opts || {};
     if (hold.depth > 0) { queueRender(opts); return; }
     if (hold.pending) { var p = hold.pending; hold.pending = null; var keep = !!(p.keep && opts.keep); opts = Object.assign({}, p, opts); opts.keep = keep; }
+    var snap = snapUi();
+    paint(opts);
+    restoreUi(snap);
+  }
+  function paint(opts) {
     compute();
     if (app._lastKey !== null && app._lastKey !== app.key) opts.keep = false;
     app._lastKey = app.key;
@@ -259,6 +308,7 @@
     main.appendChild(node);
     if (opts.keepScroll !== false) window.scrollTo(0, sy);
     restoreFocus(focus);
+    if (node._needScroll) node._needScroll();
   }
   app.render = render;
 
@@ -271,8 +321,13 @@
       if (isTyping(e.target)) e.target.blur();
       return;
     }
-    if (isTyping(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
+    // không chạy phím tắt khi đang ở bất kỳ ô nhập nào, kể cả lúc ô vừa bị thay do vẽ lại hoãn (REVIEW-3 mục 4)
+    // đang nhấn giữ chuột (ô nhập vừa mất focus, vẽ lại còn hoãn): bỏ qua phím; hết nhấn thì vẽ nốt phần hoãn rồi mới xét phím
+    if (hold.ptr) return;
+    if (hold.pending) flushHold();
+    if (isTyping(e.target) || isTyping(document.activeElement) || e.ctrlKey || e.metaKey || e.altKey) return;
     if (modalStack.length) return;
+    if (e.key === 'Enter' && e.target && e.target.tagName === 'BUTTON') return;   // nút đang focus tự xử lý Enter
     if (state.settings.shortcuts === false) return;
     var k = e.key;
     if (k === '?') { openKeys(); e.preventDefault(); return; }
@@ -323,6 +378,7 @@
     var bd = openModal(h('div', { class: 'dlg glossarybox', 'data-testid': 'glossary' }, h('h3', { text: T('glossaryTitle') }), h('p', { class: 'muted', text: T('glossaryHint') }), search, dl, none,
       h('div', { class: 'actions' }, btn(T('close'), function () { closeModal(false); }, 'primary'))));
     var box = bd.querySelector('.glossarybox');
+    if (root.innerWidth <= 600) search.blur();   // điện thoại: không tự bật bàn phím che nửa danh sách
     box.scrollTop = 0; bd.querySelector('.modal').scrollTop = 0;
     var hit = key && items.filter(function (it) { return it.g.key === key; })[0];
     if (hit) {

@@ -18,9 +18,17 @@
     var band = time.bandAt(app.nowMin, key, useDst);
     var next = time.nextWindow(R.effectiveWindows(night.t0, key), app.nowMin, key, useDst);
     var bar = h('div', { class: 'statusbar' + (hit ? ' bad' : warn ? ' warn' : '') });
-
-    bar.appendChild(h('strong', { class: 'clock', 'data-testid': 'clock', text: T('clock', { hm: J.hm(app.nowMs) }) }));
-    bar.appendChild(chip(T('biasChip', { v: ui.biasText(res.bias) }), 'bias ' + ui.dirCls(res.bias)));
+    // điện thoại: hàng đầu chỉ có giờ, bias và nút "Trạng thái"; mọi chip còn lại nằm trong khung mở xuống (USER-TEST-3 d1).
+    // Máy tính: hai khung này là display: contents nên bố cục như cũ.
+    var top = h('div', { class: 'sbmain' }), more = h('div', { class: 'sbmore' });
+    var open = !!app.ui.statusOpen;
+    var wrap = h('div', { class: 'statuswrap' + (open ? ' open' : '') }, bar);
+    top.appendChild(h('strong', { class: 'clock', 'data-testid': 'clock', text: T('clock', { hm: J.hm(app.nowMs) }) }));
+    top.appendChild(chip(T('biasChip', { v: ui.biasText(res.bias) }), 'bias ' + ui.dirCls(res.bias)));
+    top.appendChild(h('button', { type: 'button', class: 'btn small ghost sbtoggle', 'data-testid': 'status-toggle', 'aria-expanded': open ? 'true' : 'false', text: T('statusToggle') + ' ▾',
+      onclick: function (e) { e.stopPropagation(); app.ui.statusOpen = !app.ui.statusOpen; wrap.classList.toggle('open', app.ui.statusOpen); e.currentTarget.setAttribute('aria-expanded', app.ui.statusOpen ? 'true' : 'false'); } }));
+    bar.appendChild(top); bar.appendChild(more);
+    bar = more;
     // 20:20–20:30: dải "đáng tin" bắt đầu nhưng cảnh báo trước 20:30 còn hiệu lực ⇒ không in hai điều ngược nhau (REVIEW-2 mục 11)
     var early = res.warnings.indexOf('WARN_BEFORE_2030') >= 0;
     bar.appendChild(h('span', { class: 'phase', text: C.phases[phase.id] + (band && !(early && band.id === 'real') ? ' · ' + C.bands[band.id] : '') }));
@@ -39,18 +47,27 @@
     if (early && !hit) { bar.appendChild(chip(T('warnShort'), 'warn')); bar.appendChild(ui.qd19Help()); }
 
     var rb = res.counts.ruleBreaks, ss = res.counts.slStreak;
-    bar.appendChild(chip(T('chipBreaks', { n: rb }), rb >= 2 ? 'bad' : rb ? 'warn' : 'zero'));
-    bar.appendChild(chip(T('chipStreak', { n: ss }), ss >= 3 ? 'bad' : ss ? 'warn' : 'zero'));
+    bar.appendChild(chip(T('chipBreaks', { n: rb }), rb >= 2 ? 'bad' : rb ? 'warn' : 'zero', T('chipBreaksTip')));
+    bar.appendChild(chip(T('chipStreak', { n: ss }), ss >= 3 ? 'bad' : ss ? 'warn' : 'zero', T('chipStreakTip')));
     var paper = res.open && res.open.trade && res.open.trade.flags.indexOf('paper') >= 0;
-    bar.appendChild(chip(T(paper ? 'chipOpenPaper' : 'chipOpen', { n: res.open ? 1 : 0 }), res.open ? 'warn' : 'zero'));
-    if (res.zone) bar.appendChild(chip(T('chipZone', { n: res.counts.zoneN }), res.counts.zoneN >= 2 ? 'bad' : 'zero'));
+    bar.appendChild(chip(T(paper ? 'chipOpenPaper' : 'chipOpen', { n: res.open ? 1 : 0 }), res.open ? 'warn' : 'zero', T('chipOpenTip')));
+    if (res.zone && res.counts.zoneN > 0) bar.appendChild(chip(T('chipZone', { n: res.counts.zoneN }), res.counts.zoneN >= 2 ? 'bad' : 'zero', T('chipZoneTip')));
+    // giờ mùa đông Mỹ: mỗi đêm chỉ một chip ngắn, câu đầy đủ trong "?"; dòng dài chỉ hiện đúng ngày đổi giờ (REVIEW-3 mục 13)
+    var notes = time.notices(key, useDst);
+    if (notes.some(function (n) { return n.id === 'US_WINTER'; })) { bar.appendChild(chip(T('winterChip'), 'warn')); bar.appendChild(ui.helpBtn({ text: C.notices.US_WINTER, ref: 'thoi-gian' })); }
 
     bar.appendChild(h('button', { type: 'button', class: 'btn small ghost glossary-btn', 'data-testid': 'glossary-btn', text: T('glossaryBtn'), onclick: function () { app.openGlossary(); } }));
-    var wrap = h('div', { class: 'statuswrap' }, bar);
-    var notes = time.notices(key, useDst);
-    notes.forEach(function (n) { wrap.appendChild(h('div', { class: 'notice', text: C.notices[n.id] })); });
+    notes.forEach(function (n) { if (n.id !== 'US_WINTER') wrap.appendChild(h('div', { class: 'notice', text: C.notices[n.id] })); });
     return wrap;
   }
+  // bấm ra ngoài khung "Trạng thái" thì đóng lại (điện thoại)
+  document.addEventListener('click', function (e) {
+    var a = TDV.app;
+    if (!a || !a.ui.statusOpen || (e.target.closest && e.target.closest('#status'))) return;
+    a.ui.statusOpen = false;
+    var w = document.querySelector('#status .statuswrap'); if (w) w.classList.remove('open');
+    var t = document.querySelector('#status .sbtoggle'); if (t) t.setAttribute('aria-expanded', 'false');
+  });
 
   function renderCard(app) {
     var res = app.res, night = app.night, card = night.card, a = card.answers || {};

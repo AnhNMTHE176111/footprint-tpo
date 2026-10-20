@@ -296,3 +296,63 @@ kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4
 .t3 .ctl-label { margin-bottom: 4px; }
 .tiers { padding: 6px 0; }
 .vnotes { padding: 4px 18px; }
+
+/* ----- vòng 4 ----- */
+/* thông báo nổi: nằm ở góc, KHÔNG chặn click (REVIEW-3 mục 4); chỉ thông báo "Tải lại" nhận click */
+#toast { left: auto; right: 16px; top: 92px; bottom: auto; transform: none; align-items: flex-end; width: min(360px, 92vw); }
+.toast-item { pointer-events: none; }
+.toast-item.sticky { pointer-events: auto; }
+/* ô cuối của Canh không nằm dưới thanh phán quyết khi cuộn / Tab tới (REVIEW-3 mục 14) */
+html { scroll-padding-bottom: calc(var(--vbar-h, 120px) + 16px); scroll-padding-top: 72px; }
+.vtext.entry .ebig { font-size: 32px; line-height: 1.15; }
+.sbmain, .sbmore { display: contents; }
+.sbtoggle { display: none; }
+.jumpnote { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.legend { font-size: 12px; margin: 6px 0 0; }
+.boathint { flex: 1 1 100%; font-size: 12px; }
+.glossary dt { scroll-margin-top: 64px; }
+.btn.small.primary { color: #1b1400; }
+
+/* điện thoại ≤ 600px: thanh trên 1 hàng (giờ, bias, nút "Trạng thái"), thanh dưới gọn (USER-TEST-3 d1) */
+@media (max-width: 600px) {
+  .statusbar { flex-wrap: nowrap; gap: 6px; padding: 6px 112px 6px 12px; min-height: 0; }
+  .sbmain { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .sbmain .chip { font-size: 12px; padding: 0 8px; }
+  .clock { font-size: 15px; }
+  .sbtoggle { display: inline-flex; align-items: center; min-height: 28px; padding: 0 8px; font-size: 12px; white-space: nowrap; }
+  .sbmore { display: none; }
+  .statuswrap { position: relative; }
+  .statuswrap.open .sbmore { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; position: absolute; left: 0; right: 0; top: 100%; padding: 10px 12px; background: var(--panel); color: var(--text); border-bottom: 1px solid var(--line); box-shadow: var(--shadow); z-index: 30; }
+  .statuswrap.open .sbmore .chip { color: var(--text); background: var(--panel2); border-color: var(--line); }
+  .statuswrap.open .sbmore .chip.bad { color: var(--no); } .statuswrap.open .sbmore .chip.warn { color: var(--wait); }
+  .statusbar .phase { display: inline; color: var(--muted); }
+  .statusbar .chip.zero { display: inline-flex; }
+  .statusbar .sbmore .chip { white-space: normal; }
+  .help { width: 40px; height: 40px; font-size: 14px; }
+  .help::after { display: none; }
+  #toast { top: 66px; left: 8px; right: 8px; width: auto; align-items: stretch; }
+  .vbar { padding: 6px 10px; gap: 4px 10px; min-height: 0; }
+  .vbar.v-entry { flex-wrap: nowrap; }
+  .vbar.v-entry .vmain { flex: 1 1 0; }
+  .vbar.v-entry .vact { flex: none; }
+  .vbar .btn.big { width: auto; min-height: 44px; padding: 6px 14px; font-size: 16px; }
+  .vtext { font-size: 14px; }
+  .vtext.entry .ebig { display: block; }
+  .vtext.entry .erest { font-size: 13px; display: block; line-height: 1.3; }
+  .vnotes { padding: 3px 10px; gap: 6px; }
+  .vnotes .chip { font-size: 12px; }
+}
+
+/* thanh trên máy tính gọn: chip chữ 12 px để chữ đủ nghĩa vẫn vừa một hàng (REVIEW-3 mục 12, 13) */
+.statusbar { gap: 4px 8px; padding: 6px 16px; }
+.statusbar .chip { font-size: 12px; padding: 0 8px; line-height: 1.7; }
+.statusbar .clock { font-size: 17px; }
+.vnotes .help { margin: -4px 0; }
+@media (max-width: 600px) {
+  .statusbar { padding: 6px 112px 6px 12px; }
+  .vnotes { flex-wrap: nowrap; overflow: hidden; align-items: center; }
+  .vnotes .chip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+  .vnotes .help { margin: -8px 0; flex: none; }
+}
+.statusbar .glossary-btn { padding: 0 10px; min-height: 26px; }
+.statusbar .clock { font-size: 16px; }

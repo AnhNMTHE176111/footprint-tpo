@@ -133,18 +133,27 @@
     return best;
   }
   // chép Q1′ (nếu chưa trả lời) và các vùng CARRY_ZONES chưa có cùng loại; không vượt 5 vùng. Trả về số mục đã chép
-  function copyFromPrev(night, src) {
-    var card = night.card, n = 0, sc = (src && src.card) || {};
-    if (sc.answers && sc.answers.q1w && !card.answers.q1w) { card.answers.q1w = sc.answers.q1w; n++; }
+  // VWAP tuần chép sang thì giá của nó cũng điền luôn vào ô "VWAP tuần" của bias (nếu ô đó còn trống) — USER-TEST-3 (b) 1
+  // Trả về {n, items}: items là chữ ngắn từng mục đã chép (không nhắc mục không có)
+  function copyFromPrevDetail(night, src) {
+    var card = night.card, items = [], sc = (src && src.card) || {};
+    if (sc.answers && sc.answers.q1w && !card.answers.q1w) { card.answers.q1w = sc.answers.q1w; items.push(C.ui.copyShape); }
     (sc.zones || []).forEach(function (z) {
       if (CARRY_ZONES.indexOf(z.type) < 0 || card.zones.length >= R.T.zonesMax) return;
       if (card.zones.some(function (q) { return q.type === z.type; })) return;
       var c = { id: newZoneId(card), type: z.type, price: z.price, note: '' };
       if (z.priceTo !== undefined && z.priceTo !== null) c.priceTo = z.priceTo;
-      card.zones.push(c); n++;
+      card.zones.push(c);
+      items.push(C.zoneTypes[z.type].label + ' ' + fmt(z.price));
+      if (z.type === 'vwapW' && R.num(z.price) !== null && R.num(card.answers.vwapPrice) === null) {
+        card.answers.vwapPrice = z.price;
+        var pn = R.num(card.answers.priceNow);
+        if (pn !== null && !card.answers.vwapW) { var d = pn - z.price; card.answers.vwapW = Math.abs(d) <= R.T.vwapNear + R.EPS ? 'near' : d > 0 ? 'above' : 'below'; }
+      }
     });
-    return n;
+    return { n: items.length, items: items };
   }
+  function copyFromPrev(night, src) { return copyFromPrevDetail(night, src).n; }
 
   // ===== chế độ =====
   function setRegimeMode(night, mode, nowMs) {
@@ -156,6 +165,18 @@
     }
     night.regime.mode = mode;
     night.regime.log.push({ at: hm(nowMs), mode: mode });
+  }
+  // Đổi hướng phá hoặc cạnh vừa phá khi đã có giá trị cũ là một cú phá KHÁC: xóa bước 1, bước 2, giờ phá = lúc bấm
+  // (như đổi chế độ; REVIEW-3 mục 2). Lần chọn đầu (chưa có giá trị cũ) không xóa gì.
+  function setBreakoutField(night, field, v, nowMs) {
+    var bo = night.regime.breakout, old = bo[field];
+    bo[field] = v;
+    if (old !== v && ((old !== null && old !== undefined) || bo.step1 || bo.step2)) {
+      bo.step1 = false; bo.step2 = false; bo.at = hm(nowMs);
+      (night.regime.log = night.regime.log || []).push({ at: hm(nowMs), mode: night.regime.mode, reset: field });
+      return true;
+    }
+    return false;
   }
   // "Chui lại trong (phá hụt)": về Cân bằng, lần phá kế = 2
   function breakoutFailed(night, nowMs) {
@@ -359,6 +380,7 @@
       lines.push('| ' + [r.time, r.side, r.name, r.mode, r.checks, r.sl, r.r + (r.warn ? ' ⚠' : '')].join(' | ') + ' |');
       if (r.warn) warns.push(W.mdWarn + ' ' + r.time + ' ' + r.warn);
     });
+    lines.push(''); lines.push(W.mdLegend);   // chú giải một dòng dưới bảng
     if (warns.length) { lines.push(''); warns.forEach(function (w) { lines.push(w); }); }
     var tl = night.tally || {};
     lines.push('');
@@ -418,7 +440,7 @@
   return {
     fmt: fmt, fmtTrim: fmtTrim, fmtR: fmtR, fmtSigned: fmtSigned, parseNum: parseNum, hm: hm,
     newNight: newNight, normalizeNight: normalizeNight, ensureNight: ensureNight,
-    planConflict: planConflict, prevCardSource: prevCardSource, copyFromPrev: copyFromPrev, newZoneId: newZoneId, canLockCard: canLockCard, lockCard: lockCard, cardEditPolicy: cardEditPolicy, applyCardEdit: applyCardEdit,
+    planConflict: planConflict, prevCardSource: prevCardSource, copyFromPrev: copyFromPrev, copyFromPrevDetail: copyFromPrevDetail, setBreakoutField: setBreakoutField, newZoneId: newZoneId, canLockCard: canLockCard, lockCard: lockCard, cardEditPolicy: cardEditPolicy, applyCardEdit: applyCardEdit,
     setRegimeMode: setRegimeMode, breakoutFailed: breakoutFailed, changeScenario: changeScenario,
     createTrade: createTrade, forceCodes: forceCodes, tradeById: tradeById, fillLimit: fillLimit, cancelLimit: cancelLimit,
     computeR: computeR, beStatus: beStatus, markBE: markBE, closeTrade: closeTrade, recomputeTally: recomputeTally,

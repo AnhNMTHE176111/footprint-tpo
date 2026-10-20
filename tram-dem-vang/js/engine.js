@@ -8,14 +8,16 @@
   var R = dep('rules'), time = dep('time');
   var T = R.T, EPS = R.EPS, num = R.num;
 
-  // Lệnh đóng có tính là SL (cộng chuỗi) không? (REVIEW-2 mục 3)
-  //  · kind SL mà chưa dời be ⇒ SL; kind SL sau be (beStop) ⇒ hòa, không cộng
-  //  · R ≤ −0,5 ⇒ SL (kể cả đóng tay); R trong (−0,5; 0) hay trượt ±0,2 quanh hòa ⇒ không cộng
+  // Lệnh đóng có tính là SL (cộng chuỗi) không? Một định nghĩa duy nhất (REVIEW-3 mục 1, quyết định chủ plan):
+  //  · R ≤ −0,2 ⇒ SL (kể cả đóng tay), hoặc kind SL mà chưa dời be ⇒ SL: cộng chuỗi
+  //  · R trong (−0,2; +0,2) ⇒ hòa: reset chuỗi · R ≥ +0,2 ⇒ thắng: reset chuỗi
+  //  · kind SL sau be (beStop) ⇒ hòa (nếu gõ giá thoát xấu làm R còn ≤ −0,2 thì vẫn là SL)
+  var SL_R = -0.2;
   function isSLTrade(t) {
     var ex = t.exit;
     if (!ex) return false;
     if (ex.kind === 'SL' && !ex.beStop) return true;
-    return typeof t.r === 'number' && t.r <= -0.5 + 1e-9;
+    return typeof t.r === 'number' && t.r <= SL_R + 1e-9;
   }
 
   function countTrades(night) {
@@ -25,7 +27,7 @@
       if ((t.flags || []).indexOf('paper') >= 0) return;
       if ((t.flags || []).indexOf('RULE_BREAK') >= 0) ruleBreaks++;
     });
-    // chuỗi SL: đếm từ cuối, bỏ lệnh luyện mắt và lệnh chưa đóng; chỉ SL cộng chuỗi, TP / hòa reset (QĐ-10)
+    // chuỗi SL: đếm từ cuối, bỏ lệnh luyện mắt và lệnh chưa đóng; chỉ SL (R ≤ −0,2) cộng chuỗi, TP / hòa reset (QĐ-10)
     var streak = 0;
     for (var i = trades.length - 1; i >= 0; i--) {
       var t = trades[i];
@@ -115,6 +117,7 @@
     cl.sizeFull = full;
     cl.maxSl = R.round1(Math.floor(fullUsd / T.tickValue * 10 + 1e-9) / 10);   // SL tối đa cho 1 hợp đồng ở cỡ chuẩn
     cl.sizeMinOne = false;
+    cl.realUsd = R.round2(per);   // rủi ro thật của 1 hợp đồng với SL này
     if (half && full >= 1 && n < 1) { n = 1; cl.sizeMinOne = true; }
     return n;
   }
@@ -175,7 +178,7 @@
       longestBarActive: untilMs !== null && nowMs < untilMs,
       nyseMin: nyseMin, comexMin: comexMin, breakMin: breakMin,
       earlyBreak: breakMin !== null && breakMin >= 18 * 60 && breakMin < comexMin,
-      reasons: [], missing: [], halfs: [], offs: [], blocked: false
+      reasons: [], shadow: [], missing: [], halfs: [], offs: [], blocked: false
     };
     c.calc = computeCalc(c);
 
@@ -200,8 +203,10 @@
       } else if (e === 'HALF') {
         if (rule.when(c)) push(c.halfs, rule.code);
       } else if (e === 'NO' || e === 'WAIT') {
-        if (c.blocked) return;
         if (rule.scope !== 'ALL' && (!scen || rule.scope.indexOf(scen) < 0)) return;
+        // kịch bản đã bị tắt (DIS_*): phán quyết không đổi, nhưng mọi luật NO vẫn được xét và ghi vào danh sách phụ
+        // để "Tôi vẫn vào" ghi đủ mã luật đã phạm (REVIEW-3 mục 5, QĐ-20)
+        if (c.blocked) { if (e === 'NO' && rule.when(c)) push(c.shadow, rule.code); return; }
         if (rule.when(c)) push(e === 'NO' ? c.reasons : c.missing, rule.code);
       }
     });
@@ -246,7 +251,7 @@
     if (card.lockedAt && zones.length < T.zonesMin) warnings.push('WARN_FEW_ZONES');
 
     return {
-      verdict: verdict, reasons: reasons, ruleReasons: c.reasons.slice(), missing: c.missing.slice(), dots: dots, dotsLit: dots.filter(Boolean).length,
+      verdict: verdict, reasons: reasons, ruleReasons: c.reasons.concat(c.shadow.filter(function (x) { return c.reasons.indexOf(x) < 0; })), missing: c.missing.slice(), dots: dots, dotsLit: dots.filter(Boolean).length,
       order: R.RULE_ORDER, enabled: enabled, half: { on: half, reasons: c.halfs.slice() },
       regime: { effective: reg.effective, dir: reg.dir }, bias: b.value, biasAuto: b.auto, biasOverridden: b.overridden,
       scenario: scen, side: side, zone: zone, zones: zones, counter: counter, exempt9: exempt9, calc: cl,

@@ -137,7 +137,8 @@
   function effectiveBias(card) {
     var b = (card && card.bias) || {};
     var auto = autoBias(card && card.answers, b);
-    if (b.override && b.reason && String(b.reason).trim()) return { value: b.override, auto: auto, overridden: true };
+    // ghi đè bằng đúng bias tự động không phải là ghi đè (REVIEW-3 mục 7)
+    if (b.override && b.reason && String(b.reason).trim() && b.override !== auto) return { value: b.override, auto: auto, overridden: true };
     return { value: auto, auto: auto, overridden: false };
   }
 
@@ -281,6 +282,14 @@
       return c.calc.rr < T.rrMin - EPS || (c.calc.nextZone && !c.calc.nextRRok);
     } },
     { code: 'NO_TP_PAST_ZONE', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && c.calc.slSideOk && c.calc.rr !== null && !c.calc.tpPastOk; } },
+    // thiếu vốn hoặc % rủi ro: không tính được số hợp đồng ⇒ CHỜ, trỏ tới nút "Đổi vốn" (REVIEW-3 mục 6)
+    { code: 'WAIT_CAPITAL', scope: 'ABCD', effect: 'WAIT', when: function (c) {
+      return c.calc.numsOk && c.calc.slSideOk && !(num(c.settings.capital) > 0 && num(c.settings.riskPct) > 0);
+    } },
+    // thiếu vốn hoặc % rủi ro: không tính được số hợp đồng ⇒ CHỜ, trỏ tới nút "Đổi vốn" (REVIEW-3 mục 6)
+    { code: 'WAIT_CAPITAL', scope: 'ABCD', effect: 'WAIT', when: function (c) {
+      return c.calc.numsOk && c.calc.slSideOk && !(num(c.settings.capital) > 0 && num(c.settings.riskPct) > 0);
+    } },
     // QĐ-21: chỉ khi CỠ CHUẨN (đủ, chưa giảm ½) dưới 1 hợp đồng; cỡ ½ không chia được thì 1 hợp đồng tối thiểu
     { code: 'NO_SIZE_ZERO', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && c.calc.slSideOk && c.sizeOf() !== null && c.calc.sizeFull === 0; } }
   ];

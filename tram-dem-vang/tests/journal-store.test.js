@@ -61,6 +61,8 @@ test('sổ: Markdown đúng mẫu (so chuỗi)', () => {
     '| 20:25 | sell | phá hồi | vừa phá | U · bb -129 giữ · Δ nến mạnh · cạnh | 2,4 | +3 |',
     '| 20:48 | sell | hấp thụ | cân bằng | V · bb +29 NGƯỢC · Δ — · cạnh | 1,2 | -1 ⚠ |',
     '',
+    'Cột "4 kiểm tra": V/U nhịp hồi · bb bong bóng (kèm số) · Δ delta · cạnh hay lưng so với vùng.',
+    '',
     '⚠ dòng 20:48 phạm 4.1, 4.3 và luật SL',
     '',
     'Máy cộng: +2 R · Bạn cộng: +2 R · Lệnh phá luật: 1 · SL bị quét rồi tới TP: 0',

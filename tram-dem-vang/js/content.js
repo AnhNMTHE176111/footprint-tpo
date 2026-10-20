@@ -81,7 +81,7 @@
     NO_ZONE_3RD: { text: 'Đã vào 2 lần ở vùng này — không có lần thứ ba.', htRef: '7' },
     NO_BANNED_ZONE: { text: 'Không hấp thụ ở HVN ngày, HVN 3 tuần hay LVN.', htRef: '2.3' },
     NO_MID_RANGE: { text: 'Giữa range không có lệnh — chỉ làm tại cạnh.', htRef: '7' },
-    NO_C_NOT_EDGE: { text: 'Fade chỉ ở đúng cạnh VA Âu hoặc cạnh range (cách không quá 1 giá); vùng này không phải cạnh.', htRef: '5·C' },
+    NO_C_NOT_EDGE: { text: 'Fade chỉ ở vùng cạnh (VAH / VAL Âu, IB, cạnh range, High / Low hôm qua), cách không quá 1 giá; vùng này không phải cạnh.', htRef: '5·C' },
     NO_PENDING_ACCEPT: { text: 'Cạnh vừa phá đang chờ công nhận — không fade, không hấp thụ ở đó.', htRef: '3.1' },
     NO_B_RANK: { text: 'Vùng này chưa đủ hạng cho hấp thụ (cần hạng 1–2, hoặc cạnh khi cân bằng).', htRef: '2.3' },
     NO_FIGHT_BREAK: { text: 'Hấp thụ ngược chiều phá là cản tàu.', htRef: '5' },
@@ -121,7 +121,8 @@
     WAIT_B3: { text: 'Nến xác nhận', ctl: 'b3', htRef: '5' },
     WAIT_B3_NOT: { text: 'Chờ nến xác nhận đạt chuẩn', ctl: 'b3', htRef: '5' },
     WAIT_CALC: { text: 'Giá vào và SL', ctl: 'b4', htRef: '6' },
-    WAIT_B5: { text: 'SL đúng chỗ', ctl: 'b5', htRef: '6' }
+    WAIT_B5: { text: 'SL đúng chỗ', ctl: 'b5', htRef: '6' },
+    WAIT_CAPITAL: { text: 'Cài vốn và % rủi ro để tính số hợp đồng', htRef: 'ST §6' }
   };
 
   // mã → ô điều khiển để bấm vào xem / sửa (NO_UNCLEAR chọn theo ô đang "không rõ")
@@ -253,6 +254,7 @@
     edgeNear: 'cạnh', edgeBack: 'lưng', strong: 'nến mạnh', paper: '(luyện mắt)',
     warnPrefix: 'phạm', and: 'và', slLaw: 'luật SL', section: 'mục',
     mdTitle: 'Sổ đêm', mdHead: '| giờ | hướng | tên | chế độ | 4 kiểm tra (V/U · bb · Δ · cạnh) | SL | R |', mdWarn: '⚠ dòng',
+    mdLegend: 'Cột "4 kiểm tra": V/U nhịp hồi · bb bong bóng (kèm số) · Δ delta · cạnh hay lưng so với vùng.',
     mdCard: 'Thẻ phiên', mdBias: 'BIAS', mdVwap: 'VWAP tuần', mdClose: 'Đóng hôm qua so với VA', mdShape: 'Hình hôm qua', mdZones: 'Vùng', mdPlan1: 'Kế hoạch 1', mdPlan2: 'Kế hoạch 2', mdCancel: 'Hủy khi', mdMode: 'Chế độ',
     machine: 'Máy cộng', you: 'Bạn cộng', breaks: 'Lệnh phá luật', swept: 'SL bị quét rồi tới TP'
   };
@@ -267,7 +269,10 @@
     unitGia: 'giá', newVersion: 'Có bản mới.', reload: 'Tải lại',
     // --- thanh trạng thái ---
     clock: '{hm} VN', nextWindow: 'Cửa sổ cấm kế: {hm} ({min}′)', inWindow: 'TRONG CỬA SỔ CẤM {hm} — còn {left}′', noWindow: 'Hết cửa sổ cấm trong đêm',
-    biasChip: 'BIAS {v}', chipBreaks: 'Phá luật {n}/2', chipStreak: 'SL liên tiếp {n}/3', chipOpen: 'Lệnh mở {n}/1', chipOpenPaper: 'Lệnh mở {n}/1 (luyện mắt)', chipZone: 'Đã vào {n}/2 lần ở vùng này',
+    biasChip: 'BIAS {v}', chipBreaks: 'Phá luật {n} trên 2', chipStreak: 'SL liên tiếp {n} trên 3', chipOpen: 'Lệnh mở {n} trên 1', chipOpenPaper: 'Lệnh mở {n} trên 1 (luyện mắt)', chipZone: 'Vùng này {n} trên 2 lần',
+    chipBreaksTip: 'Số lệnh phá luật trong đêm. Đủ 2 lệnh thì tắt máy đến hết đêm.', chipStreakTip: 'Số SL liên tiếp ở cuối sổ. Đủ 3 thì tắt máy đến hết đêm.',
+    chipOpenTip: 'Chỉ được một lệnh mở cùng lúc.', chipZoneTip: 'Mỗi vùng chỉ vào tối đa 2 lần.',
+    statusToggle: 'Trạng thái', winterChip: 'Mỹ mùa đông +1h',
     // --- thẻ phiên ---
     cardTitle: 'Thẻ phiên', cardDate: 'Ngày', cardVwap: 'VWAP tuần', cardClose: 'Đóng hôm qua', cardShape: 'Hình hôm qua', cardBias: 'BIAS', cardMode: 'Chế độ',
     cardZones: 'VÙNG', cardDebt: 'NỢ', cardBanned: 'VÙNG CẤM', cardNote: 'Kịch bản nền', cardPlan1: 'Kế hoạch 1', cardPlan2: 'Kế hoạch 2', cardCancel: 'Hủy khi',
@@ -280,7 +285,7 @@
     windowLabel: '{hm} (−{before}′ / +{after}′) · hạng {rank}', offAt: 'đã tắt lúc {hm}',
     offConfirmTitle: 'Tắt cửa sổ cấm?', offConfirmText: 'Tắt cửa sổ {hm} sẽ ghi vết giờ tắt. Chắc chắn?', offConfirmOk: 'Tắt cửa sổ',
     nyseRow: 'NYSE mở {hm} (±5′): chỉ cảnh báo, không đánh tin', alwaysOn: 'luôn bật',
-    addWindow: 'Thêm cửa sổ', timePh: 'giờ VN (hh:mm)', rank1: 'Hạng 1', rank2: 'Hạng 2', minBefore: 'phút trước', minAfter: 'phút sau', addFomc: 'Thêm FOMC 01:00',
+    addWindow: 'Thêm cửa sổ', timePh: 'giờ VN (hh:mm)', rank1: 'Hạng 1', rank2: 'Hạng 2', minBefore: 'phút trước', minAfter: 'phút sau', addFomc: 'Thêm FOMC {fomc}',
     badTime: 'Giờ chưa đúng dạng giờ:phút.', autoOn: '(tự bật)', t0WinNote: 'Mặc định: {b} ±5′ luôn bật. {a} ±15′ tự bật vào thứ Năm, ngày có tin lớn, hoặc khi chưa xong tầng 0. Có FOMC thì đóng sạch trước {fomcFlat}.',
     t0Title3: 'Ngày tin và kịch bản nền', newsDay: 'Hôm nay có tin lớn (NFP, CPI)', t0Note: 'Kịch bản nền ban ngày (tùy chọn)', t0NotePh: 'Một dòng',
     t0Done: 'Xong tầng 0 — sang kẻ vùng',
@@ -328,6 +333,7 @@
     calcNone: 'Chọn kịch bản để tính SL và R:R.', calcNeed: 'Nhập giá vào và SL ở bước Bấm.', calcSl: 'SL {v} giá', calcRr: 'R:R 1:{v}', calcTpSug: 'TP gợi ý {v}',
     sizeTitle: 'Cỡ lệnh MGC', sizeNoCfg: 'chưa cài vốn', sizeZero: '0 hợp đồng', sizeN: '{n} hợp đồng',
     sizeCalc: 'Vốn {cap} $ · rủi ro {pct} % = {full} $. Mỗi hợp đồng rủi ro {per} $ với SL này. Làm tròn xuống.', sizeHalf: 'Cỡ ½ vì: {why}, nên chỉ rủi ro {usd} $.',
+    sizeHalfMin: 'Cỡ ½ ({why}) không chia được: vào 1 hợp đồng, rủi ro thật {real} $ (hơn ½ kế hoạch).',
     dotsLabel: '{n} trên 8 điều kiện đã đạt', vWait: 'CHỜ', missingLabel: 'thiếu:', vNo: 'KHÔNG VÀO', vOff: 'TẮT MÁY', vLocked: 'Có lệnh mở.', moreCodes: '(+{n} lý do nữa)',
     forceBtn: 'Tôi vẫn vào (phá luật)', forceNeed: 'Cần có hướng, giá vào và SL trước.', entryView: 'ENTRY (chỉ xem)', paperBtn: 'Ghi kèo luyện mắt', enterBtn: 'Vào lệnh',
     slGia: '{v} giá', sizeHalfShort: 'cỡ ½', sizeFull: 'cỡ đủ', counterTag: 'ngược bias · 2R · ½', halfNote: 'Cỡ ½ vì: {why}.',
@@ -356,7 +362,7 @@
     breaksN: 'Lệnh phá luật: {n}', sweptN: 'SL bị quét rồi tới TP: {n}', endNight: 'Kết phiên', endNeed: 'Cần nhập "Bạn cộng" trước.', endedToast: 'Đã kết phiên.',
     afterClose: 'Sau đóng lệnh: SL bị quét, ghi chú',
     t5Week: 'Cuối tuần: 4 con số', t5WeekHelp: 'Chỉ số theo dõi duy nhất của tuần là số lệnh phá luật. Lãi lỗ chỉ là hệ quả.',
-    wBreaks: 'Phá luật / tổng lệnh', wSwept: 'SL bị quét rồi tới TP', wByScen: 'R theo kịch bản', wByZone: 'R theo loại vùng', wCounter: 'Lệnh ngược bias', wStreak: 'Chuỗi đêm 0 phá luật',
+    wBreaks: 'Phá luật / tổng lệnh', wSwept: 'SL bị quét rồi tới TP', wByScen: 'R theo kịch bản', wByZone: 'R theo loại vùng', wCounter: 'Lệnh ngược bias', wStreak: 'Số đêm liên tiếp không phá luật',
     pairFmt: '{name} {n} lệnh {r} R',
     t5Export: 'Xuất và nhập', exMd: 'Tải Markdown', exMdCopy: 'Sao chép Markdown', exJson: 'Tải JSON', exCsv: 'Tải CSV', copied: 'Đã sao chép.', copyFail: 'Không sao chép được.',
     importJson: 'Nhập JSON (gộp vào dữ liệu hiện có)', importDone: 'Nhập xong: {a} đêm mới, {b} đêm gộp, {c} lệnh thêm.', exportDue: 'Cuối tuần rồi — tải JSON về để giữ bản sao.',
@@ -377,27 +383,32 @@
     storeFail: 'Không lưu được vào máy — tải JSON ngay để giữ dữ liệu.', storeFailBtn: 'Tải JSON', otherTab: 'Dữ liệu vừa đổi ở cửa sổ khác — đã tải lại.',
     unitGiaShort: 'giá',
     // --- vòng 3 ---
-    warnShort: 'trước {nyse} · cỡ ½', sizeMinOne: 'cỡ ½ không chia được — 1 hợp đồng (tối thiểu)',
+    warnShort: 'trước {nyse} · cỡ ½', sizeMinOne: '1 hợp đồng = cỡ đầy, rủi ro {usd} $', halfNoteMin: 'Lẽ ra cỡ ½ vì: {why}; không chia được.',
     capTitle: 'Vốn và rủi ro mỗi lệnh', capText: 'Công cụ dùng hai số này để tính số hợp đồng MGC. Mặc định 2000 $ và 2 %. Đổi lại được ở tầng Sổ, mục Cài đặt.',
     capLater: 'Để sau', capSave: 'Lưu', capBad: 'Vốn và % rủi ro phải là số lớn hơn 0.', capChange: 'Đổi vốn',
     glossarySearch: 'Tìm từ…', glossaryNone: 'Không có mục nào khớp.',
-    copyPrev: 'Sao chép vùng từ đêm {key}', copyPrevEdit: 'Sao chép vùng từ đêm {key}', copyPrevDone: 'Đã chép {n} mục (VWAP tuần, HVN 3 tuần, Q1′).',
+    copyPrev: 'Sao chép vùng từ đêm {key}', copyPrevEdit: 'Sao chép vùng từ đêm {key}', copyPrevDone: 'Đã chép: {list}.', copyShape: 'hình 3 tuần',
     copyPrevNone: 'Không có gì mới để chép.', copyPrevHint: 'VWAP tuần, HVN 3 tuần và hình 3 tuần thường giữ nguyên cả tuần; sửa lại giá nếu đã đổi.',
     goTier1: 'Về tầng 1', goTier2: 'Về tầng 2',
     sideNeedZone: 'Vùng này chưa có phía (trên hay dưới). Chọn phía ở tầng 1.', sideAfterZone: 'Chọn vùng ở trên: hướng tự điền theo phía của vùng.',
     sideNeedRegime: 'Hướng lấy từ chế độ: chọn hướng phá hoặc hướng Trend thin ở tầng 2.',
-    closeSlBe: 'Chạm SL (đã ở hòa vốn)', needDirEdge: 'Chọn hướng phá và cạnh vừa phá trước.'
+    closeSlBe: 'Chạm SL (đã ở hòa vốn)', needDirEdge: 'Chọn hướng phá và cạnh vừa phá trước.',
+    // --- vòng 4 ---
+    boAtHint: 'Mặc định là giờ bấm; sửa thành giờ nến M5 đóng ngoài cạnh.', boAtOutside: 'Giờ phá {hm} nằm ngoài giờ giao dịch (trước 18:00): chỉ cảnh báo, kịch bản vẫn xét như thường.',
+    boReset: 'Đổi hướng hoặc cạnh là một cú phá mới: công nhận lại từ bước 1.',
+    jumpNote: 'Canh đã đủ nên công cụ chuyển sang Bấm (chỉ một lần cho kèo này).', backCanh: '← Quay lại Canh',
+    sideNoneZone: 'Vùng này không có phía nên không fade được; C chỉ làm ở cạnh.'
   };
 
   // ===== Từ điển (định nghĩa ngắn, lấy từ trang Hệ thống Đêm Vàng; chỗ là luật của công cụ thì ghi rõ) =====
   var glossary = [
     { key: 'bias', term: 'bias', def: 'Chiều ưu tiên của đêm: BUY, SELL, KHÔNG hoặc CHỜ. Chỉ lấy từ VWAP tuần và giá đóng hôm qua so với VA hôm qua; ngược bias phải ghi lý do trước khi bấm.' },
     { key: 'no', term: 'nợ', def: 'Phần giá chưa được lấp lại (single print, poor high, poor low), giá hay trở lại chạm. Đây là "nợ giá", không phải nợ tiền.' },
-    { key: 'moi', term: 'mồi', def: 'Cực trị có khối lượng dày: trông như đỉnh hoặc đáy nhưng không phải bị từ chối thật, nên không coi là đỉnh hay đáy. Ví dụ: đỉnh 4210,0 chỉ 1 TPO, khối lượng thấp ⇒ tail thật; đỉnh 4208,0 khối lượng dày ⇒ mồi.' },
+    { key: 'moi', term: 'mồi', def: 'Cực trị có khối lượng dày: trông như đỉnh hoặc đáy nhưng không phải bị từ chối thật, nên không coi là đỉnh hay đáy. Ví dụ: đỉnh 4210,0 chỉ 1 TPO, khối lượng thấp ⇒ tail thật; đỉnh 4208,0 khối lượng dày ⇒ mồi (ví dụ minh họa, không phải ca thật).' },
     { key: 'tail', term: 'tail thật', def: 'Cực trị chỉ có 1 TPO với khối lượng thấp: giá bị từ chối thật ở đó. Chỉ tail thật mới cho phép hấp thụ ngược bias tại High / Low hôm qua.' },
     { key: 'poor', term: 'poor high / poor low', def: 'Đỉnh hoặc đáy có từ 2 TPO, tức giá chưa bị từ chối dứt khoát. Đó là nợ, sẽ bị chạm lại.' },
     { key: 'thin', term: 'thin', def: 'Profile mỏng, đi một chiều, chưa đấu giá xong: không đánh ngược. Chế độ "Trend thin" là không cản tàu, chỉ vào theo chiều ở nhịp hồi.' },
-    { key: 'trap', term: 'trap (bẫy)', def: 'Một move rõ (từ 5 giá) cùng chiều bias, rồi nhịp hồi ngược tới một vùng. Ở đỉnh nhịp hồi phe hồi thử mà thất bại: bong bóng hấp thụ phe hồi, hoặc nến hồi có delta thuận mà đóng dưới nửa thân. Vào theo chiều move cũ, mục tiêu 2R. Ví dụ: sell, giá giảm từ 4200 xuống 4194 (6 giá), hồi lên 4197 (nửa move, dưới 70 %) rồi thất bại ⇒ sell, SL trên 4197 cộng 0,3 giá.' },
+    { key: 'trap', term: 'trap (bẫy)', def: 'Một move rõ (từ 5 giá) cùng chiều bias, rồi nhịp hồi ngược tới một vùng. Ở đỉnh nhịp hồi phe hồi thử mà thất bại: bong bóng hấp thụ phe hồi, hoặc nến hồi có delta thuận mà đóng dưới nửa thân. Vào theo chiều move cũ, mục tiêu 2R. Ví dụ: sell, giá giảm từ 4200 xuống 4194 (6 giá), hồi lên 4197 (nửa move, dưới 70 %) rồi thất bại ⇒ sell, SL trên 4197 cộng 0,3 giá (ví dụ minh họa, không phải ca thật).' },
     { key: 'bong-bong', term: 'bong bóng', def: 'Vòng tròn trên chart M1 (chỉ báo hấp thụ và chỉ báo lệnh lớn). Tròn đặc là hấp thụ: một phe đánh market mạnh tại mức đó mà giá không đi; vòng trắng là mức còn giữ, mờ đi là mức đã vỡ. Tròn mờ có số từ 100 là lệnh lớn vừa vào; giá không rời mức thì mức đó thành vùng phòng thủ. Chỉ để kiểm tra, không phải tín hiệu vào lệnh.' },
     { key: 'dma', term: 'DMA', def: 'Chỉ báo đường trên chart M1 dùng để đọc đà (trang Hệ thống không ghi tên đầy đủ). Dốc cùng chiều move là đà còn; đi ngang khi giá còn chạy là đà đang cạn. Chỉ để kiểm tra, không phải tín hiệu vào lệnh.' },
     { key: 'be', term: 'be (hòa vốn)', def: 'Dời SL về giá vào để lệnh không lỗ nữa. Phá hồi và hấp thụ dời ở +1,5R sau 1 nến M1 đóng ngoài vùng vào; fade và trap dời ở +1R.' },
@@ -414,7 +425,10 @@
     { key: 'vwap', term: 'VWAP tuần', def: 'Giá trung bình theo khối lượng tính từ đầu tuần, là đường mốc cả tuần. Giá cách VWAP tuần không quá 2 giá là "sát": bias CHỜ.' },
     { key: 'mo-ao', term: 'mở ảo', def: 'Hệ thống: khoảng {comex} đến {nyse} vàng hay chạy giả, cú phá chưa đáng tin; cú phá đáng tin thường rơi vào {real1} đến {real2}; trước {nyse} chỉ fade cạnh, cỡ nhỏ. Công cụ: không tắt kịch bản, chỉ giảm cỡ còn ½ (QĐ-19, quyết định của công cụ, chưa đo).' },
     { key: 'r', term: 'R', def: 'R là khoảng rủi ro của lệnh: giá vào trừ SL. Lãi 1R bằng đúng khoảng đó, 3R gấp ba. Ví dụ: sell 4193,0, SL 4195,4 (2,4 giá) thì 1R = 2,4 giá và TP 3R ở 4185,8.' },
-    { key: 'hinh-dang', term: 'hình dạng profile (D, P, b, B, thin, chữ nhật)', def: 'D: đấu giá xong, chờ phá. P: cân bằng ở đỉnh, đuôi là hỗ trợ; b ngược lại. B: trang Hệ thống chưa mô tả riêng. thin: mỏng, một chiều, chưa xong, không đánh ngược. Chữ nhật: cân bằng rộng, sẽ phá một đầu.' }
+    { key: 'hinh-dang', term: 'hình dạng profile (D, P, b, B, thin, chữ nhật)', def: 'D: đấu giá xong, chờ phá. P: cân bằng ở đỉnh, đuôi là hỗ trợ; b ngược lại. B: trang Hệ thống chưa mô tả riêng. thin: mỏng, một chiều, chưa xong, không đánh ngược. Chữ nhật: cân bằng rộng, sẽ phá một đầu.' },
+    { key: 'va', term: 'VA / VAH / VAL / POC', def: 'VA là vùng giá trị của một phiên. VAH là mép trên, VAL là mép dưới, POC là mức giá giao dịch nhiều nhất. Giá đóng hôm qua ngoài VA hôm qua là giá đang tìm giá trị mới; trong VA là cân bằng còn hiệu lực. VAH Âu và VAL Âu là hai cạnh mặc định để fade.' },
+    { key: 'pha-gia', term: 'phá giả', def: 'Từ 18:00 đến {comex} hay có cú phá VA ngay trước giờ COMEX mà không đi tiếp. Thấy phá giờ này: nghi trước, tin sau. Công cụ tắt phá hồi (A) nếu giờ phá nằm trong khoảng đó.' },
+    { key: 'cua-so-cam', term: 'cửa sổ cấm', def: 'Khoảng quanh giờ tin lớn: mặc định {news1} (trước 15′, sau 15′, hạng 1; tự bật vào thứ Năm và ngày có tin) và {core} (trước 5′, sau 5′, hạng 2). Trong khoảng đó mọi kịch bản đều KHÔNG VÀO; lệnh đang mở thì đóng sạch trước cửa sổ hạng 1.' }
   ];
 
   // thay {comex} {nyse} {real1} {real2} {fomcFlat} bằng giờ đã dịch theo mùa (xem time.textVars); biến lạ giữ nguyên

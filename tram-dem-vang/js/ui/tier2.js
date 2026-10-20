@@ -7,7 +7,7 @@
 
   var SIDE_OPTS = [{ v: 'buy', label: 'buy' }, { v: 'sell', label: 'sell' }];
   var TICK_GROUPS = ['ctx', 'chk', 'ent'];
-  function autoIds(s) { return s === 'A' ? ['bias', 'breakHours', 'near', 'slFloor', 'slCap', 'rr', 'size'] : ['bias', 'near', 'slFloor', 'slCap', 'rr', 'size']; }   // zone2 nằm cạnh ô Vùng
+  function autoIds(s) { return s === 'A' ? ['bias', 'breakHours'] : ['bias']; }   // zone2 nằm cạnh ô Vùng
 
   function mark(ok) { return ok === true ? '✓' : ok === false ? '✕' : '…'; }
   function stateCls(ok) { return ok === true ? 'ok' : ok === false ? 'bad' : 'wait'; }
@@ -21,6 +21,8 @@
 
     // hướng mặc định theo bias ở lần chạm đầu (trừ khối C: fade có thể cả hai chiều); noDefault khi chính là ô chọn hướng
     function setBlock(scen, fn, keep, noDefault) {
+      var cur = (app.night.se.blocks || {})[scen] || {};
+      if (!noDefault && !cur.side && scen !== 'C' && (app.res.bias === 'BUY' || app.res.bias === 'SELL')) keep = false;   // hướng mặc định: dựng lại để nút hướng sáng
       app.update(function (n) {
         var bs = J.block(n, scen);
         if (!noDefault && !bs.side && scen !== 'C') { var b = app.res.bias; if (b === 'BUY' || b === 'SELL') bs.side = b.toLowerCase(); }
@@ -65,10 +67,6 @@
       }
       refs.common[c.id] = { row: row, mark: mk, why: why };
     });
-    // biên độ nến M1 cao nhất 5 nến: nhập một lần cho cả đêm, đổi khi cần
-    var c6In = numInput(se.c6 === undefined ? null : se.c6, function (v) { app.update(function (n) { if (v === null) delete n.se.c6; else n.se.c6 = v; }, { keep: true }); },
-      { label: T('c6L'), id: 'c6', placeholder: '0,0', unit: T('unitGia') });
-    ctrls.appendChild(h('div', { class: 'cm-c6' }, h('label', { class: 'mini-l' }, T('c6Night'), c6In), ui.helpBtn({ text: T('numsHelp'), ref: 'luat-sl' })));
     el.appendChild(h('section', { class: 'panel commonbox', 'data-testid': 'common' },
       h('h3', { class: 'ptitle' }, h('span', { text: T('commonTitle') }), ui.helpBtn({ text: T('commonHelp'), ref: 'ngat-mach' })), biasLine, sum, cmList, ctrls));
 
@@ -143,25 +141,7 @@
         return grp;
       }
       body.appendChild(h('div', { class: 'blk-groups' }, group('ctx'), group('chk')));
-      var slg = h('div', { class: 'grp', 'data-group': 'sl' }, h('h4', { class: 'grp-title', text: C.groupTitles.sl }));
-      def.sl.forEach(function (it, i) { slg.appendChild(tickRow(s, 'sl' + (i + 1), it, ticks)); });
-      body.appendChild(h('div', { class: 'blk-groups' }, group('ent'), slg));
-
-      // giá vào · SL · TP (Enter nhảy ô kế; biên độ nến nằm ở ô chung)
-      var numRow = h('div', { class: 'ctl numgrp', 'data-item': s + ':nums' });
-      r.tpIn = numInput(bs.tp === undefined ? null : bs.tp, function (v) { setBlock(s, function (b) { if (v === null) delete b.tp; else b.tp = v; }, true); }, { label: T('tpL'), placeholder: T('tpAuto'), id: 'tp-' + s });
-      function numField(label, key, id, onEnter) {
-        var o = { label: label, id: id + '-' + s, placeholder: '0000,0', onEnter: onEnter };
-        return h('label', { class: 'mini-l' }, label, numInput(bs[key] === undefined ? null : bs[key], function (v) { setBlock(s, function (b) { if (v === null) delete b[key]; else b[key] = v; }, true); }, o));
-      }
-      numRow.appendChild(h('div', { class: 'ctl-label' }, h('span', { text: T('numsTitle') }), ui.helpBtn({ text: T('numsHelp'), ref: 'luat-sl' })));
-      numRow.appendChild(h('div', { class: 'row wrap' },
-        numField(T('entryL'), 'entry', 'entry', function () { focusEl('[data-id="sl-' + s + '"]'); }),
-        numField(T('slL'), 'sl', 'sl', function () { focusEl('[data-id="tick-' + s + '-sl1"]'); }),
-        h('label', { class: 'mini-l' }, T('tpL'), r.tpIn)));
-      r.calc = h('div', { class: 'calcslot', 'data-testid': 'calc-' + s });
-      numRow.appendChild(r.calc);
-      body.appendChild(numRow);
+      body.appendChild(h('div', { class: 'blk-groups' }, group('ent')));
 
       // ô tự kiểm của khối: chip gọn khi đạt, hàng đầy đủ + lý do khi đỏ
       r.autos = h('div', { class: 'autos', 'aria-label': T('autosTitle') });
@@ -169,12 +149,6 @@
         var row = h('div', { class: 'auto wait', 'data-item': s + ':' + id, 'data-auto': id });
         var o = { row: row, mk: h('span', { class: 'cm-mark', 'aria-hidden': 'true' }), lab: h('span', { class: 'cm-label' }), why: h('span', { class: 'cm-why' }) };
         row.appendChild(o.mk); row.appendChild(o.lab); row.appendChild(o.why);
-        if (id === 'near') {
-          o.wick = h('label', { class: 'wickbox', hidden: true }, h('input', { type: 'checkbox', checked: bs.wick ? true : null, 'data-testid': 'wick-' + s, 'data-id': 'wick-' + s, 'aria-label': T('wickL'),
-            onchange: function (e) { var on = e.target.checked; setBlock(s, function (b) { if (on) b.wick = true; else delete b.wick; }, true); } }), h('span', { text: T('wickL') }));
-          row.appendChild(o.wick); row.appendChild(ui.helpBtn(C.helps.near));
-        }
-        if (id === 'size') { o.cap = btn(T('capChange'), function () { app.openCapital(false); }, 'small', { 'data-testid': 'btn-capital', hidden: true }); row.appendChild(o.cap); }
         r['auto_' + id] = o; r.autos.appendChild(row);
       });
       body.appendChild(h('div', { class: 'autowrap' }, h('div', { class: 'grp-title', text: T('autosTitle') }), r.autos));
@@ -190,8 +164,6 @@
             if (on) b.ticks[id] = true; else delete b.ticks[id];
             if (s === 'A' && id === 'ctx1') { if (on) b.ctx1At = app.nowMin; else delete b.ctx1At; }   // giờ cú phá = lúc tick ô nến M5
           }, true);
-          // vừa tick nến xác nhận: nhảy sẵn vào ô Giá vào để gõ luôn
-          if (on && id === 'ent1') { var inp = document.querySelector('[data-id="entry-' + s + '"]'); if (inp && !inp.value) setTimeout(function () { try { inp.focus(); } catch (x) { /* bỏ qua */ } }, 0); }
         } });
       return h('div', { class: 'tickrow', 'data-item': s + ':' + id },
         h('label', { class: 'tick36' }, cb, h('span', { class: 'tt', text: ui.fillTimes(it.t) })), it.help ? ui.helpBtn(it.help) : null);
@@ -208,8 +180,6 @@
       else if (ok === null) why = T('autoWait');
       o.why.textContent = why;
       o.why.classList.toggle('muted', ok === null);
-      if (o.wick) { o.wick.hidden = !(a && a.needWick); if (a && a.needWick) o.wick.querySelector('input').checked = !!bl.wick; }
-      if (o.cap) o.cap.hidden = !(a && (a.reason === 'size' || a.reason === 'noCapital'));
     }
     function fillLive(a2) {
       var res = a2.res;
@@ -256,22 +226,6 @@
           if (s === 'B') r.counterChip.appendChild(chip(T('counterTag'), 'warn'));
         }
         if (r.tail) r.tail.querySelector('input').checked = !!bl.tailOk;
-        // số + cỡ lệnh
-        var cc = bl.calc;
-        ui.clear(r.calc);
-        r.tpIn.input.placeholder = cc.tpSuggested !== null ? J.fmt(cc.tpSuggested) : T('tpAuto');
-        if (cc.numsOk && cc.slSideOk) {
-          var line = h('div', { class: 'calcline' });
-          line.appendChild(chip(T('calcSl', { v: J.fmt(cc.slDist) }), ''));
-          line.appendChild(chip(T('calcRr', { v: J.fmtTrim(cc.rr) }), cc.rr >= R.T.rrMin - 1e-9 ? 'good' : 'bad'));
-          if (cc.tpSuggested !== null) line.appendChild(chip(T('calcTpSug', { v: J.fmt(cc.tpSuggested) }) + ' (' + J.fmtTrim(cc.targetR) + 'R)', ''));
-          var sizeTxt = cc.size === null ? T('sizeNoCfg') : cc.size === 0 ? T('sizeZero') : cc.sizeMinOne ? T('sizeMinOne', { usd: J.fmtTrim(cc.realUsd) }) : T('sizeN', { n: cc.size });
-          line.appendChild(chip(T('sizeTitle') + ': ' + sizeTxt, bl.half ? 'warn' : ''));
-          if (bl.half) line.appendChild(chip(T(cc.sizeMinOne ? 'halfNoteMin' : 'halfNote', { why: bl.halfs.map(function (x) { return ui.fillTimes(C.halfText[x]); }).join(', ') }), 'warn'));
-          r.calc.appendChild(line);
-        } else if (cc.numsOk && !cc.slSideOk) {
-          r.calc.appendChild(h('span', { class: 'prob', role: 'alert', text: bl.side === 'sell' ? T('slAbove') : T('slBelow') }));   // SL sai phía: nói đúng nghĩa
-        } else r.calc.appendChild(h('span', { class: 'muted small', text: T('calcNeed') }));
         // ô tự kiểm của khối
         autoIds(s).forEach(function (id) {
           var a = bl.autoChecks.filter(function (x) { return x.id === id; })[0];
@@ -285,6 +239,7 @@
   }
 
   // ===== thanh dính đáy: ENTRY / CHỜ / kết quả lệnh đang mở =====
+  function halfChip(halfs) { return chip(T('halfNote', { why: halfs.map(function (x) { return ui.fillTimes(C.halfText[x]); }).join(', ') }), 'warn'); }
   function verdictBar(app) {
     var res = app.res, e = res.entry, op = res.open;
     var bc = app.ui.barClose && op && app.ui.barClose.id === op.trade.id ? app.ui.barClose : null;
@@ -296,50 +251,46 @@
       // lệnh đang mở: nút kết quả ngay trên thanh, không phải sang Sổ
       var t = op.trade, row = J.rowOf(t), be = J.beInfo(t);
       main.appendChild(h('div', { class: 'vtext open', 'data-testid': 'open-text' },
-        h('b', { text: T('barOpen') }), ' ', h('span', { class: 'ebig2', text: t.side + ' ' + row.name + ' ' + J.fmt(t.entry) }),
-        h('span', { class: 'erest', text: ' · SL ' + J.fmt(t.sl) + ' · TP ' + J.fmt(t.tp) + ' · ' + T('barBe', { r: J.fmtTrim(be.target), price: J.fmt(be.priceAt) }) })));
+        h('b', { text: T('barOpen') }), ' ', h('span', { class: 'ebig2', text: t.side + ' ' + row.name }),
+        h('span', { class: 'erest', text: ' · ' + row.zone + ' · ' + t.time + ' · ' + T('barBe', { r: J.fmtTrim(be.target) }) })));
       if (!bc) {
         [{ v: 'TP', l: T('closeTp') }, { v: 'SL', l: T('closeSl') }, { v: 'BE', l: T('closeBe') }, { v: 'MANUAL', l: T('closeManual') }].forEach(function (k) {
-          actions.appendChild(btn(k.l, function () { app.ui.barClose = { id: t.id, kind: k.v }; app.render({ keep: true }); }, 'barres', { 'data-testid': 'bar-' + k.v }));
+          actions.appendChild(btn(k.l, function () { app.ui.barClose = { id: t.id, kind: k.v, r: J.defaultR(t, k.v) === null ? undefined : J.defaultR(t, k.v) }; app.render({ keep: true }); }, 'barres', { 'data-testid': 'bar-' + k.v }));
         });
       } else {
-        var def = bc.kind === 'TP' ? t.tp : bc.kind === 'SL' ? t.sl : bc.kind === 'BE' ? t.entry : null;
-        var price = bc.price === undefined ? def : bc.price;
-        var rEl = h('span', { class: 'rnow', 'data-testid': 'bar-r' });
-        function paintR() { var r = J.computeR(t, price); rEl.textContent = r === null ? '' : 'R ' + J.fmtR(r); }
-        var pIn = numInput(price, function (v) { price = v; bc.price = v; paintR(); }, { id: 'barprice', label: T('exitPrice'),
-          onEnter: function () { confirmClose(); } });
-        function confirmClose() {
+        var confirmClose = function () {
           if (bc.kind === 'MANUAL' && !bc.reason) { app.toast(T('needReason')); return; }
-          if (R.num(price) === null) { app.toast(T('needExit')); return; }
+          if (R.num(bc.r) === null) { app.toast(T('needExit')); return; }
           app.ui.barClose = null;
-          app.closeOpen(op, { kind: bc.kind, price: price, reason: bc.reason });
-        }
-        paintR();
+          app.closeOpen(op, { kind: bc.kind, r: bc.r, reason: bc.reason });
+        };
+        var rIn = numInput(bc.r === undefined ? null : bc.r, function (v) { bc.r = v === null ? undefined : v; }, { id: 'barr', label: T('exitR'), unit: 'R', onEnter: function () { confirmClose(); } });
+        setTimeout(function () { var ae = document.activeElement; if (rIn.input.isConnected && !(ae && ae.tagName === 'INPUT')) { try { rIn.input.focus(); rIn.input.select(); } catch (x) { /* bỏ qua */ } } }, 0);
         if (bc.kind === 'MANUAL') {
           C.closeReasons.forEach(function (x) {
             actions.appendChild(btn(x.label, function () { bc.reason = x.v; app.render({ keep: true }); }, 'barres' + (bc.reason === x.v ? ' sel' : '') + (x.v === 'other' ? ' bad' : ''), { 'data-testid': 'bar-reason-' + x.v, 'aria-pressed': bc.reason === x.v ? 'true' : 'false' }));
           });
         }
-        actions.appendChild(h('label', { class: 'mini-l barprice' }, T('exitPrice'), pIn));
-        actions.appendChild(rEl);
+        [3, 2, 1, 0, -1].forEach(function (q) {
+          actions.appendChild(btn((q > 0 ? '+' : q < 0 ? '−' : '') + Math.abs(q), function () { bc.r = q; app.render({ keep: true }); }, 'barres rq' + (bc.r === q ? ' sel' : ''), { 'data-testid': 'barrq-' + q, 'aria-pressed': bc.r === q ? 'true' : 'false' }));
+        });
+        actions.appendChild(h('label', { class: 'mini-l barprice' }, T('exitR'), rIn));
         actions.appendChild(btn(T('closeConfirm'), confirmClose, 'primary', { 'data-testid': 'bar-confirm' }));
         actions.appendChild(btn(T('cancel'), function () { app.ui.barClose = null; app.render({ keep: true }); }, 'ghost', { 'data-testid': 'bar-cancel' }));
       }
       // vẫn vào kèo khác khi đang có lệnh mở (tính phá luật)
       var f0 = res.focus, bl0 = f0 ? res.blocks[f0] : null;
-      if (bl0 && bl0.side && bl0.calc.numsOk && bl0.complete) {
+      if (bl0 && bl0.side && bl0.complete) {
         actions.appendChild(btn(T('forceBtn', { n: res.common.filter(function (x) { return !x.ok; }).length }), function () { app.forceTrade(f0); }, 'danger small', { 'data-testid': 'btn-force' }));
       }
     } else if (e) {
-      var cc = e.calc;
       half = e.half ? e : null;
-      var sizePart = cc.sizeMinOne ? T('sizeMinOne', { usd: J.fmtTrim(cc.realUsd) }) : (e.half ? T('sizeHalfShort') : T('sizeFull')) + (cc.size === null || cc.size === undefined ? '' : ' · ' + T('sizeN', { n: cc.size }));
+      var zl = e.zone ? ui.zoneLabel(e.zone).replace(/\s[\d.,–]+(\s.*)?$/, '') : '';
       main.appendChild(h('div', { class: 'vtext entry', 'data-testid': 'entry-text' },
-        h('span', { class: 'ebig', text: (e.paper ? T('entryView') : 'ENTRY') + ' ' + e.side.toUpperCase() + ' · ' + T('scenTag', { s: e.scen }) }),
-        h('span', { class: 'erest', text: ' ' + J.fmt(cc.entry) + ' · SL ' + J.fmt(cc.sl) + ' (' + T('slGia', { v: J.fmt(cc.slDist) }) + ') · TP ' + J.fmt(cc.tpUsed) + ' · 1:' + J.fmtTrim(cc.rr) + ' · ' + sizePart + (e.counter && e.scen === 'B' ? ' · ' + T('counterTag') : '') })));
+        h('span', { class: 'ebig', text: (e.paper ? T('entryView') + ' ' : '') + T('entryBar', { side: e.side.toUpperCase(), s: e.scen, zone: zl, r: J.fmtTrim(e.targetR) }) }),
+        e.half ? h('span', { class: 'erest', text: ' · ' + T('sizeHalfShort') + (e.counter && e.scen === 'B' ? ' · ' + T('counterTag') : '') }) : null));
       if (e.paper) actions.appendChild(btn(T('paperBtn'), function () { app.writeTrade(e.scen, {}); }, 'primary big', { 'data-testid': 'btn-paper' }));
-      else { var eb = btn(T('writeBtn'), function () { app.writeTrade(e.scen, {}); }, 'primary big', { 'data-testid': 'btn-entry', title: 'Enter' }); eb.appendChild(h('kbd', { class: 'keyhint', text: 'Enter' })); actions.appendChild(eb); }
+      else { var eb = btn(T('writeBtn'), function () { app.writeTrade(e.scen, {}); }, 'primary big', { 'data-testid': 'btn-entry', title: 'Enter' }); eb.appendChild(h('kbd', { class: 'keyhint', text: 'Enter' })); actions.appendChild(eb); actions.appendChild(ui.helpBtn(C.helps.sl)); }
     } else {
       var f = res.focus, bl = f ? res.blocks[f] : null;
       var fails = res.common.filter(function (x) { return !x.ok; });
@@ -358,14 +309,13 @@
         });
         main.appendChild(h('div', { class: 'vtext', 'data-testid': 'wait-text' }, h('b', { text: T('vWait') }), ' — ',
           useCommon ? T('waitCommon', { s: f }) : T('waitBlock', { s: f }), ' ', list, extra ? h('span', { class: 'moremuted', text: ' ' + T('moreItems', { n: extra }) }) : null));
-        half = bl.half ? { halfs: bl.halfs, calc: bl.calc } : null;
-        var can = !!bl.side && bl.calc.numsOk;
+        half = bl.half ? bl : null;
         var nMiss = bl.missing.length + fails.length;
-        actions.appendChild(btn(T('forceBtn', { n: nMiss }), function () { app.forceTrade(f); }, 'danger', { 'data-testid': 'btn-force', disabled: can ? null : true, title: can ? null : T('forceNeed') }));
+        actions.appendChild(btn(T('forceBtn', { n: nMiss }), function () { app.forceTrade(f); }, 'danger', { 'data-testid': 'btn-force', disabled: bl.side ? null : true, title: bl.side ? null : T('forceNeed') }));
       }
     }
     if (half) {
-      notes.appendChild(chip(T(half.calc.sizeMinOne ? 'halfNoteMin' : 'halfNote', { why: half.halfs.map(function (x) { return ui.fillTimes(C.halfText[x]); }).join(', ') }), 'warn'));
+      notes.appendChild(halfChip(half.halfs));
       if (half.halfs.indexOf('BEFORE_2030') >= 0) notes.appendChild(ui.qd19Help());
     }
     if (res.warnings.indexOf('WARN_NYSE') >= 0) notes.appendChild(chip(C.warnText.WARN_NYSE, 'warn'));

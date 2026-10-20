@@ -24,25 +24,19 @@
     var be = J.beInfo(t);
     var head = h('div', { class: 'ohead' }, chip(t.side, ui.dirCls(t.side)), h('b', { text: row.name }), h('span', { class: 'muted', text: row.zone + ' · ' + t.time + (key !== app.key ? ' · ' + key : '') }),
       paper ? chip(T('openPaper'), 'warn') : null, t.flags.indexOf('RULE_BREAK') >= 0 ? chip(T('ruleBreakFlag'), 'bad') : null, t.flags.indexOf('HALF') >= 0 ? chip(T('sizeHalfShort'), 'warn') : null);
-    var grid = h('div', { class: 'kvgrid' },
-      kv(T('kvEntry'), J.fmt(t.entry)), kv(T('kvSl'), J.fmt(t.sl)), kv(T('kvTp'), J.fmt(t.tp)),
-      kv(T('kvRr'), '1:' + J.fmtTrim(t.rrPlanned)), kv(T('kvSize'), t.size === null || t.size === undefined ? '—' : String(t.size)), kv(T('kvTime'), t.time));
-    var remind = h('p', { class: 'beline muted', 'data-testid': 'be-remind', text: T(be.needBar ? 'beRemindBar' : 'beRemind', { r: J.fmtTrim(be.target), price: J.fmt(be.priceAt) }) });
+    var grid = h('div', { class: 'kvgrid' }, kv(T('kvSide'), t.side), kv(T('kvScen'), row.name), kv(T('kvZone'), row.zone), kv(T('kvTime'), t.time));
+    var remind = h('p', { class: 'beline muted', 'data-testid': 'be-remind', text: T(be.needBar ? 'beRemindBar' : 'beRemind', { r: J.fmtTrim(be.target) }) });
     var warn = row.warn ? h('p', { class: 'prob', text: '⚠ ' + row.warn }) : null;
 
     var kinds = [{ v: 'TP', label: T('closeTp') }, { v: 'SL', label: T('closeSl'), bad: true }, { v: 'BE', label: T('closeBe') }, { v: 'MANUAL', label: T('closeManual') }];
-    var body = [seg(kinds, st.kind || null, function (v) { st.kind = v; st.price = undefined; st.r = undefined; st.rEdit = false; st.reason = null; app.render({ keep: false }); }, { cls: 'close', label: T('t4Close') })];
+    var body = [seg(kinds, st.kind || null, function (v) { st.kind = v; st.r = v ? J.defaultR(t, v) : undefined; st.reason = null; app.render({ keep: false }); }, { cls: 'close', label: T('t4Close') })];
     if (st.kind) {
-      var def = st.kind === 'TP' ? t.tp : st.kind === 'SL' ? t.sl : st.kind === 'BE' ? t.entry : null;
-      var price = st.price === undefined ? def : st.price;
-      var rNow = st.rEdit ? st.r : J.computeR(t, price);
       var rIn;
-      var pIn = numInput(price, function (v) {
-        st.price = v;
-        if (!st.rEdit) { var r2 = J.computeR(t, v); st.r = r2; if (rIn) rIn.input.value = r2 === null ? '' : ui.fmtIn(r2); }
-      }, { id: 'exitprice', label: T('exitPrice') });
-      rIn = numInput(rNow, function (v) { st.r = v; st.rEdit = true; }, { id: 'exitr', label: T('exitR'), unit: 'R' });
-      body.push(h('div', { class: 'row wrap' }, h('label', { class: 'mini-l' }, T('exitPrice'), pIn), h('label', { class: 'mini-l' }, T('exitR'), rIn), h('span', { class: 'muted small', text: T('exitRHint') })));
+      var quick = [3, 2, 1, 0, -1].map(function (q) {
+        return btn((q > 0 ? '+' : q < 0 ? '−' : '') + Math.abs(q), function () { st.r = q; if (rIn) rIn.input.value = ui.fmtIn(q); app.render({ keep: false }); }, 'small rq' + (st.r === q ? ' sel' : ''), { 'data-testid': 'rq-' + q, 'aria-pressed': st.r === q ? 'true' : 'false' });
+      });
+      rIn = numInput(st.r === undefined ? null : st.r, function (v) { st.r = v === null ? undefined : v; }, { id: 'exitr', label: T('exitR'), unit: 'R' });
+      body.push(h('div', { class: 'row wrap' }, h('label', { class: 'mini-l' }, T('exitR'), rIn), h('div', { class: 'row rqrow' }, quick), h('span', { class: 'muted small', text: T('rQuickHint') })));
       if (st.kind === 'MANUAL') {
         body.push(h('div', { class: 'ctl' }, h('div', { class: 'ctl-label' }, h('span', { text: T('manualReason') }), ui.helpBtn({ text: T('manualHelp'), ref: 'tp-be' })),
           seg(C.closeReasons.map(function (x) { return { v: x.v, label: x.label, bad: x.v === 'other' }; }), st.reason || null, function (v) { st.reason = v; app.render({ keep: false }); })));
@@ -50,15 +44,14 @@
       }
       body.push(h('label', { class: 'tick36 sweptrow' }, h('input', { type: 'checkbox', 'data-testid': 'open-swept', checked: st.swept ? true : null, onchange: function (e) { st.swept = e.target.checked; } }), h('span', { class: 'tt', text: T('swept') })));
       body.push(btn(T('closeConfirm'), function () {
-        var p = st.price === undefined ? def : st.price;
-        var rEdit = st.rEdit && R.num(st.r) !== null ? st.r : undefined;
+        var rv = R.num(st.r);
         if (st.kind === 'MANUAL' && !st.reason) { app.toast(T('needReason')); return; }
-        if (R.num(p) === null && rEdit === undefined) { app.toast(T('needExit')); return; }
+        if (rv === null) { app.toast(T('needExit')); return; }
         var kind = st.kind, reason = st.reason, swept = !!st.swept;
         delete all[t.id];
         app.update(function (n) {
           var tr = J.tradeById(n, t.id); if (!tr) return;
-          J.closeTrade(n, t.id, { kind: kind, price: p, r: rEdit, reason: reason, nowMs: app.nowMs, nowMin: time.nightMinutes(app.nowMs, key) });
+          J.closeTrade(n, t.id, { kind: kind, r: rv, reason: reason, nowMs: app.nowMs, nowMin: time.nightMinutes(app.nowMs, key) });
           if (swept) tr.sweptThenTP = true;
         }, { key: key });
         app.toast(T('closedToast'));
@@ -168,21 +161,11 @@
     // --- cài đặt ---
     var s0 = st.settings;
     function setS(fn) { app.updateState(fn, {}); }
-    // vốn và % rủi ro chỉ ghi khi là số lớn hơn 0; xóa trắng hoặc gõ sai thì trả lại số cũ (REVIEW-3 mục 6)
-    function commitMoney(field, v, inp) {
-      if (v > 0) { app.updateState(function (s) { s.settings[field] = v; }, { keep: true }); return; }
-      inp.value = ui.fmtIn(app.state.settings[field]); inp.classList.remove('invalid');
-      app.toast(T('capBad'));
-    }
     el.appendChild(section(T('t5Settings'), [
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setTheme') }),
         seg([{ v: 'dark', label: T('themeDark') }, { v: 'light', label: T('themeLight') }], s0.theme, function (v) { setS(function (s) { s.settings.theme = v || 'dark'; }); }, { noToggle: true })),
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setGuide') }),
         seg([{ v: 'new', label: T('guideNew') }, { v: 'quen', label: T('guideQuen') }], s0.guideLevel, function (v) { setS(function (s) { s.settings.guideLevel = v || 'new'; }); }, { noToggle: true })),
-      h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setCapital') }),
-        numInput(s0.capital, function () {}, { unit: '$', id: 'capital', label: T('setCapital'), onCommit: function (v, inp) { commitMoney('capital', v, inp); } })),
-      h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setRisk') }),
-        numInput(s0.riskPct, function () {}, { unit: '%', id: 'riskpct', label: T('setRisk'), onCommit: function (v, inp) { commitMoney('riskPct', v, inp); } })),
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label' }, h('span', { text: T('setDst') }), ui.helpBtn({ text: T('setDstHelp'), ref: 'thoi-gian' })),
         seg([{ v: true, label: T('yes') }, { v: false, label: T('no') }], s0.dstShift !== false, function (v) { setS(function (s) { s.settings.dstShift = !!v; }); }, { noToggle: true })),
       h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setKeys') }),

@@ -107,7 +107,7 @@
   function clearBlock(night, scen) {
     var bs = block(night, scen);
     bs.ticks = {};
-    ['entry', 'sl', 'tp', 'c6', 'reason', 'wick', 'tail', 'ctx1At'].forEach(function (k) { delete bs[k]; });
+    ['entry', 'sl', 'tp', 'c6', 'reason', 'wick', 'tail', 'ctx1At'].forEach(function (k) { delete bs[k]; });   // khóa số chỉ còn ở dữ liệu cũ
   }
   // sau "Ghi lệnh" (mục 7 thiết kế v2): giữ hướng, vùng, tick Bối cảnh và Kiểm tra, ô lý do / tail; chỉ xóa nhóm Điểm vào, ô SL và giá
   function clearAfterTrade(night, scen) {
@@ -234,7 +234,7 @@
   // Ghi một dòng Sổ từ khối `o.scen` (lấy số từ kết quả engine `res`), rồi xóa Điểm vào + giá của khối đó (giữ hướng, vùng, bối cảnh, kiểm tra).
   // o = {scen, ruleBreak, paper, missing:[mã ô thiếu], nowMs, nowMin}
   function createTrade(night, res, o) {
-    var scen = o.scen, bl = res.blocks[scen], bs = block(night, scen), cc = bl.calc;
+    var scen = o.scen, bl = res.blocks[scen], bs = block(night, scen);
     var flags = [];
     if (o.paper) flags.push('paper');
     if (o.ruleBreak && !o.paper) flags.push('RULE_BREAK');
@@ -243,8 +243,8 @@
     var trade = {
       id: o.id || newId(o.nowMs), time: time.fmtMin(o.nowMin), side: bl.side, scenario: scen,
       zoneId: bl.zone ? bl.zone.id : null, zoneType: bl.zone ? bl.zone.type : null,
-      ticks: Object.assign({}, bs.ticks), c6: R.num(bl.c6), entry: cc.entry, sl: cc.sl, tp: cc.tpUsed,
-      size: cc.size, slDist: cc.slDist, rrPlanned: cc.rr, exit: null, r: null,
+      ticks: Object.assign({}, bs.ticks), targetR: bl.targetR, entry: null, sl: null, tp: null,
+      size: null, slDist: null, rrPlanned: null, exit: null, r: null,
       flags: flags, counterBiasReason: bl.counter ? (bs.reason || '') : '', missing: (o.missing || []).slice(), ruleCodes: [], sweptThenTP: null, notes: ''
     };
     night.trades.push(trade);
@@ -253,8 +253,16 @@
   }
   function tradeById(night, id) { return (night.trades || []).filter(function (t) { return t.id === id; })[0] || null; }
 
+  // R mặc định theo loại kết quả khi không nhập số: TP = R mục tiêu của kịch bản, SL = −1, hòa = 0 (đóng tay phải nhập)
+  function defaultR(trade, kind) {
+    if (kind === 'TP') return R.num(trade.targetR) !== null ? trade.targetR : (R.TARGET_R[trade.scenario] || 3);
+    if (kind === 'SL') return -1;
+    if (kind === 'BE') return 0;
+    return null;
+  }
+  // dữ liệu cũ (có giá vào, SL) vẫn tính R từ giá thoát
   function computeR(trade, price) {
-    if (!trade || trade.entry === null || trade.sl === null || price === null || price === undefined) return null;
+    if (!trade || trade.entry === null || trade.entry === undefined || trade.sl === null || price === null || price === undefined) return null;
     var risk = Math.abs(trade.entry - trade.sl);
     if (risk <= 0) return null;
     var dir = trade.side === 'buy' ? 1 : -1;
@@ -264,23 +272,20 @@
   // Mốc dời SL về hòa (nhắc trên dòng lệnh đang mở): A/B +1,5R và cần 1 nến M1 đóng ngoài vùng vào; C/D +1R
   function beInfo(trade) {
     var target = R.BE_R[trade.scenario] || 1.5;
-    return { target: target, needBar: trade.scenario === 'A' || trade.scenario === 'B',
-      priceAt: trade.entry === null || trade.sl === null ? null : R.round1(trade.entry + (trade.side === 'buy' ? 1 : -1) * target * Math.abs(trade.entry - trade.sl)) };
+    return { target: target, needBar: trade.scenario === 'A' || trade.scenario === 'B' };
   }
 
-  // Nhập kết quả ngay trên dòng Sổ. o = {kind:'TP'|'SL'|'BE'|'MANUAL', price, r, reason:'absorb'|'flat'|'other', nowMs, nowMin}
-  // R mặc định tự tính từ giá thoát; o.r (số) ghi đè khi người dùng sửa tay.
+  // Nhập kết quả ngay trên dòng Sổ. o = {kind:'TP'|'SL'|'BE'|'MANUAL', r, reason:'absorb'|'flat'|'other', nowMs, nowMin}
+  // R người dùng nhập (nút nhanh hoặc ô số); không nhập thì lấy R mặc định theo loại (dữ liệu cũ có giá thoát thì tính từ giá).
   function closeTrade(night, tradeId, o) {
     var t = tradeById(night, tradeId);
     if (!t) return null;
     var price = R.num(o.price);
-    if (price === null) {
-      if (o.kind === 'TP') price = t.tp;
-      else if (o.kind === 'SL') price = t.sl;
-      else if (o.kind === 'BE') price = t.entry;
-    }
     t.exit = { kind: o.kind, price: price, reason: o.reason || null, at: time.fmtMin(o.nowMin) };
-    t.r = R.num(o.r) !== null ? R.round2(o.r) : computeR(t, price);
+    var r = R.num(o.r);
+    if (r === null && price !== null) r = computeR(t, price);
+    if (r === null) r = defaultR(t, o.kind);
+    t.r = r === null ? null : R.round2(r);
     if (o.kind === 'MANUAL' && o.reason === 'other' && t.flags.indexOf('paper') < 0) {
       if (t.flags.indexOf('RULE_BREAK') < 0) t.flags.push('RULE_BREAK');
       if (t.ruleCodes.indexOf('MANUAL_CLOSE') < 0) t.ruleCodes.push('MANUAL_CLOSE');
@@ -380,13 +385,13 @@
     var s = v === null || v === undefined ? '' : String(v);
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
-  var CSV_HEAD = ['dem', 'gio', 'huong', 'kich_ban', 'loai_vung', 'kiem_tra', 'c6', 'vao', 'sl', 'tp', 'khoang_sl', 'rr', 'size', 'thoat', 'gia_thoat', 'r', 'co', 'o_thieu', 'quet_roi_tp'];
+  var CSV_HEAD = ['dem', 'gio', 'huong', 'kich_ban', 'loai_vung', 'kiem_tra', 'thoat', 'r', 'co', 'o_thieu', 'quet_roi_tp'];
   function toCSV(state) {
     var rows = [CSV_HEAD.join(',')];
     Object.keys(state.nights).sort().forEach(function (k) {
       (state.nights[k].trades || []).forEach(function (t) {
-        rows.push([k, t.time, t.side, t.scenario, t.zoneType, checksOf(t), t.c6, t.entry, t.sl, t.tp, t.slDist, t.rrPlanned, t.size,
-          t.exit ? t.exit.kind : '', t.exit ? t.exit.price : '', t.r, (t.flags || []).join('|'), (t.missing || []).join('|'), t.sweptThenTP === true ? 1 : 0].map(csvCell).join(','));
+        rows.push([k, t.time, t.side, t.scenario, t.zoneType, checksOf(t),
+          t.exit ? t.exit.kind : '', t.r, (t.flags || []).join('|'), (t.missing || []).join('|'), t.sweptThenTP === true ? 1 : 0].map(csvCell).join(','));
       });
     });
     return rows.join('\n') + '\n';
@@ -429,7 +434,7 @@
     block: block, touchBlock: touchBlock, clearBlock: clearBlock, clearAfterTrade: clearAfterTrade, setupActive: setupActive,
     planConflict: planConflict, prevCardSource: prevCardSource, copyFromPrevDetail: copyFromPrevDetail, newZoneId: newZoneId, canLockCard: canLockCard,
     lockCard: lockCard, cardEditPolicy: cardEditPolicy, applyCardEdit: applyCardEdit, parseQuickZones: parseQuickZones,
-    createTrade: createTrade, tradeById: tradeById, computeR: computeR, beInfo: beInfo, closeTrade: closeTrade, recomputeTally: recomputeTally,
+    createTrade: createTrade, tradeById: tradeById, computeR: computeR, defaultR: defaultR, beInfo: beInfo, closeTrade: closeTrade, recomputeTally: recomputeTally,
     manualTally: manualTally, tallyMismatch: tallyMismatch, checksOf: checksOf, warnLine: warnLine, rowOf: rowOf,
     toMarkdown: toMarkdown, toCSV: toCSV, weekStats: weekStats, ruleBreakCount: ruleBreakCount, sweptCount: sweptCount
   };

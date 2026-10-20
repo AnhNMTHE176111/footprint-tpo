@@ -190,7 +190,7 @@
     var res = app.res, bl = res.blocks[scen], e = res.entry;
     var forced = !!o.force;
     if (!bl || (!forced && !(e && e.scen === scen))) { render(); return; }
-    if (forced && !(bl.side && bl.calc.numsOk)) return;
+    if (forced && !bl.side) return;
     var missing = forced ? bl.missing.concat(res.common.filter(function (x) { return !x.ok; }).map(function (x) { return 'common:' + x.id; })) : [];
     var paper = res.paper;
     app.update(function (n) { J.createTrade(n, res, { scen: scen, ruleBreak: forced, paper: paper, missing: missing, nowMs: app.nowMs, nowMin: app.nowMin }); });
@@ -199,7 +199,7 @@
   app.forceTrade = function (scen) {
     compute();
     var res = app.res, bl = res.blocks[scen];
-    if (!bl || !bl.side || !bl.calc.numsOk || res.entry) return;
+    if (!bl || !bl.side || res.entry) return;
     var list = bl.missing.map(function (id) { return ui.fillTimes(C.itemLabel(scen, id)); })
       .concat(res.common.filter(function (x) { return !x.ok; }).map(function (x) { return C.itemLabel(scen, 'common:' + x.id); }));
     var paper = res.paper;
@@ -239,13 +239,13 @@
     var se = app.night.se, s = se.last;
     if (!s) s = R.SCENARIOS.filter(function (x) { return app.ui.blkOpen && app.ui.blkOpen[x]; })[0];
     if (!s) { app.toast(T('pickBlockFirst')); return; }
-    app.update(function (n) { var b = J.block(n, s); if (!b.side && s !== 'C' && (app.res.bias === 'BUY' || app.res.bias === 'SELL')) b.side = app.res.bias.toLowerCase(); b.zoneId = zid; J.touchBlock(n, s); }, { keep: true });
+    app.update(function (n) { var b = J.block(n, s); if (!b.side && s !== 'C' && (app.res.bias === 'BUY' || app.res.bias === 'SELL')) b.side = app.res.bias.toLowerCase(); b.zoneId = zid; J.touchBlock(n, s); }, { keep: false });
   };
   // ghi kết quả lệnh đang mở từ thanh dưới (không phải sang Sổ). c = {kind, price, reason}
   app.closeOpen = function (o, c) {
     var t = o.trade, key = o.nightKey;
     app.update(function (n) {
-      J.closeTrade(n, t.id, { kind: c.kind, price: c.price, reason: c.reason, nowMs: app.nowMs, nowMin: time.nightMinutes(app.nowMs, key) });
+      J.closeTrade(n, t.id, { kind: c.kind, r: c.r, reason: c.reason, nowMs: app.nowMs, nowMin: time.nightMinutes(app.nowMs, key) });
     }, { key: key });
     app.toast(T('closedToast'));
   };
@@ -397,26 +397,6 @@
     }
   };
 
-  // vốn và % rủi ro: hỏi lần đầu mở (có "để sau") và mở lại từ thông báo NO_SIZE_ZERO (QĐ-21)
-  app.openCapital = function (first) {
-    var cap = state.settings.capital, pct = state.settings.riskPct;
-    var capIn = ui.numInput(cap, function (v) { cap = v; }, { id: 'cap-dlg', label: T('setCapital'), unit: '$' });
-    var pctIn = ui.numInput(pct, function (v) { pct = v; }, { id: 'risk-dlg', label: T('setRisk'), unit: '%' });
-    var content = h('div', { class: 'dlg', 'data-testid': 'capital-dlg' }, h('h3', { text: T('capTitle') }), h('p', { text: T('capText') }),
-      h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setCapital') }), capIn),
-      h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setRisk') }), pctIn),
-      h('div', { class: 'actions' },
-        btn(T('capLater'), function () { closeModal(false); }, 'ghost', { 'data-testid': 'cap-later' }),
-        btn(T('capSave'), function () {
-          if (!(cap > 0) || !(pct > 0)) { app.toast(T('capBad')); return; }
-          app.updateState(function (s) { s.settings.capital = cap; s.settings.riskPct = pct; s.settings.sizeAsked = true; });
-          closeModal(true);
-        }, 'primary', { 'data-testid': 'cap-save' })));
-    openModal(content, function () {
-      if (first && !state.settings.sizeAsked) app.updateState(function (s) { s.settings.sizeAsked = true; });
-    });
-  };
-
   // ngăn thẻ phiên trên điện thoại: mở / đóng bằng nút, nút ✕, chạm ra ngoài, Esc (REVIEW-1 mục 2)
   app.toggleCard = function (open) {
     var el = $('card');
@@ -457,7 +437,6 @@
     document.title = T('appTitle');
     $('skip').textContent = T('skip');
     render();
-    if (!state.settings.sizeAsked) app.openCapital(true);
     fetchNews();
     setInterval(fetchNews, 300000);
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && Date.now() - newsAt > 60000) fetchNews(); });

@@ -16,8 +16,8 @@ test('mỗi ô tick của mỗi khối có chữ; số ô khớp hình dạng tr
   });
 });
 test('mọi ô chọn, ô tự kiểm, ô dùng chung có nhãn; mọi lý do có chữ', () => {
-  ['side', 'zone', 'nums', 'counter', 'zone2', 'slFloor', 'slCap', 'rr', 'size'].forEach((id) => assert.ok(C.itemLabels[id], id));
-  ['zone2', 'slFloor', 'slSide', 'slCap', 'rr', 'rrNext', 'tpPast', 'counter', 'size', 'noCapital'].forEach((c) => assert.ok(C.autoBad[c], c));
+  ['side', 'zone', 'counter', 'tail', 'bias', 'breakHours', 'zone2'].forEach((id) => assert.ok(C.itemLabels[id], id));
+  ['zone2', 'counter', 'biasNone', 'biasWait', 'biasCounter', 'breakHours'].forEach((c) => assert.ok(C.autoBad[c], c));
   ['card', 'news', 'breakerRule', 'breakerSl', 'open', 'longest'].forEach((c) => assert.ok(C.commonBad[c], c));
   C.common.forEach((c) => assert.ok(C.itemLabel('A', 'common:' + c.id) === c.label));
   Object.keys(C.ui).forEach((k) => assert.ok(!/⟦/.test(C.ui[k]), k));

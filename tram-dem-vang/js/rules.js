@@ -30,12 +30,13 @@
   var HALF_ORDER = ['BIAS_NONE', 'SCENARIO_C', 'COUNTER_BIAS', 'NEWS_DAY', 'B_RANK2', 'BEFORE_2030'];
   var SCENARIOS = ['A', 'B', 'C', 'D'];
   // số checkbox từng nhóm của mỗi khối (id ô = ctx1.., chk1.., ent1, sl1); chữ ở content.js → blocks.
-  // Các ô máy tính được (bias, giờ phá, giá cách vùng) KHÔNG còn là ô tick: chúng là ô tự kiểm trong engine.
+  // Từ 21/10 (yêu cầu người dùng): không còn ô nhập số và không còn nhóm SL trong checklist (luật SL chỉ ở Từ điển và nút "?" cạnh thanh ENTRY).
+  // Giá cách vùng (chk cuối) là ô người tick; chỉ bias, giờ phá (A) và lần ≤ 2 tại vùng là ô tự kiểm trong engine.
   var BLOCK_SHAPE = {
-    A: { ctx: 2, chk: 3, ent: 1, sl: 1 },
-    B: { ctx: 5, chk: 4, ent: 1, sl: 1 },
-    C: { ctx: 3, chk: 3, ent: 1, sl: 1 },
-    D: { ctx: 3, chk: 3, ent: 1, sl: 1 }
+    A: { ctx: 2, chk: 4, ent: 1, sl: 0 },
+    B: { ctx: 5, chk: 5, ent: 1, sl: 0 },
+    C: { ctx: 3, chk: 4, ent: 1, sl: 0 },
+    D: { ctx: 3, chk: 4, ent: 1, sl: 0 }
   };
   var GROUPS = ['ctx', 'chk', 'ent', 'sl'];
   function tickIds(scen) {

@@ -25,17 +25,18 @@ test('V2 · công nhận cú phá cần ba bước, ở trợ giúp và Từ đi
   assert.match(C.blocks.A.chk[1].help.text, /Bước 3 của công nhận cú phá/);           // V35
   assert.match(C.blocks.A.ctx[0].help.text, /mở rộng của công cụ theo ca 6\/10/);    // V12, V34
 });
-test('V3 · B ngược bias: TP gợi ý 2R (không phải 3R), cỡ ½, chữ "ngược bias (2R)"; B cùng chiều bias vẫn 3R; A ngược bias không đổi 3R', () => {
-  const over = { block: { side: 'sell', entry: 4177, sl: 4179.3, tp: undefined, reason: 'tail', tail: true } };
+test('V3 · B ngược bias: R mục tiêu 2R (không phải 3R), cỡ ½, chữ "ngược bias (2R)"; B cùng chiều bias vẫn 3R; A ngược bias không đổi 3R', () => {
+  const over = { block: { side: 'sell', reason: 'tail', tail: true } };
   const r = go('B', over);
-  const c = r.blocks.B.calc;
-  assert.equal(c.targetR, 2); assert.equal(c.tpSuggested, 4172.4); assert.equal(c.rr, 2);
+  assert.equal(r.blocks.B.targetR, 2); assert.equal(r.entry.targetR, 2);
   assert.deepEqual(r.blocks.B.halfs, ['COUNTER_BIAS']);
-  assert.equal(go('B').blocks.B.calc.targetR, 3); assert.equal(go('B').blocks.B.calc.tpSuggested, 4183.9);
+  assert.equal(go('B').entry.targetR, 3);
   assert.equal(R.TARGET_R_COUNTER_B, 2);
   assert.match(C.halfText.COUNTER_BIAS, /ngược bias \(2R\)/);
-  assert.equal(go('A', { block: { side: 'buy', entry: 4194.5, sl: 4192.1, tp: undefined } }).blocks.A.calc.targetR, 3);   // A ngược bias: ô bias đỏ, TP vẫn theo A
+  assert.equal(go('A', { block: { side: 'buy' } }).blocks.A.targetR, 3);   // A ngược bias: ô bias đỏ, R mục tiêu vẫn theo A
+  assert.match(C.helps.sl.text, /B ngược bias: 2R/);
 });
+
 test('V4 · Từ điển "khung giờ cấm": lịch thật (FOMC sau 30′, lịch cũ vẫn dùng) và mặc định chỉ khi không có lịch', () => {
   const g = C.glossary.filter((x) => x.key === 'khung-gio-cam')[0].def;
   assert.match(g, /họp báo FOMC sau 30′/); assert.match(g, /Lịch cũ hơn 2 giờ mà còn phủ đêm nay thì vẫn dùng/);
@@ -44,26 +45,21 @@ test('V4 · Từ điển "khung giờ cấm": lịch thật (FOMC sau 30′, l�
 });
 
 // ---------- THIẾU ----------
-test('V5 · giá vào cách vùng: ô tự kiểm cho cả bốn khối (≤ 1 đạt; 1–3 cần râu chạm vùng; > 3 là ở lưng, râu không cứu)', () => {
+test('V5 · giá cách vùng ≤ 1 giá, không ở lưng: ô người tick có mặt ở cả bốn khối (nhóm Kiểm tra, ô cuối)', () => {
   ['A', 'B', 'C', 'D'].forEach((s) => {
-    const z = mk(s).se.blocks[s];
-    const zone = mk(s).card.zones.filter((x) => x.id === z.zoneId)[0];
-    const at = (d) => go(s, (n) => { n.se.blocks[s].entry = zone.price + (z.side === 'buy' ? d : -d); n.se.blocks[s].sl = n.se.blocks[s].entry + (z.side === 'buy' ? -2.3 : 2.3); delete n.se.blocks[s].tp; });
-    let a = auto(at(0.9), s, 'near'); assert.equal(a.ok, true, s);
-    a = auto(at(2), s, 'near'); assert.equal(a.ok, false, s); assert.equal(a.reason, 'nearFar'); assert.equal(a.needWick, true);
-    a = auto(go(s, (n) => { const b = n.se.blocks[s]; b.entry = zone.price + (z.side === 'buy' ? 2 : -2); b.sl = b.entry + (z.side === 'buy' ? -2.3 : 2.3); b.wick = true; delete b.tp; }), s, 'near'); assert.equal(a.ok, true, s);
-    a = auto(go(s, (n) => { const b = n.se.blocks[s]; b.entry = zone.price + (z.side === 'buy' ? 3.5 : -3.5); b.sl = b.entry + (z.side === 'buy' ? -2.3 : 2.3); b.wick = true; delete b.tp; }), s, 'near');
-    assert.equal(a.ok, false, s); assert.equal(a.reason, 'nearBack');
-    assert.ok(missing(at(2), s).indexOf('near') >= 0, s);
+    const n = R.BLOCK_SHAPE[s].chk;
+    assert.match(C.blocks[s].chk[n - 1].t, /Giá cách vùng ≤ 1 giá, không ở lưng \(hoặc râu nến xác nhận chạm vùng\)/);
+    assert.equal(C.blocks[s].chk[n - 1].short, 'cạnh');
+    assert.ok(go(s).blocks[s].order.indexOf('chk' + n) >= 0);
   });
-  assert.equal(auto(go('D', (n) => { delete n.se.blocks.D.entry; }), 'D', 'near').ok, null);
-  assert.equal(engine.gapToZone(4177, { lo: 4175, hi: 4176 }), 1); assert.equal(engine.gapToZone(4175.5, { lo: 4175, hi: 4176 }), 0);
+  assert.match(C.helps.edge.text, /Đi từ 3 giá trở lên khỏi vùng mà chưa hồi là ở lưng: bỏ kèo/);   // V14
 });
+
 test('V6 · khối D có ô bong bóng (chk3) và ô giá cách vùng; thiếu ô thì thiếu đúng ô đó', () => {
-  assert.equal(C.blocks.D.chk.length, 3); assert.match(C.blocks.D.chk[2].t, /Bong bóng to gần nhất \(10 nến, ở cực trị\) không đứng phe ngược lệnh, hoặc mức đó đã vỡ/);
+  assert.equal(C.blocks.D.chk.length, 4); assert.match(C.blocks.D.chk[2].t, /Bong bóng to gần nhất \(10 nến, ở cực trị\) không đứng phe ngược lệnh, hoặc mức đó đã vỡ/);
   assert.deepEqual(missing(go('D', (n) => { delete n.se.blocks.D.ticks.chk3; }), 'D'), ['chk3']);
-  assert.ok(go('D').blocks.D.order.indexOf('near') >= 0);
 });
+
 test('V7 · khối B: ô "đang cân bằng thì vùng ở cạnh range / VA Âu, không ở giữa range"', () => {
   assert.match(C.blocks.B.ctx[3].t, /Nếu đang cân bằng: vùng ở cạnh range \/ VA Âu \(≤ 1 giá\), không ở giữa range/);
   assert.deepEqual(missing(go('B', (n) => { delete n.se.blocks.B.ticks.ctx4; }), 'B'), ['ctx4']);
@@ -130,43 +126,24 @@ test('mục 7 · giờ phá: tick ô nến M5 lúc 18:30 (trước COMEX) ⇒ đ
 test('B ngược bias hay không: ô "Không ngay sau nến dài nhất" của B bỏ (trùng ô chung); ô chung đảo nghĩa', () => {
   assert.equal(C.blocks.B.ctx.some((x) => /sau nến dài nhất/.test(x.t)), false);
 });
-test('biên độ nến M1 cao nhất 5 nến nhập một lần cho cả đêm (se.c6); số riêng của khối thắng nếu có', () => {
-  const r = go('B', (n) => { delete n.se.blocks.B.c6; n.se.c6 = 2; });
-  assert.equal(r.blocks.B.c6, 2); assert.equal(auto(r, 'B', 'slFloor').ok, true);
-  const r2 = go('B', (n) => { delete n.se.blocks.B.c6; });
-  assert.equal(auto(r2, 'B', 'slFloor').ok, null); assert.ok(missing(r2, 'B').indexOf('nums') >= 0);
-  const r3 = go('B', (n) => { n.se.blocks.B.c6 = 2.4; n.se.c6 = 1; });
-  assert.equal(auto(r3, 'B', 'slFloor').ok, false);
-});
-test('V20 · khối C: TP gợi ý về cạnh đối diện hoặc cụm POC (cái gần hơn), bỏ qua vùng khác nằm gần hơn', () => {
-  const r = go('C', (n) => {
-    n.card.zones = [{ id: 'z1', type: 'valEu', price: 4175 }, { id: 'z2', type: 'vwapD', price: 4177.8 }, { id: 'z3', type: 'vahEu', price: 4190 }, { id: 'z4', type: 'pocCluster', price: 4182 }];
-    delete n.se.blocks.C.tp;
-  });
-  assert.equal(r.blocks.C.calc.nextZone.id, 'z4');             // cụm POC 4182 gần hơn cạnh VAH 4190; VWAP ngày 4177,8 bị bỏ qua
-  assert.equal(r.blocks.C.calc.tpSuggested, 4180.8);          // 2R = 4180,8 gần hơn vùng POC ⇒ giữ 2R
-  const r2 = go('C', (n) => { n.card.zones = [{ id: 'z1', type: 'valEu', price: 4175 }, { id: 'z2', type: 'vwapD', price: 4177.8 }, { id: 'z3', type: 'vwapW', price: 4182 }]; delete n.se.blocks.C.tp; });
-  assert.equal(r2.blocks.C.calc.nextZone.id, 'z2');            // không có cạnh đối diện / POC thì xét mọi vùng
+test('V20 + SL: luật SL chỉ còn ở Từ điển và nút "?" cạnh thanh ENTRY (C: TP về cạnh đối diện hoặc POC); không có ô SL nào trong khối', () => {
+  const g = C.glossary.filter((x) => x.key === 'luat-sl')[0].def;
+  assert.match(g, /không chặn ENTRY/); assert.match(g, /sàn nhiễu: SL không ngắn hơn nến M1 lớn nhất trong 5 nến/); assert.match(g, /trần: SL không quá 4 giá/);
+  assert.match(g, /R:R ít nhất 1:2/); assert.match(g, /C: cạnh đối diện hoặc POC/); assert.match(g, /B ngược bias: 2R/);
+  assert.match(C.helps.sl.text, /không chặn ENTRY/);
+  ['A', 'B', 'C', 'D'].forEach((s0) => { assert.equal(C.blocks[s0].sl.length, 0); assert.equal(R.BLOCK_SHAPE[s0].sl, 0); });
 });
 
 // ---------- 8 câu HT mục 9 → ô phủ ----------
 const HT9 = {
-  1: { // thẻ phiên + cùng chiều bias / lý do
-    cover: ['common:card', 'bias', 'counter', 'tail'] },
-  2: { // vùng ≤ 1 giá, hạng 1–2 hoặc cạnh khi cân bằng
-    cover: ['near', 'B:ctx1', 'B:ctx4', 'C:ctx1', 'D:near'] },
-  3: { // gọi tên chế độ, kịch bản được bật
-    cover: ['bias', 'A:ctx1', 'A:ctx2', 'B:ctx2', 'B:ctx5', 'C:ctx2', 'C:ctx3'] },
-  4: { // U không V
-    cover: ['A:chk1', 'B:chk4', 'D:chk2'] },
-  5: { // bong bóng
-    cover: ['A:chk3', 'B:chk2', 'C:chk3', 'D:chk3'] },
-  6: { // thân + |delta|
-    cover: ['B:chk1', 'A:ent1', 'B:ent1', 'C:ent1', 'D:ent1'] },
-  7: { // nến xác nhận + không 3 nến sau nến dài nhất
-    cover: ['A:ent1', 'common:longest'] },
-  8: { // SL 3 điều kiện, R:R, lần ≤ 2
-    cover: ['sl1', 'slFloor', 'slCap', 'rr', 'zone2'] }
+  1: { cover: ['common:card', 'bias', 'counter', 'tail'] },
+  2: { cover: ['B:chk5', 'B:ctx1', 'B:ctx4', 'C:ctx1', 'D:chk4', 'A:chk4', 'C:chk4'] },
+  3: { cover: ['bias', 'A:ctx1', 'A:ctx2', 'B:ctx2', 'B:ctx5', 'C:ctx2', 'C:ctx3'] },
+  4: { cover: ['A:chk1', 'B:chk4', 'D:chk2'] },
+  5: { cover: ['A:chk3', 'B:chk2', 'C:chk3', 'D:chk3'] },
+  6: { cover: ['B:chk1', 'A:ent1', 'B:ent1', 'C:ent1', 'D:ent1'] },
+  7: { cover: ['A:ent1', 'common:longest'] },
+  8: { cover: ['zone2', 'glossary:luat-sl', 'help:sl'] }
 };
 test('8 câu HT mục 9 đều có ô phủ thật trong engine / nội dung (mỗi mã ô trong bảng phải tồn tại)', () => {
   const idsA = go('A').blocks.A.order, idsB = go('B').blocks.B.order, idsC = go('C').blocks.C.order, idsD = go('D').blocks.D.order;
@@ -175,6 +152,8 @@ test('8 câu HT mục 9 đều có ô phủ thật trong engine / nội dung (m�
   Object.keys(HT9).forEach((q) => {
     assert.ok(HT9[q].cover.length >= 1);
     HT9[q].cover.forEach((ref) => {
+      if (/^glossary:/.test(ref)) { assert.ok(C.glossary.some((x) => x.key === ref.slice(9)), ref); return; }
+      if (/^help:/.test(ref)) { assert.ok(C.helps[ref.slice(5)], ref); return; }
       if (/^common:/.test(ref)) { assert.ok(go('B').common.some((x) => 'common:' + x.id === ref), 'câu ' + q + ' ' + ref); return; }
       const m = /^([A-D]):(.+)$/.exec(ref);
       if (m) { assert.ok(all[m[1]].indexOf(m[2]) >= 0, 'câu ' + q + ' ' + ref); return; }
@@ -183,7 +162,7 @@ test('8 câu HT mục 9 đều có ô phủ thật trong engine / nội dung (m�
     });
   });
   // ô cuối (nến xác nhận) và ô SL đủ trong mọi khối
-  ['A', 'B', 'C', 'D'].forEach((s) => ['ent1', 'sl1', 'near', 'bias', 'zone2', 'slFloor', 'slCap', 'rr'].forEach((id) => assert.ok(all[s].indexOf(id) >= 0, s + ' ' + id)));
+  ['A', 'B', 'C', 'D'].forEach((s) => ['ent1', 'bias', 'zone2'].forEach((id) => assert.ok(all[s].indexOf(id) >= 0, s + ' ' + id)));
 });
 
 // ---------- chữ LỆCH NHẸ / CHỮ (12–43) ----------
@@ -191,7 +170,7 @@ test('V13–V43 · chữ theo đề xuất của biên bản', () => {
   const T = (path, re) => { const v = path.split('.').reduce((o, k) => (o === undefined ? o : o[k]), C); assert.match(String(v), re, path); };
   T('blocks.A.chk.2.t', /Bong bóng to gần nhất \(10 nến, ở cực trị\) không đứng phe ngược lệnh, hoặc mức đó đã vỡ/);       // 13
   T('blocks.A.chk.2.help.text', /Bong bóng ở giữa move: bỏ qua/);
-  T('itemLabels.near', /hoặc râu nến xác nhận chạm vùng/);                                                                 // 14
+  T('blocks.A.chk.3.t', /hoặc râu nến xác nhận chạm vùng/);                                                                 // 14
   T('blocks.A.chk.1.t', /Tại cạnh: delta cùng chiều phá/);
   assert.match(C.blocks.B.ctx[0].help.text, /Cụm POC xếp hạng 2 theo QĐ-3, quyết định của công cụ, chưa đo/);             // 15
   assert.match(C.glossary.filter((x) => x.key === 'hang')[0].def, /QĐ-3, quyết định của công cụ, chưa đo/);
@@ -205,7 +184,7 @@ test('V13–V43 · chữ theo đề xuất của biên bản', () => {
   T('zoneTypes.ibHigh.use', /Fade ở IB là quyết định của công cụ, chưa đo/);                                               // 24
   T('ui.manualHelp', /đóng sạch trước tin: quyết định của công cụ theo QĐ-22/);                                           // 25
   T('halfText.NEWS_DAY', /quyết định của công cụ/);                                                                        // 26
-  T('autoBad.tpPast', /ngưỡng 0,5 giá: quyết định của công cụ/);                                                           // 27
+  // 27: ngưỡng 0,5 giá của máy tính TP không còn (không có ô số); mục này không còn áp dụng
   assert.match(C.glossary.filter((x) => x.key === 'sl-bi-quet')[0].def, /SL \(hoặc SL đã dời về hòa\) bị chạm/);           // 28
   T('ui.biasNoneNote', /mục tiêu 2R, cỡ ½\. Không phá hồi/);                                                               // 29
   T('blocks.D.chk.0.t', /nến hồi delta theo chiều hồi mà đóng ở nửa ngược chiều hồi/);                                    // 37

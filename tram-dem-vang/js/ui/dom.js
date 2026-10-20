@@ -142,11 +142,10 @@
   function sideText(s) { return s === 'buy' ? 'buy' : s === 'sell' ? 'sell' : '—'; }
   // chữ lý do của một ô tự kiểm (autoBad) của khối bl; vars lấy từ số liệu của khối
   function autoReason(code, bl, app) {
-    var cc = bl.calc, s = app.settings || {}, tpl = C.autoBad[code];
+    var tpl = C.autoBad[code];
     if (!tpl) return code;
     var aa = bl.autoChecks.filter(function (x) { return x.reason === code; })[0] || {};
-    var vars = { gap: aa.gap === undefined || aa.gap === null ? '—' : J.fmt(aa.gap), hm: aa.at === undefined || aa.at === null ? '—' : TDV.time.fmtMin(aa.at), sl: J.fmt(cc.slDist), c6: J.fmt(bl.c6), rr: J.fmtTrim(cc.rr), cap: s.capital, pct: String(s.riskPct).replace('.', ','),
-      max: cc.maxSl === undefined ? '—' : J.fmt(cc.maxSl), bias: biasText(app.res.bias) };
+    var vars = { hm: aa.at === undefined || aa.at === null ? '—' : TDV.time.fmtMin(aa.at), bias: biasText(app.res.bias) };
     return fillTimes(tpl.replace(/\{(\w+)\}/g, function (m, k) { return vars[k] === undefined ? m : vars[k]; }));
   }
   // chữ lý do của một ô dùng chung chưa đạt

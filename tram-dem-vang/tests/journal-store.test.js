@@ -13,32 +13,29 @@ function sampleNight() {
   const n = J.newNight();
   n.trades = [
     trade({ id: 'a1', time: '20:25', side: 'sell', scenario: 'A', zoneType: 'hvnW', ticks: { chk1: true, chk2: true, chk3: true }, slDist: 2.4, exit: { kind: 'TP', price: 4185.8, at: '20:50' }, r: 3 }),
-    trade({ id: 'a2', time: '20:48', side: 'sell', scenario: 'B', zoneType: 'vwapW', ticks: { chk2: true }, slDist: 1.2, missing: ['chk1', 'slFloor'],
+    trade({ id: 'a2', time: '20:48', side: 'sell', scenario: 'B', zoneType: 'vwapW', ticks: { chk2: true }, slDist: 1.2, missing: ['chk1', 'chk2'],
       exit: { kind: 'SL', price: 0, at: '20:55' }, r: -1, flags: ['RULE_BREAK'] })
   ];
   return n;
 }
 
 // ---------- ghi lệnh từ khối ----------
-test('ghi lệnh: dòng Sổ có giờ, hướng, kịch bản, vùng, giá, SL, TP, R dự kiến, cỡ lệnh, các ô đã tick; khối bỏ tick nhưng giữ hướng và vùng', () => {
+test('ghi lệnh: dòng Sổ có giờ, hướng, kịch bản, vùng, R mục tiêu, các ô đã tick (không còn giá); khối chỉ xóa Điểm vào và ô SL', () => {
   const n = mk('B');
   const res = run(DATE, '21:30', n);
   const t = J.createTrade(n, res, { scen: 'B', nowMs: NOW.getTime(), nowMin: NOWMIN });
   assert.ok(t.id); assert.equal(t.exit, null); assert.equal(t.time, '21:30'); assert.equal(t.side, 'buy'); assert.equal(t.scenario, 'B');
-  assert.equal(t.zoneId, 'z1'); assert.equal(t.zoneType, 'vwapW');
-  assert.deepEqual([t.entry, t.sl, t.tp, t.slDist, t.rrPlanned, t.size], [4177, 4174.7, 4183.9, 2.3, 3, 1]);
+  assert.equal(t.zoneId, 'z1'); assert.equal(t.zoneType, 'vwapW'); assert.equal(t.targetR, 3);
+  assert.deepEqual([t.entry, t.sl, t.tp, t.size, t.rrPlanned], [null, null, null, null, null]);
   assert.deepEqual(t.ticks, ticksAll('B')); assert.deepEqual(t.flags, []); assert.deepEqual(t.missing, []);
   assert.equal(n.trades.length, 1);
   const bs = n.se.blocks.B;
-  // mục 7 thiết kế v2: giữ hướng, vùng, tick Bối cảnh + Kiểm tra; chỉ xóa nhóm Điểm vào, ô SL và giá (entry, sl, tp)
-  assert.equal(bs.side, 'buy'); assert.equal(bs.zoneId, 'z1');
-  const keep = ticksAll('B'); delete keep.ent1; delete keep.sl1;
-  assert.deepEqual(bs.ticks, keep);
-  ['entry', 'sl', 'tp', 'wick'].forEach((k) => assert.equal(bs[k], undefined, k));
-  // vừa ghi lệnh ⇒ có lệnh mở ⇒ ô chung "Không có lệnh đang mở" đỏ
+  const keep = ticksAll('B'); ['ent1', 'sl1', 'sl2', 'sl3', 'sl4'].forEach((k) => delete keep[k]);
+  assert.deepEqual(bs.ticks, keep); assert.equal(bs.side, 'buy'); assert.equal(bs.zoneId, 'z1');
   const after = run(DATE, '21:31', n);
   assert.equal(after.common.filter((x) => x.id === 'open')[0].ok, false);
 });
+
 test('ghi lệnh "Vẫn vào": cờ phá luật + danh sách ô thiếu; lệnh luyện mắt không phá luật', () => {
   const n = mk('A', (x) => { delete x.se.blocks.A.ticks.chk1; delete x.se.blocks.A.ticks.ctx2; });
   const res = run(DATE, '21:30', n);
@@ -65,42 +62,52 @@ test('khối: touchBlock đánh dấu khối chạm cuối; clearBlock chỉ xó
 });
 
 // ---------- nhập kết quả ngay trên dòng ----------
-test('kết quả: TP / SL / hòa lấy giá mặc định, R tự tính, cộng vào máy cộng', () => {
+test('kết quả: TP / SL / hòa lấy R mặc định (TP = R mục tiêu, SL = -1, hòa = 0), R nhập tay ghi đè, cộng vào máy cộng', () => {
   const n = mk('A');
   const t = J.createTrade(n, run(DATE, '21:30', n), { scen: 'A', nowMs: NOW.getTime(), nowMin: NOWMIN });
-  assert.equal(J.computeR(t, 4185.8), 3); assert.equal(J.computeR(t, 4195.4), -1); assert.equal(J.computeR(t, 4193), 0); assert.equal(J.computeR(t, 4190.6), 1);
   J.closeTrade(n, t.id, { kind: 'TP', nowMs: NOW.getTime(), nowMin: NOWMIN + 20 });
-  assert.equal(t.r, 3); assert.equal(t.exit.price, 4185.8); assert.equal(n.tally.machine, 3);
-  const u = trade({ id: 'u', side: 'sell', entry: 4193, sl: 4195.4 }); n.trades.push(u);
-  J.closeTrade(n, 'u', { kind: 'SL', nowMs: NOW.getTime(), nowMin: NOWMIN + 30 });
-  assert.equal(u.exit.price, 4195.4); assert.equal(u.r, -1);
-  const v = trade({ id: 'v', side: 'sell', entry: 4193, sl: 4195.4 }); n.trades.push(v);
-  J.closeTrade(n, 'v', { kind: 'BE', nowMs: NOW.getTime(), nowMin: NOWMIN + 40 });
-  assert.equal(v.r, 0); assert.equal(n.tally.machine, 2);
+  assert.equal(t.r, 3); assert.equal(n.tally.machine, 3);
+  const u = trade({ id: 'u', side: 'sell', scenario: 'C', targetR: 2 }); n.trades.push(u);
+  J.closeTrade(n, 'u', { kind: 'TP', nowMs: NOW.getTime(), nowMin: NOWMIN + 25 });
+  assert.equal(u.r, 2);
+  const v = trade({ id: 'v', side: 'sell' }); n.trades.push(v);
+  J.closeTrade(n, 'v', { kind: 'SL', nowMs: NOW.getTime(), nowMin: NOWMIN + 30 });
+  assert.equal(v.r, -1);
+  const w = trade({ id: 'w', side: 'sell' }); n.trades.push(w);
+  J.closeTrade(n, 'w', { kind: 'BE', nowMs: NOW.getTime(), nowMin: NOWMIN + 40 });
+  assert.equal(w.r, 0);
+  const x = trade({ id: 'x2', side: 'sell' }); n.trades.push(x);
+  J.closeTrade(n, 'x2', { kind: 'TP', r: 2.5, nowMs: NOW.getTime(), nowMin: NOWMIN + 50 });
+  assert.equal(x.r, 2.5); assert.equal(n.tally.machine, 3 + 2 - 1 + 0 + 2.5);
   assert.equal(J.closeTrade(n, 'khong-co', { kind: 'TP' }), null);
+  // dữ liệu cũ còn giá vào / SL: vẫn tính R từ giá thoát
+  const old = trade({ id: 'old', side: 'sell', entry: 4193, sl: 4195.4 }); n.trades.push(old);
+  J.closeTrade(n, 'old', { kind: 'MANUAL', price: 4190.6, reason: 'flat', nowMs: 1, nowMin: NOWMIN });
+  assert.equal(old.r, 1); assert.equal(J.computeR(old, 4195.4), -1);
 });
-test('kết quả: giá thoát và R sửa tay (R nhập tay ghi đè); đóng tay lý do "khác" ⇒ phá luật, hai lý do kia thì không', () => {
-  const mkTrade = () => { const n = J.newNight(); const t = trade({ id: 'x', side: 'sell', entry: 4193, sl: 4195.4 }); n.trades.push(t); return { n, t }; };
+
+test('kết quả: đóng tay lý do "khác" ⇒ phá luật, hai lý do kia thì không; R nhập tay', () => {
+  const mkTrade = () => { const n = J.newNight(); const t = trade({ id: 'x', side: 'sell' }); n.trades.push(t); return { n, t }; };
   let { n, t } = mkTrade();
-  J.closeTrade(n, 'x', { kind: 'MANUAL', price: 4190.6, reason: 'flat', nowMs: 1, nowMin: NOWMIN });
+  J.closeTrade(n, 'x', { kind: 'MANUAL', r: 1, reason: 'flat', nowMs: 1, nowMin: NOWMIN });
   assert.equal(t.r, 1); assert.ok(!t.flags.includes('RULE_BREAK'));
   ({ n, t } = mkTrade());
-  J.closeTrade(n, 'x', { kind: 'MANUAL', price: 4190.6, r: 0.8, reason: 'absorb', nowMs: 1, nowMin: NOWMIN });
+  J.closeTrade(n, 'x', { kind: 'MANUAL', r: 0.8, reason: 'absorb', nowMs: 1, nowMin: NOWMIN });
   assert.equal(t.r, 0.8); assert.ok(!t.flags.includes('RULE_BREAK'));
   ({ n, t } = mkTrade());
-  J.closeTrade(n, 'x', { kind: 'MANUAL', price: 4192, reason: 'other', nowMs: 1, nowMin: NOWMIN });
+  J.closeTrade(n, 'x', { kind: 'MANUAL', r: 0.3, reason: 'other', nowMs: 1, nowMin: NOWMIN });
   assert.ok(t.flags.includes('RULE_BREAK')); assert.deepEqual(t.ruleCodes, ['MANUAL_CLOSE']);
   assert.equal(J.warnLine(t), 'phá luật: đóng tay lý do khác');
 });
-test('nhắc be theo kịch bản: A, B +1,5R và cần nến M1 đóng ngoài vùng; C, D +1R', () => {
-  const a = J.beInfo({ scenario: 'A', side: 'sell', entry: 4193, sl: 4195.4 });
-  assert.deepEqual([a.target, a.needBar, a.priceAt], [1.5, true, 4189.4]);
-  const c = J.beInfo({ scenario: 'C', side: 'buy', entry: 4177, sl: 4174.7 });
-  assert.deepEqual([c.target, c.needBar, c.priceAt], [1, false, 4179.3]);
-  assert.equal(J.beInfo({ scenario: 'B', side: 'buy', entry: 4177, sl: 4174.7 }).priceAt, 4180.5);
+
+test('nhắc be theo kịch bản: A, B +1,5R và cần nến M1 đóng ngoài vùng; C, D +1R (không còn giá)', () => {
+  const a = J.beInfo({ scenario: 'A' });
+  assert.deepEqual([a.target, a.needBar, a.priceAt], [1.5, true, undefined]);
+  const c = J.beInfo({ scenario: 'C' });
+  assert.deepEqual([c.target, c.needBar], [1, false]);
+  assert.equal(J.beInfo({ scenario: 'B' }).target, 1.5);
 });
 
-// ---------- sổ ----------
 test('sổ: máy cộng R, lệch tay ⇒ mismatch', () => {
   const n = sampleNight();
   assert.equal(J.recomputeTally(n, 1000), 2);
@@ -115,9 +122,9 @@ test('sổ: lệnh luyện mắt và lệnh chưa đóng không vào máy cộng
   assert.equal(J.recomputeTally(n), 2);
 });
 test('sổ: dòng ⚠ liệt kê tối đa 3 ô thiếu, nói số ô còn lại', () => {
-  assert.equal(J.warnLine({ scenario: 'B', missing: ['chk1', 'slFloor'], ruleCodes: [] }), 'phá luật: thiếu 2 ô: 3 nến cuối: thân và |delta| giảm dần, không cực trị mới; SL ≥ biên độ nến M1 cao nhất 5 nến');
-  const w = J.warnLine({ scenario: 'C', missing: ['side', 'zone', 'nums', 'rr', 'common:news'], ruleCodes: [] });
-  assert.match(w, /^phá luật: thiếu 5 ô: Hướng; Vùng; Giá vào, SL, biên độ nến \(\+2\)$/);
+  assert.equal(J.warnLine({ scenario: 'B', missing: ['chk1', 'chk2'], ruleCodes: [] }), 'phá luật: thiếu 2 ô: 3 nến cuối: thân và |delta| giảm dần, không cực trị mới; Bong bóng ở cực trị cùng phe với lệnh');
+  const w = J.warnLine({ scenario: 'C', missing: ['side', 'zone', 'ent1', 'zone2', 'common:news'], ruleCodes: [] });
+  assert.match(w, /^phá luật: thiếu 5 ô: Hướng; Vùng; Nến M1 đóng lại trong range; thân không ngắn, râu ngược không dài \(\+2\)$/);
   assert.equal(J.warnLine({ scenario: 'A', missing: [], ruleCodes: [] }), '');
   assert.equal(J.warnLine({ scenario: 'A', missing: ['common:news'], ruleCodes: [] }), 'phá luật: thiếu 1 ô: Không trong khung giờ cấm');
 });
@@ -145,9 +152,9 @@ test('sổ: Markdown đúng mẫu (so chuỗi)', () => {
     '| 20:25 | sell | phá hồi | HVN tuần | U · Δ · bb | 2,4 | +3 |',
     '| 20:48 | sell | hấp thụ | VWAP tuần | bb | 1,2 | -1 ⚠ |',
     '',
-    'Cột "4 kiểm tra": các ô kiểm tra đã tick lúc ghi lệnh (U nhịp hồi · bb bong bóng · Δ delta · DMA).',
+    'Cột "4 kiểm tra": các ô kiểm tra đã tick lúc ghi lệnh (U nhịp hồi · bb bong bóng · Δ delta · cạnh · DMA).',
     '',
-    '⚠ dòng 20:48 phá luật: thiếu 2 ô: 3 nến cuối: thân và |delta| giảm dần, không cực trị mới; SL ≥ biên độ nến M1 cao nhất 5 nến',
+    '⚠ dòng 20:48 phá luật: thiếu 2 ô: 3 nến cuối: thân và |delta| giảm dần, không cực trị mới; Bong bóng ở cực trị cùng phe với lệnh',
     '',
     'Máy cộng: +2 R · Bạn cộng: +2 R · Lệnh phá luật: 1 · SL bị quét rồi tới TP: 0',
     ''
@@ -172,8 +179,8 @@ test('sổ: CSV có đủ cột, in ô thiếu và thoát dấu phẩy', () => {
   const st = S.defaultState(); st.nights['2026-10-06'] = sampleNight();
   const lines = J.toCSV(st).trim().split('\n');
   assert.equal(lines.length, 3);
-  assert.equal(lines[0].split(',').length, 19);
-  assert.match(lines[2], /RULE_BREAK/); assert.match(lines[2], /chk1\|slFloor/); assert.match(lines[1], /"U · Δ · bb"|U · Δ · bb/);
+  assert.equal(lines[0].split(',').length, 11);
+  assert.match(lines[2], /RULE_BREAK/); assert.match(lines[2], /chk1\|chk2/); assert.match(lines[1], /"U · Δ · bb"|U · Δ · bb/);
 });
 test('tuần: 4 con số HT 8 + chuỗi đêm 0 phá luật', () => {
   const st = S.defaultState();

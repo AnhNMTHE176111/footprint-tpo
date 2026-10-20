@@ -44,91 +44,6 @@
     return out;
   }
 
-  // vùng kế tiếp theo hướng lệnh; bỏ vùng vào, vùng cùng cụm (cách vùng vào ≤ 1 giá) và LVN (QĐ-20).
-  // fadeOnly (khối C, HT 5·C): TP = cạnh đối diện hoặc POC, cái nào gần hơn ⇒ chỉ xét vùng cạnh và cụm POC; không có thì xét mọi vùng.
-  function nextZoneFor(zones, side, entry, entryZone, fadeOnly) {
-    function find(accept) {
-      var best = null;
-      zones.forEach(function (z) {
-        if (z.lo === null || z.type === 'lvn') return;
-        if (accept && !accept(z)) return;
-        if (entryZone && (z.id === entryZone.id || R.zoneGap(z, entryZone) <= T.nearGap + EPS)) return;
-        if (side === 'sell' && z.hi < entry - EPS) { if (!best || z.hi > best.edge) best = { zone: z, edge: z.hi }; }
-        if (side === 'buy' && z.lo > entry + EPS) { if (!best || z.lo < best.edge) best = { zone: z, edge: z.lo }; }
-      });
-      return best;
-    }
-    if (fadeOnly) {
-      var fz = find(function (z) { return R.hasFlag(z, 'edge') || z.type === 'pocCluster'; });
-      if (fz) return fz;
-    }
-    return find(null);
-  }
-
-  // o = {scen, side, zone, zones, entry, sl, tp, c6, counter}  (B ngược bias ⇒ TP gợi ý 2R, HT 2.2)
-  function computeCalc(o) {
-    var entry = num(o.entry), sl = num(o.sl), tp = num(o.tp), c6 = num(o.c6);
-    var out = { entry: entry, sl: sl, tp: tp, numsOk: false, slDist: null, risk: null, slSideOk: true, floorOk: true, capOk: true,
-      rr: null, tpSuggested: null, tpUsed: null, nextZone: null, nextRRok: true, tpPastOk: true, size: null,
-      targetR: (o.scen === 'B' && o.counter) ? R.TARGET_R_COUNTER_B : (R.TARGET_R[o.scen] || 3) };
-    if (entry === null || sl === null || !o.side) return out;
-    out.numsOk = true;
-    var risk = Math.abs(entry - sl);
-    out.risk = risk;
-    out.slDist = R.round1(risk);
-    out.slSideOk = o.side === 'buy' ? sl < entry - EPS : sl > entry + EPS;
-    out.floorOk = !(c6 > 0) || c6 > T.c6Max || out.slDist >= c6 - EPS;
-    out.capOk = out.slDist <= T.slCap + EPS;
-    if (risk <= EPS) { out.slSideOk = false; return out; }
-    var nz = nextZoneFor(o.zones || [], o.side, entry, o.zone, o.scen === 'C');
-    var dirMul = o.side === 'buy' ? 1 : -1;
-    var sug = entry + dirMul * out.targetR * risk;
-    if (nz) {
-      var dist = Math.abs(nz.edge - entry);
-      out.nextZone = nz.zone;
-      out.nextRRok = dist / risk >= T.rrMin - EPS;
-      if (dist < out.targetR * risk - EPS) sug = nz.edge;
-    }
-    out.tpSuggested = R.round1(sug);
-    out.tpUsed = tp !== null ? tp : out.tpSuggested;
-    var reward = dirMul * (out.tpUsed - entry);
-    out.rr = R.round2(reward / risk);
-    if (nz) {
-      var over = o.side === 'buy' ? out.tpUsed - nz.edge : nz.edge - out.tpUsed;
-      out.tpPastOk = R.round2(over) <= T.tpPastTol + EPS;
-    }
-    return out;
-  }
-
-  // khoảng cách từ giá vào tới vùng (0 nếu nằm trong vùng); null khi thiếu số
-  function gapToZone(entry, zone) {
-    if (entry === null || !zone || zone.lo === null) return null;
-    if (entry >= zone.lo - EPS && entry <= zone.hi + EPS) return 0;
-    return Math.min(Math.abs(entry - zone.lo), Math.abs(entry - zone.hi));
-  }
-
-  // cỡ lệnh MGC (làm tròn xuống); null khi chưa cài vốn / rủi ro
-  // QĐ-21: cỡ chuẩn = floor(vốn × % / (SL × 10 $)); cỡ ½ = floor(½ × số $ / (SL × 10 $)),
-  // nhưng cỡ chuẩn ≥ 1 mà ½ ra 0 thì lấy 1 hợp đồng (sizeMinOne). Cỡ chuẩn < 1 ⇒ 0 (không đủ vốn).
-  function sizeFor(cl, half, settings) {
-    if (!cl || !cl.numsOk || !(cl.slDist > 0)) return null;
-    var cap = num(settings.capital), rp = num(settings.riskPct);
-    if (!(cap > 0 && rp > 0)) return null;
-    var per = cl.slDist * T.tickValue;
-    var fullUsd = cap * rp / 100;
-    var riskUsd = fullUsd * (half ? 0.5 : 1);
-    var full = Math.floor(fullUsd / per + 1e-9);
-    var n = Math.floor(riskUsd / per + 1e-9);
-    cl.fullUsd = R.round2(fullUsd);
-    cl.riskUsd = R.round2(riskUsd);
-    cl.sizeFull = full;
-    cl.maxSl = R.round1(Math.floor(fullUsd / T.tickValue * 10 + 1e-9) / 10);   // SL tối đa cho 1 hợp đồng ở cỡ chuẩn
-    cl.sizeMinOne = false;
-    cl.realUsd = R.round2(per);   // rủi ro thật của 1 hợp đồng với SL này
-    if (half && full >= 1 && n < 1) { n = 1; cl.sizeMinOne = true; }
-    return n;
-  }
-
   function evalBlock(id, c) {
     var bs = (c.se.blocks && c.se.blocks[id]) || {};
     var ticks = bs.ticks || {};
@@ -137,12 +52,8 @@
     var counter = !!side && R.isCounter(c.bias, side);
     var reasonOk = !!(bs.reason && String(bs.reason).trim());
     var zoneN = zone ? c.trades.filter(function (t) { return t.zoneId === zone.id && !isPaper(t); }).length : 0;
-    // biên độ nến M1 cao nhất 5 nến: nhập một lần cho cả đêm (se.c6); số riêng của khối (dữ liệu cũ, test) thắng nếu có
-    var c6 = num(bs.c6) !== null ? num(bs.c6) : num(c.se.c6);
-    var cl = computeCalc({ scen: id, side: side, zone: zone, zones: c.zones, entry: bs.entry, sl: bs.sl, tp: bs.tp, c6: c6, counter: counter });
-    var c6ok = c6 !== null && c6 > 0 && c6 <= T.c6Max;
 
-    // cỡ ½: lý do theo QĐ-19 / QĐ-21 và bảng 2.3
+    // cỡ ½ (nhãn nhắc, không tính số hợp đồng): QĐ-19 và bảng 2.3
     var halfs = [];
     if (c.bias === 'KHÔNG') halfs.push('BIAS_NONE');
     if (id === 'C') halfs.push('SCENARIO_C');
@@ -151,9 +62,9 @@
     if (id === 'B' && zone && R.hasFlag(zone, 'r2') && !R.hasFlag(zone, 'r1')) halfs.push('B_RANK2');
     if (c.nowMin < c.nyseMin) halfs.push('BEFORE_2030');
     halfs = R.HALF_ORDER.filter(function (x) { return halfs.indexOf(x) >= 0; });
-    cl.size = sizeFor(cl, halfs.length > 0, c.settings);
+    var targetR = (id === 'B' && counter) ? R.TARGET_R_COUNTER_B : (R.TARGET_R[id] || 3);
 
-    // ô tự kiểm: ok true / false / null (chưa đủ số liệu để kiểm)
+    // ô tự kiểm: ok true / false / null (chưa đủ dữ liệu để kiểm)
     var autos = [];
     // bias cho phép kịch bản này (HT 2.2 + mục 7): KHÔNG ⇒ chỉ C; CHỜ ⇒ chưa khối nào; ngược bias ⇒ chỉ B (kèm ô tail + lý do)
     var bz = { id: 'bias', ok: null, reason: null };
@@ -174,38 +85,7 @@
       }
       autos.push(bh);
     }
-    // giá vào cách vùng (HT 4.4): ≤ 1 giá đạt; 1–3 giá chỉ đạt khi râu nến xác nhận chạm vùng; > 3 giá là ở lưng
-    var gap = gapToZone(num(bs.entry), zone);
-    var nr = { id: 'near', ok: null, reason: null, gap: gap, needWick: false };
-    if (gap !== null) {
-      if (gap <= T.nearOk + EPS) nr.ok = true;
-      else if (gap > T.nearBack + EPS) { nr.ok = false; nr.reason = 'nearBack'; }
-      else { nr.needWick = true; nr.ok = !!bs.wick; nr.reason = bs.wick ? null : 'nearFar'; }
-    }
-    autos.push(nr);
     autos.push({ id: 'zone2', ok: zone ? zoneN < T.zoneMax : null, reason: zone && zoneN >= T.zoneMax ? 'zone2' : null });
-    var slKnown = cl.numsOk && cl.slDist > 0;
-    var floor = { id: 'slFloor', ok: null, reason: null };
-    if (slKnown && !cl.slSideOk) { floor.ok = false; floor.reason = 'slSide'; }
-    else if (slKnown && c6ok) { floor.ok = cl.floorOk; floor.reason = cl.floorOk ? null : 'slFloor'; }
-    autos.push(floor);
-    var cap = { id: 'slCap', ok: null, reason: null };
-    if (slKnown && cl.slSideOk) { cap.ok = cl.capOk; cap.reason = cl.capOk ? null : 'slCap'; }
-    autos.push(cap);
-    var rr = { id: 'rr', ok: null, reason: null };
-    if (slKnown && cl.slSideOk && cl.rr !== null) {
-      if (cl.rr < T.rrMin - EPS) { rr.ok = false; rr.reason = 'rr'; }
-      else if (cl.nextZone && !cl.nextRRok) { rr.ok = false; rr.reason = 'rrNext'; }
-      else if (!cl.tpPastOk) { rr.ok = false; rr.reason = 'tpPast'; }
-      else rr.ok = true;
-    }
-    autos.push(rr);
-    var size = { id: 'size', ok: null, reason: null };
-    if (slKnown && cl.slSideOk) {
-      if (cl.size === null) size.reason = 'noCapital';
-      else { size.ok = cl.sizeFull >= 1; size.reason = size.ok ? null : 'size'; }
-    }
-    autos.push(size);
     if (counter) autos.push({ id: 'counter', ok: reasonOk, reason: reasonOk ? null : 'counter' });
     var tailOk = !!bs.tail;
 
@@ -215,14 +95,13 @@
     if (counter) items.push({ id: 'counter', group: 'pick', ok: reasonOk });
     if (counter && id === 'B') items.push({ id: 'tail', group: 'pick', ok: tailOk });
     R.tickIds(id).forEach(function (t) { items.push({ id: t.id, group: t.group, ok: !!ticks[t.id] }); });
-    items.push({ id: 'nums', group: 'num', ok: num(bs.entry) !== null && num(bs.sl) !== null && c6ok });
     autos.forEach(function (a) { if (a.id !== 'counter') items.push({ id: a.id, group: 'auto', ok: a.ok === true }); });
 
     var done = items.filter(function (i) { return i.ok; }).length;
     var missing = items.filter(function (i) { return !i.ok; }).map(function (i) { return i.id; });
     return {
       id: id, done: done, total: items.length, complete: missing.length === 0, missing: missing, order: items.map(function (i) { return i.id; }), items: items,
-      autoChecks: autos, side: side, zone: zone, counter: counter, tailOk: tailOk, c6: c6, zoneN: zoneN, nth: zoneN + 1, calc: cl, c6ok: c6ok,
+      autoChecks: autos, side: side, zone: zone, counter: counter, tailOk: tailOk, targetR: targetR, zoneN: zoneN, nth: zoneN + 1,
       halfs: halfs, half: halfs.length > 0, touch: (c.se.touch && c.se.touch[id]) || 0,
       active: Object.keys(ticks).some(function (k) { return ticks[k]; }) || !!side || !!zone
     };
@@ -272,7 +151,7 @@
     if (commonOk && cands.length) {
       cands.sort(function (x, y) { return blocks[y].touch - blocks[x].touch || R.SCENARIOS.indexOf(x) - R.SCENARIOS.indexOf(y); });
       var eb = blocks[cands[0]];
-      entry = { scen: eb.id, side: eb.side, zone: eb.zone, calc: eb.calc, half: eb.half, halfs: eb.halfs, counter: eb.counter, paper: t0.alert === false };
+      entry = { scen: eb.id, side: eb.side, zone: eb.zone, targetR: eb.targetR, half: eb.half, halfs: eb.halfs, counter: eb.counter, paper: t0.alert === false };
     }
     // khối đang làm (cho dòng CHỜ): khối chạm cuối, không có thì khối nhiều ô nhất đã đụng tới
     var focus = null, best = -1;
@@ -302,5 +181,5 @@
     };
   }
 
-  return { evaluate: evaluate, countTrades: countTrades, isSLTrade: isSLTrade, findOpen: findOpen, computeCalc: computeCalc, nextZoneFor: nextZoneFor, sizeFor: sizeFor, gapToZone: gapToZone };
+  return { evaluate: evaluate, countTrades: countTrades, isSLTrade: isSLTrade, findOpen: findOpen };
 });

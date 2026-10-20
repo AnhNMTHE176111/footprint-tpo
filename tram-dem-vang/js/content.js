@@ -110,27 +110,17 @@
   };
   // nhãn các ô còn lại của mỗi khối (dùng trong danh sách thiếu và dòng Sổ)
   var itemLabels = {
-    side: 'Hướng', zone: 'Vùng', nums: 'Giá vào, SL, biên độ nến', counter: 'Lý do ngược bias', tail: 'Vùng có tail thật hoặc single print cũ đúng phía',
-    bias: 'Bias cho phép kịch bản này', breakHours: 'Cú phá không rơi vào 18:00–{comex}', near: 'Giá vào cách vùng ≤ 1 giá (hoặc râu nến xác nhận chạm vùng)',
-    zone2: 'Lần ≤ 2 tại vùng', slFloor: 'SL ≥ biên độ nến M1 cao nhất 5 nến', slCap: 'SL ≤ 4 giá', rr: 'R:R ≥ 1:2', size: 'Đủ vốn cho 1 hợp đồng'
+    side: 'Hướng', zone: 'Vùng', counter: 'Lý do ngược bias', tail: 'Vùng có tail thật hoặc single print cũ đúng phía',
+    bias: 'Bias cho phép kịch bản này', breakHours: 'Cú phá không rơi vào 18:00–{comex}',
+    zone2: 'Lần ≤ 2 tại vùng'
   };
   var autoBad = {
     zone2: 'Đã vào 2 lần ở vùng này — không có lần thứ ba.',
-    slFloor: 'SL {sl} giá nhỏ hơn nến {c6} giá — đẩy SL ra hoặc bỏ kèo.',
-    slSide: 'SL nằm sai phía so với giá vào.',
-    slCap: 'Khoảng SL {sl} giá, quá 4 giá — bỏ kèo hoặc chờ hồi sâu hơn.',
-    rr: 'R:R 1:{rr} dưới 1:2 — bỏ kèo.',
-    rrNext: 'Vùng kế tiếp quá gần: R:R tới vùng đó dưới 1:2 — bỏ kèo.',
-    tpPast: 'TP vượt vùng kế tiếp quá 0,5 giá (ngưỡng 0,5 giá: quyết định của công cụ) — kéo TP về vùng đó.',
     counter: 'Ngược bias {bias}: ghi lý do ở ô bên dưới trước khi vào (luật cứng, mục 2.2).',
     biasNone: 'Bias KHÔNG: chỉ fade hai cạnh VA Âu (khối C), mục tiêu 2R, cỡ ½. Không phá hồi.',
     biasWait: 'Bias CHỜ: chờ 1 nến M5 đóng rõ một phía rồi chốt lại bias ở tầng 1. Chưa khối nào vào được.',
     biasCounter: 'Ngược bias {bias}: chỉ khối B được ngược, tại tail thật hoặc single print cũ đúng phía, 2R, cỡ ½.',
     breakHours: 'Cú phá lúc {hm} rơi vào 18:00–{comex}: hay là phá giả. Nghi trước, tin sau.',
-    nearFar: 'Giá vào cách vùng {gap} giá: chỉ đạt nếu râu nến xác nhận chạm vùng (tick ô bên cạnh).',
-    nearBack: 'Giá vào cách vùng {gap} giá, quá 3 giá là ở lưng: bỏ kèo.',
-    size: 'Vốn × rủi ro chưa đủ 1 hợp đồng MGC với SL này. Với vốn {cap} $ · rủi ro {pct}%, SL tối đa {max} giá. Bỏ kèo, hoặc tăng vốn.',
-    noCapital: 'Cài vốn và % rủi ro để tính số hợp đồng.'
   };
 
   var halfText = {
@@ -177,8 +167,8 @@
     dma: { text: 'DMA đi ngang khi giá còn chạy nghĩa là đà đang cạn.', ref: 'kb-b', gloss: 'dma' },
     trap: { text: 'Phe hồi thử ở đỉnh nhịp hồi mà thất bại: bong bóng hấp thụ phe hồi, hoặc nến hồi có delta theo chiều hồi nhưng đóng ở nửa ngược chiều hồi (hồi lên thì đóng ở nửa dưới).', ref: 'kb-d', gloss: 'trap' },
     edge: { text: 'Cạnh là mép của VA Âu hoặc của range. Ở cạnh là cách vùng không quá 1 giá, hoặc râu nến xác nhận chạm vùng. Đi từ 3 giá trở lên khỏi vùng mà chưa hồi là ở lưng: bỏ kèo.', ref: 'canh-hay-lung', gloss: 'canh' },
-    near: { text: 'Máy tự kiểm từ giá vào và vùng đã chọn: không quá 1 giá là đạt. Từ 1 đến 3 giá chỉ đạt khi râu nến xác nhận chạm vùng. Quá 3 giá là ở lưng: bỏ kèo.', ref: 'canh-hay-lung', gloss: 'canh' },
-    sl: { text: 'SL lai: cấu trúc cộng 0,3 giá đệm. Sau đó máy kiểm sàn nhiễu (SL không nhỏ hơn nến M1 cao nhất 5 nến) và trần 4 giá.', ref: 'luat-sl' },
+    near: { text: 'Giá không quá 1 giá cách vùng là đạt. Từ 1 đến 3 giá chỉ đạt khi râu nến xác nhận chạm vùng. Từ 3 giá trở lên là ở lưng: bỏ kèo.', ref: 'canh-hay-lung', gloss: 'canh' },
+    sl: { text: 'Luật SL (HT mục 6), bạn tự kiểm, công cụ không tính và không chặn ENTRY: (1) vị trí: sau cấu trúc của kịch bản cộng 0,3 giá; (2) sàn nhiễu: SL không ngắn hơn nến M1 lớn nhất trong 5 nến; (3) trần: SL không quá 4 giá. R:R ít nhất 1:2 tính trước; TP 3R cho A, B (B ngược bias: 2R), 2R cho C, D, hoặc vùng kế tiếp nếu gần hơn (C: cạnh đối diện hoặc POC).', ref: 'luat-sl', gloss: 'luat-sl' },
     fadeWick: { text: 'Phá hụt: râu xuyên cạnh rồi nến đóng lại trong. Không có nến đóng lại thì không vào.', ref: 'kb-c', gloss: 'fade' },
     thin: { text: 'Trend thin là profile mỏng đi một chiều: không cản tàu, chỉ vào theo chiều ở nhịp hồi. Hấp thụ và fade ngược chiều thin là cản tàu.', ref: 'cau-truc', gloss: 'thin' },
     balance: { text: 'Giữa range không có lệnh. Khi đang cân bằng thì hấp thụ chỉ ở vùng nằm sát cạnh range hoặc cạnh VA Âu (không quá 1 giá).', ref: 'cau-truc', gloss: 'canh' },
@@ -193,10 +183,11 @@
       chk: [
         { t: 'Hồi hình U, ≥ 3 nến, không phải V', short: 'U', help: HELP.uv },
         { t: 'Tại cạnh: delta cùng chiều phá hoặc bong bóng hấp thụ phe ngược', short: 'Δ', help: HELP.step3 },
-        { t: 'Bong bóng to gần nhất (10 nến, ở cực trị) không đứng phe ngược lệnh, hoặc mức đó đã vỡ', short: 'bb', help: HELP.bubble }
+        { t: 'Bong bóng to gần nhất (10 nến, ở cực trị) không đứng phe ngược lệnh, hoặc mức đó đã vỡ', short: 'bb', help: HELP.bubble },
+        { t: 'Giá cách vùng ≤ 1 giá, không ở lưng (hoặc râu nến xác nhận chạm vùng)', short: 'cạnh', help: HELP.near }
       ],
       ent: [{ t: 'Nến M1 đóng theo chiều phá, thân ≥ nửa biên độ, delta cùng dấu' }],
-      sl: [{ t: 'SL sau râu nến xác nhận hoặc mép xa vùng (cái xa hơn) + 0,3 giá', help: HELP.sl }] },
+      sl: [] },
     B: { title: 'Hấp thụ', target: '3R', sizeNote: 'Vùng hạng 2 thì cỡ ½. Ngược bias: 2R, cỡ ½.',
       ctx: [
         { t: 'Giá tại VWAP tuần, VWAP ngày, HVN tuần, cụm POC, hoặc cạnh VA Âu khi đang cân bằng', help: { text: 'VWAP tuần là hạng 1 (tốt nhất). VWAP ngày, HVN tuần là hạng 2: cỡ ½. Cụm POC xếp hạng 2 theo QĐ-3, quyết định của công cụ, chưa đo. Cạnh VA Âu chỉ khi đang cân bằng.', ref: 'xep-hang-vung', gloss: 'hang' } },
@@ -209,10 +200,11 @@
         { t: '3 nến cuối: thân và |delta| giảm dần, không cực trị mới', short: 'giảm dần', help: HELP.absorb },
         { t: 'Bong bóng ở cực trị cùng phe với lệnh', short: 'bb', help: HELP.bubble },
         { t: 'DMA đi ngang', short: 'DMA', help: HELP.dma },
-        { t: 'Cú test lại hình U, không phải V', short: 'U', help: HELP.uv }
+        { t: 'Cú test lại hình U, không phải V', short: 'U', help: HELP.uv },
+        { t: 'Giá cách vùng ≤ 1 giá, không ở lưng (hoặc râu nến xác nhận chạm vùng)', short: 'cạnh', help: HELP.near }
       ],
       ent: [{ t: 'Nến xác nhận ngược chiều move, delta đổi dấu, độ lớn ≥ ½ |delta| của nến lớn nhất trong move', help: HELP.confirmB }],
-      sl: [{ t: 'SL sau cực trị của cụm hấp thụ + 0,3 giá, không ở giữa cụm', help: HELP.sl }] },
+      sl: [] },
     C: { title: 'Fade cạnh', target: '2R', sizeNote: 'Luôn cỡ ½.',
       ctx: [
         { t: 'Vùng là cạnh VA Âu / range, không ở giữa range', help: HELP.edge },
@@ -222,10 +214,11 @@
       chk: [
         { t: 'Phá hụt: râu xuyên cạnh rồi đóng lại trong', short: 'phá hụt', help: HELP.fadeWick },
         { t: 'Delta ủng hộ chiều vào', short: 'Δ' },
-        { t: 'Bong bóng to gần nhất (10 nến, ở cực trị) không đứng phe ngược lệnh, hoặc mức đó đã vỡ', short: 'bb', help: HELP.bubble }
+        { t: 'Bong bóng to gần nhất (10 nến, ở cực trị) không đứng phe ngược lệnh, hoặc mức đó đã vỡ', short: 'bb', help: HELP.bubble },
+        { t: 'Giá cách vùng ≤ 1 giá, không ở lưng (hoặc râu nến xác nhận chạm vùng)', short: 'cạnh', help: HELP.near }
       ],
       ent: [{ t: 'Nến M1 đóng lại trong range; thân không ngắn, râu ngược không dài', help: HELP.fadeWick }],
-      sl: [{ t: 'SL sau râu phá hụt + 0,3 giá', help: HELP.sl }] },
+      sl: [] },
     D: { title: 'Trap', target: '2R',
       ctx: [
         { t: 'Có move rõ ≥ 5 giá cùng chiều bias' },
@@ -235,10 +228,11 @@
       chk: [
         { t: 'Đỉnh hồi có bong bóng hấp thụ phe hồi, hoặc nến hồi delta theo chiều hồi mà đóng ở nửa ngược chiều hồi', short: 'bẫy', help: HELP.trap },
         { t: 'Hồi hình U, ≥ 3 nến, không phải V', short: 'U', help: HELP.uv },
-        { t: 'Bong bóng to gần nhất (10 nến, ở cực trị) không đứng phe ngược lệnh, hoặc mức đó đã vỡ', short: 'bb', help: HELP.bubble }
+        { t: 'Bong bóng to gần nhất (10 nến, ở cực trị) không đứng phe ngược lệnh, hoặc mức đó đã vỡ', short: 'bb', help: HELP.bubble },
+        { t: 'Giá cách vùng ≤ 1 giá, không ở lưng (hoặc râu nến xác nhận chạm vùng)', short: 'cạnh', help: HELP.near }
       ],
       ent: [{ t: 'Nến M1 đóng theo chiều move cũ, thân dài, delta cùng dấu' }],
-      sl: [{ t: 'SL sau đỉnh nhịp hồi + 0,3 giá', help: HELP.sl }] }
+      sl: [] }
   };
   var groupTitles = { ctx: 'Bối cảnh', chk: 'Kiểm tra', ent: 'Điểm vào', sl: 'SL' };
   // chữ của một ô theo mã: ô tick của khối ('ctx1'), ô tự kiểm hoặc ô chọn ('zone2'), ô dùng chung ('common:news')
@@ -273,7 +267,7 @@
   var journal = {
     paper: '(luyện mắt)', warnPrefix: 'phá luật', manualClose: 'đóng tay lý do khác',
     mdTitle: 'Sổ đêm', mdHead: '| giờ | hướng | tên | vùng | 4 kiểm tra | SL | R |', mdWarn: '⚠ dòng',
-    mdLegend: 'Cột "4 kiểm tra": các ô kiểm tra đã tick lúc ghi lệnh (U nhịp hồi · bb bong bóng · Δ delta · DMA).',
+    mdLegend: 'Cột "4 kiểm tra": các ô kiểm tra đã tick lúc ghi lệnh (U nhịp hồi · bb bong bóng · Δ delta · cạnh · DMA).',
     mdCard: 'Thẻ phiên', mdBias: 'BIAS', mdVwap: 'VWAP tuần', mdClose: 'Đóng hôm qua so với VA', mdShape: 'Hình hôm qua', mdZones: 'Vùng', mdPlan1: 'Kế hoạch 1', mdPlan2: 'Kế hoạch 2', mdCancel: 'Hủy khi',
     machine: 'Máy cộng', you: 'Bạn cộng', breaks: 'Lệnh phá luật', swept: 'SL bị quét rồi tới TP'
   };
@@ -379,10 +373,10 @@
     biasWaitNote: 'Bias CHỜ: chờ 1 nến M5 đóng rõ một phía rồi chốt lại bias ở tầng 1.', biasUnknownNote: 'Chưa có bias: điền thẻ phiên ở tầng 1.',
     scenTag: 'kịch bản {s}', writeBtn: 'Ghi lệnh', waitPick: 'chọn một khối và tick các ô.', waitBlock: 'khối {s} còn thiếu:',
     waitCommon: 'khối {s} đủ ô, nhưng ô chung chưa đạt:', moreItems: '(+{n} ô nữa)', exitR: 'R thực tế',
-    exitRHint: 'R tự tính từ giá thoát, sửa được.', needReason: 'Chọn lý do đóng tay.', needExit: 'Nhập giá thoát hoặc R.',
-    beRemind: 'Nhắc be: dời SL về hòa vốn (be) khi giá đạt +{r}R, tại giá {price}.',
-    beRemindBar: 'Nhắc be: dời SL về hòa vốn (be) khi giá đạt +{r}R, tại giá {price}, và có 1 nến M1 đóng ngoài vùng vào.',
-    barOpen: 'Lệnh đang mở:', barBe: 'be +{r}R tại {price}', c6Night: 'Biên độ nến M1 cao nhất 5 nến (cả đêm)', commonSum: '{n}/{m} máy kiểm đạt: thẻ phiên · giờ cấm · tắt máy · lệnh mở',
+    exitRHint: 'Bấm nhanh hoặc gõ số R.', needReason: 'Chọn lý do đóng tay.', needExit: 'Chọn hoặc gõ R kết quả.',
+    beRemind: 'Nhắc be: dời SL về hòa vốn (be) khi giá đạt +{r}R.',
+    beRemindBar: 'Nhắc be: dời SL về hòa vốn (be) khi giá đạt +{r}R và có 1 nến M1 đóng ngoài vùng vào.',
+    barOpen: 'Lệnh đang mở:', barBe: 'be +{r}R', entryBar: 'ENTRY {side} · khối {s} · vùng {zone} · mục tiêu {r}R', rQuick: 'R kết quả', rQuickHint: 'Bấm nhanh hoặc gõ số R.', kvSide: 'Hướng', kvScen: 'Kịch bản', kvZone: 'Vùng', c6Night: 'Biên độ nến M1 cao nhất 5 nến (cả đêm)', commonSum: '{n}/{m} máy kiểm đạt: thẻ phiên · giờ cấm · tắt máy · lệnh mở',
     wickL: 'Râu nến xác nhận chạm vùng', autosTitle: 'Máy tự kiểm', scenImgZoom: 'Bấm ảnh để mở ảnh gốc và phóng to.', counterTag: 'ngược bias · 2R · cỡ ½',
     slAbove: 'SL phải cao hơn giá vào (sell).', slBelow: 'SL phải thấp hơn giá vào (buy).', badNum: 'Không đọc được số "{v}" — đã xóa.',
     pickBlockFirst: 'Mở một khối trước, rồi bấm vùng.', zonePickTip: 'Bấm để chọn vùng này cho khối đang làm', zoneTap: 'Chạm lần nữa để chọn',
@@ -416,6 +410,7 @@
     { key: 'move', term: 'move', def: 'Đợt giá chạy rõ một chiều, từ lúc bắt đầu tới lúc dừng. Nhịp hồi là đoạn giá quay ngược lại sau move.' },
     { key: 'range', term: 'range', def: 'Khoảng giá đi ngang có hai mép (cạnh trên và cạnh dưới). Giữa range không có lệnh.' },
     { key: 'test-lai', term: 'test lại (retest)', def: 'Giá quay lại chạm mức vừa phá. Giữ được thì cú phá có thể là thật; không giữ thì chỉ là chạm.' },
+    { key: 'luat-sl', term: 'luật SL (3 điều kiện)', def: 'Luật SL (HT mục 6), bạn tự kiểm, công cụ không tính và không chặn ENTRY: (1) vị trí: sau cấu trúc của kịch bản (râu nến xác nhận, cực trị cụm hấp thụ, râu phá hụt, đỉnh nhịp hồi) cộng 0,3 giá; (2) sàn nhiễu: SL không ngắn hơn nến M1 lớn nhất trong 5 nến; (3) trần: SL không quá 4 giá. R:R ít nhất 1:2 tính trước; TP 3R cho A, B (B ngược bias: 2R), 2R cho C, D, hoặc vùng kế tiếp nếu gần hơn (C: cạnh đối diện hoặc POC).' },
     { key: 'sl-bi-quet', term: 'SL bị quét', def: 'SL (hoặc SL đã dời về hòa) bị chạm rồi giá quay lại chạy tới TP. Sổ đếm số lệnh như vậy để biết SL có đặt quá sát không (HT mục 6, 8). Lệnh vẫn tính là SL, không đổi kết quả.' }
   ];
 

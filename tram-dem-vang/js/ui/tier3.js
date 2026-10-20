@@ -18,6 +18,9 @@
   function canhFilled(res, st) {
     var s = res.scenario;
     if (!s || !res.zone || !res.side || !st.c4 || !st.c5 || !(R.num(st.c6) > 0)) return false;
+    if (s !== 'C' && !st.b1) return false;
+    if (s === 'B' && !st.b2) return false;
+    if ((s === 'B' || s === 'D') && R.num(st.ext) === null) return false;
     if (s === 'B' && !(st.c7 && st.c7.dma)) return false;
     if (s === 'D' && !(st.c7 && st.c7.moveSize !== null && st.c7.moveSize !== undefined && st.c7.deep)) return false;
     if (res.counter && !(st.counterBiasReason && String(st.counterBiasReason).trim())) return false;
@@ -93,20 +96,15 @@
     function set(fn, keep) { app.update(function (n) { fn(n.setup, n); n.setup.updatedAt = app.nowMs; }, { keep: !!keep }); }
     // Canh đủ ⇒ tự sang Bấm ĐÚNG MỘT LẦN cho mỗi kèo; sửa Canh sau đó không nhảy nữa (USER-TEST-3 d8)
     var filled = canhFilled(res, st);
-    if (!scen || app.ui.jumpScen !== scen) { app.ui.jumpDone = false; app.ui.jumpNote = false; }
+    if (!scen || app.ui.jumpScen !== scen) { app.ui.jumpDone = false; app.ui.jumpNote = false; app.ui.canhOpen = true; }
     app.ui.jumpScen = scen || null;
-    if (filled && !app.ui.jumpDone) { app.ui.sub = 'bam'; app.ui.jumpDone = true; app.ui.jumpNote = true; }
-    var sub = app.ui.sub || 'canh';
+    if (filled && !app.ui.jumpDone) { app.ui.canhOpen = false; app.ui.jumpDone = true; }
 
-    // ----- đầu trang: tab Canh / Bấm + kèo mới -----
-    var missCanh = 0, missBam = 0;
-    res.missing.concat(res.reasons).forEach(function (c) { var id = ctlOf(c, st); if (id) { if (ctlGroup(id) === 'bam') missBam++; else missCanh++; } });
+    // ----- đầu trang: Kèo mới (giữ C1–C3, C6) · Xóa hết -----
     el.appendChild(h('div', { class: 't3head' },
-      seg([{ v: 'canh', label: T('tabCanh') }, { v: 'bam', label: T('tabBam') }], sub, function (v) { app.ui.sub = v || sub; app.ui.jumpNote = false; app.render({ keep: false }); }, { noToggle: true, cls: 'tabs', label: T('tabLabel') }),
-      sub === 'bam' && app.ui.jumpNote
-        ? h('span', { class: 'jumpnote' }, h('span', { class: 'muted', text: T('jumpNote') + ' ' }), btn(T('backCanh'), function () { app.ui.sub = 'canh'; app.ui.jumpNote = false; app.render({ keep: false }); }, 'small primary', { 'data-testid': 'back-canh' }))
-        : h('span', { class: 'muted', text: sub === 'canh' ? T('canhHint') : T('bamHint') }),
-      btn(T('newSetup'), function () { app.ui.sub = 'canh'; app.update(function (n) { n.setup = {}; }); app.toast(T('newSetupDone')); }, 'ghost', { 'data-testid': 'new-setup', title: 'N' })));
+      h('span', { class: 'muted small', text: T('t3Hint') }),
+      (function () { var nb = btn(T('newSetup'), function () { app.newSetup(); }, 'ghost small', { 'data-testid': 'new-setup', title: 'N' }); nb.appendChild(h('kbd', { class: 'keyhint', text: 'N' })); return nb; })(),
+      btn(T('clearAll'), function () { app.clearSetup(); }, 'ghost small', { 'data-testid': 'clear-setup' })));
 
     if (scen && st.updatedAt && app.nowMs - st.updatedAt > R.T.idleMinutes * 60000) el.appendChild(banner(T('idleNote'), 'warn'));
 
@@ -116,8 +114,11 @@
     var scenOpts = R.SCENARIOS.map(function (s) { return { v: s, label: s + ' · ' + C.scenarios[s].name, sub: disabledMap[s] ? T('offShort') : C.scenarios[s].target }; });
     var c1 = ctl('c1', C.controls.c1.label, C.controls.c1.help, seg(scenOpts, scen || null, function (v) {
       set(function (s0, n) { var next = v ? J.changeScenario(s0, v) : (function () { var c = Object.assign({}, s0); delete c.scenario; return c; })(); n.setup = next; });
-    }, { disabled: disabledMap, onDisabled: function (v, why) { app.toast(why); }, cls: 'scen', label: C.controls.c1.label }));
-    if (sub === 'canh' || !scen) el.appendChild(c1);
+    }, { disabled: disabledMap, onDisabled: function (v, why) { app.pickOff(v, why); }, cls: 'scen', label: C.controls.c1.label }));
+    // bấm thẻ kịch bản đang tắt: không im lặng, hiện ngay lý do tắt (USER-TEST-4)
+    var offPick = app.ui.offPick && app.ui.offPick.scen !== scen && res.enabled[app.ui.offPick.scen] ? app.ui.offPick : null;
+    el.appendChild(c1);
+    if (offPick) el.appendChild(h('div', { class: 'offpick', 'data-testid': 'off-pick' }, h('b', { text: offPick.scen + ' · ' + C.scenarios[offPick.scen].name + ': ' }), h('span', { text: ui.codeText(res.enabled[offPick.scen], ui.codeVars(app)) })));
     if (scen && res.enabled[scen]) { el.appendChild(banner(T('scenLocked', { why: ui.codeText(res.enabled[scen]) }), 'warn')); c1.classList.add('locked-sel'); }
 
     if (!scen) {
@@ -128,101 +129,116 @@
     }
 
     var sc = C.scenarios[scen];
-    // ----- CANH -----
-    if (sub === 'canh') {
-      if (lv === 'new') {
-        el.appendChild(h('details', { class: 'fold scenfold' }, h('summary', { text: T('scenSummary', { name: sc.name, tp: sc.target, be: sc.be }) }),
-          h('p', { text: sc.blurb }), h('img', { src: sc.img, alt: T('scenImgAlt', { name: sc.name }), loading: 'lazy', class: 'scenimg' })));
-      }
-      // C3 vùng
-      var autoA = scen === 'A' && res.regime.effective === 'broken';
-      var c3body;
-      if (autoA) {
-        c3body = h('div', { class: 'autochip' }, res.zone ? chip(ui.zoneLabel(res.zone), 'good') : h('span', { class: 'muted', text: T('c3NoEdge') }), h('span', { class: 'muted', text: T('autoFilled') }));
-      } else {
-        var zopts = res.zones.map(function (z) { return { v: z.id, label: z.id + ' · ' + ui.zoneLabel(z), sub: z.flags.map(function (f) { return C.flagText[f] || f; }).join(' · ') || null }; });
-        c3body = zopts.length ? seg(zopts, st.zoneId || null, function (v) { set(function (s0) { if (v) s0.zoneId = v; else delete s0.zoneId; }); }, { cls: 'wrap', label: C.controls.c3.label }) : h('span', { class: 'muted', text: T('noZones') });
-      }
-      var c3note = null;
-      if (scen === 'B') c3note = C.qd['QĐ-1'] + ' (' + C.unmeasured + ')';
-      if (scen === 'B' && res.zone && res.zone.type === 'pocCluster') c3note = C.qd['QĐ-3'] + ' (' + C.unmeasured + ')';
-      var c3 = ctl('c3', C.controls.c3.label, C.controls.c3.help, c3body, { note: c3note });
-      if (res.zone) {
-        var nth = res.counts.zoneN + 1;
-        c3.appendChild(h('div', { class: 'zinfo' },
-          res.zone.flags.map(function (f) { return chip(C.flagText[f] || f, 'mini'); }),
-          chip(T('nthAt', { n: nth }), nth > 2 ? 'bad' : nth === 2 ? 'warn' : '')));
-      }
-      el.appendChild(c3);
+    // ===== CANH (nhìn được trước khi nến xác nhận đóng): C2–C7, B1, B2, cực trị =====
+    var canhEls = [];
+    function C_(x) { canhEls.push(x); }
+    if (lv === 'new') {
+      C_(h('details', { class: 'fold scenfold' }, h('summary', { text: T('scenSummary', { name: sc.name, tp: sc.target, be: sc.be }) }),
+        h('p', { text: sc.blurb }), h('img', { src: sc.img, alt: T('scenImgAlt', { name: sc.name }), loading: 'lazy', class: 'scenimg' })));
+    }
+    // C3 vùng
+    var autoA = scen === 'A' && res.regime.effective === 'broken';
+    var c3body;
+    if (autoA) {
+      c3body = h('div', { class: 'autochip' }, res.zone ? chip(ui.zoneLabel(res.zone), 'good') : h('span', { class: 'muted', text: T('c3NoEdge') }), h('span', { class: 'muted', text: T('autoFilled') }));
+    } else {
+      var zopts = res.zones.map(function (z) { return { v: z.id, label: z.id + ' · ' + ui.zoneLabel(z), sub: z.flags.map(function (f) { return C.flagText[f] || f; }).join(' · ') || null }; });
+      c3body = zopts.length ? seg(zopts, st.zoneId || null, function (v) { set(function (s0) { if (v) s0.zoneId = v; else delete s0.zoneId; }); }, { cls: 'wrap', label: C.controls.c3.label }) : h('span', { class: 'muted', text: T('noZones') });
+    }
+    var c3note = null;
+    if (scen === 'B') c3note = C.qd['QĐ-1'] + ' (' + C.unmeasured + ')';
+    if (scen === 'B' && res.zone && res.zone.type === 'pocCluster') c3note = C.qd['QĐ-3'] + ' (' + C.unmeasured + ')';
+    var c3 = ctl('c3', C.controls.c3.label, C.controls.c3.help, c3body, { note: c3note });
+    if (res.zone) {
+      var nth = res.counts.zoneN + 1;
+      c3.appendChild(h('div', { class: 'zinfo' },
+        res.zone.flags.map(function (f) { return chip(C.flagText[f] || f, 'mini'); }),
+        chip(T('nthAt', { n: nth }), nth > 2 ? 'bad' : nth === 2 ? 'warn' : '')));
+    }
+    C_(c3);
 
-      // C2 hướng
-      var c2body;
-      if (scen === 'B') {
-        c2body = seg(C.controls.c2.options, st.side || null, function (v) { set(function (s0) { if (v) s0.side = v; else delete s0.side; }); }, { label: C.controls.c2.label });
-      } else {
-        if (res.side) c2body = h('div', { class: 'autochip' }, chip(ui.sideText(res.side), ui.dirCls(res.side)), h('span', { class: 'muted', text: T('autoFilled') }));
-        else {
-          // hướng của A, D lấy từ chế độ (tầng 2); của C lấy từ phía của vùng (tầng 1): luôn chỉ đường tới ô chọn thật (REVIEW-2 mục 2, 13)
-          var toTier = scen === 'C' ? 1 : 2;
-          var noSideEver = scen === 'C' && res.zone && !(R.ZONE_TYPES[res.zone.type] || {}).needSide;   // vd HVN: không bao giờ có phía
-          c2body = h('div', { class: 'autochip' }, h('span', { class: 'muted', text: scen === 'C' ? (res.zone ? (noSideEver ? T('sideNoneZone') : T('sideNeedZone')) : T('sideAfterZone')) : T('sideNeedRegime') }),
-            (scen === 'C' && !res.zone) || noSideEver ? null : btn(toTier === 1 ? T('goTier1') : T('goTier2'), function () { app.go(toTier); }, 'small', { 'data-testid': 'go-tier-' + toTier }));
-        }
-      }
-      var c2 = ctl('c2', C.controls.c2.label, C.controls.c2.help, c2body, { note: res.counter ? C.qd['QĐ-9'] + ' (' + C.unmeasured + ')' : null });
-      if (res.counter) {
-        c2.appendChild(h('div', { class: 'counter' }, chip(T('counterBias', { tp: res.exempt9 ? T('counterOk') : T('counterBad') }), res.exempt9 ? 'warn' : 'bad'),
-          res.exempt9 ? textInput(st.counterBiasReason || '', function (v) { set(function (s0) { s0.counterBiasReason = v; }); }, { placeholder: T('counterPh'), label: T('counterPh') }) : null));
-      }
-      el.appendChild(c2);
-
-      // C4
-      var c4ctl = C.controls.c4;
-      var c4 = ctl('c4', c4ctl.label, c4ctl.help, h('div', { class: 'row wrap' },
-        seg(c4ctl.options, st.c4 || null, function (v) { set(function (s0) { if (v) s0.c4 = v; else delete s0.c4; }); }, { label: c4ctl.label }),
-        numInput(st.c4num === undefined ? null : st.c4num, function (v) { set(function (s0) { s0.c4num = v; }, true); }, { placeholder: T('c4numPh'), label: T('c4numPh'), id: 'c4num' })));
-      el.appendChild(c4);
-      // C5
-      el.appendChild(ctl('c5', C.controls.c5.label, C.controls.c5.help, seg(C.controls.c5.options, st.c5 || null, function (v) { set(function (s0) { if (v) s0.c5 = v; else delete s0.c5; }); }, { label: C.controls.c5.label })));
-      // C6
-      el.appendChild(ctl('c6', C.controls.c6.label, C.controls.c6.help, numInput(st.c6 === undefined ? null : st.c6, function (v) { set(function (s0) { s0.c6 = v; }, true); }, { unit: T('unitGia'), placeholder: '0,0', label: C.controls.c6.label, id: 'c6', onCommit: function () { app.render({ keep: false }); } })));
-      // C7
-      if (scen === 'B') {
-        el.appendChild(ctl('c7', C.controls.c7dma.label, C.controls.c7dma.help, seg(C.controls.c7dma.options, (st.c7 || {}).dma || null, function (v) { set(function (s0) { s0.c7 = Object.assign({}, s0.c7); if (v) s0.c7.dma = v; else delete s0.c7.dma; }); }, { label: C.controls.c7dma.label })));
-      } else if (scen === 'D') {
-        el.appendChild(ctl('c7', C.controls.c7move.label, C.controls.c7move.help, h('div', { class: 'row wrap' },
-          numInput((st.c7 || {}).moveSize === undefined ? null : st.c7.moveSize, function (v) { set(function (s0) { s0.c7 = Object.assign({}, s0.c7); s0.c7.moveSize = v; }, true); }, { unit: T('unitGia'), label: C.controls.c7move.label, id: 'c7move', onCommit: function () { app.render({ keep: false }); } }),
-          h('span', { class: 'ctl-label inline', text: C.controls.c7deep.label }), ui.helpBtn(C.controls.c7deep.help),
-          seg(C.controls.c7deep.options, (st.c7 || {}).deep || null, function (v) { set(function (s0) { s0.c7 = Object.assign({}, s0.c7); if (v) s0.c7.deep = v; else delete s0.c7.deep; }); }, { label: C.controls.c7deep.label }))));
+    // C2 hướng
+    var c2body;
+    if (scen === 'B') {
+      c2body = seg(C.controls.c2.options, st.side || null, function (v) { set(function (s0) { if (v) s0.side = v; else delete s0.side; }); }, { label: C.controls.c2.label });
+    } else {
+      if (res.side) c2body = h('div', { class: 'autochip' }, chip(ui.sideText(res.side), ui.dirCls(res.side)), h('span', { class: 'muted', text: T('autoFilled') }));
+      else {
+        // hướng của A, D lấy từ chế độ (tầng 2); của C lấy từ phía của vùng (tầng 1): luôn chỉ đường tới ô chọn thật (REVIEW-2 mục 2, 13)
+        var toTier = scen === 'C' ? 1 : 2;
+        var noSideEver = scen === 'C' && res.zone && !(R.ZONE_TYPES[res.zone.type] || {}).needSide;   // vd HVN: không bao giờ có phía
+        c2body = h('div', { class: 'autochip' }, h('span', { class: 'muted', text: scen === 'C' ? (res.zone ? (noSideEver ? T('sideNoneZone') : T('sideNeedZone')) : T('sideAfterZone')) : T('sideNeedRegime') }),
+          (scen === 'C' && !res.zone) || noSideEver ? null : btn(toTier === 1 ? T('goTier1') : T('goTier2'), function () { app.go(toTier); }, 'small', { 'data-testid': 'go-tier-' + toTier }));
       }
     }
-
-    // ----- BẤM -----
-    if (sub === 'bam') {
-      if (scen !== 'C') {
-        el.appendChild(ctl('b1', C.controls.b1.label, C.controls.b1.help, seg(C.controls.b1.options, st.b1 || null, function (v) { set(function (s0) { if (v) s0.b1 = v; else delete s0.b1; }); }, { label: C.controls.b1.label }), {}));
-        if (lv === 'new' && !st.b1) el.lastChild.appendChild(h('ul', { class: 'criteria' }, C.controls.b1.criteria.map(function (t) { return h('li', { text: t }); })));
-      }
-      if (scen === 'B') {
-        el.appendChild(ctl('b2', C.controls.b2.label, C.controls.b2.help, seg(C.controls.b2.options, st.b2 || null, function (v) { set(function (s0) { if (v) s0.b2 = v; else delete s0.b2; }); }, { label: C.controls.b2.label })));
-      }
-      var b3 = ctl('b3', C.controls.b3.label, C.controls.b3.help, seg(C.controls.b3.options, st.b3 || null, function (v) { set(function (s0) { if (v) s0.b3 = v; else delete s0.b3; }); }, { label: C.controls.b3.label }));
-      if (lv === 'new' && !st.b3) b3.appendChild(h('ul', { class: 'criteria' }, C.controls.b3.criteria[scen].map(function (t) { return h('li', { text: t }); })));
-      el.appendChild(b3);
-
-      var cc0 = st.calc || {};
-      function setCalc(k, v) { set(function (s0) { s0.calc = Object.assign({}, s0.calc); s0.calc[k] = v; }, true); }
-      var b4 = ctl('b4', C.controls.b4.label, C.controls.b4.help, h('div', { class: 'row wrap' },
-        h('label', { class: 'mini-l' }, T('entryL'), numInput(cc0.entry === undefined ? null : cc0.entry, function (v) { setCalc('entry', v); }, { label: T('entryL'), placeholder: '0000,0', id: 'entry' })),
-        h('label', { class: 'mini-l' }, T('slL'), numInput(cc0.sl === undefined ? null : cc0.sl, function (v) { setCalc('sl', v); }, { label: T('slL'), placeholder: '0000,0', id: 'sl' })),
-        h('label', { class: 'mini-l' }, T('tpL'), numInput(cc0.tp === undefined ? null : cc0.tp, function (v) { setCalc('tp', v); }, { label: T('tpL'), placeholder: res.calc.tpSuggested !== null ? J.fmt(res.calc.tpSuggested) : T('tpAuto'), id: 'tp' })),
-        h('label', { class: 'mini-l' }, T('c6Again'), numInput(st.c6 === undefined ? null : st.c6, function (v) { set(function (s0) { s0.c6 = v; }, true); }, { label: T('c6Again'), unit: T('unitGia'), id: 'c6b' }))));
-      el.appendChild(b4);
-
-      var b5 = ctl('b5', C.controls.b5.label, C.controls.b5.help, seg(C.controls.b5.options, st.slPos || null, function (v) { set(function (s0) { if (v) s0.slPos = v; else delete s0.slPos; }); }, { label: C.controls.b5.label }));
-      if (lv === 'new' && !st.slPos) b5.appendChild(h('p', { class: 'criteria one', text: C.controls.b5.criteria[scen] }));
-      el.appendChild(b5);
+    var c2 = ctl('c2', C.controls.c2.label, C.controls.c2.help, c2body, { note: res.counter ? C.qd['QĐ-9'] + ' (' + C.unmeasured + ')' : null });
+    if (res.counter) {
+      c2.appendChild(h('div', { class: 'counter' }, chip(T('counterBias', { tp: res.exempt9 ? T('counterOk') : T('counterBad') }), res.exempt9 ? 'warn' : 'bad'),
+        res.exempt9 ? textInput(st.counterBiasReason || '', function (v) { set(function (s0) { s0.counterBiasReason = v; }); }, { placeholder: T('counterPh'), label: T('counterPh') }) : null));
     }
+    C_(c2);
+
+    // C4
+    var c4ctl = C.controls.c4;
+    C_(ctl('c4', c4ctl.label, c4ctl.help, h('div', { class: 'row wrap' },
+      seg(c4ctl.options, st.c4 || null, function (v) { set(function (s0) { if (v) s0.c4 = v; else delete s0.c4; }); }, { label: c4ctl.label }),
+      numInput(st.c4num === undefined ? null : st.c4num, function (v) { set(function (s0) { s0.c4num = v; }, true); }, { placeholder: T('c4numPh'), label: T('c4numPh'), id: 'c4num' }))));
+    // C5
+    C_(ctl('c5', C.controls.c5.label, C.controls.c5.help, seg(C.controls.c5.options, st.c5 || null, function (v) { set(function (s0) { if (v) s0.c5 = v; else delete s0.c5; }); }, { label: C.controls.c5.label })));
+    // C6
+    C_(ctl('c6', C.controls.c6.label, C.controls.c6.help, numInput(st.c6 === undefined ? null : st.c6, function (v) { set(function (s0) { s0.c6 = v; }, true); }, { unit: T('unitGia'), placeholder: '0,0', label: C.controls.c6.label, id: 'c6', onCommit: function () { app.render({ keep: false }); } })));
+    // C7
+    if (scen === 'B') {
+      C_(ctl('c7', C.controls.c7dma.label, C.controls.c7dma.help, seg(C.controls.c7dma.options, (st.c7 || {}).dma || null, function (v) { set(function (s0) { s0.c7 = Object.assign({}, s0.c7); if (v) s0.c7.dma = v; else delete s0.c7.dma; }); }, { label: C.controls.c7dma.label })));
+    } else if (scen === 'D') {
+      C_(ctl('c7', C.controls.c7move.label, C.controls.c7move.help, h('div', { class: 'row wrap' },
+        numInput((st.c7 || {}).moveSize === undefined ? null : st.c7.moveSize, function (v) { set(function (s0) { s0.c7 = Object.assign({}, s0.c7); s0.c7.moveSize = v; }, true); }, { unit: T('unitGia'), label: C.controls.c7move.label, id: 'c7move', onCommit: function () { app.render({ keep: false }); } }),
+        h('span', { class: 'ctl-label inline', text: C.controls.c7deep.label }), ui.helpBtn(C.controls.c7deep.help),
+        seg(C.controls.c7deep.options, (st.c7 || {}).deep || null, function (v) { set(function (s0) { s0.c7 = Object.assign({}, s0.c7); if (v) s0.c7.deep = v; else delete s0.c7.deep; }); }, { label: C.controls.c7deep.label }))));
+    }
+    // B1 (A, B, D) và B2 (B): nhìn được trên nhịp hồi trước khi nến xác nhận đóng ⇒ hỏi ở Canh (QĐ-25)
+    if (scen !== 'C') {
+      var b1 = ctl('b1', C.controls.b1.label, C.controls.b1.help, seg(C.controls.b1.options, st.b1 || null, function (v) { set(function (s0) { if (v) s0.b1 = v; else delete s0.b1; }); }, { label: C.controls.b1.label }), {});
+      if (lv === 'new' && !st.b1) b1.appendChild(h('ul', { class: 'criteria' }, C.controls.b1.criteria.map(function (t) { return h('li', { text: t }); })));
+      C_(b1);
+    }
+    if (scen === 'B') {
+      C_(ctl('b2', C.controls.b2.label, C.controls.b2.help, seg(C.controls.b2.options, st.b2 || null, function (v) { set(function (s0) { if (v) s0.b2 = v; else delete s0.b2; }); }, { label: C.controls.b2.label })));
+    }
+    // cực trị cụm hấp thụ (B) / đỉnh nhịp hồi (D): nhìn được trước; máy tự kiểm SL ở bước Bấm (B5 tự kiểm)
+    if (scen === 'B' || scen === 'D') {
+      var c8 = C.controls[scen === 'B' ? 'c8B' : 'c8D'];
+      C_(ctl('c8', c8.label, c8.help, numInput(st.ext === undefined ? null : st.ext, function (v) { set(function (s0) { if (v === null) delete s0.ext; else s0.ext = v; }, true); }, { label: c8.label, placeholder: '0000,0', id: 'ext', onCommit: function () { app.render({ keep: false }); } })));
+    }
+
+    // Canh: một khối; đủ rồi thì tự gập thành một dòng tóm tắt (đúng một lần cho mỗi kèo), bấm để mở lại
+    var canhOpen = app.ui.canhOpen !== false;
+    var summary = T('canhSummary', { scen: scen, zone: res.zone ? ui.zoneLabel(res.zone) : '—', side: res.side ? ui.sideText(res.side).toUpperCase() : '—' });
+    var canhBox = h('section', { class: 'panel canh' + (canhOpen ? ' open' : ' closed'), 'data-testid': 'canh' },
+      h('button', { type: 'button', class: 'canhhead', 'aria-expanded': canhOpen ? 'true' : 'false', 'data-testid': 'canh-toggle',
+        onclick: function () { app.ui.canhOpen = !canhOpen; app.render({ keep: false }); } },
+        h('b', { text: T('canhTitle') }), h('span', { class: 'muted', text: canhOpen ? T('canhHint') : (filled ? '✓ ' : '') + summary }), h('span', { class: 'caret', text: canhOpen ? '▾' : '▸' })),
+      h('div', { class: 'canhbody', hidden: canhOpen ? null : true }, canhEls));
+    el.appendChild(canhBox);
+
+    // ===== BẤM (sau khi nến xác nhận đóng): nến xác nhận, giá vào, SL — luôn hiện, tối đa 3 thao tác =====
+    var bamEls = [];
+    var b3 = ctl('b3', C.controls.b3.label, C.controls.b3.help, seg(C.controls.b3.options, st.b3 || null, function (v) { set(function (s0) { if (v) s0.b3 = v; else delete s0.b3; }); }, { label: C.controls.b3.label }));
+    b3.querySelector('.ctl-label').appendChild(h('kbd', { class: 'keyhint', text: 'Đ' }));
+    if (lv === 'new' && !st.b3) b3.appendChild(h('ul', { class: 'criteria' }, C.controls.b3.criteria[scen].map(function (t) { return h('li', { text: t }); })));
+    bamEls.push(b3);
+
+    var cc0 = st.calc || {};
+    function setCalc(k, v) { set(function (s0) { s0.calc = Object.assign({}, s0.calc); s0.calc[k] = v; }, true); }
+    // Enter ở ô SL khi phán quyết là ENTRY = bấm "Vào lệnh" (QĐ-25)
+    function enterIfEntry() { if (app.res.verdict === 'ENTRY') { if (app.res.paper) app.enter({ kind: 'market', paper: true }); else app.openEnter(); } }
+    var b4 = ctl('b4', C.controls.b4.label, C.controls.b4.help, h('div', { class: 'row wrap' },
+      h('label', { class: 'mini-l' }, T('entryL'), numInput(cc0.entry === undefined ? null : cc0.entry, function (v) { setCalc('entry', v); }, { label: T('entryL'), placeholder: '0000,0', id: 'entry' })),
+      h('label', { class: 'mini-l' }, T('slL'), numInput(cc0.sl === undefined ? null : cc0.sl, function (v) { setCalc('sl', v); }, { label: T('slL'), placeholder: '0000,0', id: 'sl', onEnter: function (v) { setCalc('sl', v); enterIfEntry(); } })),
+      h('label', { class: 'mini-l' }, T('tpL'), numInput(cc0.tp === undefined ? null : cc0.tp, function (v) { setCalc('tp', v); }, { label: T('tpL'), placeholder: res.calc.tpSuggested !== null ? J.fmt(res.calc.tpSuggested) : T('tpAuto'), id: 'tp' })),
+      h('label', { class: 'mini-l' }, T('c6Again'), numInput(st.c6 === undefined ? null : st.c6, function (v) { set(function (s0) { s0.c6 = v; }, true); }, { label: T('c6Again'), unit: T('unitGia'), id: 'c6b' }))));
+    bamEls.push(b4);
+    el.appendChild(h('section', { class: 'panel bam', 'data-testid': 'bam' }, h('div', { class: 'canhhead static' }, h('b', { text: T('bamTitle') }), h('span', { class: 'muted', text: T('bamHint') })), bamEls));
 
     var calc = calcBox(app);
     el.appendChild(calc);
@@ -253,7 +269,7 @@
       if (res.counter) rest += ' · ' + T('counterTag');
       main.appendChild(h('div', { class: 'vtext entry', 'data-testid': 'entry-text' }, h('span', { class: 'ebig', text: big }), h('span', { class: 'erest', text: rest })));
       if (res.paper) actions.appendChild(btn(T('paperBtn'), function () { app.enter({ kind: 'market', paper: true }); }, 'primary big', { 'data-testid': 'btn-paper' }));
-      else actions.appendChild(btn(T('enterBtn'), function () { app.openEnter(); }, 'primary big', { 'data-testid': 'btn-entry', title: 'Enter' }));
+      else { var eb = btn(T('enterBtn'), function () { app.openEnter(); }, 'primary big', { 'data-testid': 'btn-entry', title: 'Enter' }); eb.appendChild(h('kbd', { class: 'keyhint', text: 'Enter' })); actions.appendChild(eb); }
     } else if (v === 'WAIT') {
       var items = res.missing.slice(0, 3);
       var list = h('span', { class: 'vlist' });

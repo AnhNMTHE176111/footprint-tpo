@@ -80,6 +80,24 @@
     }
     return out;
   }
+  // B5 tự kiểm (QĐ-25). Trả 'right' / 'wrong' / null (chưa kiểm được, hoặc dữ liệu cũ đã có slPos tay)
+  function derivedSlPos(c) {
+    var s = c.s || {};
+    if (s.slPos) return null;       // dữ liệu cũ có chọn tay ('right' / 'wrong' / 'unsure'): giữ nguyên
+    var cl = c.calc;
+    if (!cl || !cl.numsOk || !c.side) return null;
+    var ref = null;
+    if (c.scen === 'A' || c.scen === 'C') {
+      var z = c.zone;
+      if (!z || z.lo === null) return null;
+      ref = c.side === 'sell' ? z.hi : z.lo;      // mép xa của vùng (phía SL)
+    } else if (c.scen === 'B' || c.scen === 'D') {
+      ref = num(s.ext);
+    }
+    if (ref === null) return null;
+    var ok = c.side === 'sell' ? cl.sl >= ref + T.slPad - EPS : cl.sl <= ref - T.slPad + EPS;
+    return ok ? 'right' : 'wrong';
+  }
   var NYSE_WARN = { at: '20:30', tz: 'ET', minutesBefore: 5, minutesAfter: 5 };
 
   // Bảng loại vùng: cờ, phía
@@ -292,7 +310,14 @@
     // B4 — giá vào / SL / TP
     { code: 'WAIT_CALC', scope: 'ABCD', effect: 'WAIT', when: function (c) { return !c.calc.numsOk; } },
     // B5 — SL đúng chỗ?
-    { code: 'WAIT_B5', scope: 'ABCD', effect: 'WAIT', when: function (c) { return c.s.slPos !== 'right' && c.s.slPos !== 'wrong'; } },
+    // QĐ-25: B5 tự kiểm từ dữ liệu (A, C: SL qua mép xa của vùng + 0,3; B, D: SL qua cực trị người dùng nhập ở bước Canh + 0,3).
+    // Ô 3 trạng thái cũ không còn trên màn hình; dữ liệu cũ có slPos 'right' / 'wrong' vẫn được tôn trọng (derivedSlPos trả null).
+    // CHỜ khi chưa tự kiểm được: B, D thiếu cực trị (nhắc ngay ở Canh); A, C chỉ nhắc khi đã có giá vào + SL mà vùng không có giá.
+    { code: 'WAIT_B5', scope: 'ABCD', effect: 'WAIT', when: function (c) {
+      if (c.s.slPos === 'right' || c.s.slPos === 'wrong') return false;
+      if (c.scen === 'B' || c.scen === 'D') return num(c.s.ext) === null;
+      return c.calc.numsOk;
+    } },
     { code: 'NO_SL_POS', scope: 'ABCD', effect: 'NO', when: function (c) { return c.s.slPos === 'wrong'; } },
     { code: 'NO_SL_SIDE', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && !c.calc.slSideOk; } },
     { code: 'NO_SL_FLOOR', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && num(c.s.c6) > 0 && num(c.s.c6) <= T.c6Max && !c.calc.floorOk; } },
@@ -318,7 +343,7 @@
 
   return {
     APP_VERSION: APP_VERSION, T: T, EPS: EPS, TARGET_R: TARGET_R, BE_R: BE_R, HALF_ORDER: HALF_ORDER, SCENARIOS: SCENARIOS,
-    MARKS: MARKS, NYSE_WARN: NYSE_WARN, defaultWindows: defaultWindows, effectiveWindows: effectiveWindows, effectiveNewsDay: effectiveNewsDay, ZONE_TYPES: ZONE_TYPES, ZONE_ORDER: ZONE_ORDER,
+    MARKS: MARKS, NYSE_WARN: NYSE_WARN, defaultWindows: defaultWindows, effectiveWindows: effectiveWindows, effectiveNewsDay: effectiveNewsDay, derivedSlPos: derivedSlPos, ZONE_TYPES: ZONE_TYPES, ZONE_ORDER: ZONE_ORDER,
     RULES: RULES, RULE_ORDER: RULE_ORDER, enrichZone: enrichZone, zoneGap: zoneGap, hasFlag: hasFlag, coincidesEdge: coincidesEdge,
     autoBias: autoBias, effectiveBias: effectiveBias, effectiveRegime: effectiveRegime, dirToSide: dirToSide, isCounter: isCounter,
     against: against, isScenIn: isScenIn, num: num, round1: round1, round2: round2

@@ -87,7 +87,7 @@ const dynamic = [];
 ['NO_CARD', 'BIAS_WAIT', 'OPEN_TRADE', 'NO_OPEN'].forEach((c) => dynamic.push('lock_' + c));
 ['NO_CARD', 'BIAS_WAIT', 'OPEN_TRADE'].forEach((c) => dynamic.push('lockGo_' + c));
 ['q1', 'q5', 'q6', 'vwapW', 'zones'].forEach((c) => dynamic.push('need_' + c));
-for (let i = 0; i < 10; i++) dynamic.push('key' + i);
+for (let i = 0; i < 11; i++) dynamic.push('key' + i);
 for (let i = 1; i <= 7; i++) dynamic.push('jh' + i);
 dynamic.push('chipOpen', 'chipOpenPaper');
 dynamic.forEach((k) => used.add(k));

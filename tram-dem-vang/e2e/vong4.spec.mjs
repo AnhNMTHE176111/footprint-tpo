@@ -44,10 +44,10 @@ async function walkB(page) {
   await page.waitForSelector('[data-ctl="b3"]');
   await page.click(seg('b1', 'U'));
   await page.click(seg('b2', 'down'));
+  await fillNum(page, 'ext', '4175');
   await page.click(seg('b3', 'ok'));
   await fillNum(page, 'entry', '4177');
   await fillNum(page, 'sl', '4174.7');
-  await page.click(seg('b5', 'right'));
 }
 const settle = (page) => page.waitForFunction(() => parseInt(getComputedStyle(document.documentElement).getPropertyValue('--vbar-h'), 10) === document.getElementById('verdict').offsetHeight);
 
@@ -99,8 +99,9 @@ test('v4-4 · thông báo nổi không chặn click: bấm "Kèo mới" rồi b�
     const r = await page.$eval('.toast-item', (e) => { const b = e.getBoundingClientRect(); return [b.left, b.top, b.right, b.bottom]; });
     const main = await page.$eval('#main', (e) => { const b = e.getBoundingClientRect(); return b.right; });
     assert.ok(r[0] >= main - 1 || r[3] < 100, 'thông báo nằm giữa vùng nút: ' + r.join(','));   // ở góc, không đè cột nút
-    await mclick(page, seg('c1', 'B'));                               // bấm ngay, không chờ toast tắt
-    assert.equal((await stored(page)).nights[KEY].setup.scenario, 'B');
+    await mclick(page, seg('c5', 'near'));                            // bấm ngay, không chờ toast tắt
+    assert.equal((await stored(page)).nights[KEY].setup.c5, 'near');
+    assert.equal((await stored(page)).nights[KEY].setup.scenario, 'B');   // Kèo mới giữ kịch bản (QĐ-25)
     await mclick(page, seg('c4', 'none'));
     assert.equal((await stored(page)).nights[KEY].setup.c4, 'none');
   });
@@ -141,21 +142,24 @@ test('v4-6 · tầng 2: đổi hướng phá sau khi công nhận ⇒ bước 1,
   });
 });
 
-test('v4-7 · Canh đủ ⇒ tự sang Bấm đúng một lần; có nút "Quay lại Canh"; sửa Canh sau đó không nhảy nữa', async () => {
+test('v4-7 · QĐ-25: Canh đủ ⇒ tự gập thành một dòng đúng một lần; bấm dòng để mở lại; sửa Canh sau đó không gập lại', async () => {
   await withPage(buildState('B'), null, async ({ page }) => {
     await page.click('[data-tier-btn="3"]');
     await page.click(seg('c1', 'B')); await page.click(seg('c3', 'z1')); await page.click(seg('c2', 'buy'));
     await page.click(seg('c4', 'same')); await page.click(seg('c5', 'near'));
     await fillNum(page, 'c6', '2');
     await page.click('[data-ctl="c7"] [data-v="flat"]');
-    await page.waitForSelector('[data-ctl="b3"]');
-    assert.equal(await page.locator('[data-testid="back-canh"]').count(), 1);
-    await mclick(page, '[data-testid="back-canh"]');
+    await page.click(seg('b1', 'U')); await page.click(seg('b2', 'down'));
+    assert.equal(await page.locator('[data-testid="canh"].closed').count(), 0);   // chưa có cực trị: chưa đủ
+    await fillNum(page, 'ext', '4175');
+    await page.waitForSelector('[data-testid="canh"].closed');
+    assert.equal(await page.locator('[data-ctl="b3"]').count(), 1);                 // Bấm luôn hiện
+    assert.match(await page.textContent('[data-testid="canh-toggle"]'), /B · .* · BUY/);
+    await mclick(page, '[data-testid="canh-toggle"]');
     await page.waitForSelector('[data-ctl="c4"]');
-    await fillNum(page, 'c6', ''); await fillNum(page, 'c6', '3');    // Canh thiếu rồi đủ lại
+    await fillNum(page, 'c6', ''); await fillNum(page, 'c6', '3');                  // Canh thiếu rồi đủ lại
     await wait(page, 200);
-    assert.equal(await page.locator('[data-ctl="c4"]').count(), 1);
-    assert.equal(await page.locator('[data-ctl="b3"]').count(), 0);
+    assert.equal(await page.locator('[data-testid="canh"].open').count(), 1);       // không tự gập lần nữa
   });
 });
 

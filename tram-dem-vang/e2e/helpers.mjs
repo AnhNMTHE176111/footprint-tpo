@@ -74,3 +74,8 @@ export async function fillNum(page, id, value) {
   await page.press(sel, 'Tab');
 }
 export async function verdict(page) { return page.getAttribute('[data-testid="verdict"]', 'data-verdict'); }
+
+// Canh tự gập thành một dòng khi đã đủ (QĐ-25); mở lại trước khi sửa một ô của Canh
+export async function openCanh(page) {
+  if (await page.locator('[data-testid="canh"].closed').count()) await page.click('[data-testid="canh-toggle"]');
+}

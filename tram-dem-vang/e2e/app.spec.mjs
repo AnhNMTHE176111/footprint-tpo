@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { launch, openPage, buildState, seg, fillNum, verdict, ROOT, KEY } from './helpers.mjs';
+import { launch, openPage, buildState, seg, fillNum, verdict, openCanh, ROOT, KEY } from './helpers.mjs';
 
 let browser;
 test.before(async () => { browser = await launch(); });
@@ -14,21 +14,19 @@ async function withPage(state, opts, fn) {
   try { await fn(o); } finally { await o.context.close(); }
 }
 
-// đường đi của kịch bản A (đang vừa phá xuống): Canh 4 thao tác, Bấm 5 thao tác
+// QĐ-25: Canh (nhìn được trước khi nến xác nhận đóng) gồm cả B1, B2 và cực trị; Bấm tối đa 3 thao tác: nến xác nhận, giá vào, SL
 async function walkA(page) {
   let ops = 0;
   const click = async (sel) => { await page.click(sel); ops++; };
   await click(seg('c1', 'A'));                 // 1 kịch bản (vùng và hướng tự điền)
   await click(seg('c4', 'none'));              // 2 bong bóng
   await click(seg('c5', 'near'));              // 3 cách vùng
-  await fillNum(page, 'c6', '2,0'); ops++;     // 4 nến M1 cao nhất  ⇒ tự sang bước Bấm
+  await fillNum(page, 'c6', '2,0'); ops++;     // 4 nến M1 cao nhất
+  await click(seg('b1', 'U'));                 // 5 nhịp hồi U  ⇒ Canh đủ, tự gập
   const canh = ops;
-  await page.waitForSelector('[data-ctl="b3"]');
-  await click(seg('b1', 'U'));                 // 1
-  await click(seg('b3', 'ok'));                // 2
-  await fillNum(page, 'entry', '4193.0'); ops++;   // 3 (nhận dấu chấm)
-  await fillNum(page, 'sl', '4195,4'); ops++;      // 4
-  await click(seg('b5', 'right'));             // 5   (TP gợi ý sẵn, không tính)
+  await click(seg('b3', 'ok'));                // 1
+  await fillNum(page, 'entry', '4193.0'); ops++;   // 2 (nhận dấu chấm)
+  await fillNum(page, 'sl', '4195,4'); ops++;      // 3 (TP gợi ý sẵn, không tính; B5 máy tự kiểm)
   return { canh, bam: ops - canh };
 }
 async function walkB(page) {
@@ -40,15 +38,14 @@ async function walkB(page) {
   await click(seg('c4', 'same'));              // 4
   await click(seg('c5', 'near'));              // 5
   await page.click('[data-ctl="c7"] [data-v="flat"]'); ops++;   // 6 DMA
-  await fillNum(page, 'c6', '2'); ops++;       // 7 ⇒ tự sang Bấm
+  await fillNum(page, 'c6', '2'); ops++;       // 7
+  await click(seg('b1', 'U'));                 // 8
+  await click(seg('b2', 'down'));              // 9
+  await fillNum(page, 'ext', '4175'); ops++;   // 10 cực trị cụm ⇒ Canh đủ, tự gập
   const canh = ops;
-  await page.waitForSelector('[data-ctl="b3"]');
-  await click(seg('b1', 'U'));                 // 1
-  await click(seg('b2', 'down'));              // 2
-  await click(seg('b3', 'ok'));                // 3
-  await fillNum(page, 'entry', '4177'); ops++; // 4
-  await fillNum(page, 'sl', '4174.7'); ops++;  // 5
-  await click(seg('b5', 'right'));             // 6
+  await click(seg('b3', 'ok'));                // 1
+  await fillNum(page, 'entry', '4177'); ops++; // 2
+  await fillNum(page, 'sl', '4174.7'); ops++;  // 3
   return { canh, bam: ops - canh };
 }
 
@@ -61,10 +58,10 @@ async function enterAndClose(page, kind) {
   await page.waitForSelector('[data-tier="5"]');
 }
 
-test('1a · đường đi tới ENTRY và ghi sổ — kịch bản A (4 thao tác Canh + 5 Bấm)', async () => {
+test('1a · đường đi tới ENTRY và ghi sổ — kịch bản A (5 thao tác Canh + 3 Bấm)', async () => {
   await withPage(buildState('A'), null, async ({ page, errors }) => {
     const n = await walkA(page);
-    assert.deepEqual(n, { canh: 4, bam: 5 });
+    assert.deepEqual(n, { canh: 5, bam: 3 });
     assert.equal(await verdict(page), 'ENTRY');
     const text = await page.textContent('[data-testid="entry-text"]');
     assert.match(text, /ENTRY SELL 4193,0 · SL 4195,4 \(2,4 giá\) · TP 4185,8 · 1:3 · cỡ đủ/);
@@ -76,10 +73,10 @@ test('1a · đường đi tới ENTRY và ghi sổ — kịch bản A (4 thao t�
   });
 });
 
-test('1b · đường đi tới ENTRY và ghi sổ — kịch bản B (7 thao tác Canh + 6 Bấm)', async () => {
+test('1b · đường đi tới ENTRY và ghi sổ — kịch bản B (10 thao tác Canh + 3 Bấm)', async () => {
   await withPage(buildState('B'), null, async ({ page, errors }) => {
     const n = await walkB(page);
-    assert.deepEqual(n, { canh: 7, bam: 6 });
+    assert.deepEqual(n, { canh: 10, bam: 3 });
     assert.equal(await verdict(page), 'ENTRY');
     assert.match(await page.textContent('[data-testid="entry-text"]'), /ENTRY BUY 4177,0 · SL 4174,7 \(2,3 giá\) · TP 4183,9 · 1:3 · cỡ đủ/);
     await enterAndClose(page, 'SL');
@@ -116,7 +113,7 @@ test('2 · tầng 3 khóa khi chưa chốt thẻ / bias CHỜ / có lệnh', asy
 test('3 · nhịp hồi V ⇒ KHÔNG VÀO màu đỏ', async () => {
   await withPage(buildState('A'), null, async ({ page }) => {
     await walkA(page);
-    await page.click(seg('b1', 'V'));
+    await openCanh(page); await page.click(seg('b1', 'V'));
     assert.equal(await verdict(page), 'NO');
     const bg = await page.$eval('[data-testid="verdict"]', (e) => getComputedStyle(e).backgroundColor);
     assert.equal(bg, 'rgb(214, 60, 66)');
@@ -178,7 +175,10 @@ test('7 · phím tắt chạy ở tầng 3 và tắt khi đang gõ vào ô nhậ
     assert.equal(await page.getAttribute(seg('c1', 'B'), 'aria-pressed'), 'true');
     await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(() => document.activeElement.tagName), 'BODY');
-    await page.keyboard.press('n');                               // kèo mới
+    await page.keyboard.press('n');                               // kèo mới: GIỮ C1–C3 và C6 (QĐ-25), xóa câu quan sát
+    assert.equal(await page.getAttribute(seg('c1', 'B'), 'aria-pressed'), 'true');
+    assert.equal(await page.getAttribute(seg('c2', 'sell'), 'aria-pressed'), 'true');
+    await page.click('[data-testid="clear-setup"]');              // Xóa hết
     assert.equal(await page.getAttribute(seg('c1', 'B'), 'aria-pressed'), 'false');
     await page.keyboard.press('1');                               // A đang tắt (cân bằng) ⇒ báo lý do, không chọn
     assert.equal(await page.getAttribute(seg('c1', 'A'), 'aria-pressed'), 'false');
@@ -193,13 +193,13 @@ test('7 · phím tắt chạy ở tầng 3 và tắt khi đang gõ vào ô nhậ
 test('8 · "Tôi vẫn vào (phá luật)" hai lần ⇒ TẮT MÁY', async () => {
   await withPage(buildState('A'), null, async ({ page }) => {
     await walkA(page);
-    await page.click(seg('b1', 'V'));                             // V ⇒ KHÔNG VÀO
+    await openCanh(page); await page.click(seg('b1', 'V'));       // V ⇒ KHÔNG VÀO
     assert.equal(await verdict(page), 'NO');
     for (let i = 0; i < 2; i++) {
       if (i > 0) { // lệnh đầu đã ghi ⇒ tầng 3 về "Kèo mới"; làm lại kèo
         await page.click('[data-tier-btn="3"]'); await page.waitForSelector(seg('c1', 'A'));
         assert.equal(await page.getAttribute(seg('c1', 'A'), 'aria-pressed'), 'false');
-        await walkA(page); await page.click(seg('b1', 'V'));
+        await walkA(page); await openCanh(page); await page.click(seg('b1', 'V'));
         assert.equal(await verdict(page), 'NO');
       }
       await page.click('[data-testid="btn-force"]');

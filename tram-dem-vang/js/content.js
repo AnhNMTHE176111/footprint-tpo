@@ -93,7 +93,7 @@
     NO_D_DEEP: { text: 'Nhịp hồi đã quá 70 % move — không còn là hồi.', htRef: '5' },
     NO_V_PULLBACK: { text: 'Nhịp hồi hình V — phe hồi đang thắng.', htRef: '4.1' },
     NO_MOMENTUM: { text: 'Thân nến và delta tăng dần — đó là đà, không phải hấp thụ.', htRef: '4.2' },
-    NO_SL_POS: { text: 'SL không đúng chỗ theo kịch bản.', htRef: '6' },
+    NO_SL_POS: { text: 'SL chưa qua mép vùng hoặc cực trị cộng 0,3 giá.', htRef: '6' },
     NO_SL_SIDE: { text: 'SL nằm sai phía so với giá vào.', htRef: '6' },
     NO_SL_FLOOR: { text: 'SL {sl} nhỏ hơn nến {c6} — đẩy SL ra hoặc bỏ kèo.', htRef: '6' },
     NO_SL_CAP: { text: 'Khoảng SL quá 4 giá — bỏ kèo hoặc chờ hồi sâu hơn.', htRef: '6' },
@@ -121,14 +121,14 @@
     WAIT_B3: { text: 'Nến xác nhận', ctl: 'b3', htRef: '5' },
     WAIT_B3_NOT: { text: 'Chờ nến xác nhận đạt chuẩn', ctl: 'b3', htRef: '5' },
     WAIT_CALC: { text: 'Giá vào và SL', ctl: 'b4', htRef: '6' },
-    WAIT_B5: { text: 'SL đúng chỗ', ctl: 'b5', htRef: '6' },
+    WAIT_B5: { text: 'Cực trị cụm / đỉnh nhịp hồi để kiểm SL', ctl: 'c8', htRef: '6' },
     WAIT_CAPITAL: { text: 'Cài vốn và % rủi ro để tính số hợp đồng', htRef: 'ST §6' }
   };
 
   // mã → ô điều khiển để bấm vào xem / sửa (NO_UNCLEAR chọn theo ô đang "không rõ")
   var ctlMap = {
     NO_BUBBLE_AGAINST: 'c4', NO_BACK: 'c5', NO_DMA_SLOPE: 'c7', NO_D_NO_MOVE: 'c7', NO_D_DEEP: 'c7', NO_V_PULLBACK: 'b1', NO_MOMENTUM: 'b2',
-    NO_SL_POS: 'b5', NO_SL_SIDE: 'b4', NO_SL_FLOOR: 'b4', NO_SL_CAP: 'b4', NO_RR: 'b4', NO_TP_PAST_ZONE: 'b4', NO_SIZE_ZERO: 'b4', NO_BIAS_NONE_EDGE: 'c3', NO_ZONE_3RD: 'c3', NO_BANNED_ZONE: 'c3',
+    NO_SL_POS: 'b4', NO_SL_SIDE: 'b4', NO_SL_FLOOR: 'b4', NO_SL_CAP: 'b4', NO_RR: 'b4', NO_TP_PAST_ZONE: 'b4', NO_SIZE_ZERO: 'b4', NO_BIAS_NONE_EDGE: 'c3', NO_ZONE_3RD: 'c3', NO_BANNED_ZONE: 'c3',
     NO_MID_RANGE: 'c3', NO_C_NOT_EDGE: 'c3', NO_PENDING_ACCEPT: 'c3', NO_B_RANK: 'c3', NO_FIGHT_BREAK: 'c3', NO_COUNTER_BIAS_SCENARIO: 'c2', NO_COUNTER_BIAS_ZONE: 'c2',
     DIS_LONGEST_BAR: 'c1', DIS_NOT_BROKEN: 'c1', DIS_PENDING_ACCEPT: 'c1', DIS_NO_MOVE: 'c1', DIS_M5_OUTSIDE: 'c1', DIS_USE_D: 'c1', DIS_THIN_NO_FADE: 'c1',
     DIS_BREAK_AGAINST_BIAS: 'c1', DIS_EARLY_BREAK: 'c1', DIS_BIAS_NONE: 'c1', DIS_NO_EDGE: 'c1'
@@ -214,6 +214,8 @@
         C: ['Râu xuyên cạnh rồi đóng lại trong', 'Thân không ngắn, râu ngược không dài', 'Delta ủng hộ'],
         D: ['Đỉnh hồi có bong bóng hấp thụ phe hồi, hoặc nến hồi delta thuận đóng dưới nửa thân', 'Nến xác nhận đóng theo chiều cũ, thân dài, delta cùng dấu']
       } },
+    c8B: { label: 'Cực trị cụm hấp thụ', help: { text: 'Giá thấp nhất của cụm khi buy (cao nhất khi sell). Máy kiểm SL phải nằm sau cực trị này ít nhất 0,3 giá.', ref: 'luat-sl' } },
+    c8D: { label: 'Đỉnh nhịp hồi', help: { text: 'Đỉnh của nhịp hồi khi sell (đáy khi buy). Máy kiểm SL phải nằm sau điểm này ít nhất 0,3 giá.', ref: 'luat-sl' } },
     b4: { label: 'Giá vào, SL, TP', help: { text: 'Gõ giá vào và SL. TP gợi ý sẵn theo R mục tiêu hoặc vùng kế tiếp, nếu gần hơn.', ref: 'tp-be' } },
     b5: { label: 'SL đúng chỗ', help: { text: 'SL lai: cấu trúc cộng 0,3 giá đệm. Sau đó kiểm sàn nhiễu và trần 4 giá.', ref: 'luat-sl' },
       options: [{ v: 'right', label: 'Đúng chỗ' }, { v: 'unsure', label: 'Chưa chắc' }, { v: 'wrong', label: 'Sai chỗ', bad: true }],
@@ -333,8 +335,9 @@
     lock_OPEN_TRADE: 'Đang có lệnh mở — tầng 3 khóa cho tới khi đóng lệnh.', lock_NO_OPEN: 'Chưa có lệnh nào đang mở.',
     lockGo_NO_CARD: 'Về tầng 1', lockGo_BIAS_WAIT: 'Về tầng 1', lockGo_OPEN_TRADE: 'Sang tầng 4',
     // --- tầng 3 ---
-    tabLabel: 'Hai bước của kèo', tabCanh: 'Canh', tabBam: 'Bấm', canhHint: 'Trước khi nến xác nhận đóng.', bamHint: 'Sau khi nến xác nhận đóng.',
-    newSetup: 'Kèo mới', newSetupDone: 'Đã xóa kèo, bắt đầu lại.', idleNote: 'Đã hơn 10′ không thao tác — nến M1 đã khác, kiểm lại.',
+    t3Hint: 'Canh trước khi nến xác nhận đóng; Bấm sau khi nến đóng.', canhTitle: 'Canh', bamTitle: 'Bấm', canhHint: 'Làm lúc còn thời gian.', bamHint: 'Ba việc: nến xác nhận, giá vào, SL.',
+    canhSummary: '{scen} · {zone} · {side}', clearAll: 'Xóa hết', clearAllDone: 'Đã xóa cả kèo.',
+    newSetup: 'Kèo mới', newSetupDone: 'Kèo mới: giữ kịch bản, vùng, C6; đã xóa các câu quan sát.', idleNote: 'Đã hơn 10′ không thao tác — nến M1 đã khác, kiểm lại.',
     offShort: 'tắt', pickScenario: 'Chọn một kịch bản đang bật để bắt đầu.', scenSummary: '{name} · mục tiêu {tp} · be {be}', scenImgAlt: 'Ví dụ kịch bản {name}',
     c3NoEdge: 'Chưa chọn cạnh vừa phá ở tầng 2', autoFilled: '(tự điền)', nthAt: 'Lần thứ {n} tại vùng', 
     counterBias: 'Ngược bias: {tp}', counterOk: 'được phép, cỡ ½, TP 2R', counterBad: 'không được phép', counterPh: 'Lý do ngược bias', c4numPh: '±số',
@@ -380,7 +383,7 @@
     setKeys: 'Phím tắt tầng 3', keysHelp: 'Bấm ? để xem danh sách phím tắt.', wipe: 'Xóa toàn bộ dữ liệu', wipeTitle: 'Xóa toàn bộ dữ liệu?',
     wipeText: 'Mọi đêm, thẻ phiên và sổ lệnh trên máy này sẽ mất. Nên tải JSON trước.', wipeOk: 'Xóa hết', wiped: 'Đã xóa dữ liệu.', version: 'Phiên bản {v}',
     keysTitle: 'Phím tắt (tầng 3)', key0: 'Chọn kịch bản A', key1: 'Chọn kịch bản B', key2: 'Chọn kịch bản C', key3: 'Chọn kịch bản D', key4: 'Chọn hướng buy / sell (chỉ B)',
-    key5: 'Nhịp hồi U / V', key6: 'Nút chính (Vào lệnh)', key7: 'Kèo mới', key8: 'Rời ô nhập, đóng hộp thoại', key9: 'Mở bảng phím tắt',
+    key5: 'Nhịp hồi U / V', key6: 'Nến xác nhận đạt chuẩn', key7: 'Nút chính (Vào lệnh); Enter ở ô SL cũng vào lệnh khi ENTRY', key8: 'Kèo mới (giữ vùng, hướng, C6)', key9: 'Rời ô nhập, đóng hộp thoại', key10: 'Mở bảng phím tắt',
     // --- vòng 2 ---
     zoneHasTrades: 'Vùng này đã có lệnh trong sổ nên không xóa được (đếm 2 lần mỗi vùng).',
     glossaryBtn: 'Từ điển', glossaryTitle: 'Từ điển', glossaryHint: 'Định nghĩa ngắn các từ hay gặp. Đầy đủ ở trang Hệ thống Đêm Vàng.', openGlossary: 'Mở Từ điển',
@@ -405,7 +408,7 @@
     // --- vòng 4 ---
     
     boReset: 'Đổi hướng hoặc cạnh là một cú phá mới: công nhận lại từ bước 1.',
-    jumpNote: 'Canh đã đủ nên công cụ chuyển sang Bấm (chỉ một lần cho kèo này).', backCanh: '← Quay lại Canh',
+
     sideNoneZone: 'Vùng này không có phía nên không fade được; C chỉ làm ở cạnh.'
   };
 

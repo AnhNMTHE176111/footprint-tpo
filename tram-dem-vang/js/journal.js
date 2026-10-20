@@ -191,6 +191,12 @@
   }
 
   // ===== kèo =====
+  // "Kèo mới" (QĐ-25): giữ C1–C3 (kịch bản, hướng của B, vùng) và C6; xóa mọi câu trả lời quan sát (C4, C5, C7, B1, B2, B3, cực trị, giá). "Xóa hết" = setup rỗng.
+  function newSetupKeep(setup) {
+    var s0 = setup || {}, keep = {};
+    ['scenario', 'zoneId', 'side', 'c6'].forEach(function (k) { if (s0[k] !== undefined && s0[k] !== null) keep[k] = s0[k]; });
+    return keep;
+  }
   // Đổi kịch bản: giữ C4–C6, tính lại C2/C3, xóa C7 và bước Bấm
   function changeScenario(setup, scen) {
     var keep = { scenario: scen, c4: setup.c4, c4num: setup.c4num, c5: setup.c5, c6: setup.c6, zoneId: setup.zoneId, updatedAt: setup.updatedAt };
@@ -229,7 +235,7 @@
       zoneId: res.zone ? res.zone.id : null, zoneType: res.zone ? res.zone.type : null,
       tests: { b1: s.b1 || null, c4: s.c4 || null, c4num: R.num(s.c4num), b2: s.b2 || null, b3: s.b3 || null, c5: s.c5 || null },
       c6: R.num(s.c6), entryPlanned: cc.entry, entry: isMarket ? (fill !== null ? fill : cc.entry) : null, sl: cc.sl, tp: cc.tpUsed,
-      size: cc.size, slDist: cc.slDist, slPos: s.slPos || null, rrPlanned: cc.rr, exit: null, r: null,
+      size: cc.size, slDist: cc.slDist, slPos: res.slPos || s.slPos || null, rrPlanned: cc.rr, exit: null, r: null,
       flags: flags, counterBiasReason: res.counter ? (s.counterBiasReason || '') : '', ruleCodes: codes, sweptThenTP: null, notes: ''
     };
     night.trades.push(trade);
@@ -446,7 +452,7 @@
     fmt: fmt, fmtTrim: fmtTrim, fmtR: fmtR, fmtSigned: fmtSigned, parseNum: parseNum, hm: hm,
     newNight: newNight, normalizeNight: normalizeNight, ensureNight: ensureNight,
     planConflict: planConflict, prevCardSource: prevCardSource, copyFromPrev: copyFromPrev, copyFromPrevDetail: copyFromPrevDetail, setBreakoutField: setBreakoutField, newZoneId: newZoneId, canLockCard: canLockCard, lockCard: lockCard, cardEditPolicy: cardEditPolicy, applyCardEdit: applyCardEdit,
-    setRegimeMode: setRegimeMode, breakoutFailed: breakoutFailed, changeScenario: changeScenario,
+    setRegimeMode: setRegimeMode, breakoutFailed: breakoutFailed, changeScenario: changeScenario, newSetupKeep: newSetupKeep,
     createTrade: createTrade, forceCodes: forceCodes, tradeById: tradeById, fillLimit: fillLimit, cancelLimit: cancelLimit,
     computeR: computeR, beStatus: beStatus, markBE: markBE, closeTrade: closeTrade, recomputeTally: recomputeTally,
     manualTally: manualTally, tallyMismatch: tallyMismatch, checksOf: checksOf, warnLine: warnLine, rowOf: rowOf,

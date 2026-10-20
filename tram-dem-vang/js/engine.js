@@ -183,6 +183,9 @@
       reasons: [], shadow: [], missing: [], halfs: [], offs: [], blocked: false
     };
     c.calc = computeCalc(c);
+    // B5 tự kiểm (QĐ-25): điền slPos hiệu lực vào bản sao của setup để mọi luật, tám chấm và sổ dùng một nguồn
+    var slp = R.derivedSlPos(c);
+    if (slp) { setup = Object.assign({}, setup, { slPos: slp }); c.setup = setup; c.s = setup; }
 
     var enabled = { A: null, B: null, C: null, D: null };
     var locked = false;
@@ -259,7 +262,7 @@
       order: R.RULE_ORDER, enabled: enabled, half: { on: half, reasons: c.halfs.slice() },
       regime: { effective: reg.effective, dir: reg.dir }, bias: b.value, biasAuto: b.auto, biasOverridden: b.overridden,
       scenario: scen, side: side, zone: zone, zones: zones, counter: counter, exempt9: exempt9, calc: cl,
-      counts: c.counts, open: openInfo, locks: { tier3: l3 }, warnings: warnings,
+      slPos: setup.slPos || null, ext: num(setup.ext), counts: c.counts, open: openInfo, locks: { tier3: l3 }, warnings: warnings,
       paper: t0.alert === false, newsHit: newsHit, fxNews: fxHit, newsDay: t0.newsDay, longestBarActive: c.longestBarActive,
       nowMin: nowMin, nyseMin: nyseMin, comexMin: comexMin
     };

@@ -48,7 +48,6 @@
     } else {
       bar.appendChild(chip(T('noWindow'), ''));
     }
-    if (app.news && app.news.fetchedAt) bar.appendChild(chip(T('newsAgeChip', { hm: J.hm(Date.parse(app.news.fetchedAt)) }), 'zero'));
     // chữ ngắn trên thanh; câu đầy đủ nằm trong "?" (REVIEW-2 mục 12, mục 10)
     if (early && !hit) { bar.appendChild(chip(T('warnShort'), 'warn')); bar.appendChild(ui.qd19Help()); }
 

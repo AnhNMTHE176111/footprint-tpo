@@ -29,10 +29,10 @@ async function walkB(page) {
   await page.waitForSelector('[data-ctl="b3"]');
   await page.click(seg('b1', 'U'));
   await page.click(seg('b2', 'down'));
+  await fillNum(page, 'ext', '4175');
   await page.click(seg('b3', 'ok'));
   await fillNum(page, 'entry', '4177');
   await fillNum(page, 'sl', '4174.7');
-  await page.click(seg('b5', 'right'));
 }
 
 test('v3-1 · gõ số rồi bấm nút 3 trạng thái NGAY: ăn ở lần bấm đầu tiên (không cần Tab, không bấm lại)', async () => {

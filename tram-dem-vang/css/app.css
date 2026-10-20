@@ -427,3 +427,8 @@ html { scroll-padding-bottom: calc(var(--vbar-h, 120px) + 16px); scroll-padding-
 .tailq { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .plannote { width: 100%; resize: vertical; min-height: 64px; font: inherit; }
 .copyrow { margin-bottom: 4px; }
+
+/* tầng 2 gọn: hướng · cạnh · hai công tắc trên một hàng */
+.brokenrow { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: flex-start; padding: 8px 10px; }
+.brokenrow .ctl { border-bottom: 0; padding: 2px 0; }
+.brokenrow .ctl[data-ctl="boEdge"] { flex: 1 1 260px; }

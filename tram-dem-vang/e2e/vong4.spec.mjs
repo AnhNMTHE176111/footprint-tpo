@@ -253,13 +253,21 @@ test('v4-13 · sao chép vùng nằm đầu khối vùng, tự điền giá VWAP
   });
 });
 
-test('v4-14 · "Giờ phá" có chú thích; trước 18:00 chỉ cảnh báo, không tắt A', async () => {
-  await withPage(buildState('A'), null, async ({ page }) => {
+test('v4-14 · QĐ-24: tầng 2 không còn ô "Giờ phá", "Lần mấy", dải giờ; giờ phá tự lấy lúc bấm "Vừa phá"; ca Vừa phá ≤ 5 thao tác', async () => {
+  await withPage(buildState('B'), null, async ({ page }) => {
     await page.click('[data-tier-btn="2"]');
-    assert.equal(await page.locator('.boathint').count(), 1);
-    await page.fill('.panel.inner input.field.txt', '14:05'); await page.keyboard.press('Tab');
-    await page.waitForSelector('.banner.warn:has-text("ngoài giờ giao dịch")');
-    assert.equal(await page.locator('[data-scen="A"].on').count(), 1);
+    assert.equal(await page.locator('.panel.inner input.field.txt').count(), 0);
+    assert.equal(await page.locator('.boathint').count(), 0);
+    assert.doesNotMatch(await page.textContent('[data-tier="2"]'), /Giờ phá|Lần phá thứ|phá giả|mở ảo/);
+    // 5 thao tác: Vừa phá · hướng · cạnh · công tắc 1 · công tắc 2
+    await page.click('.seg.big [data-v="broken"]');
+    await page.click(seg('boDir', 'down')); await page.click(seg('boEdge', 'z2'));
+    await page.click(seg('boStep1', 'true')); await page.click(seg('boStep2', 'true'));
+    assert.match(await page.textContent('[data-testid="regime-eff"]'), /vừa phá · xuống/);
+    const bo = (await page.evaluate(() => JSON.parse(localStorage.getItem('tdv.v1')))).nights['2026-10-13'].regime.breakout;
+    assert.match(bo.at, /^\d\d:\d\d$/);                 // giờ phá tự ghi (21:30 theo giờ cố định)
+    await page.click('[data-testid="bo-failed"]');
+    assert.match(await page.textContent('[data-testid="bo-failed-note"]'), /Đã phá hụt 1 lần — không đuổi, chờ lần 2/);
   });
 });
 

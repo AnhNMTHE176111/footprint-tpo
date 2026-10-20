@@ -307,25 +307,22 @@
         app.update(function (n) { reset = J.setBreakoutField(n, field, v, app.nowMs); });
         if (reset) app.toast(T('boReset'));
       };
-      var atBase = time.baseMinute(bo.at || '');
-      if (!bo.dir || !bo.edgeZoneId || !bo.step1 || !bo.step2) body.push(banner(T('boNeedTop'), 'warn'));
-      body.push(h('div', { class: 'panel inner' },
+      // QĐ-24: không còn ô "Giờ phá" và "Lần mấy"; giờ phá = lúc bấm "Vừa phá" (hoặc bước 1 nếu chưa có), không hiện, không sửa
+      var need = !bo.dir || !bo.edgeZoneId || !bo.step1 || !bo.step2;
+      body.push(h('div', { class: 'panel inner brokenrow' },
         h('div', { class: 'ctl', 'data-ctl': 'boDir' }, h('div', { class: 'ctl-label', text: T('boDir') }),
           seg([{ v: 'up', label: T('breakUp') }, { v: 'down', label: T('breakDown') }], bo.dir || null, function (v) { setBo('dir', v); }, { noToggle: true })),
         h('div', { class: 'ctl', 'data-ctl': 'boEdge' }, h('div', { class: 'ctl-label' }, h('span', { text: T('boEdge') }), ui.helpBtn({ text: T('boEdgeHelp'), ref: 'acceptance' })),
           zoneOpts.length ? seg(zoneOpts, bo.edgeZoneId || null, function (v) { setBo('edgeZoneId', v); }, { noToggle: true, cls: 'wrap' }) : h('span', { class: 'muted', text: T('noZones') })),
-        h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('boAt') }),
-          textInput(bo.at || '', function (v) { app.update(function (n) { n.regime.breakout.at = v; }); }, { max: 5, placeholder: T('timePh') }),
-          chip(T('boNth', { n: bo.nth || 1 }), ''), (bo.nth || 1) === 1 ? h('span', { class: 'muted', text: T('boNthHint') }) : null,
-          h('div', { class: 'muted boathint', text: T('boAtHint') }),
-          atBase !== null && atBase < 18 * 60 ? banner(T('boAtOutside', { hm: bo.at }), 'warn') : null),
         h('div', { class: 'ctl', 'data-ctl': 'boStep1' }, h('div', { class: 'ctl-label' }, h('span', { text: T('boStep1') }), ui.helpBtn({ text: T('acceptHelp'), ref: 'acceptance' })),
-          seg([{ v: true, label: T('yes') }, { v: false, label: T('notYet') }], !!bo.step1, function (v) { app.update(function (n) { n.regime.breakout.step1 = !!v; if (!v) n.regime.breakout.step2 = false; }); },
+          seg([{ v: true, label: T('yes') }, { v: false, label: T('notYet') }], !!bo.step1, function (v) { app.update(function (n) { var b = n.regime.breakout; b.step1 = !!v; if (!v) b.step2 = false; if (v && !b.at) b.at = J.hm(app.nowMs); }); },
             { noToggle: true, disabled: bo.dir && bo.edgeZoneId ? null : { true: T('needDirEdge') }, onDisabled: function (v, why) { app.toast(why); } })),
         h('div', { class: 'ctl', 'data-ctl': 'boStep2' }, h('div', { class: 'ctl-label', text: T('boStep2') }),
           seg([{ v: true, label: T('yes') }, { v: false, label: T('notYet') }], !!bo.step2, function (v) { app.update(function (n) { n.regime.breakout.step2 = !!v; }); }, { noToggle: true, disabled: bo.step1 ? null : { true: T('needStep1') }, onDisabled: function (v, why) { app.toast(why); } })),
         btn(T('boFailed'), function () { app.update(function (n) { J.breakoutFailed(n, app.nowMs); }); }, 'ghost', { 'data-testid': 'bo-failed' })));
+      if (need) body.push(h('p', { class: 'muted small', text: T('boNeedTop') }));
     }
+    if ((bo.nth || 1) >= 2) body.push(h('p', { class: 'muted small', 'data-testid': 'bo-failed-note', text: T('boFailedNote', { n: (bo.nth || 1) - 1, next: bo.nth }) }));
     var eff = res.regime.effective;
     body.push(h('div', { class: 'effline' }, h('span', { class: 'ctl-label', text: T('effective') }),
       h('span', { class: 'bigchip ' + (eff === 'broken' ? 'good' : eff === 'pending' ? 'warn' : ''), 'data-testid': 'regime-eff', text: C.modes[eff] + (res.regime.dir ? ' · ' + (res.regime.dir === 'up' ? T('dirUp') : T('dirDown')) : '') })));
@@ -339,7 +336,6 @@
         btn(T('longestBar'), function () { app.update(function (n) { n.regime.longestBarUntil = time.longestBarUntil(app.nowMs); }); }, 'danger', { 'data-testid': 'longest-bar' }),
         active ? chip(T('reopenAt', { hm: J.hm(until) }), 'bad') : null,
         active ? btn(T('clearLongest'), function () { app.update(function (n) { n.regime.longestBarUntil = null; }); }, 'ghost small') : null),
-      h('p', { class: 'muted', text: T('longestHint') })
     ], { help: { text: T('t2LongestHelp'), ref: 'xung-dot' } }));
 
     // bảng bật kịch bản
@@ -353,7 +349,6 @@
     var tbox = [tbl];
     if (res.warnings.indexOf('WARN_BEFORE_2030') >= 0) tbox.push(h('div', { class: 'banner warn', 'data-testid': 'warn-2030' }, h('span', { text: ui.fillTimes(C.warnText.WARN_BEFORE_2030) + ' ' }), ui.qd19Help()));
     if (res.warnings.indexOf('WARN_NYSE') >= 0) tbox.push(banner(C.warnText.WARN_NYSE, 'warn'));
-    tbox.push(h('p', { class: 'muted', text: T('tableNote') }));
     el.appendChild(section(T('t2Title3'), tbox, { help: { text: T('t2TableHelp'), ref: 'xung-dot' } }));
 
     var can3 = !res.locks.tier3;

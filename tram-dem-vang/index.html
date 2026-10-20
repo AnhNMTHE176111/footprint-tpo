@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trạm Đêm Vàng</title>
+<meta name="description" content="Danh sách kiểm chạy theo Hệ thống Đêm Vàng: kẻ vùng, bias, chế độ, kịch bản, SL, ghi sổ.">
+<meta name="theme-color" content="#0f1115">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<a id="skip" class="skip" href="#main"></a>
+<div id="app">
+  <header id="status" class="status" role="banner"></header>
+  <nav id="tiers" class="tiers" aria-label="Các tầng"></nav>
+  <div class="layout">
+    <main id="main" tabindex="-1"></main>
+    <aside id="card" class="card" aria-label="Thẻ phiên"></aside>
+  </div>
+  <div id="verdict" class="verdict"></div>
+</div>
+<button id="cardtoggle" class="cardtoggle" type="button"></button>
+<div id="overlay"></div>
+<div id="toast" aria-live="polite"></div>
+<noscript><p style="padding:16px">Trang này cần JavaScript để chạy.</p></noscript>
+<script src="js/rules.js"></script>
+<script src="js/time.js"></script>
+<script src="js/content.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/journal.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui/dom.js"></script>
+<script src="js/ui/status.js"></script>
+<script src="js/ui/tier012.js"></script>
+<script src="js/ui/tier3.js"></script>
+<script src="js/ui/tier45.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

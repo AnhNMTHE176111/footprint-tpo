@@ -27,3 +27,7 @@ deploy-log.txt
 # Chỉ commit bản nén .csv.gz (gzip -9 nén ~9,5x). Xem tpo/HUONG-DAN-DAY-DATA-LON.md
 data-export/data-footprint/fp_GC_XCEC_Time_20240801-20260819_748d9h.csv
 data-export/data-footprint/fp_GC_XCEC_Time_20240801-20260819_748d9h_bars.csv
+
+# Trạm Đêm Vàng — rác build/test
+tram-dem-vang/node_modules/
+tram-dem-vang/test-results/

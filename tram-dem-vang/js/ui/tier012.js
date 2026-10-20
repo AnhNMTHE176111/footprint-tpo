@@ -20,7 +20,7 @@
       seg(YESNO, t0.alert === null || t0.alert === undefined ? null : t0.alert, function (v) { app.update(function (n) { n.t0.alert = v; }); }));
     el.appendChild(section(T('t0Title1'), [q1, t0.alert === false ? banner(T('t0ViewOnly'), 'warn') : null]));
 
-    // cửa sổ cấm
+    // khung giờ cấm
     var list = h('div', { class: 'windows' });
     R.effectiveWindows(t0, key).forEach(function (w) {
       var r = time.windowRange(w, key, useDst);

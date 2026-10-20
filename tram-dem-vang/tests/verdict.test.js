@@ -15,7 +15,7 @@ test('nền A / B / C / D đều ra ENTRY', () => {
   });
 });
 
-// ---------- cửa sổ cấm ----------
+// ---------- khung giờ cấm ----------
 test('NO_NEWS_WINDOW: 19:30 ±15′ khi bật', () => {
   const on = { windows: [{ id: 'w1930', kind: 'news', rank: 1, at: '19:30', tz: 'ET', minutesBefore: 15, minutesAfter: 15, on: true }] };
   const at = (hm) => run('2026-10-13', hm, mk('B', { t0: on })).reasons;
@@ -25,7 +25,7 @@ test('NO_NEWS_WINDOW: 19:30 ±15′ khi bật', () => {
   assert.notEqual(at('19:14')[0], 'NO_NEWS_WINDOW');
   assert.notEqual(at('19:46')[0], 'NO_NEWS_WINDOW');
 });
-test('NO_NEWS_WINDOW: tắt cửa sổ 19:30 thì không chặn', () => {
+test('NO_NEWS_WINDOW: tắt khung giờ 19:30 thì không chặn', () => {
   assert.ok(!go('B', null, '19:30').reasons.includes('NO_NEWS_WINDOW'));
 });
 test('NO_NEWS_WINDOW: 21:00 ±5′; 20:55 và 21:05 chặn, 20:54 và 21:06 không', () => {

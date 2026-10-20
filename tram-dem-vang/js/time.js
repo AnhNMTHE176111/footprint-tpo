@@ -1,4 +1,4 @@
-/* Trạm Đêm Vàng — giờ Việt Nam, giờ mùa đông Mỹ / London, pha, cửa sổ cấm, nightKey.
+/* Trạm Đêm Vàng — giờ Việt Nam, giờ mùa đông Mỹ / London, pha, khung giờ cấm, nightKey.
  * Mọi mốc của luật viết theo "giờ VN khi Mỹ đang giờ mùa hè". Mốc mang múi gốc:
  *  ET (Mỹ): +1h khi Mỹ giờ mùa đông · LONDON: +1h khi London giờ mùa đông · VN: không đổi.
  * Phút trong đêm = số phút kể từ 00:00 giờ VN của ngày nightKey (có thể > 1440 sau nửa đêm). */
@@ -91,7 +91,7 @@
     if (c === null) return null;
     return { from: c - (w.minutesBefore || 0), to: c + (w.minutesAfter || 0), center: c };
   }
-  // cửa sổ cấm đang trúng (biên bao gồm hai đầu); rank: 1/2 hoặc bỏ trống = mọi hạng
+  // khung giờ cấm đang trúng (biên bao gồm hai đầu); rank: 1/2 hoặc bỏ trống = mọi hạng
   function hitWindow(windows, nowMin, key, useDst, rank) {
     var list = windows || [];
     for (var i = 0; i < list.length; i++) {
@@ -103,7 +103,7 @@
     }
     return null;
   }
-  // cửa sổ kế tiếp (chưa bắt đầu) → {w, from, startsIn}
+  // khung giờ kế tiếp (chưa bắt đầu) → {w, from, startsIn}
   function nextWindow(windows, nowMin, key, useDst) {
     var best = null;
     (windows || []).forEach(function (w) {
@@ -115,7 +115,7 @@
     return best;
   }
 
-  // phút nhỏ nhất "đóng sạch trước" cho lệnh còn mở: 19:15 (cửa sổ hạng 1 19:30 trừ 15') và 00:45 (FOMC)
+  // phút nhỏ nhất "đóng sạch trước" cho lệnh còn mở: 19:15 (khung giờ hạng 1 19:30 trừ 15') và 00:45 (FOMC)
   function flatDeadline(windows, nowMin, key, useDst) {
     var best = null;
     (windows || []).forEach(function (w) {

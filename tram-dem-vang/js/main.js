@@ -131,7 +131,7 @@
   };
   app.updateState = function (fn, opts) { compute(); fn(state); persist(); app.render(opts || {}); };
 
-  // sửa thẻ phiên: ghi vết sau 19:20, hỏi xác nhận khi đang canh kèo
+  // sửa thẻ phiên: ghi lại giờ sửa sau 19:20, hỏi xác nhận khi đang canh kèo
   app.cardEdit = function (what, label, fn) {
     compute();
     var pol = J.cardEditPolicy(app.night, what, app.nowMin, app.key, app.useDst);

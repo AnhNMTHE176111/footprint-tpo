@@ -213,7 +213,7 @@ test('v3-10 · 20:24: thanh trên không in "Cú phá đáng tin" cạnh cảnh 
   });
 });
 
-test('v3-11 · điện thoại 360 px: chip cửa sổ cấm không bị nút "Thẻ phiên" đè, không bị cắt ngang', async () => {
+test('v3-11 · điện thoại 360 px: chip khung giờ cấm không bị nút "Thẻ phiên" đè, không bị cắt ngang', async () => {
   await withPage(buildState('B'), { viewport: { width: 360, height: 740 } }, async ({ page }) => {
     const r = await page.evaluate(() => {
       const t = document.getElementById('cardtoggle').getBoundingClientRect();

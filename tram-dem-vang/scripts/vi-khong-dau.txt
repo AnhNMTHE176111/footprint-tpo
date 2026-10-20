@@ -75,3 +75,4 @@ chia
 minh
 quanh
 quay
+khung

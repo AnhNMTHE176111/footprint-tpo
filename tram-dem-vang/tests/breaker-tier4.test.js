@@ -131,7 +131,7 @@ test('lệnh mở qua mốc đêm mới: engine với nightKey mới vẫn khóa
   const r = run('2026-10-14', '05:30', mk('A'), null, { '2026-10-13': prev });
   assert.equal(r.verdict, 'LOCKED'); assert.equal(r.open.trade.id, prev.trades[0].id);
 });
-test('đếm ngược "đóng sạch trước": 19:15 (cửa sổ hạng 1) và 00:45 (FOMC); mùa đông +1h', () => {
+test('đếm ngược "đóng sạch trước": 19:15 (khung giờ hạng 1) và 00:45 (FOMC); mùa đông +1h', () => {
   const w = [{ id: 'w', kind: 'news', rank: 1, at: '19:30', tz: 'ET', minutesBefore: 15, minutesAfter: 15, on: true }, { id: 'f', kind: 'fomc', rank: 2, at: '01:00', tz: 'ET', minutesBefore: 0, minutesAfter: 30, on: true }];
   const dl = (key, min) => time.flatDeadline(w, min, key, true);
   assert.equal(time.fmtMin(dl('2026-10-13', 18 * 60).at), '19:15');

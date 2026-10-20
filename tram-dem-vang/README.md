@@ -10,7 +10,7 @@ kẻ vùng → bias → chế độ → kịch bản → SL → ghi sổ. Tầng
 **Cài đặt vốn (làm một lần).** Lần đầu mở, hộp "Vốn và rủi ro mỗi lệnh" hiện ra: mặc định 2000 $ và 2 %. Bấm "Lưu" (hoặc "Để sau"). Đổi lại bất cứ lúc nào ở tầng **Sổ**, mục Cài đặt, hoặc bấm nút "Đổi vốn" khi thanh dưới báo "SL tối đa …". Công cụ chỉ nhận số lớn hơn 0; xóa trắng ô thì trả lại số cũ.
 
 **Đêm đầu tiên.** Đi từ tầng 0 sang 5:
-1. **Trước** (làm trước 18:00): tỉnh táo chưa, cửa sổ cấm tối nay, có tin lớn không.
+1. **Trước** (làm trước 18:00): tỉnh táo chưa, khung giờ cấm tối nay, có tin lớn không.
 2. **Vùng**: tick các mức đã kẻ trên chart, trả lời ba câu bắt buộc (Q1, Q5, Q6), gõ giá hiện tại và VWAP tuần để bias tự chọn, thêm 3–5 vùng, rồi "Chốt thẻ phiên". Chưa chốt thì tầng Kèo khóa.
 3. **Chế độ**: chọn cân bằng, vừa phá hay Trend thin. "Vừa phá" cần hướng, cạnh và hai bước công nhận; đổi hướng hoặc cạnh về sau là một cú phá mới, phải công nhận lại.
 4. **Kèo**: chọn kịch bản đang bật, trả lời lần lượt ở tab **Canh** (trước khi nến xác nhận đóng) rồi tab **Bấm** (sau khi nến đóng). Canh đủ thì tự sang Bấm đúng một lần; nút "Quay lại Canh" ở đầu tab. Thanh dưới đổi màu: **CHỜ** (còn thiếu gì), **KHÔNG VÀO** (lý do), **ENTRY** (đủ điều kiện, có số hợp đồng). Bấm "Vào lệnh" khi ENTRY.
@@ -32,7 +32,7 @@ Phím tắt ở tầng Kèo: `1 2 3 4` chọn kịch bản, `B`/`S` hướng, `U
 ```
 index.html · manifest.webmanifest · sw.js · icons/ · img/kb-*.png · css/app.css
 js/rules.js     luật có thứ tự (RULES) + hằng số, ma trận bias, bảng loại vùng, mốc giờ có múi
-js/time.js      giờ VN, giờ mùa đông Mỹ / London, nightKey, cửa sổ cấm, pha, dải giờ
+js/time.js      giờ VN, giờ mùa đông Mỹ / London, nightKey, khung giờ cấm, pha, dải giờ
 js/content.js   TOÀN BỘ chữ hiển thị + htRef của từng mã luật (dữ liệu thuần)
 js/engine.js    thuần: (nights, nightKey, now, settings) → phán quyết, reasons, missing, dots, enabled, half
 js/journal.js   tạo / đóng lệnh, ngắt mạch, thẻ phiên, sổ 7 cột, Markdown, CSV, thống kê tuần

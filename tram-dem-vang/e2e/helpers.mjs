@@ -11,7 +11,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 export const ROOT = resolve(here, '..');
 export const URL_INDEX = pathToFileURL(resolve(ROOT, 'index.html')).href;
 export const KEY = '2026-10-13';
-export const NOW = '2026-10-13T14:30:00Z';   // 21:30 giờ VN (hè): sau cửa sổ 21:00, sau 20:30 ⇒ cỡ đủ
+export const NOW = '2026-10-13T14:30:00Z';   // 21:30 giờ VN (hè): sau khung giờ 21:00, sau 20:30 ⇒ cỡ đủ
 
 export async function launch() { return chromium.launch(); }
 

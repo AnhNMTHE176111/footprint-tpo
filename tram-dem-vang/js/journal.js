@@ -101,7 +101,7 @@
   }
   function lockCard(night, nowMs) { night.card.lockedAt = hm(nowMs); return night.card.lockedAt; }
   var FREE_EDITS = ['q6', 'vahEu', 'valEu', 'ibHigh', 'ibLow'];
-  // Trước 19:20 (mùa đông 20:20): sửa Q6 / VA Âu / IB không để vết. Sau đó mỗi lần sửa ghi vết;
+  // Trước 19:20 (mùa đông 20:20): sửa Q6 / VA Âu / IB không để vết. Sau đó mỗi lần sửa ghi lại giờ sửa;
   // đang canh kèo thì phải xác nhận.
   function cardEditPolicy(night, what, nowMin, key, useDst) {
     if (!night.card.lockedAt) return { log: false, confirm: false };

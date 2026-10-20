@@ -46,7 +46,7 @@ test('mục 4 · chuỗi SL cộng cả khi đóng "Về hòa" ở giá lỗ; h�
   assert.equal(engine.countTrades({ trades: [sl(), closed('TP', 1, {}), sl()] }).slStreak, 1);
 });
 
-test('mục 5 · cửa sổ 19:30 mặc định: bật thứ Năm; chưa qua tầng 0 hoặc ngày tin thì tự bật', () => {
+test('mục 5 · khung giờ 19:30 mặc định: bật thứ Năm; chưa qua tầng 0 hoặc ngày tin thì tự bật', () => {
   assert.equal(J.newNight('2026-10-15').t0.windows[0].on, true);    // thứ Năm
   assert.equal(J.newNight('2026-10-13').t0.windows[0].on, false);   // thứ Ba
   const w = (t0) => R.effectiveWindows(Object.assign({ windows: R.defaultWindows(false) }, t0), '2026-10-13')[0].on;
@@ -81,7 +81,7 @@ test('QĐ-20 · 0 hợp đồng ⇒ NO_SIZE_ZERO, htRef ST §6; ENTRY in số h�
   assert.equal(go('B').calc.size >= 1, true);
 });
 
-test('mục 9 · cửa sổ tự thêm múi VN không cộng 1 giờ mùa đông', () => {
+test('mục 9 · khung giờ tự thêm múi VN không cộng 1 giờ mùa đông', () => {
   const time = require('../js/time.js');
   const w = { id: 'x', at: '21:00', tz: 'VN', minutesBefore: 5, minutesAfter: 5, on: true };
   assert.equal(time.windowRange(w, '2026-11-10', true).center, 21 * 60);

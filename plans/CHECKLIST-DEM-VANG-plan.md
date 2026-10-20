@@ -16,7 +16,7 @@ Quy ước: **HT** = `daily-trading/HE-THONG-DEM-VANG.html` v1.2 (trích theo s�
 | Nguồn | Vai trò |
 |---|---|
 | HT (16/10/2026) | **Nguồn luật chính.** Mọi câu chữ checklist lấy từ đây. |
-| ST (8/2026) | Cơ chế phụ: nhịp buổi tối, 4 chart, lịch tin + cửa sổ cấm, giờ mùa đông Mỹ, máy tính cỡ lệnh MGC, hủy kịch bản, settlement, Globex bảo trì. |
+| ST (8/2026) | Cơ chế phụ: nhịp buổi tối, 4 chart, lịch tin + khung giờ cấm, giờ mùa đông Mỹ, máy tính cỡ lệnh MGC, hủy kịch bản, settlement, Globex bảo trì. |
 | RULES (29/9, bổ sung 15/10) | Không nhồi lệnh (1 lệnh mở); chưa be thì không sờ SL; đóng tay phải có lý do có tên. |
 | REVIEW 15/10 + nhật ký | "Vì sao có luật này" trong trợ giúp "?" của từng ô. |
 
@@ -31,7 +31,7 @@ Quy ước: **HT** = `daily-trading/HE-THONG-DEM-VANG.html` v1.2 (trích theo s�
 | QĐ-3 | Câu 2 checklist "hạng 1–2 hoặc cạnh VA Âu khi cân bằng" vs ca 6/10 (A tại cụm POC), 13/10 (B tại POC). | Câu 2 = "giá ở **vùng trong thẻ**, ≤ 1 giá". **Riêng B** vùng phải: hạng 1 (VWAP tuần) · hạng 2 (VWAP ngày, HVN tuần — đã đo; **cụm POC** = ≥ 2 POC cách nhau ≤ 1 giá — chưa đo, HT 13/10 ghi "POC hôm qua", chưa rõ là cụm; cỡ ½) · cạnh theo QĐ-1 · hoặc QĐ-9. Không đạt ⇒ `NO_B_RANK`. **POC phiên trước chưa chạm = naked POC: đã đo 46,5 % ⇒ chỉ mục tiêu.** |
 | QĐ-4 | "Không cản tàu" ở `broken`: B ngược chiều phá? | B cùng chiều phá: được. B ngược chiều phá **chỉ khi cùng chiều bias, vùng hạng 1 (VWAP tuần), vùng ≠ cạnh vừa phá**; còn lại ⇒ `NO_FIGHT_BREAK`. Engine suy, không hỏi. |
 | QĐ-5 | HT 4.2 luật cứng vs ca 5/10 "delta lẫn lộn". | B cần "giảm dần"; "lẫn lộn" ⇒ CHỜ; "tăng dần" ⇒ `NO_MOMENTUM`. Ca 5/10 là ngoại lệ chưa đo. |
-| QĐ-6 | Cửa sổ cấm (HT 7 không cho độ rộng; HT 3.2 cú phá đáng tin 20:20–21:30). | 19:30 ±15′ ⇒ `NO_NEWS_WINDOW` (hạng 1). 21:00 ±5′ ⇒ `NO_NEWS_WINDOW` (hạng 2). **20:30 ±5′: chỉ cảnh báo** vàng "NYSE mở — không đánh tin". Mùa đông +1h. |
+| QĐ-6 | Khung giờ cấm (HT 7 không cho độ rộng; HT 3.2 cú phá đáng tin 20:20–21:30). | 19:30 ±15′ ⇒ `NO_NEWS_WINDOW` (hạng 1). 21:00 ±5′ ⇒ `NO_NEWS_WINDOW` (hạng 2). **20:30 ±5′: chỉ cảnh báo** vàng "NYSE mở — không đánh tin". Mùa đông +1h. |
 | QĐ-7 | Mốc giờ của luật có dịch theo giờ mùa đông? | **Có.** Mỗi mốc mang múi gốc `ET` / `LONDON` / `VN`. London đổi 25/10/2026 và trở lại 28/03/2027; Mỹ 01/11/2026 và 14/03/2027. Ngày 01/11 hiện thẻ "đổi neo session TPO / SessionZones 19:20 → 20:20, IB = 20:20–21:20". Công tắc `settings.dstShift`. |
 | QĐ-8 | "Cỡ nhỏ", "cỡ một nửa". | ½ cỡ chuẩn, **áp một lần**; `half.reasons[]` ghi mọi lý do nhưng chỉ nhân ½ một lần. |
 | QĐ-9 | Ngược bias (HT 2.2 chỉ cho hấp thụ tại đỉnh có tail thật / single print, cỡ nhỏ, 2R). | Ngược bias ⇒ A, C, D: `NO_COUNTER_BIAS_SCENARIO`. **B miễn `NO_B_RANK`** khi vùng mang cờ `tail` (High/Low hôm qua với Q2 = tail thật) hoặc `sp` **đúng phía** (sell ⇒ cờ phía trên; buy ⇒ phía dưới); không cờ hoặc sai phía ⇒ `NO_COUNTER_BIAS_ZONE`. TP ép 2R, cỡ ½, lý do bắt buộc. ENTRY in "ngược bias · 2R · ½". |
@@ -66,7 +66,7 @@ Quy ước: **HT** = `daily-trading/HE-THONG-DEM-VANG.html` v1.2 (trích theo s�
 ## 2. Hình thức: trang web tĩnh, cài được như ứng dụng, mở được bằng file://
 
 - HTML/CSS/JS thuần, **không framework, không bước build, không `type="module"`**. Deploy GitHub Pages ở repo công khai mới `AnhNMTHE176111/tram-dem-vang` → `https://anhnmthe176111.github.io/tram-dem-vang/`.
-- **PWA** (chỉ qua Pages): manifest + service worker để "Cài đặt" thành cửa sổ riêng và chạy không mạng. Mở `file://` thì không có service worker, mọi tính năng khác vẫn chạy.
+- **PWA** (chỉ qua Pages): manifest + service worker để "Cài đặt" thành khung giờ riêng và chạy không mạng. Mở `file://` thì không có service worker, mọi tính năng khác vẫn chạy.
 - **Dữ liệu ở máy**: `localStorage`; xuất / nhập JSON, xuất Markdown; nhắc xuất file cuối tuần.
 - Mã nguồn trong repo `footprint-tpo` tại `tram-dem-vang/`; `deploy.sh` sao chép sang clone repo Pages rồi push.
 
@@ -76,7 +76,7 @@ Quy ước: **HT** = `daily-trading/HE-THONG-DEM-VANG.html` v1.2 (trích theo s�
 
 ```
  ┌ Thanh trạng thái (luôn thấy) ────────────────────────────────────────────────────────┐
- │ 20:14 VN · NYSE sắp mở · cửa sổ cấm kế: 21:00 (46′) · BIAS SELL · phá luật 0/2 · SL liên tiếp 1/3 · lệnh mở 0/1 │
+ │ 20:14 VN · NYSE sắp mở · khung giờ cấm kế: 21:00 (46′) · BIAS SELL · phá luật 0/2 · SL liên tiếp 1/3 · lệnh mở 0/1 │
  └──────────────────────────────────────────────────────────────────────────────────────┘
  [0 Trước] → [1 Vùng] → [2 Chế độ] → [3 Kèo: Canh | Bấm] → [4 Lệnh] → [5 Sổ]
  ┌ Nội dung tầng ────────────────────────────────┐ ┌ Thẻ phiên (cột phải, cố định) ─┐
@@ -93,7 +93,7 @@ Khóa tầng: **1**, **2**, **5** luôn mở · **3** mở khi thẻ đã chốt
 | # | Ô | Kiểu | Hệ quả |
 |---|---|---|---|
 | 0.1 | Tỉnh táo, không bực dọc, không mệt rã rời | có / không | Không ⇒ cả đêm **CHỈ XEM**: ENTRY hiện xám "ENTRY (chỉ xem)", nút "Ghi kèo luyện mắt" ⇒ tầng 4 như lệnh thật, cờ `paper` (QĐ-17). |
-| 0.2 | Cửa sổ cấm tối nay | danh sách, bật/tắt từng dòng; thêm dòng tùy chỉnh (giờ · hạng 1/2 · phút trước/sau) | Mặc định: **21:00 ±5′** bật; **19:30 ±15′** bật vào **thứ Năm** và khi `t0.touched = false`; **20:30 ±5′** là dòng cảnh báo, không tắt được (QĐ-6). FOMC: 01:00/01:30, nhắc đóng sạch trước 00:45. Tắt một dòng ⇒ xác nhận + vết "tắt cửa sổ 19:30 lúc hh:mm". Ngày NFP/CPI ⇒ `half.reasons` += `NEWS_DAY`. Mùa đông +1h. |
+| 0.2 | Khung giờ cấm tối nay | danh sách, bật/tắt từng dòng; thêm dòng tùy chỉnh (giờ · hạng 1/2 · phút trước/sau) | Mặc định: **21:00 ±5′** bật; **19:30 ±15′** bật vào **thứ Năm** và khi `t0.touched = false`; **20:30 ±5′** là dòng cảnh báo, không tắt được (QĐ-6). FOMC: 01:00/01:30, nhắc đóng sạch trước 00:45. Tắt một dòng ⇒ xác nhận + vết "tắt khung giờ 19:30 lúc hh:mm". Ngày NFP/CPI ⇒ `half.reasons` += `NEWS_DAY`. Mùa đông +1h. |
 | 0.3 | Kịch bản nền ban ngày (1 dòng, tùy chọn) | chữ | Hiện lại ở thẻ phiên. |
 
 ### Tầng 1 · Kẻ vùng trên chart A và chốt thẻ phiên (18:30–19:20; mùa đông 19:30–20:20)
@@ -141,12 +141,12 @@ Bias tự động; **ghi đè** được với lý do bắt buộc (cờ "bias g
 | HVN ngày | trung tính (QĐ-15) | A, D; B chặn | `noB` |
 | HVN 3 tuần · LVN | **cấm fade** (QĐ-2) | A, D theo chiều; B chặn | `banned` |
 
-**1e. Thẻ phiên** (cột phải) tự điền từ 1b–1d đúng mẫu HT 8: NGÀY · VWAP tuần · Đóng hôm qua · Hình hôm qua · BIAS · VÙNG · NỢ · VÙNG CẤM (gom `banned`). Ba ô người dùng gõ (tùy chọn): **Kế hoạch 1**, **Kế hoạch 2** ("nếu … thì …"), **Hủy kế hoạch khi …**. Nút **"Chốt thẻ phiên"**: cần Q1, Q5, Q6, VWAP tuần, ≥ 1 vùng. Sau chốt vẫn sửa: trước 19:20 (mùa đông 20:20) sửa Q6 / VA Âu / IB không vết; sau đó mỗi lần sửa ghi vết; đang có kèo tầng 3 ⇒ xác nhận "đang canh kèo — sửa thẻ lúc này là nắn kế hoạch". Chưa chốt ⇒ tầng 3 khóa: "Không có thẻ phiên thì không có lệnh."
+**1e. Thẻ phiên** (cột phải) tự điền từ 1b–1d đúng mẫu HT 8: NGÀY · VWAP tuần · Đóng hôm qua · Hình hôm qua · BIAS · VÙNG · NỢ · VÙNG CẤM (gom `banned`). Ba ô người dùng gõ (tùy chọn): **Kế hoạch 1**, **Kế hoạch 2** ("nếu … thì …"), **Hủy kế hoạch khi …**. Nút **"Chốt thẻ phiên"**: cần Q1, Q5, Q6, VWAP tuần, ≥ 1 vùng. Sau chốt vẫn sửa: trước 19:20 (mùa đông 20:20) sửa Q6 / VA Âu / IB không vết; sau đó mỗi lần sửa ghi lại giờ sửa; đang có kèo tầng 3 ⇒ xác nhận "đang canh kèo — sửa thẻ lúc này là nắn kế hoạch". Chưa chốt ⇒ tầng 3 khóa: "Không có thẻ phiên thì không có lệnh."
 
 ### Tầng 2 · Chế độ thị trường (chart B, M30/M5)
 - Chọn **chế độ**: Cân bằng · Vừa phá · Trend thin (bắt buộc chọn **hướng trend** `thinDir`). Mỗi lần đổi ghi `regime.log`.
 - *Vừa phá*: hướng phá · **cạnh vừa phá** (`edgeZoneId`, chọn từ thẻ) · giờ phá (mặc định "bây giờ") · lần mấy (`nth`, chỉ hiển thị và nhắc "lần 1 chui lại ⇒ không đuổi, chờ lần 2" — HT 3.2) · bước 1 "có 1 nến M5 đóng ngoài cạnh" · bước 2 "nhịp hồi về cạnh giữ được, không nến M5 đóng ngược vào trong". Nút "Chui lại trong (phá hụt)" ⇒ về Cân bằng, `nth` kế = 2.
-- **Chế độ hiệu lực** `regime.effective`: `balanced` · `pending` (bước 1 có, bước 2 chưa: "chờ công nhận") · `broken` · `thin`. `regimeDir` = `breakout.dir` (broken/pending) hoặc `thinDir` (thin).
+- **Chế độ đang áp dụng** `regime.effective`: `balanced` · `pending` (bước 1 có, bước 2 chưa: "chờ công nhận") · `broken` · `thin`. `regimeDir` = `breakout.dir` (broken/pending) hoặc `thinDir` (thin).
 - **Bảng bật kịch bản** — **duyệt mọi hàng từ trên xuống; ô "bật" nghĩa là hàng này không tắt, xét tiếp; mã đầu tiên tắt là mã hiển thị trên thẻ.** Thứ tự khớp mục 5.
 
 | Hàng | A Phá hồi | B Hấp thụ | C Fade cạnh | D Trap |
@@ -206,7 +206,7 @@ Máy tính (B4 + C6, C6 hiện lại kèm ô sửa): `NO_SL_SIDE` · `NO_SL_FLOO
 ### Tầng 4 · Lệnh (tối đa 1)
 - **Chờ khớp** (limit): "Khớp rồi" (giá khớp thật) · "Hủy — giá bỏ đi" (xóa dòng sổ, không tăng đếm).
 - **Đã khớp**: hướng · giá vào thật · SL · TP · R dự kiến · size; ô "giá hiện tại" ⇒ R hiện tại. **Không có ô sửa SL** (RULES D). Mốc be: A/B **+1,5R** + ô "đã có 1 nến M1 đóng ngoài vùng vào" ⇒ "Đã dời về hòa"; C/D **+1R**.
-- Cửa sổ hạng 1 / FOMC sắp tới mà lệnh còn mở ⇒ đếm ngược "**đóng sạch trước hh:mm**" (19:15 / 00:45; mùa đông +1h).
+- Khung giờ hạng 1 / FOMC sắp tới mà lệnh còn mở ⇒ đếm ngược "**đóng sạch trước hh:mm**" (19:15 / 00:45; mùa đông +1h).
 - **Đóng lệnh**: TP · SL · hòa · đóng tay (lý do: "hấp thụ ngược đe dọa TP" · "đóng sạch trước tin" · "khác" ⇒ cờ phá luật). Giá thoát ⇒ R gợi ý, sửa được. Sau đóng: "SL bị quét rồi giá tới TP?" · ghi chú. Dòng sổ hoàn tất; ngắt mạch cập nhật.
 - Lệnh còn mở qua mốc đêm mới ⇒ thuộc đêm vào lệnh; engine nhận cả `nights` nên đêm mới vẫn thấy `open` của đêm trước (khóa tầng 3, mở tầng 4, nhắc Globex bảo trì 04:00–05:00 hè / 05:00–06:00 đông).
 
@@ -217,7 +217,7 @@ Máy tính (B4 + C6, C6 hiện lại kèm ô sửa): `NO_SL_SIDE` · `NO_SL_FLOO
 
 ### Thanh trạng thái + đồng hồ
 - Giờ VN; nhãn pha (mỗi mốc mang múi gốc): Ban ngày · Chuẩn bị 18:00 VN · COMEX mở 19:20 ET · Tin 19:30 ET · NYSE 20:30 ET · Lõi giao thoa 21:00 ET – 22:30 LONDON · London đóng 22:30 LONDON · Mỏng dần 23:00 VN · Chốt giá ngày 00:30 ET · Globex bảo trì 04:00–05:00 ET-tương-đương (hè 04:00–05:00 VN). Dòng "Mỹ đang giờ mùa đông: mốc +1h" từ 01/11.
-- Đếm ngược tới cửa sổ cấm kế; trong cửa sổ: thanh đỏ; 20:30 ±5′ và trước 20:30: thanh vàng.
+- Đếm ngược tới khung giờ cấm kế; trong khung giờ: thanh đỏ; 20:30 ±5′ và trước 20:30: thanh vàng.
 - Chip: phá luật n/2 · SL liên tiếp n/3 · lệnh mở 0/1 (luyện mắt ghi rõ) · vùng đang chọn n/2.
 - **`nightKey(now)`** = hôm nay nếu đã qua mốc Globex mở ngày mới (**18:00 ET** = 05:00 VN hè / 06:00 VN đông), ngược lại hôm qua.
 
@@ -230,7 +230,7 @@ Máy tính (B4 + C6, C6 hiện lại kèm ô sửa): `NO_SL_SIDE` · `NO_SL_FLOO
 3. **Nhãn chính ≤ 9 từ** (đếm theo khoảng trắng, bỏ ký hiệu toán và số); tiêu chí dài để trong `criteria[]`; trợ giúp "?" ≤ 2 câu + link đúng mục trang HT (`…/he-thong-dem-vang/#id`: `sau-cau-hoi ma-tran-bias xep-hang-vung acceptance thoi-gian v-hay-u than-delta bong-bong-phe canh-hay-lung kb-a kb-b kb-c kb-d xung-dot ca-that luat-sl tp-be the-phien nhat-ky-lenh cuoi-tuan`). Mỗi kịch bản kèm ảnh `img/kb-*.png`.
 4. **Hai mức hướng dẫn**: *Mới* / *Quen*. Nhớ lựa chọn.
 5. **Nút chọn nhóm 3 trạng thái** cho mọi câu có đáp án xấu; đáp án xấu tô đỏ khi chọn; không checkbox.
-6. **Không hộp thoại xác nhận** trừ: sửa thẻ khi đang canh kèo (sau 19:20), "Tôi vẫn vào (phá luật)", xóa dữ liệu, tắt cửa sổ cấm.
+6. **Không hộp thoại xác nhận** trừ: sửa thẻ khi đang canh kèo (sau 19:20), "Tôi vẫn vào (phá luật)", xóa dữ liệu, tắt khung giờ cấm.
 7. **Bàn phím** (tầng 3, tắt khi focus ô nhập; `Esc` rời ô): `1–4` kịch bản, `B`/`S` hướng (chỉ B), `U`/`V`, `Enter` nút chính, `N` kèo mới, `?` trợ giúp.
 8. **Tối mặc định**, WCAG AA, có chế độ sáng. Font hệ thống. Số hiển thị dấu phẩy; ô nhập nhận cả dấu chấm.
 9. **Điện thoại ≥ 360 px**: tầng dọc, thẻ phiên thành ngăn trượt, thanh phán quyết dính đáy, không tràn ngang.
@@ -247,7 +247,7 @@ tram-dem-vang/
   css/app.css
   js/content.js    # TOÀN BỘ chữ: nhãn, criteria[], trợ giúp, lý do theo mã + htRef — dữ liệu thuần
   js/rules.js      # DANH SÁCH LUẬT CÓ THỨ TỰ + hằng số (ma trận bias, bảng vùng, mốc giờ có múi, ngưỡng, APP_VERSION)
-  js/time.js       # giờ VN, giờ mùa đông Mỹ/London, pha, cửa sổ cấm, nightKey
+  js/time.js       # giờ VN, giờ mùa đông Mỹ/London, pha, khung giờ cấm, nightKey
   js/engine.js     # thuần: (nights, nightKey, now, settings) → {verdict, reasons, missing, dots, order, enabled:{A..D: code|null}, half:{reasons}, regime}
   js/store.js · js/journal.js · js/ui/*.js · js/main.js
   tests/*.test.js  # node:test, CommonJS, require js/*.js
@@ -287,7 +287,7 @@ tram-dem-vang/
 - **Năm ca** theo Phụ lục A (fixtures đầy đủ).
 - Ngắt mạch (QĐ-10, QĐ-17): 2 phá luật ⇒ OFF; "Tôi vẫn vào" ×2 ⇒ OFF; 3 SL liên tiếp ⇒ OFF; hòa và TP reset; đêm mới về 0; đóng tay "khác" ⇒ phá luật; "đóng sạch trước tin" ⇒ không; `paper` không cộng gì; limit hủy xóa dòng.
 - Tầng 4: mốc be +1,5R / +1R với SL lẻ 0,1; lệnh mở qua đêm: engine với `nightKey` mới vẫn khóa tầng 3.
-- Thời gian: `nightKey` tại 00:30, 04:59 (đêm cũ), 05:00, 10:00 (đêm mới) ngày hè; 05:30 ngày 02/11/2026 (đêm cũ); mốc giờ tại 24/10, 25/10, 31/10, 01/11/2026, 13/03, 14/03, 27/03, 28/03/2027; cửa sổ ±15′ / ±5′; thứ Năm bật 19:30.
+- Thời gian: `nightKey` tại 00:30, 04:59 (đêm cũ), 05:00, 10:00 (đêm mới) ngày hè; 05:30 ngày 02/11/2026 (đêm cũ); mốc giờ tại 24/10, 25/10, 31/10, 01/11/2026, 13/03, 14/03, 27/03, 28/03/2027; khung giờ ±15′ / ±5′; thứ Năm bật 19:30.
 - Thẻ phiên: vết trước/sau 19:20; sửa khi đang canh kèo ⇒ cần xác nhận.
 - Sổ: cộng R, lệch máy/tay, 4 con số tuần, Markdown đúng mẫu (so chuỗi), dòng ⚠ từ `htRef`, cột Δ và V/U cho 4 kịch bản.
 - Store: migrate; nhập JSON gộp theo `trades.id`.
@@ -374,6 +374,6 @@ Chung: `settings = {dstShift: true, capital: 2000, riskPct: 2}`; `t0 = {alert: t
 
 **A5 · ca dựng từ 5/10 19:25 — B buy ⇒ CHỜ, missing[0] = b2**
 - card: q1 D · q5 trên · vwapW trên · q6 rồi ⇒ BUY. zones: z1 VWAP tuần 4181 · z2 VAL Âu 4182 · z3 VAH Âu 4192.
-- regime: Cân bằng. now 19:25 (cửa sổ 19:30 tắt trong t0).
+- regime: Cân bằng. now 19:25 (khung giờ 19:30 tắt trong t0).
 - setup: B · z1 (trùng cạnh z2, |4181 − 4182| ≤ 1) · buy · c4 cùng phe, +25 · c5 ≤ 1 · c6 2,5 · c7.dma ngang · b1 U · b2 lẫn lộn · b3 đạt · calc {4183,0, 4180,5, 4190,5} · slPos đúng.
 - Kỳ vọng: WAIT · reasons [] · missing[0] = `WAIT_B2_MIXED` ("chưa đủ 3 nến giảm dần") · half.reasons [`BEFORE_2030`].

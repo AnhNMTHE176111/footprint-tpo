@@ -6,7 +6,7 @@
 })(this, function (dep) {
   'use strict';
 
-  var APP_VERSION = '1.0.4';
+  var APP_VERSION = '1.0.5';
   var EPS = 1e-9;
 
   var T = {
@@ -39,7 +39,7 @@
     thin: { at: '23:00', tz: 'VN' }, settle: { at: '00:30', tz: 'ET' }, globexMaint: { at: '04:00', tz: 'ET' }
   };
 
-  // Cửa sổ cấm mặc định (QĐ-6)
+  // Khung giờ cấm mặc định (QĐ-6)
   // 19:30 mặc định chỉ bật thứ Năm (on1930); ngoài ra engine tự coi là bật khi chưa qua tầng 0 hoặc ngày có tin (effectiveWindows)
   function defaultWindows(on1930) {
     return [
@@ -47,7 +47,7 @@
       { id: 'w2100', kind: 'news', rank: 2, at: '21:00', tz: 'ET', minutesBefore: 5, minutesAfter: 5, on: true }
     ];
   }
-  // Cửa sổ hiệu lực: 19:30 bật khi w.on, hoặc (chưa bị người dùng tắt tay) khi chưa qua tầng 0 / ngày có tin lớn
+  // Khung giờ áp dụng: 19:30 bật khi w.on, hoặc (chưa bị người dùng tắt tay) khi chưa qua tầng 0 / ngày có tin lớn
   function effectiveWindows(t0, key) {
     var t = t0 || {};
     var list = t.windows;
@@ -142,7 +142,7 @@
     return { value: auto, auto: auto, overridden: false };
   }
 
-  // Chế độ hiệu lực
+  // Chế độ đang áp dụng
   function effectiveRegime(regime) {
     var r = regime || {};
     var mode = r.mode || 'balanced';

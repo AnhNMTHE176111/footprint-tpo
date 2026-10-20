@@ -1,5 +1,5 @@
 'use strict';
-// Thời gian (giờ mùa đông, nightKey, cửa sổ, pha) + thẻ phiên
+// Thời gian (giờ mùa đông, nightKey, khung giờ, pha) + thẻ phiên
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const time = require('../js/time.js');
@@ -62,7 +62,7 @@ test('ngày chuyển giờ: hiện thẻ thông báo', () => {
   assert.match(C.notices.US_SWITCH, /19:20 sang 20:20/);
   assert.match(C.notices.US_SWITCH, /IB = 20:20–21:20/);
 });
-test('cửa sổ ±15′ (19:30) và ±5′ (21:00); mùa đông +1h', () => {
+test('khung giờ ±15′ (19:30) và ±5′ (21:00); mùa đông +1h', () => {
   const w = R.defaultWindows(true);
   const hit = (key, hm) => !!time.hitWindow(w, time.nightMinutes(vn(key, hm).getTime(), key), key, true);
   assert.equal(hit('2026-10-13', '19:14'), false);
@@ -76,7 +76,7 @@ test('cửa sổ ±15′ (19:30) và ±5′ (21:00); mùa đông +1h', () => {
   assert.equal(hit('2026-11-10', '22:03'), true);
 });
 test('thứ Năm', () => { assert.equal(time.isThursday('2026-10-15'), true); assert.equal(time.isThursday('2026-10-14'), false); });
-test('cửa sổ kế tiếp và đếm ngược', () => {
+test('khung giờ kế tiếp và đếm ngược', () => {
   const key = '2026-10-13', w = R.defaultWindows(true);
   const nw = time.nextWindow(w, 20 * 60 + 14, key, true);
   assert.equal(nw.w.id, 'w2100'); assert.equal(nw.startsIn, 41);
@@ -147,7 +147,7 @@ test('thẻ phiên: sửa khi đang canh kèo (sau 19:20) ⇒ cần xác nhận;
   n.card.lockedAt = null;
   assert.deepEqual(J.cardEditPolicy(n, 'q1', late, key, true), { log: false, confirm: false });
 });
-test('thẻ phiên: applyCardEdit ghi vết đúng', () => {
+test('thẻ phiên: applyCardEdit ghi lại giờ sửa đúng', () => {
   const key = '2026-10-13', n = mk('B'); n.setup = {};
   const at = vn(key, '20:40');
   J.applyCardEdit(n, 'q1', 'Q1 đổi thành b', at.getTime(), time.nightMinutes(at.getTime(), key), key, true);

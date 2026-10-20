@@ -71,7 +71,7 @@ function mk(scen, over) {
   return n;
 }
 const DATE = '2026-10-13';
-// chạy đêm nền ở 21:30 (sau cửa sổ 21:00, sau 20:30 ⇒ không có nửa cỡ)
+// chạy đêm nền ở 21:30 (sau khung giờ 21:00, sau 20:30 ⇒ không có nửa cỡ)
 function go(scen, over, hmStr, date) { return run(date || DATE, hmStr || '21:30', mk(scen, over)); }
 
 module.exports = { mk, go, DATE, ANS_BUY, ANS_SELL, ANS_NONE, ANS_WAIT, clone, vn, SETTINGS, t0Default, night, card, run, trade, closed, time, engine };

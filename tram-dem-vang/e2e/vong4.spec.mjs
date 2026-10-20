@@ -261,7 +261,7 @@ test('v4-14 · "Giờ phá" có chú thích; trước 18:00 chỉ cảnh báo, k
   });
 });
 
-test('v4-15 · Sổ: chú giải cột "4 kiểm tra" dưới bảng; chip đủ chữ; Từ điển có VA / VAH / VAL / POC, phá giả, cửa sổ cấm', async () => {
+test('v4-15 · Sổ: chú giải cột "4 kiểm tra" dưới bảng; chip đủ chữ; Từ điển có VA / VAH / VAL / POC, phá giả, khung giờ cấm', async () => {
   await withPage(buildState('B'), null, async ({ page }) => {
     const bar = await page.textContent('.statusbar');
     assert.match(bar, /Phá luật 0 trên 2/); assert.match(bar, /SL liên tiếp 0 trên 3/); assert.match(bar, /Lệnh mở 0 trên 1/);
@@ -273,7 +273,7 @@ test('v4-15 · Sổ: chú giải cột "4 kiểm tra" dưới bảng; chip đủ
     assert.ok((await page.$$eval('.glossary dt:not([hidden])', (els) => els.map((e) => e.textContent))).includes('VA / VAH / VAL / POC'));
     await page.fill('[data-testid="glossary-search"]', 'pha gia');
     assert.ok((await page.$$eval('.glossary dt:not([hidden])', (els) => els.map((e) => e.textContent))).includes('phá giả'));
-    await page.fill('[data-testid="glossary-search"]', 'cua so cam');
+    await page.fill('[data-testid="glossary-search"]', 'khung gio cam');
     assert.match(await page.textContent('.glossary dd:not([hidden])'), /19:30.*21:00/);
   });
 });

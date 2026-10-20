@@ -1,4 +1,4 @@
-/* Trạm Đêm Vàng — tầng 0 (trước), tầng 1 (vùng + thẻ phiên), tầng 2 (chế độ). */
+/* Trạm Đêm Vàng — tầng 0 (trước) và tầng 1 (vùng + thẻ phiên). */
 (function (root) {
   'use strict';
   var TDV = root.TDV, ui = TDV.ui, C = TDV.content, J = TDV.journal, R = TDV.rules, time = TDV.time;
@@ -189,8 +189,7 @@
         n.card.zones.push(z);
       });
     }
-    var sel = h('select', { class: 'field', 'aria-label': T('zoneType'), 'data-testid': 'zone-type', onchange: function (e) { zf.type = e.target.value; app.render({ keep: false }); } },
-      zoneOrder().map(function (t) { return h('option', { value: t, selected: zf.type === t ? true : null, text: C.zoneTypes[t].label + ' · ' + C.zoneTypes[t].rank }); }));
+    var sel = ui.zonePick({ types: zoneOrder(), value: zf.type, onPick: function (t) { zf.type = t; app.render({ keep: false }); } });
     var priceIn = numInput(zf.price, function (v) { zf.price = v; }, { placeholder: T('price'), label: T('price'), id: 'zprice', onEnter: addZone });
     var addRow = h('div', { class: 'zform' }, sel, priceIn,
       numInput(zf.priceTo, function (v) { zf.priceTo = v; }, { placeholder: T('priceTo'), label: T('priceTo'), onEnter: addZone }),
@@ -223,7 +222,7 @@
       var tdef = R.ZONE_TYPES[z.type] || {}, tf = TAIL_FROM[z.type];
       var row = h('div', { class: 'zrow', 'data-zone': z.id },
         h('span', { class: 'zid', text: z.id }),
-        h('span', { class: 'zname', text: C.zoneTypes[z.type] ? C.zoneTypes[z.type].label : z.type }),
+        h('span', { class: 'zname', title: C.zoneTypes[z.type] ? ui.fillTimes(C.zoneTypes[z.type].def + ' ' + C.zoneTypes[z.type].use) : null, text: C.zoneTypes[z.type] ? C.zoneTypes[z.type].label : z.type }),
         numInput(z.price, function () {}, { label: T('price'), onCommit: function (v) { app.cardEdit(z.type, T('editZone', { z: z.id }), function (n) { zoneOf(n, z.id).price = v; }); } }),
         z.priceTo !== undefined && z.priceTo !== null ? numInput(z.priceTo, function () {}, { label: T('priceTo'), placeholder: T('priceTo'), onCommit: function (v) { app.cardEdit(z.type, T('editZone', { z: z.id }), function (n) { var zz = zoneOf(n, z.id); if (v === null) delete zz.priceTo; else zz.priceTo = v; }); } }) : null,
         tdef.needSide ? seg(SIDE_OPTS, z.side || null, function (v) { app.cardEdit(z.type, T('editZone', { z: z.id }), function (n) { zoneOf(n, z.id).side = v; }); }, { cls: 'small', noToggle: true }) : null,
@@ -296,87 +295,5 @@
   }
   function zoneOf(n, id) { return n.card.zones.filter(function (z) { return z.id === id; })[0]; }
 
-  // ================= TẦNG 2 =================
-  function tier2(app) {
-    var night = app.night, rg = night.regime, bo = rg.breakout, res = app.res;
-    var el = h('div', { class: 'tier', 'data-tier': '2' });
-    el.appendChild(lead(T('t2Lead')));
-
-    var modes = [
-      { v: 'balanced', label: C.modeLabels.balanced, sub: T('modeBalancedSub') },
-      { v: 'broken', label: C.modeLabels.broken, sub: T('modeBrokenSub') },
-      { v: 'thin', label: C.modeLabels.thin, sub: T('modeThinSub') }
-    ];
-    var modeSeg = seg(modes, rg.mode, function (v) {
-      if (!v) return;
-      app.update(function (n) {
-        J.setRegimeMode(n, v, app.nowMs);
-      });
-    }, { cls: 'big', noToggle: true, label: T('t2Mode') });
-    var body = [modeSeg];
-
-    if (rg.mode === 'thin') {
-      body.push(h('div', { class: 'ctl', 'data-ctl': 'thinDir' }, h('div', { class: 'ctl-label', text: T('thinDir') }),
-        seg([{ v: 'up', label: T('thinUp') }, { v: 'down', label: T('thinDown') }], rg.thinDir || null, function (v) { app.update(function (n) { n.regime.thinDir = v; }); }, { noToggle: true })));
-      if (!rg.thinDir) body.push(banner(T('thinDirNeed'), 'warn'));
-    }
-    if (rg.mode === 'broken') {
-      var zoneOpts = res.zones.map(function (z) { return { v: z.id, label: z.id + ' · ' + ui.zoneLabel(z) }; });
-      // đổi hướng / cạnh sau khi đã công nhận = cú phá khác: công nhận lại từ bước 1 (REVIEW-3 mục 2)
-      var setBo = function (field, v) {
-        var reset = false;
-        app.update(function (n) { reset = J.setBreakoutField(n, field, v, app.nowMs); });
-        if (reset) app.toast(T('boReset'));
-      };
-      // QĐ-24: không còn ô "Giờ phá" và "Lần mấy"; giờ phá = lúc bấm "Vừa phá" (hoặc bước 1 nếu chưa có), không hiện, không sửa
-      var need = !bo.dir || !bo.edgeZoneId || !bo.step1 || !bo.step2;
-      body.push(h('div', { class: 'panel inner brokenrow' },
-        h('div', { class: 'ctl', 'data-ctl': 'boDir' }, h('div', { class: 'ctl-label', text: T('boDir') }),
-          seg([{ v: 'up', label: T('breakUp') }, { v: 'down', label: T('breakDown') }], bo.dir || null, function (v) { setBo('dir', v); }, { noToggle: true })),
-        h('div', { class: 'ctl', 'data-ctl': 'boEdge' }, h('div', { class: 'ctl-label' }, h('span', { text: T('boEdge') }), ui.helpBtn({ text: T('boEdgeHelp'), ref: 'acceptance' })),
-          zoneOpts.length ? seg(zoneOpts, bo.edgeZoneId || null, function (v) { setBo('edgeZoneId', v); }, { noToggle: true, cls: 'wrap' }) : h('span', { class: 'muted', text: T('noZones') })),
-        h('div', { class: 'ctl', 'data-ctl': 'boStep1' }, h('div', { class: 'ctl-label' }, h('span', { text: T('boStep1') }), ui.helpBtn({ text: T('acceptHelp'), ref: 'acceptance' })),
-          seg([{ v: true, label: T('yes') }, { v: false, label: T('notYet') }], !!bo.step1, function (v) { app.update(function (n) { var b = n.regime.breakout; b.step1 = !!v; if (!v) b.step2 = false; if (v && !b.at) b.at = J.hm(app.nowMs); }); },
-            { noToggle: true, disabled: bo.dir && bo.edgeZoneId ? null : { true: T('needDirEdge') }, onDisabled: function (v, why) { app.toast(why); } })),
-        h('div', { class: 'ctl', 'data-ctl': 'boStep2' }, h('div', { class: 'ctl-label', text: T('boStep2') }),
-          seg([{ v: true, label: T('yes') }, { v: false, label: T('notYet') }], !!bo.step2, function (v) { app.update(function (n) { n.regime.breakout.step2 = !!v; }); }, { noToggle: true, disabled: bo.step1 ? null : { true: T('needStep1') }, onDisabled: function (v, why) { app.toast(why); } })),
-        btn(T('boFailed'), function () { app.update(function (n) { J.breakoutFailed(n, app.nowMs); }); }, 'ghost', { 'data-testid': 'bo-failed' })));
-      if (need) body.push(h('p', { class: 'muted small', text: T('boNeedTop') }));
-    }
-    if ((bo.nth || 1) >= 2) body.push(h('p', { class: 'muted small', 'data-testid': 'bo-failed-note', text: T('boFailedNote', { n: (bo.nth || 1) - 1, next: bo.nth }) }));
-    var eff = res.regime.effective;
-    body.push(h('div', { class: 'effline' }, h('span', { class: 'ctl-label', text: T('effective') }),
-      h('span', { class: 'bigchip ' + (eff === 'broken' ? 'good' : eff === 'pending' ? 'warn' : ''), 'data-testid': 'regime-eff', text: C.modes[eff] + (res.regime.dir ? ' · ' + (res.regime.dir === 'up' ? T('dirUp') : T('dirDown')) : '') })));
-    el.appendChild(section(T('t2Title1'), body, { help: { text: T('t2ModeHelp'), ref: 'acceptance' } }));
-
-    // nến dài nhất phiên
-    var until = rg.longestBarUntil;
-    var active = until && app.nowMs < until;
-    el.appendChild(section(T('t2Title2'), [
-      h('div', { class: 'row' },
-        btn(T('longestBar'), function () { app.update(function (n) { n.regime.longestBarUntil = time.longestBarUntil(app.nowMs); }); }, 'danger', { 'data-testid': 'longest-bar' }),
-        active ? chip(T('reopenAt', { hm: J.hm(until) }), 'bad') : null,
-        active ? btn(T('clearLongest'), function () { app.update(function (n) { n.regime.longestBarUntil = null; }); }, 'ghost small') : null),
-    ], { help: { text: T('t2LongestHelp'), ref: 'xung-dot' } }));
-
-    // bảng bật kịch bản
-    var tbl = h('div', { class: 'scen-table', role: 'table' });
-    R.SCENARIOS.forEach(function (s) {
-      var code = res.enabled[s], sc = C.scenarios[s];
-      tbl.appendChild(h('div', { class: 'srow ' + (code ? 'off' : 'on'), role: 'row', 'data-scen': s },
-        h('span', { class: 'sname' }, h('b', { text: s }), ' ', sc.name),
-        code ? h('span', { class: 'sstat bad', text: '✖ ' + ui.codeText(code) }) : h('span', { class: 'sstat good', text: '✔ ' + T('enabled') })));
-    });
-    var tbox = [tbl];
-    if (res.warnings.indexOf('WARN_BEFORE_2030') >= 0) tbox.push(h('div', { class: 'banner warn', 'data-testid': 'warn-2030' }, h('span', { text: ui.fillTimes(C.warnText.WARN_BEFORE_2030) + ' ' }), ui.qd19Help()));
-    if (res.warnings.indexOf('WARN_NYSE') >= 0) tbox.push(banner(C.warnText.WARN_NYSE, 'warn'));
-    el.appendChild(section(T('t2Title3'), tbox, { help: { text: T('t2TableHelp'), ref: 'xung-dot' } }));
-
-    var can3 = !res.locks.tier3;
-    el.appendChild(h('div', { class: 'actions' }, btn(T('toTier3'), function () { app.go(3); }, 'primary', { disabled: can3 ? null : true }),
-      can3 ? null : h('span', { class: 'muted', text: T('lock_' + res.locks.tier3) })));
-    return el;
-  }
-
-  ui.tier0 = { render: tier0 }; ui.tier1 = { render: tier1 }; ui.tier2 = { render: tier2 };
+  ui.tier0 = { render: tier0 }; ui.tier1 = { render: tier1 };
 })(this);

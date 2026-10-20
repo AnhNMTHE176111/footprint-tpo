@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const J = require('../js/journal.js');
+const R = require('../js/rules.js');
 const here = dirname(fileURLToPath(import.meta.url));
 export const ROOT = resolve(here, '..');
 export const URL_INDEX = pathToFileURL(resolve(ROOT, 'index.html')).href;
@@ -17,7 +18,10 @@ export async function launch() { return chromium.launch(); }
 
 const SETTINGS = { theme: 'dark', guideLevel: 'new', capital: 2000, riskPct: 2, dstShift: true, shortcuts: true, lastExportAt: null, sizeAsked: true };
 
-// kind: 'A' (đang vừa phá xuống, bias SELL) · 'B' (cân bằng, bias BUY) · 'nocard' · 'wait' (bias CHỜ)
+export function ticksAll(scen) { const t = {}; R.tickIds(scen).forEach((x) => { t[x.id] = true; }); return t; }
+
+// kind: 'A' (bias SELL, vùng cho khối A) · 'B' (bias BUY) · 'nocard' · 'wait' (bias CHỜ)
+// extra(n): sửa đêm trước khi lưu. Ô chung "nến dài nhất" mặc định chưa tick (e2e tick bằng chuột khi cần)
 export function buildState(kind, extra) {
   const n = J.newNight();
   n.t0.touched = true; n.t0.alert = true;
@@ -27,7 +31,6 @@ export function buildState(kind, extra) {
     n.card.answers = sell;
     n.card.zones = [{ id: 'z1', type: 'vwapW', price: 4205 }, { id: 'z2', type: 'hvnW', price: 4195 }, { id: 'z3', type: 'valEu', price: 4185 }, { id: 'z4', type: 'vahEu', price: 4199 }];
     n.card.lockedAt = '19:00';
-    n.regime = { mode: 'broken', thinDir: null, breakout: { dir: 'down', edgeZoneId: 'z2', at: '20:40', nth: 1, step1: true, step2: true }, longestBarUntil: null, log: [] };
   } else if (kind === 'B') {
     n.card.answers = buy;
     n.card.zones = [{ id: 'z1', type: 'vwapW', price: 4175 }, { id: 'z2', type: 'valEu', price: 4175.5 }, { id: 'z3', type: 'vahEu', price: 4184 }];
@@ -41,7 +44,12 @@ export function buildState(kind, extra) {
     n.card.zones = [{ id: 'z1', type: 'vwapW', price: 4175 }];
   }
   if (extra) extra(n);
-  return { version: 1, settings: Object.assign({}, SETTINGS), nights: { [KEY]: n } };
+  return { version: 2, settings: Object.assign({}, SETTINGS), nights: { [KEY]: n } };
+}
+
+// khối đã điền sẵn gần đủ (mọi ô tick, đủ số) để test tick nốt bằng chuột
+export function blockB(over) {
+  return Object.assign({ side: 'buy', zoneId: 'z1', entry: 4177.0, sl: 4174.7, tp: 4183.9, c6: 2.0, ticks: ticksAll('B') }, over || {});
 }
 
 // Mở một trang mới với giờ cố định và dữ liệu gieo sẵn (chỉ gieo khi chưa có, để tải lại giữ nguyên)
@@ -66,7 +74,8 @@ export async function openPage(browser, state, opts) {
   return { context, page, errors };
 }
 
-export const seg = (ctl, v) => `[data-ctl="${ctl}"] [data-v="${v}"]`;
+export const tick = (scen, id) => `[data-testid="tick-${scen}-${id}"]`;
+export const prog = async (page, scen) => (await page.textContent(`[data-testid="prog-${scen}"]`)).trim();
 
 // điền ô số rồi bấm Tab để "chốt" (sự kiện change)
 export async function fillNum(page, id, value) {
@@ -75,8 +84,5 @@ export async function fillNum(page, id, value) {
   await page.press(sel, 'Tab');
 }
 export async function verdict(page) { return page.getAttribute('[data-testid="verdict"]', 'data-verdict'); }
-
-// Canh tự gập thành một dòng khi đã đủ (QĐ-25); mở lại trước khi sửa một ô của Canh
-export async function openCanh(page) {
-  if (await page.locator('[data-testid="canh"].closed').count()) await page.click('[data-testid="canh-toggle"]');
-}
+export const seg = (ctl, v) => `[data-ctl="${ctl}"] [data-v="${v}"]`;
+export const segIn = (item, v) => `[data-item="${item}"] [data-v="${v}"]`;

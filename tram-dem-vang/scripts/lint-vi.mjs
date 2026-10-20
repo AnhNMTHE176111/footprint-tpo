@@ -21,7 +21,7 @@ const LIST_411 = ('buy sell limit market ENTRY TPO VA VAH VAL POC HVN LVN VWAP d
 const viFile = readFileSync(resolve(here, 'vi-khong-dau.txt'), 'utf8').split(/\r?\n/).map((l) => l.replace(/#.*$/, '').trim().toLowerCase()).filter(Boolean);
 const ALLOW = new Set([...LIST_411, ...viFile]);
 
-const SKIP_KEYS = new Set(['htRef', 'ctl', 'img', 'anchor', 'ref', 'v', 'HT_BASE', 'criteria', 'key', 'gloss']);
+const SKIP_KEYS = new Set(['htRef', 'ctl', 'img', 'anchor', 'ref', 'v', 'HT_BASE', 'criteria', 'key', 'gloss', 'id', 'short']);
 const LABEL_KEYS = /^(t\dTitle\d?|t0Alert|t0Note|vwapQ|recheck|boDir|boEdge|boAt|boStep\d|boNth|newsDay|thinDir|swept|entryL|slL|tpL|c6Again|curPrice|exitPrice|fillPrice|manualReason|outsideBar|yourSum|set[A-Z]\w*|kv[A-Z]\w*|jh\d|plan\d|cancelWhen|w[A-Z]\w*|card[A-Z]\w*|tab(Label|Canh|Bam)|t5(Tonight|Week|Export|Settings))$/;
 
 const errors = [];
@@ -84,12 +84,10 @@ for (const f of uiFiles) {
   for (const m of src.matchAll(/\bT\(\s*[^'")]*?\?\s*'([A-Za-z0-9_]+)'\s*:\s*'([A-Za-z0-9_]+)'/g)) { used.add(m[1]); used.add(m[2]); }
 }
 const dynamic = [];
-['NO_CARD', 'BIAS_WAIT', 'OPEN_TRADE', 'NO_OPEN'].forEach((c) => dynamic.push('lock_' + c));
-['NO_CARD', 'BIAS_WAIT', 'OPEN_TRADE'].forEach((c) => dynamic.push('lockGo_' + c));
 ['q1', 'q5', 'q6', 'vwapW', 'zones'].forEach((c) => dynamic.push('need_' + c));
-for (let i = 0; i < 11; i++) dynamic.push('key' + i);
+for (let i = 0; i < 5; i++) dynamic.push('key' + i);
 for (let i = 1; i <= 7; i++) dynamic.push('jh' + i);
-dynamic.push('chipOpen', 'chipOpenPaper', 'priceFar', 'priceDigits', 'copyShape');
+dynamic.push('chipOpen', 'chipOpenPaper', 'copyShape');
 dynamic.forEach((k) => used.add(k));
 for (const k of used) if (!(k in C.ui)) errors.push(`(e) thiếu khóa chữ ui.${k} (được gọi trong js/ui hoặc js/main.js)`);
 const unused = Object.keys(C.ui).filter((k) => !used.has(k));

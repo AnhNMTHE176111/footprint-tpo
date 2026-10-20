@@ -93,3 +93,10 @@ spl
 spu
 vwapd
 vwapw
+
+# bổ sung v2
+nhau
+nam
+chung
+thanh
+xanh

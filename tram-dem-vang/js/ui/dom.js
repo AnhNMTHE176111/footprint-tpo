@@ -132,16 +132,22 @@
   function dirCls(v) { return v === 'BUY' || v === 'buy' ? 'dir-buy' : v === 'SELL' || v === 'sell' ? 'dir-sell' : 'warn'; }
   function biasText(v) { return v === 'BUY' ? T('biasBuy') : v === 'SELL' ? T('biasSell') : v === 'KHÔNG' ? T('biasNone') : v === 'CHỜ' ? T('biasWait') : T('biasUnknown'); }
   function sideText(s) { return s === 'buy' ? 'buy' : s === 'sell' ? 'sell' : '—'; }
-  function codeText(code, vars) {
-    var c = C.codes[code];
-    if (!c) return code;
-    return fillTimes(c.text.replace(/\{(\w+)\}/g, function (m, k) { return vars && vars[k] !== undefined ? vars[k] : m; }));
+  // chữ lý do của một ô tự kiểm (autoBad) của khối bl; vars lấy từ số liệu của khối
+  function autoReason(code, bl, app) {
+    var cc = bl.calc, s = app.settings || {}, tpl = C.autoBad[code];
+    if (!tpl) return code;
+    var vars = { sl: J.fmt(cc.slDist), c6: J.fmt(TDV.rules.num(((app.night.se.blocks || {})[bl.id] || {}).c6)), rr: J.fmtTrim(cc.rr), cap: s.capital, pct: String(s.riskPct).replace('.', ','),
+      max: cc.maxSl === undefined ? '—' : J.fmt(cc.maxSl), bias: biasText(app.res.bias) };
+    return fillTimes(tpl.replace(/\{(\w+)\}/g, function (m, k) { return vars[k] === undefined ? m : vars[k]; }));
   }
-  // biến số cho chữ của mã luật: SL, biên độ nến, vốn, rủi ro, SL tối đa
-  function codeVars(app) {
-    var cc = app.res.calc, s = app.settings || {};
-    return { sl: J.fmt(cc.slDist), c6: J.fmt(TDV.rules.num(app.night.setup.c6)), cap: s.capital, pct: String(s.riskPct).replace('.', ','),
-      max: cc.maxSl === undefined ? '—' : J.fmt(cc.maxSl) };
+  // chữ lý do của một ô dùng chung chưa đạt
+  function commonReason(code, app) {
+    var tpl = C.commonBad[code], vars = {};
+    if (code === 'news' && app.res.newsHit) {
+      var r = TDV.time.windowRange(app.res.newsHit, app.key, app.useDst);
+      vars = { hm: TDV.time.fmtMin(r.center), left: Math.max(0, Math.ceil(r.to - app.nowMin)) };
+    }
+    return fillTimes(tpl.replace(/\{(\w+)\}/g, function (m, k) { return vars[k] === undefined ? m : vars[k]; }));
   }
   function zoneLabel(z) {
     var t = C.zoneTypes[z.type];
@@ -152,5 +158,5 @@
 
   ui.T = T; ui.h = h; ui.clear = clear; ui.helpBtn = helpBtn; ui.seg = seg; ui.numInput = numInput; ui.textInput = textInput;
   ui.chip = chip; ui.btn = btn; ui.banner = banner; ui.section = section; ui.biasText = biasText; ui.dirCls = dirCls; ui.sideText = sideText;
-  ui.codeText = codeText; ui.codeVars = codeVars; ui.fillTimes = fillTimes; ui.held = held; ui.qd19Help = qd19Help; ui.halfWhy = halfWhy; ui.zoneLabel = zoneLabel; ui.fmtIn = fmtIn;
+  ui.autoReason = autoReason; ui.commonReason = commonReason; ui.fillTimes = fillTimes; ui.held = held; ui.qd19Help = qd19Help; ui.halfWhy = halfWhy; ui.zoneLabel = zoneLabel; ui.fmtIn = fmtIn;
 })(this);

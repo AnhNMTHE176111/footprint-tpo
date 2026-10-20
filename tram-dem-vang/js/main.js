@@ -1,4 +1,4 @@
-/* Trạm Đêm Vàng — dây nối: trạng thái, vẽ lại, điều hướng tầng, hộp thoại, phím tắt, service worker. */
+/* Trạm Đêm Vàng — dây nối: trạng thái, vẽ lại, điều hướng tầng, hộp thoại, ghi lệnh, phím tắt, service worker. */
 (function (root) {
   'use strict';
   var TDV = root.TDV, ui = TDV.ui, C = TDV.content, J = TDV.journal, R = TDV.rules, E = TDV.engine, S = TDV.store, time = TDV.time, N = TDV.news;
@@ -10,7 +10,7 @@
 
   var state = S.load(storage);
   var feed = N.loadStored(storage);   // lịch tin Forex Factory bản gần nhất (data/ff.json) — mở file:// vẫn có
-  var app = { state: state, ui: { sub: 'canh' }, tier: null, _draft: null, _lastKey: null, panelEl: null };
+  var app = { state: state, ui: {}, tier: null, _draft: null, _lastKey: null, panelEl: null };
   TDV.app = app;
 
   var $ = function (id) { return document.getElementById(id); };
@@ -31,7 +31,7 @@
     if (!nights[app.key]) { nights = Object.assign({}, nights); nights[app.key] = app.night; }
     app.feed = feed;
     app.news = N.forNight(feed, app.key, app.nowMs, app.useDst);
-    app.res = E.evaluate({ nights: nights, nightKey: app.key, now: app.nowMs, settings: state.settings, news: app.news });
+    app.res = E.evaluate(app.night, app.nowMs, state.settings, app.news, { key: app.key, nights: nights });
   }
   function persist() {
     var ok = S.save(storage, state);
@@ -180,107 +180,72 @@
     setTimeout(function () { t.classList.add('out'); setTimeout(function () { t.remove(); }, 400); }, 3600);
   };
 
-  // ---------- vào lệnh ----------
-  function freshEnterCtx() { compute(); return app.res; }
-  app.openEnter = function () {
-    var res = freshEnterCtx();
-    if (res.verdict !== 'ENTRY') { render(); return; }
-    var kind = 'market', price = res.calc.entry;
-    var priceWrap = ui.numInput(price, function (v) { price = v; }, { id: 'enterprice', label: T('enterPrice') });
-    var segEl = ui.seg([{ v: 'market', label: 'market' }, { v: 'limit', label: 'limit' }], kind, function (v) { kind = v || 'market'; refreshHint(); markSel(); }, { noToggle: true, label: T('enterKind') });
-    function markSel() { segEl.querySelectorAll('.opt').forEach(function (b) { var on = b.dataset.v === kind; b.classList.toggle('sel', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); }
-    var hint = h('p', { class: 'muted' });
-    var warnBox = h('div', { class: 'priceerr', 'data-testid': 'price-err' });
-    function refreshHint() { hint.textContent = kind === 'market' ? T('enterMarketHint') : T('enterLimitHint'); }
-    refreshHint();
-    var content = h('div', { class: 'dlg' }, h('h3', { text: T('enterTitle') }),
-      h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('enterKind') }), segEl),
-      h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('enterPrice') }), priceWrap), hint, warnBox,
-      h('div', { class: 'actions' }, btn(T('cancel'), function () { closeModal(false); }, 'ghost'),
-        btn(T('enterConfirm'), function () {
-          var bad = J.priceProblem(price, res.calc.entry);
-          if (bad) { ui.clear(warnBox).appendChild(ui.banner(T(bad, { n: 20, ref: J.fmt(res.calc.entry) }), 'bad')); return; }
-          closeModal(true); app.enter({ kind: kind, price: price });
-        }, 'primary big', { 'data-testid': 'enter-confirm' })));
-    openModal(content);
-  };
-  app.enter = function (o) {
-    var res = freshEnterCtx();
-    if (res.verdict !== 'ENTRY') { render(); return; }
-    app.update(function (n) { J.createTrade(n, res, { kind: o.kind, price: o.price, paper: !!o.paper || res.paper, ruleBreak: false, nowMs: app.nowMs, nowMin: app.nowMin }); });
-    app.ui.curPrice = null; app.ui.fillPrice = undefined; app.ui.closeKind = null; app.ui.sub = 'canh'; app.ui.jumpDone = false; app.ui.jumpNote = false;
-    app.go(4);
-    app.toast(o.paper || res.paper ? T('enteredPaper') : T('entered'));
-  };
-  app.forceEnter = function () {
-    var res = freshEnterCtx();
-    if (!res.side || !res.calc.numsOk || res.verdict === 'ENTRY' || res.verdict === 'LOCKED') return;
-    var vars = ui.codeVars(app);
-    var codes = J.forceCodes(res).map(function (c) { return ui.codeText(c, vars).replace(/[.\s]+$/, ''); });
+  // ---------- ghi lệnh, nhảy khối ----------
+  // Ghi một dòng vào Sổ từ khối scen. Bình thường chỉ khi khối đó là ENTRY; o.force = "Vẫn vào" (cờ phá luật + danh sách ô thiếu).
+  app.writeTrade = function (scen, o) {
+    o = o || {};
+    compute();
+    var res = app.res, bl = res.blocks[scen], e = res.entry;
+    var forced = !!o.force;
+    if (!bl || (!forced && !(e && e.scen === scen))) { render(); return; }
+    if (forced && !(bl.side && bl.calc.numsOk)) return;
+    var missing = forced ? bl.missing.concat(res.common.filter(function (x) { return !x.ok; }).map(function (x) { return 'common:' + x.id; })) : [];
     var paper = res.paper;
-    app.confirm({ title: T('forceTitle'), text: T('forceText', { list: codes.join(' · ') }) + (paper ? ' ' + T('forcePaperNote') : ' ' + T('forceCount')), ok: T('forceOk'), danger: true }).then(function (ok) {
-      if (!ok) return;
-      compute();
-      var r2 = app.res;
-      app.update(function (n) { J.createTrade(n, r2, { kind: 'market', price: r2.calc.entry, paper: paper, ruleBreak: true, nowMs: app.nowMs, nowMin: app.nowMin }); });
-      app.ui.curPrice = null; app.ui.closeKind = null; app.ui.sub = 'canh'; app.ui.jumpDone = false; app.ui.jumpNote = false;
-      app.go(4);
-      app.toast(paper ? T('enteredPaper') : T('forcedToast'));
+    app.update(function (n) { J.createTrade(n, res, { scen: scen, ruleBreak: forced, paper: paper, missing: missing, nowMs: app.nowMs, nowMin: app.nowMin }); });
+    window.scrollTo(0, 0);
+    app.toast(paper ? T('enteredPaper') : forced ? T('forcedToast') : T('entered'));
+  };
+  app.forceTrade = function (scen) {
+    compute();
+    var res = app.res, bl = res.blocks[scen];
+    if (!bl || !bl.side || !bl.calc.numsOk || res.entry) return;
+    var list = bl.missing.map(function (id) { return ui.fillTimes(C.itemLabel(scen, id)); })
+      .concat(res.common.filter(function (x) { return !x.ok; }).map(function (x) { return C.itemLabel(scen, 'common:' + x.id); }));
+    var paper = res.paper;
+    app.confirm({ title: T('forceTitle'), text: T('forceText', { n: list.length, list: list.slice(0, 5).join(' · ') + (list.length > 5 ? ' …' : '') }) + (paper ? ' ' + T('forcePaperNote') : ' ' + T('forceCount')), ok: T('forceOk'), danger: true }).then(function (ok) {
+      if (ok) app.writeTrade(scen, { force: true });
     });
   };
-  // QĐ-25: Kèo mới giữ C1–C3 và C6; Xóa hết bỏ cả kèo; bấm thẻ kịch bản đang tắt thì hiện lý do (không im lặng)
-  app.newSetup = function () {
-    app.ui.canhOpen = true; app.ui.jumpDone = false; app.ui.offPick = null;
-    app.update(function (n) { n.setup = J.newSetupKeep(n.setup); });
-    app.toast(T('newSetupDone'));
+  // bỏ tick của khối (giữ hướng, vùng); dùng cho nút "Xóa tick" và phím N
+  app.clearBlockTicks = function (scen) {
+    if (!scen) return;
+    app.update(function (n) { J.clearBlock(n, scen); });
+    app.toast(T('clearBlockDone', { s: scen }));
   };
-  app.clearSetup = function () {
-    app.ui.canhOpen = true; app.ui.jumpDone = false; app.ui.offPick = null;
-    app.update(function (n) { n.setup = {}; });
-    app.toast(T('clearAllDone'));
+  function flash(t) { if (t) { t.classList.add('flash'); setTimeout(function () { t.classList.remove('flash'); }, 1200); } }
+  app.jumpTo = function (scen) {
+    if (app.tier !== 2) { app.tier = 2; render(); }
+    var t = document.getElementById('blk-' + scen);
+    if (t) { t.scrollIntoView({ block: 'start' }); flash(t); }
   };
-  app.pickOff = function (scen, why) { app.ui.offPick = { scen: scen, why: why }; render({ keep: false }); };
-  app.focusCtl = function (id) {
-    if (!id) return;
-    if (id !== 'b3' && id !== 'b4') app.ui.canhOpen = true;   // ô của Canh nằm trong khối đang gập thì mở ra
-    app.tier = 3;
-    render();
-    var t = document.querySelector('[data-ctl="' + id + '"]');
-    // scroll-padding-bottom của html chừa chỗ cho thanh phán quyết khi cuộn tới ô
-    if (t) { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); t.classList.add('flash'); setTimeout(function () { t.classList.remove('flash'); }, 1200); }
+  // id dạng "B:ctx2" hoặc "common:news": cuộn tới ô và nháy sáng
+  app.focusItem = function (ref) {
+    if (app.tier !== 2) { app.tier = 2; render(); }
+    var t = document.querySelector('[data-item="' + ref + '"]');
+    if (t) { t.scrollIntoView({ block: 'center' }); flash(t); }
   };
 
   // ---------- điều hướng ----------
-  function tierLock(i) {
-    if (i === 3) return app.res.locks.tier3;
-    if (i === 4) return app.res.open ? null : 'NO_OPEN';
-    return null;
-  }
   app.go = function (i) {
     compute();
-    var lock = tierLock(i);
-    if (lock) { app.toast(T('lock_' + lock)); return; }
     app.tier = i;
     render();
     window.scrollTo(0, 0);
   };
   function suggestTier() {
     var n = app.night, res = app.res;
-    if (res.open) return 4;
     if (!n.card.lockedAt) return n.t0.touched ? 1 : 0;
-    return res.locks.tier3 ? 1 : 3;
+    return res.open ? 3 : 2;
   }
 
   // ---------- vẽ ----------
   function renderNav() {
     var nav = ui.clear($('tiers'));
     C.tiers.forEach(function (t) {
-      var lock = tierLock(t.id);
-      var cls = 'tierbtn' + (app.tier === t.id ? ' active' : '') + (lock ? ' locked' : '');
+      var cls = 'tierbtn' + (app.tier === t.id ? ' active' : '');
       var done = (t.id === 1 && app.night.card.lockedAt) || (t.id === 0 && app.night.t0.touched);
-      nav.appendChild(h('button', { type: 'button', class: cls, 'data-tier-btn': t.id, 'aria-current': app.tier === t.id ? 'step' : null, 'aria-disabled': lock ? 'true' : null,
-        title: lock ? T('lock_' + lock) : t.long, onclick: function () { app.go(t.id); } },
-        h('span', { class: 'tnum', text: String(t.id) }), h('span', { class: 'tname', text: t.name }), done ? h('span', { class: 'tdone', text: '✓' }) : null, lock ? h('span', { class: 'tlock', text: '🔒' }) : null));
+      nav.appendChild(h('button', { type: 'button', class: cls, 'data-tier-btn': t.id, 'aria-current': app.tier === t.id ? 'step' : null, title: t.long, onclick: function () { app.go(t.id); } },
+        h('span', { class: 'tnum', text: String(t.id) }), h('span', { class: 'tname', text: t.name }), done ? h('span', { class: 'tdone', text: '✓' }) : null));
     });
   }
 
@@ -308,7 +273,7 @@
     ui.clear($('card')).appendChild(ui.card.render(app));
 
     var vb = $('verdict');
-    if (app.tier === 3 && !app.res.locks.tier3) {
+    if (app.tier === 2) {
       ui.clear(vb).appendChild(ui.verdict.render(app));
       document.body.classList.add('has-vbar');
     } else { ui.clear(vb); document.body.classList.remove('has-vbar'); }
@@ -332,7 +297,7 @@
   }
   app.render = render;
 
-  // ---------- phím tắt (tầng 3) ----------
+  // ---------- phím tắt (tầng 2) ----------
   function isTyping(t) { return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable); }
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
@@ -351,29 +316,13 @@
     if (state.settings.shortcuts === false) return;
     var k = e.key;
     if (k === '?') { openKeys(); e.preventDefault(); return; }
-    if (app.tier !== 3 || app.res.locks.tier3) return;
-    var res = app.res, st = app.night.setup;
-    function setSetup(fn) { app.update(function (n) { fn(n.setup, n); n.setup.updatedAt = app.nowMs; }); }
-    if (k >= '1' && k <= '4') {
-      var s = R.SCENARIOS[+k - 1];
-      if (res.enabled[s] && s !== res.scenario) { app.toast(ui.codeText(res.enabled[s])); return; }
-      setSetup(function (s0, n) { n.setup = res.scenario === s ? Object.assign({}, s0) : J.changeScenario(s0, s); });
-    } else if ((k === 'b' || k === 'B' || k === 's' || k === 'S') && res.scenario === 'B') {
-      var side = (k === 'b' || k === 'B') ? 'buy' : 'sell';
-      setSetup(function (s0) { s0.side = side; });
-    } else if ((k === 'u' || k === 'U' || k === 'v' || k === 'V') && res.scenario && res.scenario !== 'C') {
-      var v = (k === 'u' || k === 'U') ? 'U' : 'V';
-      setSetup(function (s0) { s0.b1 = v; });
-    } else if (k === 'Enter') {
-      if (res.verdict === 'ENTRY') { if (res.paper) app.enter({ kind: 'market', paper: true }); else app.openEnter(); e.preventDefault(); }
-    } else if ((k === 'đ' || k === 'Đ' || k === 'd' || k === 'D') && res.scenario) {
-      setSetup(function (s0) { s0.b3 = 'ok'; });   // Đ = nến xác nhận đạt chuẩn
-    } else if (k === 'n' || k === 'N') {
-      app.newSetup();
-    }
+    if (app.tier !== 2) return;
+    if (k >= '1' && k <= '4') { app.jumpTo(R.SCENARIOS[+k - 1]); e.preventDefault(); }
+    else if (k === 'Enter') { if (app.res.entry) { app.writeTrade(app.res.entry.scen, {}); e.preventDefault(); } }
+    else if (k === 'n' || k === 'N') { app.clearBlockTicks(app.night.se.last); }
   });
   function openKeys() {
-    var rows = ['1', '2', '3', '4', 'B / S', 'U / V', 'Đ', 'Enter', 'N', 'Esc', '?'].map(function (k, i) { return h('div', { class: 'kv' }, h('span', { class: 'k' }, h('kbd', { text: k })), h('span', { class: 'v', text: T('key' + i) })); });
+    var rows = ['1 – 4', 'Enter', 'N', 'Esc', '?'].map(function (k, i) { return h('div', { class: 'kv' }, h('span', { class: 'k' }, h('kbd', { text: k })), h('span', { class: 'v', text: T('key' + i) })); });
     openModal(h('div', { class: 'dlg' }, h('h3', { text: T('keysTitle') }), rows, h('div', { class: 'actions' }, btn(T('close'), function () { closeModal(false); }, 'primary'))));
   }
 
@@ -478,13 +427,16 @@
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && Date.now() - newsAt > 60000) fetchNews(); });
     setInterval(function () {
       compute();
-      var sig = JSON.stringify([app.res.enabled, !!app.res.newsHit, app.res.longestBarActive, app.res.locks.tier3]);
+      var sig = JSON.stringify([!!app.res.newsHit, app.res.opens.length, !!app.night.card.lockedAt]);
       var typing = isTyping(document.activeElement);
       if (app._sig !== undefined && sig !== app._sig && !typing) render({ keep: false });
       else render({ keep: true });
       if (!typing) app._sig = sig;
     }, 15000);
-    if (root.ResizeObserver) new ResizeObserver(function () { document.documentElement.style.setProperty('--vbar-h', $('verdict').offsetHeight + 'px'); }).observe($('verdict'));
+    if (root.ResizeObserver) {
+      new ResizeObserver(function () { document.documentElement.style.setProperty('--vbar-h', $('verdict').offsetHeight + 'px'); }).observe($('verdict'));
+      new ResizeObserver(function () { document.documentElement.style.setProperty('--sbh', $('status').offsetHeight + 'px'); }).observe($('status'));   // thanh nhảy A·B·C·D dính ngay dưới thanh trạng thái
+    }
     window.addEventListener('storage', function (e) {
       if (e.key !== S.KEY) return;
       state = S.load(storage); app.state = state; app._draft = null; render({ keep: false });

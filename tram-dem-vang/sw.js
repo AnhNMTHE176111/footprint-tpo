@@ -1,10 +1,10 @@
 /* Trạm Đêm Vàng — service worker: chạy không mạng. Cache theo APP_VERSION; deploy.sh tự tăng số phiên bản. */
-const APP_VERSION = '1.0.8';
+const APP_VERSION = '2.0.0';
 const CACHE = 'tdv-' + APP_VERSION;
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/rules.js', 'js/time.js', 'js/news.js', 'js/content.js', 'js/engine.js', 'js/journal.js', 'js/store.js',
-  'js/ui/dom.js', 'js/ui/status.js', 'js/ui/tier012.js', 'js/ui/tier3.js', 'js/ui/tier45.js', 'js/main.js',
+  'js/ui/dom.js', 'js/ui/status.js', 'js/ui/zonepick.js', 'js/ui/tier01.js', 'js/ui/tier2.js', 'js/ui/tier3.js', 'js/main.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png'
 ];
 

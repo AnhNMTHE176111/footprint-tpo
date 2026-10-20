@@ -56,7 +56,6 @@
     bar.appendChild(chip(T('chipStreak', { n: ss }), ss >= 3 ? 'bad' : ss ? 'warn' : 'zero', T('chipStreakTip')));
     var paper = res.open && res.open.trade && res.open.trade.flags.indexOf('paper') >= 0;
     bar.appendChild(chip(T(paper ? 'chipOpenPaper' : 'chipOpen', { n: res.open ? 1 : 0 }), res.open ? 'warn' : 'zero', T('chipOpenTip')));
-    if (res.zone && res.counts.zoneN > 0) bar.appendChild(chip(T('chipZone', { n: res.counts.zoneN }), res.counts.zoneN >= 2 ? 'bad' : 'zero', T('chipZoneTip')));
     // giờ mùa đông Mỹ: mỗi đêm chỉ một chip ngắn, câu đầy đủ trong "?"; dòng dài chỉ hiện đúng ngày đổi giờ (REVIEW-3 mục 13)
     var notes = time.notices(key, useDst);
     if (notes.some(function (n) { return n.id === 'US_WINTER'; })) { bar.appendChild(chip(T('winterChip'), 'warn')); bar.appendChild(ui.helpBtn({ text: C.notices.US_WINTER, ref: 'thoi-gian' })); }
@@ -88,7 +87,6 @@
     if (a.q5) root_.appendChild(row(T('cardClose'), optLabel('q5', a.q5)));
     if (a.q1) root_.appendChild(row(T('cardShape'), optLabel('q1', a.q1)));
     root_.appendChild(row(T('cardBias'), h('span', { class: 'cardbias ' + ui.dirCls(res.bias), 'data-testid': 'card-bias', text: ui.biasText(res.bias) + (res.biasOverridden ? ' ' + T('overridden') : '') })));
-    root_.appendChild(row(T('cardMode'), C.modes[res.regime.effective] + (res.regime.dir ? ' ' + (res.regime.dir === 'up' ? T('dirUp') : T('dirDown')) : '')));
 
     var zonesBox = h('div', { class: 'czones' });
     var zs = res.zones.filter(function (z) { return z.flags.indexOf('banned') < 0; });

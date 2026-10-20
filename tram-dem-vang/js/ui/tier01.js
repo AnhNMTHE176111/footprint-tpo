@@ -140,7 +140,7 @@
         seg(q.options, a[q.id] === undefined ? null : a[q.id], function (v) {
           var lbl = v ? q.options.filter(function (o) { return o.v === v; })[0].label : '—';
           app.cardEdit(q.id, T('editQ', { q: q.label, v: lbl }), function (n) { if (v === null) delete n.card.answers[q.id]; else n.card.answers[q.id] = v; });
-        })));
+        }, { noToggle: true })));
     });
     var vw = h('div', { class: 'ctl', 'data-ctl': 'vwapW' },
       h('div', { class: 'ctl-label' }, h('span', { text: T('vwapQ') }), ui.helpBtn({ text: T('vwapHelp'), ref: 'ma-tran-bias' })),
@@ -150,7 +150,7 @@
         seg(C.vwapOpts, a.vwapW || null, function (v) {
           var lbl = v ? C.vwapOpts.filter(function (o) { return o.v === v; })[0].label : '—';
           app.cardEdit('vwapW', T('editQ', { q: T('vwapQ'), v: lbl }), function (n) { if (v === null) delete n.card.answers.vwapW; else n.card.answers.vwapW = v; });
-        }, { cls: 'small' })));
+        }, { cls: 'small', noToggle: true })));
     qbox.appendChild(vw);
     if (a.vwapW === 'near') {
       qbox.appendChild(h('div', { class: 'ctl', 'data-ctl': 'recheck' },

@@ -13,7 +13,7 @@
   // opts: {types:[mã loại], value, onPick(mã), label}
   function zonePick(opts) {
     var id = 'zp' + (++seq), listId = id + '-list';
-    var value = opts.value, query = '', active = -1, shown = [];
+    var value = opts.value, query = '', active = -1, shown = [], touchMode = false;
     var btn = h('button', { type: 'button', class: 'field zpick-btn', role: 'combobox', 'aria-haspopup': 'listbox', 'aria-expanded': 'false', 'aria-controls': listId, 'aria-label': opts.label || T('zoneType'), 'data-testid': 'zone-type' });
     var q = h('input', { type: 'text', class: 'field zpick-q', role: 'combobox', 'aria-autocomplete': 'list', 'aria-expanded': 'true', 'aria-controls': listId, 'aria-label': T('zoneFilter'), placeholder: T('zoneFilter'), autocomplete: 'off', 'data-testid': 'zone-filter' });
     var list = h('ul', { class: 'zpick-list', role: 'listbox', id: listId, 'aria-label': T('zoneType'), 'data-testid': 'zone-list' });
@@ -57,11 +57,14 @@
       shown.forEach(function (t, k) {
         var z = C.zoneTypes[t];
         var li = h('li', { role: 'option', id: id + '-o' + k, 'aria-selected': 'false', 'data-type': t,
-          onmouseenter: function () { if (k !== active) setActive(k, false); },
+          // chuột thật di chuyển mới đổi dòng (không dùng mouseenter: danh sách cuộn dưới con trỏ đứng yên sẽ giành lại dòng đang chọn bằng phím)
+          onmousemove: function () { if (!touchMode && k !== active) setActive(k, false); },
+          onpointerdown: function (e) { touchMode = e.pointerType !== 'mouse'; },
           onmousedown: function (e) { e.preventDefault(); },        // giữ focus ở ô lọc để phím tiếp tục chạy
-          onclick: function () { pick(t); } },
+          // điện thoại: chạm lần đầu chỉ hiện định nghĩa, chạm lần hai mới chọn
+          onclick: function () { if (touchMode && k !== active) { setActive(k, false); return; } pick(t); } },
           h('span', { class: 'zname', text: shortLabel(t) }), h('span', { class: 'zrank', text: z.rank }),
-          h('div', { class: 'zpick-inline' }, defNodes(t, 'zi')));      // điện thoại: định nghĩa hiện ngay dưới dòng đang chọn
+          h('div', { class: 'zpick-inline' }, defNodes(t, 'zi'), h('p', { class: 'zpick-tap', text: T('zoneTap') })));      // điện thoại: định nghĩa hiện ngay dưới dòng đang chọn
         list.appendChild(li);
       });
       if (!shown.length) list.appendChild(h('li', { class: 'zpick-empty muted', role: 'presentation', text: T('zoneNone') }));
@@ -70,11 +73,13 @@
     }
     function open(initial) {
       if (!pop.hasAttribute('hidden')) return;
+      touchMode = false;
       document.querySelectorAll('.zpick-pop:not([hidden])').forEach(function (p) { p.setAttribute('hidden', ''); });
       query = initial || ''; q.value = query;
       pop.removeAttribute('hidden'); btn.setAttribute('aria-expanded', 'true');
       paintList();
       q.focus();
+      try { pop.scrollIntoView({ block: 'nearest' }); } catch (e) { /* bỏ qua */ }   // mở sát đáy màn hình thì cuộn trang cho vừa
     }
     function close(refocus) {
       if (pop.hasAttribute('hidden')) return;

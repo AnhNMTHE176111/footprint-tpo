@@ -194,7 +194,6 @@
     var missing = forced ? bl.missing.concat(res.common.filter(function (x) { return !x.ok; }).map(function (x) { return 'common:' + x.id; })) : [];
     var paper = res.paper;
     app.update(function (n) { J.createTrade(n, res, { scen: scen, ruleBreak: forced, paper: paper, missing: missing, nowMs: app.nowMs, nowMin: app.nowMin }); });
-    window.scrollTo(0, 0);
     app.toast(paper ? T('enteredPaper') : forced ? T('forcedToast') : T('entered'));
   };
   app.forceTrade = function (scen) {
@@ -215,16 +214,40 @@
     app.toast(T('clearBlockDone', { s: scen }));
   };
   function flash(t) { if (t) { t.classList.add('flash'); setTimeout(function () { t.classList.remove('flash'); }, 1200); } }
+  // nhảy tới khối: mở khối đó, thu gọn các khối còn lại; focus vào tiêu đề khối để Tab đi tiếp vào trong khối
   app.jumpTo = function (scen) {
     if (app.tier !== 2) { app.tier = 2; render(); }
+    var m = {}; m[scen] = true;
+    if (app.panelEl && app.panelEl._setOpen) app.panelEl._setOpen(m, true);
     var t = document.getElementById('blk-' + scen);
-    if (t) { t.scrollIntoView({ block: 'start' }); flash(t); }
+    if (t) {
+      t.scrollIntoView({ block: 'start' }); flash(t);
+      var tg = t.querySelector('.blk-toggle'); if (tg) try { tg.focus({ preventScroll: true }); } catch (e) { /* bỏ qua */ }
+    }
   };
-  // id dạng "B:ctx2" hoặc "common:news": cuộn tới ô và nháy sáng
+  // id dạng "B:ctx2" hoặc "common:news": mở khối chứa ô, cuộn tới ô và nháy sáng
   app.focusItem = function (ref) {
     if (app.tier !== 2) { app.tier = 2; render(); }
+    var mm = /^([A-D]):/.exec(ref);
+    if (mm && app.panelEl && app.panelEl._setOpen) { var m = {}; m[mm[1]] = true; app.panelEl._setOpen(m, false); }
     var t = document.querySelector('[data-item="' + ref + '"]');
     if (t) { t.scrollIntoView({ block: 'center' }); flash(t); }
+  };
+  // bấm một vùng ở thẻ phiên: điền vào khối đang làm (khối chạm cuối, hoặc khối đang mở)
+  app.pickZone = function (zid) {
+    if (app.tier !== 2) return;
+    var se = app.night.se, s = se.last;
+    if (!s) s = R.SCENARIOS.filter(function (x) { return app.ui.blkOpen && app.ui.blkOpen[x]; })[0];
+    if (!s) { app.toast(T('pickBlockFirst')); return; }
+    app.update(function (n) { var b = J.block(n, s); if (!b.side && s !== 'C' && (app.res.bias === 'BUY' || app.res.bias === 'SELL')) b.side = app.res.bias.toLowerCase(); b.zoneId = zid; J.touchBlock(n, s); }, { keep: true });
+  };
+  // ghi kết quả lệnh đang mở từ thanh dưới (không phải sang Sổ). c = {kind, price, reason}
+  app.closeOpen = function (o, c) {
+    var t = o.trade, key = o.nightKey;
+    app.update(function (n) {
+      J.closeTrade(n, t.id, { kind: c.kind, price: c.price, reason: c.reason, nowMs: app.nowMs, nowMin: time.nightMinutes(app.nowMs, key) });
+    }, { key: key });
+    app.toast(T('closedToast'));
   };
 
   // ---------- điều hướng ----------
@@ -276,9 +299,11 @@
 
     var vb = $('verdict');
     if (app.tier === 2) {
-      ui.clear(vb).appendChild(ui.verdict.render(app));
+      // đang gõ giá thoát trong thanh dưới thì không dựng lại thanh (mất focus giữa chừng)
+      var af = document.activeElement;
+      if (!(af && af.tagName === 'INPUT' && vb.contains(af))) ui.clear(vb).appendChild(ui.verdict.render(app));
       document.body.classList.add('has-vbar');
-    } else { ui.clear(vb); document.body.classList.remove('has-vbar'); }
+    } else { ui.clear(vb); document.body.classList.remove('has-vbar'); document.documentElement.style.setProperty('--jbh', '0px'); }
 
     if (opts.keep && app.panelEl && app.panelEl.isConnected) {
       if (app.panelEl._live) app.panelEl._live(app);
@@ -300,10 +325,19 @@
   app.render = render;
 
   // ---------- phím tắt (tầng 2) ----------
-  function isTyping(t) { return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable); }
+  function isTyping(t) { return t && ((t.tagName === 'INPUT' && !/^(checkbox|radio|button)$/.test(t.type)) || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable); }
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       if (modalStack.length) { closeModal(false); return; }
+      // khung "?" đang mở: Esc đóng và trả focus về nút "?"
+      var po = document.querySelector('.pop:not([hidden])');
+      if (po) {
+        var hb = po.parentNode && po.parentNode.querySelector('.help');
+        document.querySelectorAll('.pop').forEach(function (p) { p.setAttribute('hidden', ''); });
+        document.querySelectorAll('.help[aria-expanded="true"]').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+        if (hb) try { hb.focus(); } catch (x) { /* bỏ qua */ }
+        return;
+      }
       if ($('card').classList.contains('open')) { app.toggleCard(false); return; }
       if (isTyping(e.target)) e.target.blur();
       return;

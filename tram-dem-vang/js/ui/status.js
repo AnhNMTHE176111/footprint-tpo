@@ -93,14 +93,17 @@
     if (!zs.length) zonesBox.appendChild(h('span', { class: 'muted', text: T('cardNone') }));
     zs.forEach(function (z) {
       var flagChips = z.flags.map(function (f) { return chip(C.flagText[f] || f, 'mini'); });
-      zonesBox.appendChild(h('div', { class: 'czone' }, h('span', { class: 'zid', text: z.id }), h('span', { text: ui.zoneLabel(z) }), flagChips));
+      var rk = C.zoneTypes[z.type] && C.zoneTypes[z.type].rank === 'nợ' ? [chip('nợ', 'mini')] : [];
+      var inner = [h('span', { class: 'zid', text: z.id }), h('span', { text: ui.zoneLabel(z) }), flagChips, rk];
+      // ở Setup Entry: bấm vùng để điền vào khối đang làm
+      zonesBox.appendChild(app.tier === 2 ? h('button', { type: 'button', class: 'czone czpick', 'data-zone-pick': z.id, title: T('zonePickTip'), onclick: function () { app.pickZone(z.id); } }, inner)
+        : h('div', { class: 'czone' }, inner));
     });
     root_.appendChild(h('div', { class: 'cblock' }, h('div', { class: 'clabel', text: T('cardZones') }), zonesBox));
 
+    // nợ (single print, poor high / low, naked POC) đã nằm trong danh sách VÙNG, có chip "nợ": không in lặp một dòng NỢ nữa (TEST-UX-v2); Q3 cũ chỉ còn đọc từ dữ liệu cũ
     var debts = res.zones.filter(function (z) { return z.type === 'sp' || z.type === 'poorHigh' || z.type === 'poorLow' || z.type === 'nakedPoc'; });
-    // NỢ và VÙNG CẤM chỉ hiện khi có; nợ suy từ vùng single print / poor high-low / naked POC (Q3 cũ chỉ còn đọc từ dữ liệu cũ)
-    if (debts.length) root_.appendChild(row(T('cardDebt'), debts.map(ui.zoneLabel).join(' · ')));
-    else if (a.q3 && a.q3 !== 'none') root_.appendChild(row(T('cardDebt'), optLabel('q3', a.q3)));
+    if (!debts.length && a.q3 && a.q3 !== 'none') root_.appendChild(row(T('cardDebt'), optLabel('q3', a.q3)));
     var banned = res.zones.filter(function (z) { return z.flags.indexOf('banned') >= 0; });
     if (banned.length) root_.appendChild(row(T('cardBanned'), banned.map(ui.zoneLabel).join(' · ')));
     if (night.t0.note) root_.appendChild(row(T('cardNote'), night.t0.note));

@@ -93,7 +93,15 @@
     var inp = h('input', { type: 'text', inputmode: 'decimal', class: 'field num', autocomplete: 'off', placeholder: opt.placeholder || null, value: fmtIn(value),
       'aria-label': opt.label || null, dataset: opt.id ? { id: opt.id } : null,
       oninput: function () { var v = J.parseNum(inp.value); inp.classList.toggle('invalid', v === null && /\S/.test(inp.value) && inp.value.trim() !== '-'); onInput(v, inp); },
-      onchange: function () { held(function () { var v = J.parseNum(inp.value); inp.classList.toggle('invalid', v === null && /\S/.test(inp.value)); if (v !== null) inp.value = fmtIn(v); if (opt.onCommit) opt.onCommit(v, inp); }); } });
+      onchange: function () {
+        held(function () {
+          var v = J.parseNum(inp.value), bad = v === null && /\S/.test(inp.value);
+          if (bad) { var raw = inp.value.trim(); inp.value = ''; inp.classList.remove('invalid'); if (TDV.app && TDV.app.toast) TDV.app.toast(T('badNum', { v: raw.slice(0, 12) })); }   // chữ rác báo rõ và xóa
+          else inp.classList.toggle('invalid', false);
+          if (v !== null) inp.value = fmtIn(v);
+          if (opt.onCommit) opt.onCommit(v, inp);
+        });
+      } });
     if (opt.onEnter) inp.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;
       e.preventDefault(); e.stopPropagation();
@@ -136,7 +144,8 @@
   function autoReason(code, bl, app) {
     var cc = bl.calc, s = app.settings || {}, tpl = C.autoBad[code];
     if (!tpl) return code;
-    var vars = { sl: J.fmt(cc.slDist), c6: J.fmt(TDV.rules.num(((app.night.se.blocks || {})[bl.id] || {}).c6)), rr: J.fmtTrim(cc.rr), cap: s.capital, pct: String(s.riskPct).replace('.', ','),
+    var aa = bl.autoChecks.filter(function (x) { return x.reason === code; })[0] || {};
+    var vars = { gap: aa.gap === undefined || aa.gap === null ? '—' : J.fmt(aa.gap), hm: aa.at === undefined || aa.at === null ? '—' : TDV.time.fmtMin(aa.at), sl: J.fmt(cc.slDist), c6: J.fmt(bl.c6), rr: J.fmtTrim(cc.rr), cap: s.capital, pct: String(s.riskPct).replace('.', ','),
       max: cc.maxSl === undefined ? '—' : J.fmt(cc.maxSl), bias: biasText(app.res.bias) };
     return fillTimes(tpl.replace(/\{(\w+)\}/g, function (m, k) { return vars[k] === undefined ? m : vars[k]; }));
   }

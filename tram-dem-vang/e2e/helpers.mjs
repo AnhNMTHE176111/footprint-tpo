@@ -29,11 +29,11 @@ export function buildState(kind, extra) {
   const buy = { q1: 'D', q5: 'above', vwapW: 'above', q6: 'yes' };
   if (kind === 'A') {
     n.card.answers = sell;
-    n.card.zones = [{ id: 'z1', type: 'vwapW', price: 4205 }, { id: 'z2', type: 'hvnW', price: 4195 }, { id: 'z3', type: 'valEu', price: 4185 }, { id: 'z4', type: 'vahEu', price: 4199 }];
+    n.card.zones = [{ id: 'z1', type: 'vwapW', price: 4205 }, { id: 'z2', type: 'hvnW', price: 4193.8 }, { id: 'z3', type: 'valEu', price: 4185 }, { id: 'z4', type: 'vahEu', price: 4199 }];
     n.card.lockedAt = '19:00';
   } else if (kind === 'B') {
     n.card.answers = buy;
-    n.card.zones = [{ id: 'z1', type: 'vwapW', price: 4175 }, { id: 'z2', type: 'valEu', price: 4175.5 }, { id: 'z3', type: 'vahEu', price: 4184 }];
+    n.card.zones = [{ id: 'z1', type: 'vwapW', price: 4176.5 }, { id: 'z2', type: 'valEu', price: 4175.5 }, { id: 'z3', type: 'vahEu', price: 4184 }];
     n.card.lockedAt = '19:00';
   } else if (kind === 'wait') {
     n.card.answers = { q1: 'D', q5: 'below', vwapW: 'near', q6: 'yes' };
@@ -55,7 +55,7 @@ export function blockB(over) {
 // Mở một trang mới với giờ cố định và dữ liệu gieo sẵn (chỉ gieo khi chưa có, để tải lại giữ nguyên)
 export async function openPage(browser, state, opts) {
   opts = opts || {};
-  const context = await browser.newContext({ viewport: opts.viewport || { width: 1366, height: 768 } });
+  const context = await browser.newContext({ viewport: opts.viewport || { width: 1366, height: 768 }, hasTouch: !!opts.hasTouch, colorScheme: 'dark' });
   await context.route('**/data/ff.json*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));   // e2e không gọi lịch thật trên Pages; lịch gieo qua localStorage
   const page = await context.newPage();
   const errors = [];

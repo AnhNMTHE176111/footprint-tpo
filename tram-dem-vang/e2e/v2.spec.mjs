@@ -14,41 +14,58 @@ async function withPage(state, opts, fn) {
 const stored = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('tdv.v1')));
 const goT2 = (page) => page.click('[data-tier-btn="2"]');
 
-// tick bằng chuột thật toàn bộ khối B + ô chung, gõ số
+const openB = (page) => page.click('[data-testid="toggle-B"]');
+// mở khối B, tick bằng chuột thật toàn bộ khối B, gõ số (biên độ nến nhập một lần ở ô chung)
 async function fillBlockB(page) {
+  await openB(page);
   await page.click(segIn('B:side', 'buy'));
   await page.click(segIn('B:zone', 'z1'));
-  for (const id of ['ctx1', 'ctx2', 'ctx3', 'ctx4', 'chk1', 'chk2', 'chk3', 'chk4', 'ent1', 'sl1']) await page.click(tick('B', id));
+  for (const id of ['ctx1', 'ctx2', 'ctx3', 'ctx4', 'ctx5', 'chk1', 'chk2', 'chk3', 'chk4', 'ent1', 'sl1']) await page.click(tick('B', id));
   await fillNum(page, 'entry-B', '4177');
   await fillNum(page, 'sl-B', '4174,7');
-  await fillNum(page, 'c6-B', '2');
-  await page.click('[data-testid="tick-common-longest"]');
+  await fillNum(page, 'c6', '2');
 }
 
-test('v2-1 · bốn khối A–D luôn mở, xếp dọc; không khối nào có trạng thái "tắt" hay nút gập; thanh nhảy dính đầu', async () => {
+test('v2-1 · bốn khối A–D xếp dọc; không khối nào bị khóa; mặc định thu gọn một dòng, bấm tiêu đề để mở; khối đang làm tự mở; thanh nhảy dính đầu', async () => {
   await withPage(buildState('B'), {}, async ({ page, errors }) => {
     await goT2(page);
-    const boxes = await page.$$eval('[data-block]', (els) => els.map((e) => { const r = e.getBoundingClientRect(); return { id: e.dataset.block, h: r.height, top: r.top + window.scrollY, x: r.left }; }));
+    const boxes = await page.$$eval('[data-block]', (els) => els.map((e) => { const r = e.getBoundingClientRect(); return { id: e.dataset.block, h: r.height, top: r.top + window.scrollY, x: r.left, cls: e.className }; }));
     assert.deepEqual(boxes.map((b) => b.id), ['A', 'B', 'C', 'D']);
-    boxes.forEach((b) => assert.ok(b.h > 400, 'khối ' + b.id + ' cao ' + b.h));                    // đã xổ sẵn checkbox
-    for (let i = 1; i < boxes.length; i++) assert.ok(boxes[i].top > boxes[i - 1].top + 400 && boxes[i].x === boxes[0].x, 'xếp dọc');
+    boxes.forEach((b) => { assert.ok(/collapsed/.test(b.cls), 'khối ' + b.id + ' thu gọn'); assert.ok(b.h < 80, 'khối ' + b.id + ' cao ' + b.h); });   // một dòng
+    for (let i = 1; i < boxes.length; i++) assert.ok(boxes[i].top > boxes[i - 1].top && boxes[i].x === boxes[0].x, 'xếp dọc');
     assert.equal(await page.locator('[data-block] details').count(), 0);
-    assert.equal(await page.locator('[data-block] button[aria-expanded="false"]:not(.help)').count(), 0);
     assert.equal(await page.locator('[data-block] [disabled], [data-block].off, [data-block].disabled').count(), 0);
-    assert.equal(await page.locator('[data-block] input[type="checkbox"]').count(), 10 + 10 + 7 + 7);   // A 10, B 10, C 7, D 7
-    // checkbox to dễ bấm: vùng bấm ≥ 36 px
-    const hs = await page.$$eval('[data-block] .tick36', (els) => els.map((e) => e.getBoundingClientRect().height));
+    assert.equal(await page.locator('[data-block] .blk-toggle[aria-expanded="true"]').count(), 0);
+    // bấm tiêu đề khối B: mở, xổ sẵn checkbox
+    await openB(page);
+    assert.equal(await page.getAttribute('[data-testid="toggle-B"]', 'aria-expanded'), 'true');
+    const hB = await page.$eval('[data-block="B"]', (e) => e.getBoundingClientRect().height);
+    assert.ok(hB > 400, 'khối B mở cao ' + hB);
+    // số checkbox tick theo khối: A 7 · B 11 + ô tail (chỉ hiện khi ngược bias) · C 8 · D 8
+    const cnt = (s) => page.locator(`[data-block="${s}"] .tick36 input[type="checkbox"]`).count();
+    assert.deepEqual([await cnt('A'), await cnt('B'), await cnt('C'), await cnt('D')], [7, 11 + 1, 8, 8]);
+    // vùng bấm ≥ 36 px
+    const hs = await page.$$eval('[data-block="B"] .tick36', (els) => els.map((e) => e.getBoundingClientRect().height).filter((x) => x > 0));
     assert.ok(Math.min(...hs) >= 36, 'vùng bấm nhỏ nhất ' + Math.min(...hs));
-    // tiêu đề nhóm
-    const grp = await page.$$eval('[data-block="A"] .grp-title', (els) => els.map((e) => e.textContent));
-    assert.deepEqual(grp, ['Bối cảnh', 'Kiểm tra', 'Điểm vào', 'SL']);
+    const grp = await page.$$eval('[data-block="B"] h4.grp-title', (els) => els.map((e) => e.textContent));
+    assert.deepEqual(grp.slice(0, 4), ['Bối cảnh', 'Kiểm tra', 'Điểm vào', 'SL']);
+    // tick một ô ⇒ khối đó thành "đang làm": tải lại thì tự mở, khối khác vẫn thu gọn
+    await page.click(tick('B', 'ctx1'));
+    await page.reload(); await page.waitForSelector('#main .tier');
+    assert.equal(await page.getAttribute('[data-testid="toggle-B"]', 'aria-expanded'), 'true');
+    assert.equal(await page.getAttribute('[data-testid="toggle-A"]', 'aria-expanded'), 'false');
     // thanh nhảy dính đầu khi cuộn
-    await page.evaluate(() => window.scrollTo(0, 2200));
+    await page.evaluate(() => window.scrollTo(0, 400));
     const jt = await page.$eval('[data-testid="jumpbar"]', (e) => e.getBoundingClientRect().top);
     assert.ok(jt >= 0 && jt < 120, 'thanh nhảy ở ' + jt);
+    // nhảy tới C: mở C, thu gọn các khối còn lại, C nằm ngay dưới thanh nhảy, focus ở tiêu đề C
     await page.click('[data-jump="C"]');
+    assert.equal(await page.getAttribute('[data-testid="toggle-C"]', 'aria-expanded'), 'true');
+    assert.equal(await page.getAttribute('[data-testid="toggle-B"]', 'aria-expanded'), 'false');
     const ct = await page.$eval('#blk-C', (e) => e.getBoundingClientRect().top);
-    assert.ok(ct > 40 && ct < 260, 'khối C ở ' + ct);
+    const jb = await page.$eval('[data-testid="jumpbar"]', (e) => e.getBoundingClientRect().bottom);
+    assert.ok(ct >= jb - 1 && ct - jb < 24, 'khối C ở ' + ct + ', đáy thanh nhảy ' + jb);
+    assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.dataset.testid), 'toggle-C');
     assert.deepEqual(errors, []);
   });
 });
@@ -59,7 +76,7 @@ test('v2-2 · tick đủ khối B bằng chuột thật ⇒ viền xanh, thanh E
     assert.equal(await verdict(page), 'WAIT');
     assert.match(await page.textContent('[data-testid="verdict"]'), /CHỜ.*chọn một khối/);
     await fillBlockB(page);
-    assert.equal(await prog(page, 'B'), '18/18');
+    assert.equal(await prog(page, 'B'), '21/21');
     assert.equal(await verdict(page), 'ENTRY');
     assert.equal(await page.locator('[data-block="B"].complete').count(), 1);
     assert.equal(await page.locator('[data-block="A"].complete').count(), 0);
@@ -73,26 +90,48 @@ test('v2-2 · tick đủ khối B bằng chuột thật ⇒ viền xanh, thanh E
     await page.click(tick('B', 'chk3'));
     assert.equal(await verdict(page), 'WAIT');
     assert.match(await page.textContent('[data-testid="wait-text"]'), /khối B còn thiếu:.*DMA đi ngang/);
-    assert.equal(await prog(page, 'B'), '17/18');
+    assert.equal(await prog(page, 'B'), '20/21');
   });
 });
 
-test('v2-3 · Ghi lệnh: dòng Sổ đủ số, khối bỏ tick (giữ hướng, vùng), cuộn về đầu; lệnh mở chặn ô chung; nhập kết quả TP ngay trên dòng', async () => {
+test('v2-3 · Ghi lệnh: dòng Sổ đủ số; giữ vị trí cuộn; giữ hướng, vùng và tick Bối cảnh + Kiểm tra, chỉ xóa Điểm vào, ô SL và giá; thanh dưới hiện lệnh đang mở với nút kết quả', async () => {
   await withPage(buildState('B'), {}, async ({ page }) => {
     await goT2(page);
     await fillBlockB(page);
-    await page.evaluate(() => window.scrollTo(0, 1500));
+    await page.evaluate(() => window.scrollTo(0, 500));
+    const y0 = await page.evaluate(() => window.scrollY);
     await page.click('[data-testid="btn-entry"]');
     const st = (await stored(page)).nights[KEY];
     assert.equal(st.trades.length, 1);
     const t = st.trades[0];
-    assert.deepEqual([t.side, t.scenario, t.zoneId, t.entry, t.sl, t.tp, t.rrPlanned, t.size], ['buy', 'B', 'z1', 4177, 4174.7, 4183.9, 3, 1]);
-    assert.equal(Object.keys(t.ticks).length, 10); assert.equal(t.exit, null);
-    assert.deepEqual(st.se.blocks.B.ticks, {}); assert.equal(st.se.blocks.B.side, 'buy'); assert.equal(st.se.blocks.B.zoneId, 'z1');
-    assert.equal(await page.evaluate(() => window.scrollY), 0);
-    assert.equal(await prog(page, 'B'), '3/18');                        // chỉ còn hướng, vùng, ô "Đủ vốn"? không: hướng + vùng + lần ≤ 2
+    assert.deepEqual([t.side, t.scenario, t.zoneId, t.entry, t.sl, t.tp, t.rrPlanned, t.size, t.c6], ['buy', 'B', 'z1', 4177, 4174.7, 4183.9, 3, 1, 2]);
+    assert.equal(Object.keys(t.ticks).length, 11); assert.equal(t.exit, null);
+    const bs = st.se.blocks.B;
+    assert.deepEqual(Object.keys(bs.ticks).sort(), ['chk1', 'chk2', 'chk3', 'chk4', 'ctx1', 'ctx2', 'ctx3', 'ctx4', 'ctx5']);   // giữ Bối cảnh + Kiểm tra
+    assert.equal(bs.side, 'buy'); assert.equal(bs.zoneId, 'z1'); assert.equal(bs.entry, undefined); assert.equal(bs.sl, undefined); assert.equal(st.se.c6, 2);
+    assert.ok(Math.abs((await page.evaluate(() => window.scrollY)) - y0) < 5, 'giữ vị trí cuộn');
     assert.equal(await page.locator('[data-common="open"].bad').count(), 1);
-    // sang Sổ: dòng lệnh mở ở trên cùng với nút kết quả
+    assert.equal(await verdict(page), 'OPEN');
+    assert.match(await page.textContent('[data-testid="open-text"]'), /Lệnh đang mở:.*buy hấp thụ 4177,0.*SL 4174,7.*TP 4183,9.*be \+1,5R tại 4180,5/);
+    for (const k of ['TP', 'SL', 'BE', 'MANUAL']) assert.equal(await page.locator(`[data-testid="bar-${k}"]`).count(), 1);
+    // kết quả TP ngay trên thanh dưới: giá thoát điền sẵn theo TP, R tự tính
+    await page.click('[data-testid="bar-TP"]');
+    assert.equal(await page.inputValue('[data-id="barprice"]'), '4183,9');
+    assert.match(await page.textContent('[data-testid="bar-r"]'), /R \+3/);
+    await page.click('[data-testid="bar-confirm"]');
+    await page.waitForFunction(() => document.querySelector('[data-testid="verdict"]').dataset.verdict !== 'OPEN');
+    const t2 = (await stored(page)).nights[KEY].trades[0];
+    assert.equal(t2.exit.kind, 'TP'); assert.equal(t2.r, 3);
+    assert.equal(await page.locator('[data-common="open"].bad').count(), 0);
+    assert.ok(Math.abs((await page.evaluate(() => window.scrollY)) - y0) < 5, 'vẫn giữ vị trí cuộn sau khi ghi kết quả');
+    await page.click('[data-tier-btn="3"]');
+    assert.match(await page.textContent('[data-testid="journal"]'), /\+3/);
+  });
+});
+test('v2-3b · lệnh mở: sang Sổ vẫn nhập được kết quả như cũ (nhắc be, giá thoát điền sẵn, "SL bị quét")', async () => {
+  await withPage(buildState('B', (n) => { n.se.blocks.B = blockB(); n.se.last = 'B'; n.se.touch.B = 1; n.se.n = 1; }), {}, async ({ page }) => {
+    await goT2(page);
+    await page.click('[data-testid="btn-entry"]');
     await page.click('[data-testid="go-journal"]');
     await page.waitForSelector('[data-testid="open-trade"]');
     assert.match(await page.textContent('[data-testid="be-remind"]'), /\+1,5R.*4180,5.*nến M1 đóng ngoài vùng vào/);
@@ -104,9 +143,6 @@ test('v2-3 · Ghi lệnh: dòng Sổ đủ số, khối bỏ tick (giữ hướn
     await page.waitForFunction(() => !document.querySelector('[data-testid="open-trade"]'));
     const t2 = (await stored(page)).nights[KEY].trades[0];
     assert.equal(t2.exit.kind, 'TP'); assert.equal(t2.r, 3); assert.equal(t2.sweptThenTP, true);
-    assert.match(await page.textContent('[data-testid="journal"]'), /\+3/);
-    await goT2(page);
-    assert.equal(await page.locator('[data-common="open"].bad').count(), 0);
   });
 });
 
@@ -131,7 +167,7 @@ test('v2-4 · kết quả sửa tay: R sửa được, đóng tay cần lý do, 
 
 test('v2-5 · ô tự kiểm sai hiện đỏ kèm lý do: lần thứ 3 tại vùng, SL ngắn hơn nến, R:R dưới 1:2; không khóa gì', async () => {
   const two = (id) => ({ id, time: '20:00', side: 'buy', scenario: 'B', zoneId: 'z1', zoneType: 'vwapW', entry: 4177, sl: 4174.7, flags: [], ruleCodes: [], missing: [], ticks: {}, exit: { kind: 'TP', price: 4183.9, at: '20:30' }, r: 3 });
-  const st = buildState('B', (n) => { n.trades.push(two('a'), two('b')); n.se.blocks.B = blockB({ c6: 3.0, tp: 4180 }); });
+  const st = buildState('B', (n) => { n.trades.push(two('a'), two('b')); n.se.blocks.B = blockB({ c6: 3.0, tp: 4180 }); n.se.last = 'B'; });
   await withPage(st, {}, async ({ page }) => {
     await goT2(page);
     const z = page.locator('[data-block="B"] [data-item="B:zone2"]');
@@ -145,20 +181,24 @@ test('v2-5 · ô tự kiểm sai hiện đỏ kèm lý do: lần thứ 3 tại v
     await page.click(tick('B', 'sl1'));
     assert.equal(await page.isChecked(tick('B', 'sl1')), false);          // đang tick sẵn ⇒ bỏ
     // sửa số ⇒ ô tự kiểm cập nhật ngay, không cần rời ô
-    await fillNum(page, 'c6-B', '2');
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('tdv.v1')); delete s.nights['2026-10-13'].se.blocks.B.c6; localStorage.setItem('tdv.v1', JSON.stringify(s)); });
+    await page.reload(); await page.waitForSelector('#main .tier'); await goT2(page);
+    await fillNum(page, 'c6', '2');                                           // biên độ nến nhập ở ô chung, áp cho cả bốn khối
     assert.ok((await page.locator('[data-block="B"] [data-auto="slFloor"]').getAttribute('class')).includes('ok'));
     assert.match(await page.textContent('[data-testid="calc-B"]'), /SL 2,3 giá/);
   });
 });
 
 test('v2-6 · ngược bias: hiện ô lý do bắt buộc, gõ lý do thì ô thành đủ', async () => {
-  await withPage(buildState('B', (n) => { n.se.blocks.B = blockB({ side: 'sell', entry: 4177, sl: 4179.3, tp: 4170.1 }); }), {}, async ({ page }) => {
+  await withPage(buildState('B', (n) => { n.se.blocks.B = blockB({ side: 'sell', entry: 4177, sl: 4179.3, tp: 4170.1 }); n.se.last = 'B'; }), {}, async ({ page }) => {
     await goT2(page);
     const box = page.locator('[data-item="B:counter"]');
-    assert.equal(await box.isVisible(), true); assert.match(await box.textContent(), /Ngược bias BUY/);
-    assert.equal(await prog(page, 'B'), '18/19');
-    await box.locator('input').fill('đỉnh có tail thật');
-    assert.equal(await prog(page, 'B'), '19/19');
+    assert.equal(await box.isVisible(), true); assert.match(await box.textContent(), /Ngược bias BUY/); assert.match(await box.textContent(), /ngược bias · 2R · cỡ ½/);
+    assert.equal(await prog(page, 'B'), '21/23');
+    await box.locator('input[type="text"]').fill('đỉnh có tail thật');
+    assert.equal(await prog(page, 'B'), '22/23');
+    await page.click('[data-testid="tick-B-tail"]');                                // chỉ B được ngược bias, và chỉ khi vùng có tail thật / single print đúng phía
+    assert.equal(await prog(page, 'B'), '23/23');
     await page.click(segIn('B:side', 'buy'));
     assert.equal(await page.locator('[data-item="B:counter"]').isVisible(), false);
   });
@@ -168,11 +208,11 @@ test('v2-7 · "Vẫn vào (thiếu n ô — tính phá luật)": hỏi xác nh�
   const st = buildState('B', (n) => { n.se.blocks.B = blockB(); delete n.se.blocks.B.ticks.chk3; delete n.se.blocks.B.ticks.ctx3; n.se.last = 'B'; n.se.touch.B = 1; n.se.n = 1; });
   await withPage(st, {}, async ({ page }) => {
     await goT2(page);
-    assert.match(await page.textContent('[data-testid="btn-force"]'), /Vẫn vào \(thiếu 3 ô — tính phá luật\)/);   // ctx3, chk3 và ô chung "nến dài nhất" chưa tick
+    assert.match(await page.textContent('[data-testid="btn-force"]'), /Vẫn vào \(thiếu 2 ô — tính phá luật\)/);   // ctx3 và chk3 chưa tick
     await page.click('[data-testid="btn-force"]');
     await page.click('[data-testid="dlg-ok"]');
     let t = (await stored(page)).nights[KEY].trades[0];
-    assert.ok(t.flags.includes('RULE_BREAK')); assert.deepEqual(t.missing, ['ctx3', 'chk3', 'common:longest']);
+    assert.ok(t.flags.includes('RULE_BREAK')); assert.deepEqual(t.missing, ['ctx3', 'chk3']);
     assert.ok(t.missing.includes('ctx3') && t.missing.includes('chk3'));
     assert.match(await page.textContent('.statusbar'), /Phá luật 1 trên 2/);
     // đóng lệnh, vào thêm một lệnh phá luật nữa ⇒ tắt máy
@@ -192,12 +232,13 @@ test('v2-7 · "Vẫn vào (thiếu n ô — tính phá luật)": hỏi xác nh�
     assert.equal(await page.locator('[data-common="breaker"].bad').count(), 1);
     assert.match(await page.textContent('[data-common="breaker"]'), /Đã 2 lệnh phá luật trong đêm — tắt máy/);
     // không khóa: vẫn tick được
+    await page.click('[data-testid="toggle-A"]');
     await page.click(tick('A', 'ctx1')); assert.equal(await page.isChecked(tick('A', 'ctx1')), true);
   });
 });
 
 test('v2-8 · phím tắt: 1–4 nhảy tới khối, Enter ghi lệnh khi ENTRY, N xóa tick khối đang làm; tắt khi đang gõ', async () => {
-  const st = buildState('B', (n) => { n.se.blocks.B = blockB(); n.se.common = { longest: true }; n.se.last = 'B'; n.se.touch.B = 1; n.se.n = 1; });
+  const st = buildState('B', (n) => { n.se.blocks.B = blockB(); n.se.common = {}; n.se.last = 'B'; n.se.touch.B = 1; n.se.n = 1; });
   await withPage(st, {}, async ({ page }) => {
     await goT2(page);
     assert.equal(await verdict(page), 'ENTRY');
@@ -205,13 +246,16 @@ test('v2-8 · phím tắt: 1–4 nhảy tới khối, Enter ghi lệnh khi ENTRY
     await page.keyboard.press('3');
     const ct = await page.$eval('#blk-C', (e) => e.getBoundingClientRect().top);
     assert.ok(ct > 40 && ct < 260, 'C ở ' + ct);
+    assert.equal(await page.getAttribute('[data-testid="toggle-B"]', 'aria-expanded'), 'false');
+    await page.keyboard.press('2');                                                  // quay lại B
+    assert.equal(await page.getAttribute('[data-testid="toggle-B"]', 'aria-expanded'), 'true');
     await page.focus('[data-id="entry-B"]');
     await page.keyboard.press('n');                                                 // đang gõ vào ô số: phím N không xóa tick
-    assert.equal(Object.keys((await stored(page)).nights[KEY].se.blocks.B.ticks).length, 10);
+    assert.equal(Object.keys((await stored(page)).nights[KEY].se.blocks.B.ticks).length, 11);
     await page.fill('[data-id="entry-B"]', '4177'); await page.press('[data-id="entry-B"]', 'Tab');
     await page.keyboard.press('Escape');
     await page.keyboard.press('n');
-    assert.equal(await prog(page, 'B'), '3/18');                                    // chỉ còn hướng, vùng, lần ≤ 2
+    assert.equal(await prog(page, 'B'), '4/21');                                    // chỉ còn hướng, vùng, bias, lần ≤ 2
     await page.click(tick('B', 'ctx1'));
     assert.equal(await verdict(page), 'WAIT');
   });
@@ -231,7 +275,7 @@ test('v2-9 · ô chọn loại vùng: rê chuột hiện định nghĩa; phím �
     assert.equal(await page.locator('[data-testid="zone-list"] li').count(), 18);
     await page.hover('li[data-type="poorLow"]');
     let def = await page.textContent('[data-testid="zone-def"]');
-    assert.match(def, /Poor low/); assert.match(def, /Đáy có từ 2 TPO: giá chưa bị từ chối dứt khoát/); assert.match(def, /Dùng thế nào:.*nợ/s);
+    assert.match(def, /Poor low/); assert.match(def, /Đáy phẳng: mức giá thấp nhất có từ 2 TPO, không có tail/); assert.match(def, /Dùng thế nào:.*nợ/s);
     await page.hover('li[data-type="hvn3w"]');
     assert.match(await page.textContent('[data-testid="zone-def"]'), /Nút khối lượng cao trên TPO gộp 3 tuần/);
     const rank = await page.textContent('li[data-type="lvn"] .zrank'); assert.equal(rank, 'cấm fade');
@@ -241,7 +285,7 @@ test('v2-9 · ô chọn loại vùng: rê chuột hiện định nghĩa; phím �
     assert.equal(await page.locator('[data-testid="zone-list"] li[data-type]').count(), 2);
     assert.match(await page.textContent('[data-testid="zone-def"]'), /Poor high/);
     await page.keyboard.press('ArrowDown');
-    assert.match(await page.textContent('[data-testid="zone-def"]'), /Đáy có từ 2 TPO/);
+    assert.match(await page.textContent('[data-testid="zone-def"]'), /Đáy phẳng/);
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.zpick-pop:visible').count(), 0);
     assert.equal(await page.evaluate(() => document.activeElement.dataset.testid), 'zone-type');
@@ -282,7 +326,7 @@ test('v2-10 · điện thoại: định nghĩa loại vùng hiện ngay dưới 
 });
 
 test('v2-11 · 390 px: không tràn ngang ở cả 4 tầng; thanh ENTRY không che quá 1/3 màn hình; "?" bấm được', async () => {
-  const st = buildState('B', (n) => { n.se.blocks.B = blockB(); n.se.common = { longest: true }; n.se.last = 'B'; n.se.touch.B = 1; n.se.n = 1; });
+  const st = buildState('B', (n) => { n.se.blocks.B = blockB(); n.se.common = {}; n.se.last = 'B'; n.se.touch.B = 1; n.se.n = 1; });
   await withPage(st, { viewport: { width: 390, height: 800 } }, async ({ page, errors }) => {
     for (const t of [0, 1, 2, 3]) {
       await page.click(`[data-tier-btn="${t}"]`);

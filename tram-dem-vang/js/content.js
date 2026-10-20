@@ -382,6 +382,10 @@
     exitRHint: 'R tự tính từ giá thoát, sửa được.', needReason: 'Chọn lý do đóng tay.', needExit: 'Nhập giá thoát hoặc R.',
     beRemind: 'Nhắc be: dời SL về hòa vốn (be) khi giá đạt +{r}R, tại giá {price}.',
     beRemindBar: 'Nhắc be: dời SL về hòa vốn (be) khi giá đạt +{r}R, tại giá {price}, và có 1 nến M1 đóng ngoài vùng vào.',
+    barOpen: 'Lệnh đang mở:', barBe: 'be +{r}R tại {price}', c6Night: 'Biên độ nến M1 cao nhất 5 nến (cả đêm)', commonSum: '{n}/{m} máy kiểm đạt: thẻ phiên · giờ cấm · tắt máy · lệnh mở',
+    wickL: 'Râu nến xác nhận chạm vùng', autosTitle: 'Máy tự kiểm', scenImgZoom: 'Bấm ảnh để mở ảnh gốc và phóng to.', counterTag: 'ngược bias · 2R · cỡ ½',
+    slAbove: 'SL phải cao hơn giá vào (sell).', slBelow: 'SL phải thấp hơn giá vào (buy).', badNum: 'Không đọc được số "{v}" — đã xóa.',
+    pickBlockFirst: 'Mở một khối trước, rồi bấm vùng.', zonePickTip: 'Bấm để chọn vùng này cho khối đang làm', zoneTap: 'Chạm lần nữa để chọn',
     zoneFilter: 'Gõ để lọc loại vùng…', zonePh: 'Chọn loại vùng', zoneUse: 'Dùng thế nào:', zoneNone: 'Không có loại vùng nào khớp.'
   };
 
@@ -428,7 +432,7 @@
   }
 
   return {
-    fill: fill, glossary: glossary, HT_BASE: HT_BASE, scenarios: scenarios, zoneTypes: zoneTypes, flagText: flagText, tiers: tiers,
+    fill: fill, helps: HELP, glossary: glossary, HT_BASE: HT_BASE, scenarios: scenarios, zoneTypes: zoneTypes, flagText: flagText, tiers: tiers,
     common: common, commonBad: commonBad, itemLabels: itemLabels, autoBad: autoBad, blocks: blocks, groupTitles: groupTitles, itemLabel: itemLabel,
     halfText: halfText, warnText: warnText, questions: questions, vwapOpts: vwapOpts,
     phases: phases, bands: bands, notices: notices, journal: journal, errors: errors,

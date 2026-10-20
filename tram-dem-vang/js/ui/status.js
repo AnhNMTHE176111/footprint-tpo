@@ -39,7 +39,7 @@
       bar.appendChild(chip(C.warnText.WARN_NYSE, 'warn'));
     } else if (res.fxNews) {
       bar.appendChild(chip(T('fxChip', { ccy: res.fxNews.country, hm: time.fmtMin(res.fxNews.center) }), 'warn'));
-    } else if (app.news && app.news.status === 'ok' && N.nextEvent(app.news, app.nowMin)) {
+    } else if (app.news && app.news.status !== 'none' && N.nextEvent(app.news, app.nowMin)) {
       var ne = N.nextEvent(app.news, app.nowMin);
       bar.appendChild(chip(T('newsChip', { hm: ne.hm, name: ne.title, min: Math.ceil(ne.nightMin - app.nowMin) }), '', null));
     } else if (next) {
@@ -62,7 +62,7 @@
     if (notes.some(function (n) { return n.id === 'US_WINTER'; })) { bar.appendChild(chip(T('winterChip'), 'warn')); bar.appendChild(ui.helpBtn({ text: C.notices.US_WINTER, ref: 'thoi-gian' })); }
 
     bar.appendChild(h('button', { type: 'button', class: 'btn small ghost glossary-btn', 'data-testid': 'glossary-btn', text: T('glossaryBtn'), onclick: function () { app.openGlossary(); } }));
-    if (!app.news || app.news.status !== 'ok') wrap.appendChild(h('div', { class: 'notice bad', role: 'alert', 'data-testid': 'news-stale', text: T('newsStaleBar') }));
+    if (!app.news || app.news.status === 'none') wrap.appendChild(h('div', { class: 'notice bad', role: 'alert', 'data-testid': 'news-stale', text: T('newsStaleBar') }));
     notes.forEach(function (n) { if (n.id !== 'US_WINTER') wrap.appendChild(h('div', { class: 'notice', text: C.notices[n.id] })); });
     return wrap;
   }

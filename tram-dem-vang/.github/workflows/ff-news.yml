@@ -2,7 +2,7 @@ name: Lịch tin Forex Factory
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '7,22,37,52 * * * *'   # tránh phút tròn: GitHub hay bỏ lượt cron giờ cao điểm
   workflow_dispatch:
 
 permissions:

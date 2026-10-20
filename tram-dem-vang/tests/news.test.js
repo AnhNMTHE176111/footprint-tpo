@@ -97,8 +97,13 @@ test('trạng thái lịch: mới ⇒ ok; cũ hơn 2 giờ ⇒ stale; hỏng ⇒
   assert.equal(N.forNight(null, KEY, NOW, true).status, 'none');
   assert.equal(N.forNight({ events: 'x' }, KEY, NOW, true).status, 'none');
   const stale = night(e, '2026-10-21T01:00:00Z');
-  const wins = R.effectiveWindows({ touched: true, windows: R.defaultWindows(true) }, KEY, stale);
-  assert.deepEqual(wins.map((w) => w.id), ['w1930', 'w2100']);   // dự phòng: mặc định cũ, 19:30 thứ Năm
+  assert.equal(stale.status, 'stale');
+  // lịch cũ nhưng còn phủ đêm này ⇒ VẪN dùng: chỉ khung của tin thật, không mặc định (sửa 20/10)
+  assert.deepEqual(R.effectiveWindows({ touched: true, windows: R.defaultWindows(true) }, KEY, stale).map((w) => w.title || w.id), ['CPI m/m']);
+  // lịch không phủ đêm này (tuần trước) ⇒ none ⇒ dự phòng mặc định cũ
+  const old = night([ev('CPI m/m', 'USD', '2026-10-13T08:30:00-04:00', 'High')], '2026-10-13T01:00:00Z');
+  assert.equal(old.status, 'none');
+  assert.deepEqual(R.effectiveWindows({ touched: true, windows: R.defaultWindows(true) }, KEY, old).map((w) => w.id), ['w1930', 'w2100']);
 });
 
 test('khi lịch ok: 19:30 mặc định không tự bật nữa; khung tự sinh nối vào; tắt từng khung bằng newsOverrides', () => {
@@ -137,9 +142,9 @@ test('engine: CPI 19:30 ⇒ 19:20 trong khung giờ cấm (NO_NEWS_WINDOW) + c�
   assert.equal(r.newsDay, false);
 });
 
-test('engine: lịch cũ ⇒ dùng mặc định cũ (thứ Năm 19:30 bật); tin EUR trong khung cảnh báo ⇒ WARN_FX_NEWS', () => {
+test('engine: không có lịch cho đêm này ⇒ dùng mặc định cũ (thứ Năm 19:30 bật); tin EUR trong khung cảnh báo ⇒ WARN_FX_NEWS', () => {
   const thu = '2026-10-22';
-  const stale = N.forNight(feedOf([ev('CPI m/m', 'USD', '2026-10-22T08:30:00-04:00', 'High')], '2026-10-21T01:00:00Z'), thu, vn(thu, '19:20').getTime(), true);
+  const stale = N.forNight(feedOf([ev('CPI m/m', 'USD', '2026-10-15T08:30:00-04:00', 'High')], '2026-10-15T01:00:00Z'), thu, vn(thu, '19:20').getTime(), true);
   const x = mk('A', (m) => { m.t0.windows = R.defaultWindows(true); });
   let r = engine.evaluate({ nights: { [thu]: x }, nightKey: thu, now: vn(thu, '19:20'), settings: SETTINGS, news: stale });
   assert.ok(r.newsHit && r.newsHit.id === 'w1930');

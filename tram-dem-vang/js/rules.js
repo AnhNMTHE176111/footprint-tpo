@@ -6,7 +6,7 @@
 })(this, function (dep) {
   'use strict';
 
-  var APP_VERSION = '1.0.7';
+  var APP_VERSION = '1.0.8';
   var EPS = 1e-9;
 
   var T = {
@@ -51,7 +51,7 @@
   function effectiveNewsDay(t0, news) {
     var t = t0 || {};
     if (t.newsDaySet) return !!t.newsDay;
-    if (news && news.status === 'ok' && news.newsDay) return true;
+    if (news && (news.status === 'ok' || news.status === 'stale') && news.newsDay) return true;
     return !!t.newsDay;
   }
   // Khung giờ áp dụng: khung nhập tay / mặc định + khung tự sinh từ lịch (news.windows, khi lịch còn mới).
@@ -61,7 +61,7 @@
     var t = t0 || {};
     var list = t.windows;
     if (!list) { var th = key ? dep('time').isThursday(key) : false; list = defaultWindows(th); }
-    var ok = !!(news && news.status === 'ok');
+    var ok = !!(news && (news.status === 'ok' || news.status === 'stale'));
     var nd = effectiveNewsDay(t, news);
     var out = list.filter(function (w) { return !(ok && (w.id === 'w1930' || w.id === 'w2100')); }).map(function (w) {
       if (w.id !== 'w1930') return w;

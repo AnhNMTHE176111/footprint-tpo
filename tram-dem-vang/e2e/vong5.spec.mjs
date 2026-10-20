@@ -65,15 +65,19 @@ test('v5-2 · tắt một khung giờ tự sinh ghi lại giờ tắt, giữ qua
   });
 });
 
-test('v5-3 · đếm ngược tới tin kế ở thanh trạng thái; lịch cũ hơn 2 giờ ⇒ thanh đỏ và dùng mặc định cũ', async () => {
+test('v5-3 · đếm ngược tới tin kế ở thanh trạng thái; lịch cũ nhưng còn phủ đêm này vẫn dùng; lịch tuần trước ⇒ thanh đỏ và mặc định cũ', async () => {
   await withPage(buildState('B'), { feed: Object.assign({}, FEED, { fetchedAt: '2026-10-13T11:20:00.000Z' }), now: '2026-10-13T11:30:00Z' }, async ({ page }) => {
     assert.match(await page.textContent('.statusbar'), /Tin kế 19:30 · CPI m\/m · còn 60′/);
     assert.equal(await page.locator('[data-testid="news-stale"]').count(), 0);
   });
   const stale = Object.assign({}, FEED, { fetchedAt: '2026-10-13T08:00:00.000Z' });
   await withPage(buildState('B'), { feed: stale, now: '2026-10-13T11:30:00Z' }, async ({ page }) => {
-    assert.equal(await page.locator('[data-testid="news-stale"]').count(), 1);
-    assert.match(await page.textContent('[data-testid="news-stale"]'), /Lịch tin chưa cập nhật — tự kiểm Forex Factory/);
+    assert.equal(await page.locator('[data-testid="news-stale"]').count(), 0);       // cũ 3,5 giờ nhưng phủ đêm này: vẫn dùng
+    assert.match(await page.textContent('.statusbar'), /Tin kế 19:30 · CPI m\/m/);
+  });
+  await withPage(buildState('B'), { feed: stale, now: '2026-10-21T11:30:00Z' }, async ({ page }) => {
+    assert.equal(await page.locator('[data-testid="news-stale"]').count(), 1);       // lịch tuần trước: không phủ ⇒ đỏ
+    assert.match(await page.textContent('[data-testid="news-stale"]'), /Không có lịch tin cho đêm nay — tự kiểm Forex Factory/);
     assert.doesNotMatch(await page.textContent('.statusbar'), /Tin kế/);
   });
   await withPage(buildState('B'), { feed: null, now: '2026-10-13T11:30:00Z' }, async ({ page }) => {

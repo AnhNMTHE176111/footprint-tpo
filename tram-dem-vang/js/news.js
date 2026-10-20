@@ -57,7 +57,7 @@
     return !!feed && typeof feed === 'object' && Array.isArray(feed.events) && typeof feed.fetchedAt === 'string' && isFinite(Date.parse(feed.fetchedAt));
   }
 
-  // Tin của một đêm giao dịch + khung giờ tự sinh. status: 'ok' | 'stale' (cũ hơn 2 giờ) | 'none' (không có / hỏng)
+  // Tin của một đêm giao dịch + khung giờ tự sinh. status: 'ok' | 'stale' (cũ hơn 2 giờ nhưng còn phủ đêm này — vẫn dùng) | 'none' (không có / không phủ / hỏng)
   function forNight(feed, key, nowMs, useDst) {
     var out = { status: 'none', fetchedAt: null, ageMin: null, events: [], windows: [], warns: [], newsDay: false, skipped: [] };
     if (!validFeed(feed)) return out;
@@ -65,6 +65,12 @@
     out.fetchedAt = feed.fetchedAt;
     out.ageMin = Math.round((nowMs - fetched) / MIN);
     out.status = (nowMs - fetched) > STALE_MS ? 'stale' : 'ok';
+    // lịch cũ hơn 2 giờ vẫn DÙNG ĐƯỢC nếu phủ tới đêm này (giờ tin trong tuần không đổi, chỉ số "thực tế" có thể chậm);
+    // không phủ (lịch tuần trước, hoặc cũ hơn 8 ngày) ⇒ 'none' ⇒ về mốc mặc định
+    var lo = Infinity, hi = -Infinity;
+    feed.events.forEach(function (r) { var t = Date.parse(r && r.date); if (isFinite(t)) { if (t < lo) lo = t; if (t > hi) hi = t; } });
+    var covers = lo === Infinity ? out.status === 'ok' : (nowMs >= lo - 86400000 && nowMs <= hi + 86400000);   // lịch rỗng: chỉ tin khi còn mới
+    if (!covers || (nowMs - fetched) > 8 * 86400000) { out.status = 'none'; return out; }
     var seen = {};
     feed.events.forEach(function (raw) {
       var p = parseEvent(raw);
@@ -107,7 +113,7 @@
   }
   // tin cảnh báo (EUR / GBP) đang trúng
   function hitWarn(news, nowMin) {
-    var list = (news && news.status === 'ok' && news.warns) || [];
+    var list = (news && (news.status === 'ok' || news.status === 'stale') && news.warns) || [];
     for (var i = 0; i < list.length; i++) if (nowMin >= list[i].from - 1e-9 && nowMin <= list[i].to + 1e-9) return list[i];
     return null;
   }

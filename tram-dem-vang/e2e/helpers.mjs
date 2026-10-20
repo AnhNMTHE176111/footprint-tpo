@@ -49,7 +49,7 @@ export function buildState(kind, extra) {
 
 // khối đã điền sẵn gần đủ (mọi ô tick, đủ số) để test tick nốt bằng chuột
 export function blockB(over) {
-  return Object.assign({ side: 'buy', zoneId: 'z1', entry: 4177.0, sl: 4174.7, tp: 4183.9, c6: 2.0, ticks: ticksAll('B') }, over || {});
+  return Object.assign({ side: 'buy', zoneId: 'z1', ticks: ticksAll('B') }, over || {});
 }
 
 // Mở một trang mới với giờ cố định và dữ liệu gieo sẵn (chỉ gieo khi chưa có, để tải lại giữ nguyên)

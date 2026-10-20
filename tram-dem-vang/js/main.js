@@ -301,7 +301,7 @@
     if (app.tier === 2) {
       // đang gõ giá thoát trong thanh dưới thì không dựng lại thanh (mất focus giữa chừng)
       var af = document.activeElement;
-      if (!(af && af.tagName === 'INPUT' && vb.contains(af))) ui.clear(vb).appendChild(ui.verdict.render(app));
+      if (!(app.ui.barClose && af && af.tagName === 'INPUT' && vb.contains(af))) ui.clear(vb).appendChild(ui.verdict.render(app));
       document.body.classList.add('has-vbar');
     } else { ui.clear(vb); document.body.classList.remove('has-vbar'); document.documentElement.style.setProperty('--jbh', '0px'); }
 

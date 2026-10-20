@@ -87,7 +87,6 @@ test('v5-3 · đếm ngược tới tin kế ở thanh trạng thái; lịch cũ
 
 test('v5-4 · tầng 1 từ dữ liệu trống: 6 thao tác (Q1, Q5, hai ô giá, gõ nhanh bốn vùng, Chốt)', async () => {
   await withPage(null, null, async ({ page }) => {
-    await page.click('[data-testid="cap-save"]');
     await page.click('[data-ctl="t0alert"] [data-v="true"]'); await page.click('button:has-text("Xong tầng 0")');
     await page.waitForSelector('[data-tier="1"]');
     assert.equal(await page.locator('.ticks input[type="checkbox"]').count(), 0);          // không còn 7 ô tick

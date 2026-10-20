@@ -619,3 +619,14 @@ body:has(.card.open) .cardtoggle { display: none; }
 /* thông báo nổi nằm trên thanh dưới, không che nút tầng */
 #toast { top: auto; bottom: calc(var(--vbar-h, 0px) + 12px); right: 16px; left: auto; }
 @media (max-width: 600px) { #toast { top: auto; bottom: calc(var(--vbar-h, 0px) + 8px); left: 8px; right: 8px; } }
+
+/* thanh ENTRY điện thoại gọn: chữ ENTRY vừa 2 dòng, dấu "?" nhỏ nằm cạnh nút */
+@media (max-width: 600px) {
+  .vtext.entry .ebig { font-size: 20px; line-height: 1.2; }
+  .vbar.v-entry .vact { align-items: center; flex-wrap: nowrap; }
+  .vbar .btn.big { min-height: 44px; padding: 6px 12px; font-size: 16px; }
+  .vbar .vact .help { margin: 0; }
+}
+:root[data-theme="light"] .vbar .btn.primary { color: #05120a; }
+:root[data-theme="light"] .vbar.v-open .btn.primary { color: #fff; }
+@media (max-width: 600px) { .backdrop:has(.imgdlg) { padding: 0; } }

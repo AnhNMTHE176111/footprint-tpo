@@ -93,3 +93,4 @@ Thứ tự: **Hướng** (buy / sell, nút đôi) · **Vùng** (chọn từ th�
 ## 8. Bỏ ô giá (người học yêu cầu 21/10)
 - Bỏ ô "Giá vào, SL, TP, biên độ nến M1" và máy tính cỡ lệnh. Luật SL (HT 6) giữ nguyên nhưng thành checkbox người tick: SL không ngắn hơn nến M1 lớn nhất 5 nến · SL không quá 4 giá · R:R ít nhất 1:2. "Giá cách vùng ≤ 1 giá" và "SL đúng phía" cũng tick tay.
 - Sổ ghi R bằng nút nhanh (+3 · +2 · +1 · 0 · −1) hoặc ô số; ngắt mạch tính theo R như cũ.
+- **Sửa lại (21/10, người học):** bỏ HẲN nhóm SL khỏi checklist, kể cả dạng tick tay ("quá vô nghĩa cho check list"). Luật SL HT 6 chỉ còn trong Từ điển và nút "?" cạnh thanh ENTRY; không tính vào tiến độ, không chặn ENTRY. "Giá cách vùng ≤ 1 giá" (HT 4.4) vẫn là checkbox.

@@ -15,7 +15,7 @@ export const NOW = '2026-10-13T14:30:00Z';   // 21:30 giờ VN (hè): sau cửa 
 
 export async function launch() { return chromium.launch(); }
 
-const SETTINGS = { theme: 'dark', guideLevel: 'new', capital: 2000, riskPct: 2, dstShift: true, shortcuts: true, lastExportAt: null };
+const SETTINGS = { theme: 'dark', guideLevel: 'new', capital: 2000, riskPct: 2, dstShift: true, shortcuts: true, lastExportAt: null, sizeAsked: true };
 
 // kind: 'A' (đang vừa phá xuống, bias SELL) · 'B' (cân bằng, bias BUY) · 'nocard' · 'wait' (bias CHỜ)
 export function buildState(kind, extra) {

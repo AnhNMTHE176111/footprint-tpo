@@ -58,7 +58,8 @@
     }
 
     // đã khớp: giá hiện tại → R hiện tại, mốc be
-    var cur = app.ui.curPrice && app.ui.curPrice.id === t.id ? app.ui.curPrice.v : null;
+    // giá hiện tại lưu vào lệnh đang mở nên tải lại không mất (REVIEW-2 mục 15)
+    var cur = app.ui.curPrice && app.ui.curPrice.id === t.id ? app.ui.curPrice.v : (typeof op.curPrice === 'number' ? op.curPrice : null);
     var live = h('span', { class: 'bigchip', 'data-testid': 'r-now' });
     var beLine = h('div', { class: 'beline' });
     function refreshLive() {
@@ -76,18 +77,18 @@
       beLine.appendChild(btn(T('moveBe'), function () { app.update(function (n) { J.markBE(n); }, { key: key }); }, 'primary', { disabled: be.ready ? null : true, 'data-testid': 'btn-be' }));
     }
     el.appendChild(section(T('t4Live'), [
-      h('div', { class: 'row wrap' }, h('label', { class: 'mini-l' }, T('curPrice'), numInput(cur, function (v) { app.ui.curPrice = { id: t.id, v: v }; cur = v; refreshLive(); }, { id: 'curprice', label: T('curPrice') })), live),
+      h('div', { class: 'row wrap' }, h('label', { class: 'mini-l' }, T('curPrice'), numInput(cur, function (v) { app.ui.curPrice = { id: t.id, v: v }; cur = v; refreshLive(); app.update(function (n) { if (n.open) n.open.curPrice = v; }, { key: key, keep: true }); }, { id: 'curprice', label: T('curPrice') })), live),
       beLine], { help: { text: T('t4BeHelp'), ref: 'tp-be' } }));
     refreshLive();
 
     // đóng lệnh
     var ck = app.ui.closeKind || null;
     if (ck === 'BE' && !op.beDone) ck = null;
-    var kinds = [{ v: 'TP', label: T('closeTp') }, { v: 'SL', label: T('closeSl'), bad: true }, { v: 'BE', label: T('closeBe') }, { v: 'MANUAL', label: T('closeManual') }];
+    var kinds = [{ v: 'TP', label: T('closeTp') }, { v: 'SL', label: op.beDone ? T('closeSlBe') : T('closeSl'), bad: !op.beDone }, { v: 'BE', label: T('closeBe') }, { v: 'MANUAL', label: T('closeManual') }];
     var beOff = op.beDone ? null : { BE: T('beNeedDone') };
     var closeBody = [seg(kinds, ck, function (v) { app.ui.closeKind = v; app.ui.closePrice = undefined; app.ui.closeReason = null; app.render({ keep: false }); }, { cls: 'close', label: T('t4Close'), disabled: beOff, onDisabled: function (v, why) { app.toast(why); } })];
     if (ck) {
-      var defPrice = ck === 'TP' ? t.tp : ck === 'SL' ? t.sl : ck === 'BE' ? t.entry : (cur !== null ? cur : null);
+      var defPrice = ck === 'TP' ? t.tp : ck === 'SL' ? (op.beDone ? t.entry : t.sl) : ck === 'BE' ? t.entry : (cur !== null ? cur : null);
       var price = app.ui.closePrice === undefined ? defPrice : app.ui.closePrice;
       var rr = J.computeR(t, price);
       var reasonOk = ck !== 'MANUAL' || !!app.ui.closeReason;

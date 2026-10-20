@@ -49,13 +49,16 @@ async function addZone(page, type, price) {
 
 test('v2-1 · từ dữ liệu trống: tầng 0 → 1 → 2 (cú phá mới) → ENTRY → ghi lệnh → tải lại về Kèo mới', async () => {
   await withPage(null, null, async ({ page, errors }) => {
+    // lần đầu mở: hộp hỏi vốn (QĐ-21), bấm "Lưu" với mặc định 2000 $ · 2 %
+    await page.waitForSelector('[data-testid="capital-dlg"]');
+    await page.click('[data-testid="cap-save"]');
     // tầng 0
     await page.click('[data-ctl="t0alert"] [data-v="true"]');
     await page.click('button:has-text("Xong tầng 0")');
     await page.waitForSelector('[data-tier="1"]');
     // tầng 1: tám câu hỏi có số, VWAP tuần chọn bằng hai ô số
     assert.match(await page.textContent('[data-ctl="q1"] .ctl-label'), /^Q1 · Hình dạng profile hôm qua/);
-    assert.match(await page.textContent('[data-ctl="q6"] .ctl-label'), /^Q8 · /);
+    assert.match(await page.textContent('[data-ctl="q6"] .ctl-label'), /^Q6 · /);
     await page.click(seg('q1', 'D')); await page.click(seg('q5', 'below')); await page.click(seg('q6', 'yes'));
     await fillNum(page, 'pricenow', '4200'); await fillNum(page, 'vwapprice', '4210');
     assert.equal(await page.getAttribute(seg('vwapW', 'below'), 'aria-pressed'), 'true');

@@ -161,6 +161,17 @@ test('mục 6 · chữ có giờ: mùa hè 20:30 / 19:20; ngày 02/11/2026 (mùa
   assert.ok(!/19:20|20:30/.test(C.codes.DIS_EARLY_BREAK.text));
 });
 
+// ---------- USER-TEST 5 · kế hoạch ngược bias (regex từng hỏng: ký tự lùi thay cho \b nên không bao giờ khớp) ----------
+test('USER-TEST 5 · kế hoạch ngược bias: "sell ở VAH Âu" khi bias BUY ⇒ cảnh báo; buy ⇒ không; có cả hai ⇒ không', () => {
+  assert.equal(J.planConflict({ plan1: 'sell ở VAH Âu' }, 'BUY'), true);
+  assert.equal(J.planConflict({ plan1: 'Nếu giá hồi thì SELL tại VAH' }, 'BUY'), true);
+  assert.equal(J.planConflict({ plan1: 'buy ở VAL Âu' }, 'BUY'), false);
+  assert.equal(J.planConflict({ plan1: 'sell VAH', plan2: 'buy VAL' }, 'BUY'), false);
+  assert.equal(J.planConflict({ plan1: 'buy ở VAL', plan2: '' }, 'SELL'), true);
+  assert.equal(J.planConflict({ plan1: 'sell' }, 'KHÔNG'), false);
+  assert.equal(J.planConflict({ plan1: 'buyer' }, 'SELL'), false);
+});
+
 // ---------- mục 7 · đánh số câu hỏi ----------
 test('mục 7 · câu hỏi đánh số theo HT 2.1: Q1, Q1′, Q2a, Q2b, Q3, Q4, Q5, Q6; tiêu đề "Sáu câu hỏi"', () => {
   assert.deepEqual(C.questions.map((q) => q.num), ['Q1', 'Q1′', 'Q2a', 'Q2b', 'Q3', 'Q4', 'Q5', 'Q6']);
@@ -200,4 +211,16 @@ test('USER-TEST 5 · sao chép VWAP tuần, HVN 3 tuần và Q1′ từ đêm tr
   assert.equal(cur.card.answers.q1w, 'D');
   assert.deepEqual(cur.card.zones.map((z) => [z.id, z.type, z.price]), [['z1', 'vwapW', 4181], ['z2', 'hvn3w', 4200]]);
   assert.equal(J.copyFromPrev(cur, st.nights['2026-10-12']), 0);
+});
+
+// ---------- mục 16 · bảng bật kịch bản: chế độ chờ công nhận / thin × bias KHÔNG / CHỜ (R34) ----------
+test('mục 16 · bảng bật kịch bản: pending / thin × bias KHÔNG / CHỜ khóa đúng mã đầu tiên', () => {
+  const { ANS_NONE, ANS_WAIT, clone } = require('./helpers.js');
+  const PENDING = { mode: 'broken', breakout: { dir: 'down', edgeZoneId: 'z3', at: '20:40', nth: 1, step1: true, step2: false } };
+  const THIN = { mode: 'thin', thinDir: 'up' };
+  const en = (reg, ans) => go('B', { answers: clone(ans), regime: reg }).enabled;
+  assert.deepEqual(en(PENDING, ANS_NONE), { A: 'DIS_BIAS_NONE', B: 'DIS_BIAS_NONE', C: null, D: 'DIS_BIAS_NONE' });
+  assert.deepEqual(en(PENDING, ANS_WAIT), { A: 'DIS_BIAS_WAIT', B: 'DIS_BIAS_WAIT', C: 'DIS_BIAS_WAIT', D: 'DIS_BIAS_WAIT' });
+  assert.deepEqual(en(THIN, ANS_NONE), { A: 'DIS_BIAS_NONE', B: 'DIS_BIAS_NONE', C: 'DIS_THIN_NO_FADE', D: 'DIS_BIAS_NONE' });
+  assert.deepEqual(en(THIN, ANS_WAIT), { A: 'DIS_BIAS_WAIT', B: 'DIS_BIAS_WAIT', C: 'DIS_BIAS_WAIT', D: 'DIS_BIAS_WAIT' });
 });

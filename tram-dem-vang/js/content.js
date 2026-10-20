@@ -327,7 +327,7 @@
     entryL: 'Giá vào', slL: 'SL', tpL: 'TP', tpAuto: 'gợi ý', c6Again: 'Biên độ nến M1 cao nhất (sửa tại đây)',
     calcNone: 'Chọn kịch bản để tính SL và R:R.', calcNeed: 'Nhập giá vào và SL ở bước Bấm.', calcSl: 'SL {v} giá', calcRr: 'R:R 1:{v}', calcTpSug: 'TP gợi ý {v}',
     sizeTitle: 'Cỡ lệnh MGC', sizeNoCfg: 'chưa cài vốn', sizeZero: '0 hợp đồng', sizeN: '{n} hợp đồng',
-    sizeCalc: 'Vốn {cap} $ · rủi ro {pct} % = {usd} $. Mỗi hợp đồng rủi ro {per} $ với SL này. Làm tròn xuống.', sizeHalf: 'Đã giảm ½ vì: {why}.',
+    sizeCalc: 'Vốn {cap} $ · rủi ro {pct} % = {full} $. Mỗi hợp đồng rủi ro {per} $ với SL này. Làm tròn xuống.', sizeHalf: 'Cỡ ½ vì: {why}, nên chỉ rủi ro {usd} $.',
     dotsLabel: '{n} trên 8 điều kiện đã đạt', vWait: 'CHỜ', missingLabel: 'thiếu:', vNo: 'KHÔNG VÀO', vOff: 'TẮT MÁY', vLocked: 'Có lệnh mở.', moreCodes: '(+{n} lý do nữa)',
     forceBtn: 'Tôi vẫn vào (phá luật)', forceNeed: 'Cần có hướng, giá vào và SL trước.', entryView: 'ENTRY (chỉ xem)', paperBtn: 'Ghi kèo luyện mắt', enterBtn: 'Vào lệnh',
     slGia: '{v} giá', sizeHalfShort: 'cỡ ½', sizeFull: 'cỡ đủ', counterTag: 'ngược bias · 2R · ½', halfNote: 'Cỡ ½ vì: {why}.',
@@ -375,7 +375,18 @@
     nightPick: 'Chọn đêm', editsOpen: '{n} lần sửa thẻ', boNeedTop: 'Chưa công nhận: chọn hướng phá, cạnh vừa phá rồi tới bước 1 và bước 2.',
     scenLocked: 'Kịch bản này đang tắt: {why}',
     storeFail: 'Không lưu được vào máy — tải JSON ngay để giữ dữ liệu.', storeFailBtn: 'Tải JSON', otherTab: 'Dữ liệu vừa đổi ở cửa sổ khác — đã tải lại.',
-    unitGiaShort: 'giá'
+    unitGiaShort: 'giá',
+    // --- vòng 3 ---
+    warnShort: 'trước {nyse} · cỡ ½', sizeMinOne: 'cỡ ½ không chia được — 1 hợp đồng (tối thiểu)',
+    capTitle: 'Vốn và rủi ro mỗi lệnh', capText: 'Công cụ dùng hai số này để tính số hợp đồng MGC. Mặc định 2000 $ và 2 %. Đổi lại được ở tầng Sổ, mục Cài đặt.',
+    capLater: 'Để sau', capSave: 'Lưu', capBad: 'Vốn và % rủi ro phải là số lớn hơn 0.', capChange: 'Đổi vốn',
+    glossarySearch: 'Tìm từ…', glossaryNone: 'Không có mục nào khớp.',
+    copyPrev: 'Sao chép vùng từ đêm {key}', copyPrevEdit: 'Sao chép vùng từ đêm {key}', copyPrevDone: 'Đã chép {n} mục (VWAP tuần, HVN 3 tuần, Q1′).',
+    copyPrevNone: 'Không có gì mới để chép.', copyPrevHint: 'VWAP tuần, HVN 3 tuần và hình 3 tuần thường giữ nguyên cả tuần; sửa lại giá nếu đã đổi.',
+    goTier1: 'Về tầng 1', goTier2: 'Về tầng 2',
+    sideNeedZone: 'Vùng này chưa có phía (trên hay dưới). Chọn phía ở tầng 1.', sideAfterZone: 'Chọn vùng ở trên: hướng tự điền theo phía của vùng.',
+    sideNeedRegime: 'Hướng lấy từ chế độ: chọn hướng phá hoặc hướng Trend thin ở tầng 2.',
+    closeSlBe: 'Chạm SL (đã ở hòa vốn)', needDirEdge: 'Chọn hướng phá và cạnh vừa phá trước.'
   };
 
   // ===== Từ điển (định nghĩa ngắn, lấy từ trang Hệ thống Đêm Vàng; chỗ là luật của công cụ thì ghi rõ) =====

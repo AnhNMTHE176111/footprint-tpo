@@ -21,7 +21,9 @@
 
     bar.appendChild(h('strong', { class: 'clock', 'data-testid': 'clock', text: T('clock', { hm: J.hm(app.nowMs) }) }));
     bar.appendChild(chip(T('biasChip', { v: ui.biasText(res.bias) }), 'bias ' + ui.dirCls(res.bias)));
-    bar.appendChild(h('span', { class: 'phase', text: C.phases[phase.id] + (band ? ' · ' + C.bands[band.id] : '') }));
+    // 20:20–20:30: dải "đáng tin" bắt đầu nhưng cảnh báo trước 20:30 còn hiệu lực ⇒ không in hai điều ngược nhau (REVIEW-2 mục 11)
+    var early = res.warnings.indexOf('WARN_BEFORE_2030') >= 0;
+    bar.appendChild(h('span', { class: 'phase', text: C.phases[phase.id] + (band && !(early && band.id === 'real') ? ' · ' + C.bands[band.id] : '') }));
     if (hit) {
       var r = time.windowRange(hit, key, useDst);
       bar.appendChild(chip(T('inWindow', { hm: time.fmtMin(r.center), left: Math.max(0, Math.ceil(r.to - app.nowMin)) }), 'bad'));
@@ -33,7 +35,8 @@
     } else {
       bar.appendChild(chip(T('noWindow'), ''));
     }
-    if (res.warnings.indexOf('WARN_BEFORE_2030') >= 0 && !hit) bar.appendChild(chip(C.warnText.WARN_BEFORE_2030, 'warn'));
+    // chữ ngắn trên thanh; câu đầy đủ nằm trong "?" (REVIEW-2 mục 12, mục 10)
+    if (early && !hit) { bar.appendChild(chip(T('warnShort'), 'warn')); bar.appendChild(ui.qd19Help()); }
 
     var rb = res.counts.ruleBreaks, ss = res.counts.slStreak;
     bar.appendChild(chip(T('chipBreaks', { n: rb }), rb >= 2 ? 'bad' : rb ? 'warn' : 'zero'));

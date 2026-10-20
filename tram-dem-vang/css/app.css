@@ -273,8 +273,26 @@ kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4
 .banner.savefail { margin: 0; border-radius: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 @media (max-width: 600px) {
   .chip.zero, .statusbar .phase { display: none; }
-  .statusbar { flex-wrap: nowrap; overflow-x: auto; gap: 8px; }
+  /* chip tự xuống dòng, chừa chỗ cho nút "Thẻ phiên" nổi ở góc phải: không cắt, không bị đè (REVIEW-2 mục 14) */
+  .statusbar { flex-wrap: wrap; gap: 4px 8px; margin-right: 0; padding-right: 112px; }
   .clock { white-space: nowrap; flex: none; }
-  .statusbar .chip, .statusbar .btn { flex: none; }
+  .statusbar .chip, .statusbar .btn { flex: none; white-space: normal; }
   .vbar .dots { display: none; }
 }
+@media (max-width: 900px) { .statusbar { margin-right: 0; padding-right: 112px; } }
+
+/* ----- vòng 3 ----- */
+.banner.strong { border-width: 2px; font-weight: 700; font-size: 15px; }
+.conflictslot:empty { display: none; }
+.conflictslot { margin-bottom: 8px; }
+.copyrow { margin-top: 8px; }
+.gsearch { width: 100%; margin: 8px 0 4px; position: sticky; top: 0; z-index: 2; }
+.glossary dt.hl { background: var(--accent-bg); color: var(--accent-text); border-radius: 6px; padding: 2px 8px; }
+.glossary dd.hl { background: var(--accent-bg); border-radius: 6px; padding: 4px 8px; }
+.statusbar .helpwrap .pop { color: var(--text); }
+
+/* bước Bấm vừa một màn 1366×768 kể cả lúc 20:24 có hàng ghi chú ở thanh phán quyết (REVIEW-2 mục 12) */
+.t3 .ctl { padding: 5px 6px; }
+.t3 .ctl-label { margin-bottom: 4px; }
+.tiers { padding: 6px 0; }
+.vnotes { padding: 4px 18px; }

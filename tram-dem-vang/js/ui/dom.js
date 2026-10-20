@@ -5,12 +5,20 @@
   var ui = TDV.ui = TDV.ui || {};
   var C = TDV.content, J = TDV.journal;
 
+  // giờ trong chữ ({comex} {nyse} {real1} {real2} {fomcFlat}) lấy từ time.js theo mùa của đêm đang xem
+  function fillTimes(s) {
+    var a = TDV.app;
+    if (typeof s !== 'string' || s.indexOf('{') < 0 || !a || !a.key || !TDV.time) return s;
+    return C.fill(s, TDV.time.textVars(a.key, a.useDst));
+  }
   function T(key, vars) {
     var s = C.ui[key];
     if (s === undefined) { if (root.console) console.warn('thiếu chữ: ' + key); return '⟦' + key + '⟧'; }
     if (vars) s = s.replace(/\{(\w+)\}/g, function (m, k) { return vars[k] === undefined ? m : vars[k]; });
-    return s;
+    return fillTimes(s);
   }
+  // chạy một bước commit (sự kiện change); vẽ lại do nó gây ra được hoãn tới khi cú bấm đang diễn ra xong (USER-TEST-2 mục 1)
+  function held(fn) { var a = TDV.app; if (a && a.hold) a.hold(fn); else fn(); }
 
   function append(el, c) {
     if (c === null || c === undefined || c === false) return;
@@ -40,10 +48,10 @@
   function helpBtn(help, extraNote) {
     if (!help) return null;
     var pop = h('div', { class: 'pop', role: 'note', hidden: true },
-      h('p', { text: help.text }),
-      extraNote ? h('p', { class: 'muted', text: extraNote }) : null,
+      h('p', { text: fillTimes(help.text) }),
+      extraNote ? h('p', { class: 'muted', text: fillTimes(extraNote) }) : null,
       help.ref ? h('a', { href: C.HT_BASE + help.ref, target: '_blank', rel: 'noopener', text: T('helpLink') }) : null,
-      (TDV.app && TDV.app.state.settings.guideLevel === 'new') ? h('button', { type: 'button', class: 'btn small ghost glossbtn', text: T('openGlossary'), onclick: function (e) { e.stopPropagation(); TDV.app.openGlossary(); } }) : null);
+      (TDV.app && TDV.app.state.settings.guideLevel === 'new') ? h('button', { type: 'button', class: 'btn small ghost glossbtn', text: T('openGlossary'), onclick: function (e) { e.stopPropagation(); TDV.app.openGlossary(help.gloss); } }) : null);
     var btn = h('button', { class: 'help', type: 'button', 'aria-label': T('helpLabel'), 'aria-expanded': 'false', text: '?',
       onclick: function (e) {
         e.stopPropagation();
@@ -80,7 +88,7 @@
     var inp = h('input', { type: 'text', inputmode: 'decimal', class: 'field num', autocomplete: 'off', placeholder: opt.placeholder || null, value: fmtIn(value),
       'aria-label': opt.label || null, dataset: opt.id ? { id: opt.id } : null,
       oninput: function () { var v = J.parseNum(inp.value); inp.classList.toggle('invalid', v === null && /\S/.test(inp.value) && inp.value.trim() !== '-'); onInput(v, inp); },
-      onchange: function () { var v = J.parseNum(inp.value); inp.classList.toggle('invalid', v === null && /\S/.test(inp.value)); if (v !== null) inp.value = fmtIn(v); if (opt.onCommit) opt.onCommit(v, inp); } });
+      onchange: function () { held(function () { var v = J.parseNum(inp.value); inp.classList.toggle('invalid', v === null && /\S/.test(inp.value)); if (v !== null) inp.value = fmtIn(v); if (opt.onCommit) opt.onCommit(v, inp); }); } });
     var wrap = h('span', { class: 'numwrap' }, inp, opt.unit ? h('span', { class: 'unit', text: opt.unit }) : null);
     wrap.input = inp;
     return wrap;
@@ -88,8 +96,14 @@
   function textInput(value, onChange, opt) {
     opt = opt || {};
     return h('input', { type: 'text', class: 'field txt', value: value || '', placeholder: opt.placeholder || null, 'aria-label': opt.label || null, maxlength: opt.max || 200,
-      onchange: function (e) { onChange(e.target.value); }, oninput: opt.onInput ? function (e) { opt.onInput(e.target.value); } : null });
+      onchange: function (e) { var v = e.target.value; held(function () { onChange(v); }); }, oninput: opt.onInput ? function (e) { opt.onInput(e.target.value); } : null });
   }
+
+  // "?" của cảnh báo trước 20:30: QĐ-19 là quyết định của công cụ, chưa đo (REVIEW-2 mục 10)
+  function qd19Help() { return helpBtn({ text: C.qd['QĐ-19'] + ' (' + C.unmeasured + ')', ref: 'thoi-gian', gloss: 'mo-ao' }); }
+
+  // lý do giảm ½, có giờ theo mùa: "ngày có tin lớn, trước 20:30 (hay mở ảo)"
+  function halfWhy(res) { return res.half.reasons.map(function (x) { return fillTimes(C.halfText[x]); }).join(', '); }
 
   function chip(text, cls, title) { return h('span', { class: 'chip' + (cls ? ' ' + cls : ''), title: title || null, text: text }); }
   function btn(text, onclick, cls, extra) {
@@ -111,7 +125,13 @@
   function codeText(code, vars) {
     var c = C.codes[code];
     if (!c) return code;
-    return c.text.replace(/\{(\w+)\}/g, function (m, k) { return vars && vars[k] !== undefined ? vars[k] : m; });
+    return fillTimes(c.text.replace(/\{(\w+)\}/g, function (m, k) { return vars && vars[k] !== undefined ? vars[k] : m; }));
+  }
+  // biến số cho chữ của mã luật: SL, biên độ nến, vốn, rủi ro, SL tối đa
+  function codeVars(app) {
+    var cc = app.res.calc, s = app.settings || {};
+    return { sl: J.fmt(cc.slDist), c6: J.fmt(TDV.rules.num(app.night.setup.c6)), cap: s.capital, pct: String(s.riskPct).replace('.', ','),
+      max: cc.maxSl === undefined ? '—' : J.fmt(cc.maxSl) };
   }
   function zoneLabel(z) {
     var t = C.zoneTypes[z.type];
@@ -122,5 +142,5 @@
 
   ui.T = T; ui.h = h; ui.clear = clear; ui.helpBtn = helpBtn; ui.seg = seg; ui.numInput = numInput; ui.textInput = textInput;
   ui.chip = chip; ui.btn = btn; ui.banner = banner; ui.section = section; ui.biasText = biasText; ui.dirCls = dirCls; ui.sideText = sideText;
-  ui.codeText = codeText; ui.zoneLabel = zoneLabel; ui.fmtIn = fmtIn;
+  ui.codeText = codeText; ui.codeVars = codeVars; ui.fillTimes = fillTimes; ui.held = held; ui.qd19Help = qd19Help; ui.halfWhy = halfWhy; ui.zoneLabel = zoneLabel; ui.fmtIn = fmtIn;
 })(this);

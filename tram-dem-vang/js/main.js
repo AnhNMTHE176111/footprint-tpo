@@ -36,6 +36,46 @@
     return ok;
   }
 
+  // ---------- hoãn vẽ lại khi đang bấm (USER-TEST-2 mục 1) ----------
+  // Gõ số rồi bấm nút ngay: mousedown làm ô mất focus ⇒ sự kiện change ⇒ ghi state ⇒ vẽ lại cả tầng, nút bị thay trước khi nhả chuột
+  // nên cú bấm đầu bị nuốt. Cách sửa: state vẫn ghi ngay trong change, còn VẼ LẠI do change gây ra được hoãn tới sau cú bấm
+  // (cú bấm tự vẽ lại và gộp phần hoãn) hoặc sau 0 ms nếu không có chuột (phím Tab). Ô đang focus được giữ lại sau khi vẽ.
+  var hold = { depth: 0, ptr: false, pending: null, t: null };
+  function queueRender(opts) {
+    if (!hold.pending) hold.pending = Object.assign({}, opts);
+    else { var keep = !!(hold.pending.keep && opts.keep); Object.assign(hold.pending, opts); hold.pending.keep = keep; }
+  }
+  function flushHold() { if (hold.pending && hold.depth === 0) render({}); }
+  app.hold = function (fn) {
+    var ptr = hold.ptr;
+    hold.depth++;
+    try { fn(); } finally { hold.depth--; }
+    if (hold.pending && hold.depth === 0 && !ptr) setTimeout(flushHold, 0);
+  };
+  function pointerUp() { hold.ptr = false; clearTimeout(hold.t); hold.t = setTimeout(flushHold, 100); }   // nếu không có click thì vẽ bù sau 100 ms
+  ['pointerdown', 'mousedown', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, function () { clearTimeout(hold.t); hold.ptr = true; }, true); });
+  ['pointerup', 'mouseup', 'pointercancel', 'touchend', 'touchcancel'].forEach(function (ev) { document.addEventListener(ev, pointerUp, true); });
+  document.addEventListener('click', function () { setTimeout(flushHold, 0); });
+  // phím Tab: ô kế tiếp nhận focus ngay sau change ⇒ vẽ lại tại đó (ô mới đã focus nên được giữ lại), xong trước khi người dùng gõ tiếp
+  document.addEventListener('focusin', function () { if (!hold.ptr) flushHold(); }, true);
+
+  function snapFocus() {
+    var a = document.activeElement, main = $('main');
+    if (!a || !main.contains(a) || !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return null;
+    var all = [].slice.call(main.querySelectorAll('input, textarea, select'));
+    var s = { i: all.indexOf(a), id: a.dataset ? a.dataset.id || null : null, label: a.getAttribute('aria-label'), start: null, end: null };
+    try { s.start = a.selectionStart; s.end = a.selectionEnd; } catch (e) { /* ô không có vùng chọn */ }
+    return s;
+  }
+  function restoreFocus(s) {
+    if (!s) return;
+    var main = $('main'), el = null;
+    if (s.id) el = main.querySelector('[data-id="' + s.id + '"]');
+    if (!el) { var c = main.querySelectorAll('input, textarea, select')[s.i]; if (c && c.getAttribute('aria-label') === s.label) el = c; }
+    if (!el) return;
+    try { el.focus({ preventScroll: true }); if (s.start !== null && el.setSelectionRange) el.setSelectionRange(s.start, s.end); } catch (e) { /* bỏ qua */ }
+  }
+
   // ---------- cập nhật ----------
   app.update = function (fn, opts) {
     opts = opts || {};
@@ -124,7 +164,8 @@
   app.forceEnter = function () {
     var res = freshEnterCtx();
     if (!res.side || !res.calc.numsOk || res.verdict === 'ENTRY' || res.verdict === 'LOCKED') return;
-    var codes = (res.reasons.length ? res.reasons : res.missing).map(function (c) { return ui.codeText(c, { sl: J.fmt(res.calc.slDist), c6: J.fmt(R.num(app.night.setup.c6)) }).replace(/[.\s]+$/, ''); });
+    var vars = ui.codeVars(app);
+    var codes = J.forceCodes(res).map(function (c) { return ui.codeText(c, vars).replace(/[.\s]+$/, ''); });
     var paper = res.paper;
     app.confirm({ title: T('forceTitle'), text: T('forceText', { list: codes.join(' · ') }) + (paper ? ' ' + T('forcePaperNote') : ' ' + T('forceCount')), ok: T('forceOk'), danger: true }).then(function (ok) {
       if (!ok) return;
@@ -181,6 +222,8 @@
 
   function render(opts) {
     opts = opts || {};
+    if (hold.depth > 0) { queueRender(opts); return; }
+    if (hold.pending) { var p = hold.pending; hold.pending = null; var keep = !!(p.keep && opts.keep); opts = Object.assign({}, p, opts); opts.keep = keep; }
     compute();
     if (app._lastKey !== null && app._lastKey !== app.key) opts.keep = false;
     app._lastKey = app.key;
@@ -207,6 +250,7 @@
     }
     var main = $('main');
     var sy = window.scrollY;
+    var focus = snapFocus();
     ui.clear(main);
     var mod = ui['tier' + app.tier];
     var node = mod.render(app);
@@ -214,6 +258,7 @@
     main.appendChild(h('div', { class: 'tierhead' }, h('h2', { text: C.tiers[app.tier].long })));
     main.appendChild(node);
     if (opts.keepScroll !== false) window.scrollTo(0, sy);
+    restoreFocus(focus);
   }
   app.render = render;
 
@@ -257,12 +302,54 @@
   }
 
   // ---------- Từ điển ----------
-  app.openGlossary = function () {
-    var dl = h('dl', { class: 'glossary' });
-    C.glossary.forEach(function (g) { dl.appendChild(h('dt', { text: g.term })); dl.appendChild(h('dd', { text: g.def })); });
+  // Từ điển: xếp theo chữ cái, có ô tìm; mở từ nút "?" thì cuộn tới đúng mục và tô sáng (USER-TEST-2 mục 3)
+  function plain(s) { return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd'); }
+  app.openGlossary = function (key) {
+    var list = C.glossary.slice().sort(function (a, b) { return a.term.localeCompare(b.term, 'vi'); });
+    var dl = h('dl', { class: 'glossary' }), items = [];
+    list.forEach(function (g) {
+      var dt = h('dt', { text: g.term, 'data-gloss': g.key }), dd = h('dd', { text: ui.fillTimes(g.def) });
+      dl.appendChild(dt); dl.appendChild(dd);
+      items.push({ g: g, dt: dt, dd: dd, hay: plain(g.term + ' ' + g.def) });
+    });
+    var none = h('p', { class: 'muted', hidden: true, text: T('glossaryNone') });
+    var search = h('input', { type: 'search', class: 'field gsearch', placeholder: T('glossarySearch'), 'aria-label': T('glossarySearch'), 'data-testid': 'glossary-search',
+      oninput: function () {
+        var q = plain(search.value.trim()), any = false;
+        items.forEach(function (it) { var show = !q || it.hay.indexOf(q) >= 0; it.dt.hidden = !show; it.dd.hidden = !show; if (show) any = true; });
+        none.hidden = any;
+      } });
     document.querySelectorAll('.pop').forEach(function (p) { p.setAttribute('hidden', ''); });
-    openModal(h('div', { class: 'dlg glossarybox', 'data-testid': 'glossary' }, h('h3', { text: T('glossaryTitle') }), h('p', { class: 'muted', text: T('glossaryHint') }), dl,
+    var bd = openModal(h('div', { class: 'dlg glossarybox', 'data-testid': 'glossary' }, h('h3', { text: T('glossaryTitle') }), h('p', { class: 'muted', text: T('glossaryHint') }), search, dl, none,
       h('div', { class: 'actions' }, btn(T('close'), function () { closeModal(false); }, 'primary'))));
+    var box = bd.querySelector('.glossarybox');
+    box.scrollTop = 0; bd.querySelector('.modal').scrollTop = 0;
+    var hit = key && items.filter(function (it) { return it.g.key === key; })[0];
+    if (hit) {
+      search.blur();
+      hit.dt.classList.add('hl'); hit.dd.classList.add('hl');
+      hit.dt.scrollIntoView({ block: 'start' });
+    }
+  };
+
+  // vốn và % rủi ro: hỏi lần đầu mở (có "để sau") và mở lại từ thông báo NO_SIZE_ZERO (QĐ-21)
+  app.openCapital = function (first) {
+    var cap = state.settings.capital, pct = state.settings.riskPct;
+    var capIn = ui.numInput(cap, function (v) { cap = v; }, { id: 'cap-dlg', label: T('setCapital'), unit: '$' });
+    var pctIn = ui.numInput(pct, function (v) { pct = v; }, { id: 'risk-dlg', label: T('setRisk'), unit: '%' });
+    var content = h('div', { class: 'dlg', 'data-testid': 'capital-dlg' }, h('h3', { text: T('capTitle') }), h('p', { text: T('capText') }),
+      h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setCapital') }), capIn),
+      h('div', { class: 'ctl' }, h('div', { class: 'ctl-label', text: T('setRisk') }), pctIn),
+      h('div', { class: 'actions' },
+        btn(T('capLater'), function () { closeModal(false); }, 'ghost', { 'data-testid': 'cap-later' }),
+        btn(T('capSave'), function () {
+          if (!(cap > 0) || !(pct > 0)) { app.toast(T('capBad')); return; }
+          app.updateState(function (s) { s.settings.capital = cap; s.settings.riskPct = pct; s.settings.sizeAsked = true; });
+          closeModal(true);
+        }, 'primary', { 'data-testid': 'cap-save' })));
+    openModal(content, function () {
+      if (first && !state.settings.sizeAsked) app.updateState(function (s) { s.settings.sizeAsked = true; });
+    });
   };
 
   // ngăn thẻ phiên trên điện thoại: mở / đóng bằng nút, nút ✕, chạm ra ngoài, Esc (REVIEW-1 mục 2)
@@ -285,6 +372,7 @@
     document.title = T('appTitle');
     $('skip').textContent = T('skip');
     render();
+    if (!state.settings.sizeAsked) app.openCapital(true);
     setInterval(function () {
       compute();
       var sig = JSON.stringify([app.res.enabled, !!app.res.newsHit, app.res.longestBarActive, app.res.locks.tier3]);

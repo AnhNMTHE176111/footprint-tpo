@@ -152,7 +152,7 @@ test('B cùng chiều phá: được', () => {
 test('QĐ-4: B ngược chiều phá nhưng ngược bias ⇒ không được', () => {
   const zones = [{ id: 'z1', type: 'vwapW', price: 4175 }, { id: 'z2', type: 'valEu', price: 4160 }, { id: 'z3', type: 'vahEu', price: 4190 }];
   const r = go('B', { zones, regime: BRK('up', 'z3'), setup: { side: 'sell', counterBiasReason: 'x', calc: { entry: 4175, sl: 4177.4, tp: 4170.2 } } });
-  assert.ok(r.reasons.includes('NO_COUNTER_BIAS_ZONE') || r.reasons.includes('NO_FIGHT_BREAK'));
+  assert.deepEqual(r.reasons, ['NO_COUNTER_BIAS_ZONE', 'NO_FIGHT_BREAK']);   // khóa thứ tự luật (REVIEW-2 mục 16)
 });
 
 // ---------- C4 – C7 ----------

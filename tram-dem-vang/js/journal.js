@@ -74,6 +74,14 @@
     return state.nights[key];
   }
 
+  // kế hoạch gõ ngược bias: chỉ cảnh báo, không chặn. Khớp theo từ (\bb) để "buy" / "sell" đứng giữa câu tiếng Việt vẫn bắt được
+  function planConflict(card, bias) {
+    if (bias !== 'BUY' && bias !== 'SELL') return false;
+    var txt = ((card.plan1 || '') + ' ' + (card.plan2 || '')).toLowerCase();
+    var hasBuy = /\bbuy\b/.test(txt), hasSell = /\bsell\b/.test(txt);
+    return bias === 'SELL' ? (hasBuy && !hasSell) : (hasSell && !hasBuy);
+  }
+
   // ===== thẻ phiên =====
   function newZoneId(card) {
     // số thứ tự chỉ tăng: xóa vùng rồi thêm lại không dùng lại mã cũ (REVIEW-1 mục 14)
@@ -165,6 +173,16 @@
     return keep;
   }
 
+  // mã luật của lệnh "Tôi vẫn vào": đủ mã luật thật kể cả khi TẮT MÁY (reasons chỉ có OFF_*), nếu không có thì mã CHỜ (REVIEW-2 mục 4)
+  function forceCodes(res) {
+    var codes = [];
+    var add = function (c) { if (codes.indexOf(c) < 0) codes.push(c); };
+    (res.reasons || []).forEach(add);
+    (res.ruleReasons || []).forEach(add);
+    if (!(res.ruleReasons || []).length) (res.missing || []).forEach(add);
+    return codes;
+  }
+
   var seq = 0;
   function newId(nowMs) { seq++; return 't' + (+nowMs).toString(36) + seq.toString(36); }
 
@@ -177,14 +195,7 @@
     if (o.ruleBreak && !o.paper) flags.push('RULE_BREAK');
     if (res.counter) flags.push('COUNTER_BIAS');
     if (res.half && res.half.on) flags.push('HALF');
-    var codes = [];
-    if (o.ruleBreak) {
-      // đủ mã luật thật: kể cả khi TẮT MÁY (reasons chỉ có OFF_*) thì vẫn ghi ruleReasons (REVIEW-2 mục 4)
-      var add = function (c) { if (codes.indexOf(c) < 0) codes.push(c); };
-      (res.reasons || []).forEach(add);
-      (res.ruleReasons || []).forEach(add);
-      if (!(res.ruleReasons || []).length) (res.missing || []).forEach(add);
-    }
+    var codes = o.ruleBreak ? forceCodes(res) : [];
     var isMarket = o.kind !== 'limit';
     var fill = R.num(o.price);
     var trade = {
@@ -407,9 +418,9 @@
   return {
     fmt: fmt, fmtTrim: fmtTrim, fmtR: fmtR, fmtSigned: fmtSigned, parseNum: parseNum, hm: hm,
     newNight: newNight, normalizeNight: normalizeNight, ensureNight: ensureNight,
-    prevCardSource: prevCardSource, copyFromPrev: copyFromPrev, newZoneId: newZoneId, canLockCard: canLockCard, lockCard: lockCard, cardEditPolicy: cardEditPolicy, applyCardEdit: applyCardEdit,
+    planConflict: planConflict, prevCardSource: prevCardSource, copyFromPrev: copyFromPrev, newZoneId: newZoneId, canLockCard: canLockCard, lockCard: lockCard, cardEditPolicy: cardEditPolicy, applyCardEdit: applyCardEdit,
     setRegimeMode: setRegimeMode, breakoutFailed: breakoutFailed, changeScenario: changeScenario,
-    createTrade: createTrade, tradeById: tradeById, fillLimit: fillLimit, cancelLimit: cancelLimit,
+    createTrade: createTrade, forceCodes: forceCodes, tradeById: tradeById, fillLimit: fillLimit, cancelLimit: cancelLimit,
     computeR: computeR, beStatus: beStatus, markBE: markBE, closeTrade: closeTrade, recomputeTally: recomputeTally,
     manualTally: manualTally, tallyMismatch: tallyMismatch, checksOf: checksOf, warnLine: warnLine, rowOf: rowOf,
     toMarkdown: toMarkdown, toCSV: toCSV, weekStats: weekStats, ruleBreakCount: ruleBreakCount, sweptCount: sweptCount

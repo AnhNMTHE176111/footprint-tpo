@@ -107,7 +107,13 @@
   function clearBlock(night, scen) {
     var bs = block(night, scen);
     bs.ticks = {};
-    ['entry', 'sl', 'tp', 'c6', 'reason'].forEach(function (k) { delete bs[k]; });
+    ['entry', 'sl', 'tp', 'c6', 'reason', 'wick', 'tail', 'ctx1At'].forEach(function (k) { delete bs[k]; });
+  }
+  // sau "Ghi lệnh" (mục 7 thiết kế v2): giữ hướng, vùng, tick Bối cảnh và Kiểm tra, ô lý do / tail; chỉ xóa nhóm Điểm vào, ô SL và giá
+  function clearAfterTrade(night, scen) {
+    var bs = block(night, scen);
+    Object.keys(bs.ticks).forEach(function (k) { if (/^(ent|sl)\d+$/.test(k)) delete bs.ticks[k]; });
+    ['entry', 'sl', 'tp', 'wick'].forEach(function (k) { delete bs[k]; });
   }
   function setupActive(night) {
     var bl = (night.se && night.se.blocks) || {};
@@ -225,7 +231,7 @@
   var seq = 0;
   function newId(nowMs) { seq++; return 't' + (+nowMs).toString(36) + seq.toString(36); }
 
-  // Ghi một dòng Sổ từ khối `o.scen` (lấy số từ kết quả engine `res`), rồi bỏ tick của khối đó (giữ hướng, vùng).
+  // Ghi một dòng Sổ từ khối `o.scen` (lấy số từ kết quả engine `res`), rồi xóa Điểm vào + giá của khối đó (giữ hướng, vùng, bối cảnh, kiểm tra).
   // o = {scen, ruleBreak, paper, missing:[mã ô thiếu], nowMs, nowMin}
   function createTrade(night, res, o) {
     var scen = o.scen, bl = res.blocks[scen], bs = block(night, scen), cc = bl.calc;
@@ -237,12 +243,12 @@
     var trade = {
       id: o.id || newId(o.nowMs), time: time.fmtMin(o.nowMin), side: bl.side, scenario: scen,
       zoneId: bl.zone ? bl.zone.id : null, zoneType: bl.zone ? bl.zone.type : null,
-      ticks: Object.assign({}, bs.ticks), c6: R.num(bs.c6), entry: cc.entry, sl: cc.sl, tp: cc.tpUsed,
+      ticks: Object.assign({}, bs.ticks), c6: R.num(bl.c6), entry: cc.entry, sl: cc.sl, tp: cc.tpUsed,
       size: cc.size, slDist: cc.slDist, rrPlanned: cc.rr, exit: null, r: null,
       flags: flags, counterBiasReason: bl.counter ? (bs.reason || '') : '', missing: (o.missing || []).slice(), ruleCodes: [], sweptThenTP: null, notes: ''
     };
     night.trades.push(trade);
-    clearBlock(night, scen);
+    clearAfterTrade(night, scen);
     return trade;
   }
   function tradeById(night, id) { return (night.trades || []).filter(function (t) { return t.id === id; })[0] || null; }
@@ -420,7 +426,7 @@
   return {
     fmt: fmt, fmtTrim: fmtTrim, fmtR: fmtR, parseNum: parseNum, hm: hm,
     newNight: newNight, normalizeNight: normalizeNight, ensureNight: ensureNight,
-    block: block, touchBlock: touchBlock, clearBlock: clearBlock, setupActive: setupActive,
+    block: block, touchBlock: touchBlock, clearBlock: clearBlock, clearAfterTrade: clearAfterTrade, setupActive: setupActive,
     planConflict: planConflict, prevCardSource: prevCardSource, copyFromPrevDetail: copyFromPrevDetail, newZoneId: newZoneId, canLockCard: canLockCard,
     lockCard: lockCard, cardEditPolicy: cardEditPolicy, applyCardEdit: applyCardEdit, parseQuickZones: parseQuickZones,
     createTrade: createTrade, tradeById: tradeById, computeR: computeR, beInfo: beInfo, closeTrade: closeTrade, recomputeTally: recomputeTally,

@@ -47,7 +47,7 @@ function mk(scen, over) {
   let n, bs;
   if (scen === 'B') {
     n = night({ card: card(clone(ANS_BUY), [
-      { id: 'z1', type: 'vwapW', price: 4175 }, { id: 'z2', type: 'valEu', price: 4175.5 }, { id: 'z3', type: 'vahEu', price: 4184 }]) });
+      { id: 'z1', type: 'vwapW', price: 4176.5 }, { id: 'z2', type: 'valEu', price: 4175.5 }, { id: 'z3', type: 'vahEu', price: 4184 }]) });
     bs = { side: 'buy', zoneId: 'z1', entry: 4177.0, sl: 4174.7, tp: 4183.9, c6: 2.0 };
   } else if (scen === 'C') {
     n = night({ card: card(clone(ANS_BUY), [
@@ -55,12 +55,12 @@ function mk(scen, over) {
     bs = { side: 'buy', zoneId: 'z1', entry: 4176.0, sl: 4173.6, tp: 4180.8, c6: 2.0 };
   } else {
     n = night({ card: card(clone(ANS_SELL), [
-      { id: 'z1', type: 'vwapW', price: 4205 }, { id: 'z2', type: 'hvnW', price: 4195 }, { id: 'z3', type: 'valEu', price: 4185 }, { id: 'z4', type: 'vahEu', price: 4199 }]) });
+      { id: 'z1', type: 'vwapW', price: 4205 }, { id: 'z2', type: 'hvnW', price: 4193.8 }, { id: 'z3', type: 'valEu', price: 4185 }, { id: 'z4', type: 'vahEu', price: 4199 }]) });
     bs = scen === 'D' ? { side: 'sell', zoneId: 'z2', entry: 4193.0, sl: 4195.4, tp: 4188.2, c6: 2.0 }
       : { side: 'sell', zoneId: 'z2', entry: 4193.0, sl: 4195.4, tp: 4185.8, c6: 2.0 };
   }
   bs.ticks = ticksAll(scen);
-  n.se = { blocks: { [scen]: bs }, common: { longest: true }, touch: { [scen]: 1 }, last: scen, n: 1 };
+  n.se = { blocks: { [scen]: bs }, common: {}, touch: { [scen]: 1 }, last: scen, n: 1 };
   if (typeof over === 'function') over(n); else {
     if (over.answers) n.card.answers = over.answers;
     if (over.zones) n.card.zones = over.zones;

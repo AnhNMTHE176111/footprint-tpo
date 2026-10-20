@@ -6,7 +6,7 @@
 })(this, function (dep) {
   'use strict';
 
-  var APP_VERSION = '2.0.0';
+  var APP_VERSION = '2.1.0';
   var EPS = 1e-9;
 
   var T = {
@@ -19,19 +19,23 @@
     breakLimit: 2,     // phá luật ⇒ TẮT MÁY
     slStreakLimit: 3,  // SL liên tiếp ⇒ TẮT MÁY
     zoneMax: 2,        // tối đa 2 lần mỗi vùng
+    nearOk: 1,         // giá vào cách vùng ≤ 1 giá (HT 4.4)
+    nearBack: 3,       // cách vùng > 3 giá: ở lưng, bỏ kèo (HT 4.4; mục 7 thiết kế v2)
     tickValue: 10,     // MGC: 1 giá = 10 $ mỗi hợp đồng (tick 0,1 = 1 $)
     zonesMin: 3, zonesMax: 5
   };
   var TARGET_R = { A: 3, B: 3, C: 2, D: 2 };
+  var TARGET_R_COUNTER_B = 2;   // HT 2.2 / QĐ-16: hấp thụ ngược bias chỉ 2R
   var BE_R = { A: 1.5, B: 1.5, C: 1, D: 1 };
   var HALF_ORDER = ['BIAS_NONE', 'SCENARIO_C', 'COUNTER_BIAS', 'NEWS_DAY', 'B_RANK2', 'BEFORE_2030'];
   var SCENARIOS = ['A', 'B', 'C', 'D'];
-  // số checkbox từng nhóm của mỗi khối (id ô = ctx1.., chk1.., ent1, sl1); chữ ở content.js → blocks
+  // số checkbox từng nhóm của mỗi khối (id ô = ctx1.., chk1.., ent1, sl1); chữ ở content.js → blocks.
+  // Các ô máy tính được (bias, giờ phá, giá cách vùng) KHÔNG còn là ô tick: chúng là ô tự kiểm trong engine.
   var BLOCK_SHAPE = {
-    A: { ctx: 4, chk: 4, ent: 1, sl: 1 },
-    B: { ctx: 4, chk: 4, ent: 1, sl: 1 },
-    C: { ctx: 2, chk: 3, ent: 1, sl: 1 },
-    D: { ctx: 3, chk: 2, ent: 1, sl: 1 }
+    A: { ctx: 2, chk: 3, ent: 1, sl: 1 },
+    B: { ctx: 5, chk: 4, ent: 1, sl: 1 },
+    C: { ctx: 3, chk: 3, ent: 1, sl: 1 },
+    D: { ctx: 3, chk: 3, ent: 1, sl: 1 }
   };
   var GROUPS = ['ctx', 'chk', 'ent', 'sl'];
   function tickIds(scen) {
@@ -165,7 +169,7 @@
   function isCounter(bias, side) { return (bias === 'BUY' && side === 'sell') || (bias === 'SELL' && side === 'buy'); }
 
   return {
-    APP_VERSION: APP_VERSION, T: T, EPS: EPS, TARGET_R: TARGET_R, BE_R: BE_R, HALF_ORDER: HALF_ORDER, SCENARIOS: SCENARIOS,
+    APP_VERSION: APP_VERSION, T: T, EPS: EPS, TARGET_R: TARGET_R, TARGET_R_COUNTER_B: TARGET_R_COUNTER_B, BE_R: BE_R, HALF_ORDER: HALF_ORDER, SCENARIOS: SCENARIOS,
     BLOCK_SHAPE: BLOCK_SHAPE, GROUPS: GROUPS, tickIds: tickIds,
     MARKS: MARKS, NYSE_WARN: NYSE_WARN, defaultWindows: defaultWindows, effectiveWindows: effectiveWindows, effectiveNewsDay: effectiveNewsDay,
     ZONE_TYPES: ZONE_TYPES, ZONE_ORDER: ZONE_ORDER,

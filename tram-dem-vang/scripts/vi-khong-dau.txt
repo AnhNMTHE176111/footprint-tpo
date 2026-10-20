@@ -100,3 +100,4 @@ nam
 chung
 thanh
 xanh
+test   # "test lại" có trong Từ điển (V-41)

@@ -1,5 +1,5 @@
 /* Trạm Đêm Vàng — service worker: chạy không mạng. Cache theo APP_VERSION; deploy.sh tự tăng số phiên bản. */
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.1.0';
 const CACHE = 'tdv-' + APP_VERSION;
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',

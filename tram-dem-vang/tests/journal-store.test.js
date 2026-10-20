@@ -12,8 +12,8 @@ const NOWMIN = 21 * 60 + 30;
 function sampleNight() {
   const n = J.newNight();
   n.trades = [
-    trade({ id: 'a1', time: '20:25', side: 'sell', scenario: 'A', zoneType: 'hvnW', ticks: { chk1: true, chk2: true, chk3: true, chk4: true }, slDist: 2.4, exit: { kind: 'TP', price: 4185.8, at: '20:50' }, r: 3 }),
-    trade({ id: 'a2', time: '20:48', side: 'sell', scenario: 'B', zoneType: 'vwapW', ticks: { chk2: true, chk4: true }, slDist: 1.2, missing: ['chk1', 'slFloor'],
+    trade({ id: 'a1', time: '20:25', side: 'sell', scenario: 'A', zoneType: 'hvnW', ticks: { chk1: true, chk2: true, chk3: true }, slDist: 2.4, exit: { kind: 'TP', price: 4185.8, at: '20:50' }, r: 3 }),
+    trade({ id: 'a2', time: '20:48', side: 'sell', scenario: 'B', zoneType: 'vwapW', ticks: { chk2: true }, slDist: 1.2, missing: ['chk1', 'slFloor'],
       exit: { kind: 'SL', price: 0, at: '20:55' }, r: -1, flags: ['RULE_BREAK'] })
   ];
   return n;
@@ -30,18 +30,21 @@ test('ghi lệnh: dòng Sổ có giờ, hướng, kịch bản, vùng, giá, SL,
   assert.deepEqual(t.ticks, ticksAll('B')); assert.deepEqual(t.flags, []); assert.deepEqual(t.missing, []);
   assert.equal(n.trades.length, 1);
   const bs = n.se.blocks.B;
-  assert.deepEqual(bs.ticks, {}); assert.equal(bs.side, 'buy'); assert.equal(bs.zoneId, 'z1');
-  ['entry', 'sl', 'tp', 'c6', 'reason'].forEach((k) => assert.equal(bs[k], undefined, k));
+  // mục 7 thiết kế v2: giữ hướng, vùng, tick Bối cảnh + Kiểm tra; chỉ xóa nhóm Điểm vào, ô SL và giá (entry, sl, tp)
+  assert.equal(bs.side, 'buy'); assert.equal(bs.zoneId, 'z1');
+  const keep = ticksAll('B'); delete keep.ent1; delete keep.sl1;
+  assert.deepEqual(bs.ticks, keep);
+  ['entry', 'sl', 'tp', 'wick'].forEach((k) => assert.equal(bs[k], undefined, k));
   // vừa ghi lệnh ⇒ có lệnh mở ⇒ ô chung "Không có lệnh đang mở" đỏ
   const after = run(DATE, '21:31', n);
   assert.equal(after.common.filter((x) => x.id === 'open')[0].ok, false);
 });
 test('ghi lệnh "Vẫn vào": cờ phá luật + danh sách ô thiếu; lệnh luyện mắt không phá luật', () => {
-  const n = mk('A', (x) => { delete x.se.blocks.A.ticks.chk1; delete x.se.blocks.A.ticks.ctx3; });
+  const n = mk('A', (x) => { delete x.se.blocks.A.ticks.chk1; delete x.se.blocks.A.ticks.ctx2; });
   const res = run(DATE, '21:30', n);
   const t = J.createTrade(n, res, { scen: 'A', ruleBreak: true, missing: res.blocks.A.missing, nowMs: NOW.getTime(), nowMin: NOWMIN });
-  assert.ok(t.flags.includes('RULE_BREAK')); assert.deepEqual(t.missing, ['ctx3', 'chk1']);
-  assert.equal(J.warnLine(t), 'phá luật: thiếu 2 ô: Bias cùng chiều phá; Hồi hình U, ≥ 3 nến, không phải V');
+  assert.ok(t.flags.includes('RULE_BREAK')); assert.deepEqual(t.missing, ['ctx2', 'chk1']);
+  assert.equal(J.warnLine(t), 'phá luật: thiếu 2 ô: Nhịp hồi về cạnh giữ được, không nến M5 nào đóng ngược vào trong; Hồi hình U, ≥ 3 nến, không phải V');
   const n2 = mk('A', (x) => { delete x.se.blocks.A.ticks.chk1; });
   const p = J.createTrade(n2, run(DATE, '21:30', n2), { scen: 'A', ruleBreak: true, paper: true, missing: ['chk1'], nowMs: NOW.getTime(), nowMin: NOWMIN });
   assert.ok(p.flags.includes('paper')); assert.ok(!p.flags.includes('RULE_BREAK'));
@@ -121,8 +124,8 @@ test('sổ: dòng ⚠ liệt kê tối đa 3 ô thiếu, nói số ô còn lại
 test('sổ: 7 cột — vùng thay chế độ, cột "4 kiểm tra" in các ô kiểm tra đã tick', () => {
   const base = { time: '20:00', side: 'sell', slDist: 2.4, exit: { kind: 'TP' }, r: 3, flags: [], ruleCodes: [], zoneType: 'hvnW' };
   const row = (scenario, ticks, o) => J.rowOf(trade(Object.assign({}, base, { scenario, ticks }, o || {})));
-  assert.equal(row('A', { chk1: true, chk2: true, chk3: true, chk4: true }).checks, 'U · Δ · bb · cạnh');
-  assert.equal(row('B', { chk1: true, chk3: true }).checks, 'giảm dần · DMA');
+  assert.equal(row('A', { chk1: true, chk2: true, chk3: true }).checks, 'U · Δ · bb');
+  assert.equal(row('B', { chk1: true, chk3: true, chk4: true }).checks, 'giảm dần · DMA · U');
   assert.equal(row('C', { chk1: true }).checks, 'phá hụt');
   assert.equal(row('D', {}).checks, '—');
   assert.equal(row('A', { ctx1: true, ent1: true }).checks, '—');           // chỉ in nhóm "Kiểm tra"
@@ -139,10 +142,10 @@ test('sổ: Markdown đúng mẫu (so chuỗi)', () => {
     '',
     '| giờ | hướng | tên | vùng | 4 kiểm tra | SL | R |',
     '|---|---|---|---|---|---|---|',
-    '| 20:25 | sell | phá hồi | HVN tuần | U · Δ · bb · cạnh | 2,4 | +3 |',
-    '| 20:48 | sell | hấp thụ | VWAP tuần | bb · cạnh | 1,2 | -1 ⚠ |',
+    '| 20:25 | sell | phá hồi | HVN tuần | U · Δ · bb | 2,4 | +3 |',
+    '| 20:48 | sell | hấp thụ | VWAP tuần | bb | 1,2 | -1 ⚠ |',
     '',
-    'Cột "4 kiểm tra": các ô kiểm tra đã tick lúc ghi lệnh (U nhịp hồi · bb bong bóng · Δ delta · cạnh · DMA).',
+    'Cột "4 kiểm tra": các ô kiểm tra đã tick lúc ghi lệnh (U nhịp hồi · bb bong bóng · Δ delta · DMA).',
     '',
     '⚠ dòng 20:48 phá luật: thiếu 2 ô: 3 nến cuối: thân và |delta| giảm dần, không cực trị mới; SL ≥ biên độ nến M1 cao nhất 5 nến',
     '',
@@ -157,7 +160,7 @@ test('sổ: Markdown khi chưa nhập "Bạn cộng"', () => {
 test('sổ: Markdown có thẻ phiên (bias, vùng) và không còn dòng chế độ', () => {
   const n = mk('B');
   const md = J.toMarkdown(n, DATE);
-  assert.match(md, /## Thẻ phiên \(19:00\)/); assert.match(md, /BIAS: BUY/); assert.match(md, /z1 VWAP tuần 4175,0/); assert.doesNotMatch(md, /Chế độ/);
+  assert.match(md, /## Thẻ phiên \(19:00\)/); assert.match(md, /BIAS: BUY/); assert.match(md, /z1 VWAP tuần 4176,5/); assert.doesNotMatch(md, /Chế độ/);
 });
 test('sổ: định dạng số dấu phẩy, ô nhập nhận cả dấu chấm', () => {
   assert.equal(J.fmt(2.4), '2,4'); assert.equal(J.fmt(null), '—'); assert.equal(J.fmtR(1.5), '+1,5'); assert.equal(J.fmtR(-1), '-1'); assert.equal(J.fmtR(0), '0');
@@ -170,7 +173,7 @@ test('sổ: CSV có đủ cột, in ô thiếu và thoát dấu phẩy', () => {
   const lines = J.toCSV(st).trim().split('\n');
   assert.equal(lines.length, 3);
   assert.equal(lines[0].split(',').length, 19);
-  assert.match(lines[2], /RULE_BREAK/); assert.match(lines[2], /chk1\|slFloor/); assert.match(lines[1], /"U · Δ · bb · cạnh"|U · Δ · bb · cạnh/);
+  assert.match(lines[2], /RULE_BREAK/); assert.match(lines[2], /chk1\|slFloor/); assert.match(lines[1], /"U · Δ · bb"|U · Δ · bb/);
 });
 test('tuần: 4 con số HT 8 + chuỗi đêm 0 phá luật', () => {
   const st = S.defaultState();

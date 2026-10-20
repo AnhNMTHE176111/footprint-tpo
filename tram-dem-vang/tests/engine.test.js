@@ -9,9 +9,9 @@ const common = (r, id) => r.common.filter((x) => x.id === id)[0];
 const auto = (r, scen, id) => r.blocks[scen].autoChecks.filter((x) => x.id === id)[0];
 
 // ---------- khung xương ----------
-test('đêm trống: bốn khối chưa đủ, số ô đúng theo hình dạng (A, B 18 · C, D 15), không ENTRY', () => {
+test('đêm trống: bốn khối chưa đủ, số ô đúng theo hình dạng (A 18 · B 21 · C 18 · D 18), không ENTRY', () => {
   const r = engine.evaluate(night({ card: card({}, []) }), vn(DATE, '21:30'), SETTINGS, null, { key: DATE });
-  assert.deepEqual(['A', 'B', 'C', 'D'].map((s) => r.blocks[s].total), [18, 18, 15, 15]);
+  assert.deepEqual(['A', 'B', 'C', 'D'].map((s) => r.blocks[s].total), [18, 21, 18, 18]);
   assert.deepEqual(['A', 'B', 'C', 'D'].map((s) => r.blocks[s].done), [0, 0, 0, 0]);
   assert.equal(r.entry, null); assert.equal(r.focus, null);
   assert.equal(R.SCENARIOS.every((s) => r.blocks[s].complete === false), true);
@@ -27,7 +27,7 @@ test('đêm nền: mỗi kịch bản ra ENTRY đúng khối, đủ done = total
 });
 test('thứ tự ô: hướng, vùng, ô tick theo nhóm, giá, ô tự kiểm', () => {
   const r = go('C');
-  assert.deepEqual(r.blocks.C.order, ['side', 'zone', 'ctx1', 'ctx2', 'chk1', 'chk2', 'chk3', 'ent1', 'sl1', 'nums', 'zone2', 'slFloor', 'slCap', 'rr', 'size']);
+  assert.deepEqual(r.blocks.C.order, ['side', 'zone', 'ctx1', 'ctx2', 'ctx3', 'chk1', 'chk2', 'chk3', 'ent1', 'sl1', 'nums', 'bias', 'near', 'zone2', 'slFloor', 'slCap', 'rr', 'size']);
 });
 test('bỏ một ô tick: missing đúng ô đó, done giảm 1, không ENTRY nhưng không khóa gì', () => {
   const r = go('A', (n) => { delete n.se.blocks.A.ticks.ctx2; });
@@ -90,12 +90,14 @@ test('chung · Không có lệnh đang mở: dòng Sổ chưa có kết quả �
   assert.equal(common(r, 'open').ok, false); assert.equal(r.open.trade.id, 'qua-dem'); assert.equal(r.open.nightKey, '2026-10-13');
   assert.equal(go('B', { trades: [closed('TP', 3)] }).common.every((x) => x.ok), true);
 });
-test('chung · 3 nến M1 sau nến dài nhất phiên: ô người tick, chưa tick ⇒ chưa ENTRY', () => {
-  const r = go('B', (n) => { n.se.common = {}; });
-  assert.equal(common(r, 'longest').ok, false); assert.equal(common(r, 'longest').auto, false); assert.equal(r.entry, null);
+test('chung · 3 nến M1 sau nến dài nhất phiên: nút "vừa có nến dài" mặc định tắt ⇒ đạt; bật ⇒ đỏ, chưa ENTRY', () => {
+  let r = go('B');
+  assert.equal(common(r, 'longest').ok, true); assert.equal(common(r, 'longest').auto, false); assert.equal(r.entry.scen, 'B');
+  r = go('B', (n) => { n.se.common = { justLongest: true }; });
+  assert.equal(common(r, 'longest').ok, false); assert.equal(common(r, 'longest').reason, 'longest'); assert.equal(r.entry, null);
 });
 test('ô chung sai không khóa khối: vẫn tick tiếp được, chỉ không có ENTRY', () => {
-  const r = go('B', (n) => { n.card.lockedAt = null; n.se.common = {}; });
+  const r = go('B', (n) => { n.card.lockedAt = null; n.se.common = { justLongest: true }; });
   assert.equal(r.commonOk, false); assert.equal(r.blocks.B.complete, true); assert.equal(r.entry, null);
 });
 
@@ -157,9 +159,9 @@ test('tự kiểm · đủ vốn cho 1 hợp đồng (QĐ-21): vốn 1000 $ ⇒ 
 test('ngược bias: hiện ô lý do (bắt buộc), thiếu lý do ⇒ chưa đủ; có lý do ⇒ đủ và cỡ ½', () => {
   const over = { block: { side: 'sell', entry: 4177, sl: 4179.3, tp: 4170.1 } };
   let r = go('B', over);
-  assert.equal(r.blocks.B.counter, true); assert.deepEqual(r.blocks.B.missing, ['counter']);
+  assert.equal(r.blocks.B.counter, true); assert.deepEqual(r.blocks.B.missing, ['counter', 'tail']);
   assert.equal(auto(r, 'B', 'counter').ok, false); assert.equal(auto(r, 'B', 'counter').reason, 'counter'); assert.equal(r.entry, null);
-  r = go('B', { block: Object.assign({ reason: ' đỉnh có tail thật ' }, over.block) });
+  r = go('B', { block: Object.assign({ reason: ' đỉnh có tail thật ', tail: true }, over.block) });
   assert.deepEqual(r.blocks.B.missing, []); assert.equal(r.entry.counter, true); assert.deepEqual(r.entry.halfs, ['COUNTER_BIAS']);
   // cùng chiều bias thì không có ô lý do
   assert.equal(go('B').blocks.B.autoChecks.some((x) => x.id === 'counter'), false);
@@ -197,7 +199,7 @@ test('cỡ ½: kịch bản C luôn ½; vùng hạng 2 ở B; bias KHÔNG; ngày
   assert.deepEqual(go('C').entry.halfs, ['SCENARIO_C']);
   assert.deepEqual(go('B', (n) => { n.card.zones[0].type = 'hvnW'; }).entry.halfs, ['B_RANK2']);
   assert.deepEqual(go('B', (n) => { n.card.zones[0].type = 'vwapW'; }).entry.halfs, []);
-  assert.deepEqual(go('B', { answers: ANS_NONE }).entry.halfs, ['BIAS_NONE']);
+  assert.deepEqual(go('C', { answers: ANS_NONE }).entry.halfs, ['BIAS_NONE', 'SCENARIO_C']);
   assert.deepEqual(go('B', { t0: { newsDay: true } }).entry.halfs, ['NEWS_DAY']);
   assert.deepEqual(run(DATE, '20:10', mk('B')).entry.halfs, ['BEFORE_2030']);
 });
@@ -224,7 +226,7 @@ test('cảnh báo chung: trước 20:30 và thẻ ít vùng; không khóa gì', 
 test('A1 · 6/10 20:24 — A sell, tick đủ ⇒ ENTRY, cỡ ½ vì trước 20:30, R:R 3,33', () => {
   const n = night({ card: card({ q1: 'D', q1w: 'D', q5: 'below', q6: 'yes', vwapW: 'below' }, [
     { id: 'z1', type: 'vwapW', price: 4205 }, { id: 'z2', type: 'pocCluster', price: 4195, priceTo: 4196 }, { id: 'z3', type: 'vahEu', price: 4199 }, { id: 'z4', type: 'valEu', price: 4185 }]) });
-  n.se = { blocks: { A: { side: 'sell', zoneId: 'z2', entry: 4193.0, sl: 4195.4, tp: 4185.0, c6: 2.0, ticks: ticksAll('A') } }, common: { longest: true }, touch: { A: 1 }, last: 'A', n: 1 };
+  n.se = { blocks: { A: { side: 'sell', zoneId: 'z2', entry: 4193.0, sl: 4195.4, tp: 4185.0, c6: 2.0, wick: true, ticks: ticksAll('A') } }, common: {}, touch: { A: 1 }, last: 'A', n: 1 };
   const r = run('2026-10-06', '20:24', n);
   assert.equal(r.bias, 'SELL'); assert.equal(r.entry.scen, 'A'); assert.deepEqual(r.entry.halfs, ['BEFORE_2030']);
   assert.deepEqual([r.entry.calc.slDist, r.entry.calc.rr, r.entry.calc.tpSuggested], [2.4, 3.33, 4185.8]);
@@ -233,7 +235,7 @@ test('A2 · 12/10 21:27 — A sell hình V, bong bóng ngược: không tick "h�
   const n = night({ card: card({ q1: 'b', q5: 'below', vwapW: 'below', q6: 'yes' }, [
     { id: 'z1', type: 'hvnW', price: 4190 }, { id: 'z2', type: 'valEu', price: 4186 }, { id: 'z3', type: 'vahEu', price: 4196 }]) });
   const t = ticksAll('A'); delete t.chk1; delete t.chk3;
-  n.se = { blocks: { A: { side: 'sell', zoneId: 'z1', entry: 4188.0, sl: 4190.3, tp: 4181.0, c6: 2.0, ticks: t } }, common: { longest: true }, touch: { A: 1 }, last: 'A', n: 1 };
+  n.se = { blocks: { A: { side: 'sell', zoneId: 'z1', entry: 4188.0, sl: 4190.3, tp: 4181.0, c6: 2.0, wick: true, ticks: t } }, common: {}, touch: { A: 1 }, last: 'A', n: 1 };
   const r = run('2026-10-12', '21:27', n);
   assert.equal(r.bias, 'SELL'); assert.equal(r.entry, null);
   assert.deepEqual(r.blocks.A.missing, ['chk1', 'chk3', 'rr']);
@@ -242,7 +244,7 @@ test('A2 · 12/10 21:27 — A sell hình V, bong bóng ngược: không tick "h�
 test('A3 · 1/10 20:47 — A sell, SL ngắn hơn nến 3,3 giá ⇒ thiếu đúng "SL ≥ biên độ nến" và "R:R"; không tick ô SL ⇒ thêm "sl1"', () => {
   const mkA3 = (t) => { const n = night({ card: card({ q1: 'D', q5: 'below', vwapW: 'below', q6: 'yes' }, [
     { id: 'z1', type: 'vwapW', price: 4194.8 }, { id: 'z2', type: 'hvnDay', price: 4193 }, { id: 'z3', type: 'valEu', price: 4188 }]) });
-    n.se = { blocks: { A: { side: 'sell', zoneId: 'z2', entry: 4192.7, sl: 4194.8, tp: 4182.7, c6: 3.3, ticks: t } }, common: { longest: true }, touch: { A: 1 }, last: 'A', n: 1 };
+    n.se = { blocks: { A: { side: 'sell', zoneId: 'z2', entry: 4192.7, sl: 4194.8, tp: 4182.7, c6: 3.3, ticks: t } }, common: {}, touch: { A: 1 }, last: 'A', n: 1 };
     return n; };
   let r = run('2026-10-01', '20:47', mkA3(ticksAll('A')));
   assert.deepEqual(r.blocks.A.missing, ['slFloor', 'rr']);
@@ -254,7 +256,7 @@ test('A3 · 1/10 20:47 — A sell, SL ngắn hơn nến 3,3 giá ⇒ thiếu đ�
 test('A4 · 13/10 20:10 — B buy ở cụm POC, tick đủ ⇒ ENTRY ½ (vùng hạng 2 + trước 20:30), 1 hợp đồng', () => {
   const n = night({ card: card({ q1: 'D', q5: 'above', vwapW: 'above', q6: 'yes' }, [
     { id: 'z1', type: 'valEu', price: 4175 }, { id: 'z2', type: 'pocCluster', price: 4175.5 }, { id: 'z3', type: 'vahEu', price: 4184 }, { id: 'z4', type: 'lvn', price: 4172 }]) });
-  n.se = { blocks: { B: { side: 'buy', zoneId: 'z2', entry: 4177.0, sl: 4174.7, tp: 4183.9, c6: 2.0, ticks: ticksAll('B') } }, common: { longest: true }, touch: { B: 1 }, last: 'B', n: 1 };
+  n.se = { blocks: { B: { side: 'buy', zoneId: 'z2', entry: 4177.0, sl: 4174.7, tp: 4183.9, c6: 2.0, wick: true, ticks: ticksAll('B') } }, common: {}, touch: { B: 1 }, last: 'B', n: 1 };
   const r = run('2026-10-13', '20:10', n);
   assert.equal(r.bias, 'BUY'); assert.equal(r.entry.scen, 'B'); assert.deepEqual(r.entry.halfs, ['B_RANK2', 'BEFORE_2030']);
   assert.equal(r.entry.calc.rr, 3); assert.equal(r.entry.calc.size, 1); assert.equal(r.entry.calc.sizeMinOne, true);
@@ -263,7 +265,7 @@ test('A5 · 5/10 19:25 — B buy, thân + delta "lẫn lộn" ⇒ không tick ô
   const n = night({ card: card({ q1: 'D', q5: 'above', vwapW: 'above', q6: 'yes' }, [
     { id: 'z1', type: 'vwapW', price: 4181 }, { id: 'z2', type: 'valEu', price: 4182 }, { id: 'z3', type: 'vahEu', price: 4192 }]) });
   const t = ticksAll('B'); delete t.chk1;
-  n.se = { blocks: { B: { side: 'buy', zoneId: 'z1', entry: 4183.0, sl: 4180.5, tp: 4190.5, c6: 2.5, ticks: t } }, common: { longest: true }, touch: { B: 1 }, last: 'B', n: 1 };
+  n.se = { blocks: { B: { side: 'buy', zoneId: 'z1', entry: 4183.0, sl: 4180.5, tp: 4190.5, c6: 2.5, wick: true, ticks: t } }, common: {}, touch: { B: 1 }, last: 'B', n: 1 };
   const r = run('2026-10-05', '19:25', n);
   assert.equal(r.entry, null); assert.deepEqual(r.blocks.B.missing, ['chk1']);
   assert.equal(r.blocks.B.done, r.blocks.B.total - 1); assert.deepEqual(r.blocks.B.halfs, ['BEFORE_2030']);

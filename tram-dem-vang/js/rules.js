@@ -200,15 +200,22 @@
     { code: 'NO_BIAS_NONE_EDGE', scope: 'C', effect: 'NO', when: function (c) { return c.bias === 'KHÔNG' && !!c.zone && c.zone.type !== 'vahEu' && c.zone.type !== 'valEu'; } },
     { code: 'WAIT_COUNTER_REASON', scope: 'B', effect: 'WAIT', when: function (c) { return c.counter && c.exempt9 && !(c.setup.counterBiasReason && String(c.setup.counterBiasReason).trim()); } },
     { code: 'WAIT_ZONE', scope: 'ABCD', effect: 'WAIT', when: function (c) { return !c.zone; } },
-    { code: 'WAIT_SIDE', scope: 'ABCD', effect: 'WAIT', when: function (c) { return !c.side; } },
+    // A, D lấy hướng từ chế độ (tầng 2): thiếu hướng thì nói rõ phải về tầng 2, không bắt chọn ở tầng 3 (REVIEW-2 mục 13)
+    { code: 'WAIT_REGIME_DIR', scope: 'AD', effect: 'WAIT', when: function (c) { return !c.side; } },
+    { code: 'WAIT_SIDE', scope: 'BC', effect: 'WAIT', when: function (c) { return !c.side; } },
     { code: 'NO_ZONE_3RD', scope: 'ABCD', effect: 'NO', when: function (c) { return !!c.zone && c.counts.zoneN >= T.zoneMax; } },
     { code: 'NO_BANNED_ZONE', scope: 'B', effect: 'NO', when: function (c) { return !!c.zone && (hasFlag(c.zone, 'noB') || hasFlag(c.zone, 'banned')); } },
-    { code: 'NO_MID_RANGE', scope: 'BC', effect: 'NO', when: function (c) {
+    // B: giữa range chỉ xét khi cân bằng (R8)
+    { code: 'NO_MID_RANGE', scope: 'B', effect: 'NO', when: function (c) {
       var z = c.zone, e = c.regime.effective;
       if (!z || c.counter || e !== 'balanced') return false;
-      if (c.scen === 'C') return !hasFlag(z, 'edge') && !hasFlag(z, 'edgeOuter');
       if (hasFlag(z, 'edge')) return false;
       return (hasFlag(z, 'r1') || hasFlag(z, 'r2')) && !coincidesEdge(c, z);
+    } },
+    // C: chỉ ở đúng cạnh VA Âu / range (HT 5·C); xét ở MỌI chế độ còn bật C, kể cả đang chờ công nhận (REVIEW-2 mục 2)
+    { code: 'NO_C_NOT_EDGE', scope: 'C', effect: 'NO', when: function (c) {
+      var z = c.zone;
+      return !!z && !hasFlag(z, 'edge') && !hasFlag(z, 'edgeOuter');
     } },
     { code: 'NO_PENDING_ACCEPT', scope: 'BC', effect: 'NO', when: function (c) {
       return !!c.zone && c.regime.effective === 'pending' && c.zone.id === c.breakout.edgeZoneId;
@@ -274,7 +281,8 @@
       return c.calc.rr < T.rrMin - EPS || (c.calc.nextZone && !c.calc.nextRRok);
     } },
     { code: 'NO_TP_PAST_ZONE', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && c.calc.slSideOk && c.calc.rr !== null && !c.calc.tpPastOk; } },
-    { code: 'NO_SIZE_ZERO', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && c.calc.slSideOk && c.sizeOf() === 0; } }
+    // QĐ-21: chỉ khi CỠ CHUẨN (đủ, chưa giảm ½) dưới 1 hợp đồng; cỡ ½ không chia được thì 1 hợp đồng tối thiểu
+    { code: 'NO_SIZE_ZERO', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && c.calc.slSideOk && c.sizeOf() !== null && c.calc.sizeFull === 0; } }
   ];
   var RULE_ORDER = RULES.map(function (r) { return r.code; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
 

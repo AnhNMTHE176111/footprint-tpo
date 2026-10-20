@@ -8,6 +8,16 @@
   var R = dep('rules'), time = dep('time');
   var T = R.T, EPS = R.EPS, num = R.num;
 
+  // Lệnh đóng có tính là SL (cộng chuỗi) không? (REVIEW-2 mục 3)
+  //  · kind SL mà chưa dời be ⇒ SL; kind SL sau be (beStop) ⇒ hòa, không cộng
+  //  · R ≤ −0,5 ⇒ SL (kể cả đóng tay); R trong (−0,5; 0) hay trượt ±0,2 quanh hòa ⇒ không cộng
+  function isSLTrade(t) {
+    var ex = t.exit;
+    if (!ex) return false;
+    if (ex.kind === 'SL' && !ex.beStop) return true;
+    return typeof t.r === 'number' && t.r <= -0.5 + 1e-9;
+  }
+
   function countTrades(night) {
     var trades = (night && night.trades) || [];
     var ruleBreaks = 0;
@@ -21,8 +31,7 @@
       var t = trades[i];
       if ((t.flags || []).indexOf('paper') >= 0) continue;
       if (!t.exit) continue;
-      var isSL = t.exit.kind === 'SL' || (typeof t.r === 'number' && t.r < 0);
-      if (isSL) streak++; else break;
+      if (isSLTrade(t)) streak++; else break;
     }
     return { ruleBreaks: ruleBreaks, slStreak: streak };
   }
@@ -88,14 +97,26 @@
   }
 
   // cỡ lệnh MGC (làm tròn xuống); null khi chưa cài vốn / rủi ro
+  // QĐ-21: cỡ chuẩn = floor(vốn × % / (SL × 10 $)); cỡ ½ = floor(½ × số $ / (SL × 10 $)),
+  // nhưng cỡ chuẩn ≥ 1 mà ½ ra 0 thì lấy 1 hợp đồng (sizeMinOne). Cỡ chuẩn < 1 ⇒ 0 (NO_SIZE_ZERO).
   function sizeFor(c, settings) {
     var cl = c.calc;
     if (!cl || !cl.numsOk || !(cl.slDist > 0)) return null;
     var cap = num(settings.capital), rp = num(settings.riskPct);
     if (!(cap > 0 && rp > 0)) return null;
-    var riskUsd = cap * rp / 100 * (c.halfs.length > 0 ? 0.5 : 1);
+    var per = cl.slDist * T.tickValue;
+    var fullUsd = cap * rp / 100;
+    var half = c.halfs.length > 0;
+    var riskUsd = fullUsd * (half ? 0.5 : 1);
+    var full = Math.floor(fullUsd / per + 1e-9);
+    var n = Math.floor(riskUsd / per + 1e-9);
+    cl.fullUsd = R.round2(fullUsd);
     cl.riskUsd = R.round2(riskUsd);
-    return Math.floor(riskUsd / (cl.slDist * T.tickValue) + 1e-9);
+    cl.sizeFull = full;
+    cl.maxSl = R.round1(Math.floor(fullUsd / T.tickValue * 10 + 1e-9) / 10);   // SL tối đa cho 1 hợp đồng ở cỡ chuẩn
+    cl.sizeMinOne = false;
+    if (half && full >= 1 && n < 1) { n = 1; cl.sizeMinOne = true; }
+    return n;
   }
 
   function evaluate(input) {
@@ -191,7 +212,7 @@
 
     // tám chấm (HT 9)
     var cl = c.calc, s = setup;
-    var zoneGroup = ['NO_BIAS_NONE_EDGE', 'NO_BANNED_ZONE', 'NO_MID_RANGE', 'NO_PENDING_ACCEPT', 'NO_B_RANK', 'NO_FIGHT_BREAK'];
+    var zoneGroup = ['NO_BIAS_NONE_EDGE', 'NO_BANNED_ZONE', 'NO_MID_RANGE', 'NO_C_NOT_EDGE', 'NO_PENDING_ACCEPT', 'NO_B_RANK', 'NO_FIGHT_BREAK'];
     var c4ok = scen === 'B' ? s.c4 === 'same' : (s.c4 === 'same' || s.c4 === 'none' || s.c4 === 'oppBroken');
     var dots = [false, false, false, false, false, false, false, false];
     if (scen) {
@@ -225,7 +246,7 @@
     if (card.lockedAt && zones.length < T.zonesMin) warnings.push('WARN_FEW_ZONES');
 
     return {
-      verdict: verdict, reasons: reasons, missing: c.missing.slice(), dots: dots, dotsLit: dots.filter(Boolean).length,
+      verdict: verdict, reasons: reasons, ruleReasons: c.reasons.slice(), missing: c.missing.slice(), dots: dots, dotsLit: dots.filter(Boolean).length,
       order: R.RULE_ORDER, enabled: enabled, half: { on: half, reasons: c.halfs.slice() },
       regime: { effective: reg.effective, dir: reg.dir }, bias: b.value, biasAuto: b.auto, biasOverridden: b.overridden,
       scenario: scen, side: side, zone: zone, zones: zones, counter: counter, exempt9: exempt9, calc: cl,
@@ -235,5 +256,5 @@
     };
   }
 
-  return { evaluate: evaluate, countTrades: countTrades, findOpen: findOpen, computeCalc: computeCalc, nextZoneFor: nextZoneFor };
+  return { evaluate: evaluate, countTrades: countTrades, isSLTrade: isSLTrade, findOpen: findOpen, computeCalc: computeCalc, nextZoneFor: nextZoneFor };
 });

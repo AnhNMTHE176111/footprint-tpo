@@ -109,6 +109,35 @@
     return p;
   }
 
+  // ===== sao chép từ đêm trước (USER-TEST-2 mục 5) =====
+  // VWAP tuần và HVN 3 tuần thường giữ nguyên cả tuần; Q1′ (hình 3 tuần) cũng vậy. Không đổi luật, chỉ bớt gõ lại.
+  var CARRY_ZONES = ['vwapW', 'hvn3w'];
+  // đêm gần nhất TRƯỚC `key`, cùng tuần (thứ Hai là đầu tuần), đã chốt thẻ và có thứ để chép
+  function prevCardSource(state, key) {
+    var wk = time.weekKey(key), best = null;
+    Object.keys(state.nights || {}).forEach(function (k) {
+      if (k >= key || time.weekKey(k) !== wk) return;
+      var c = state.nights[k] && state.nights[k].card;
+      if (!c || !c.lockedAt) return;
+      var has = (c.answers && c.answers.q1w) || (c.zones || []).some(function (z) { return CARRY_ZONES.indexOf(z.type) >= 0; });
+      if (has && (!best || k > best)) best = k;
+    });
+    return best;
+  }
+  // chép Q1′ (nếu chưa trả lời) và các vùng CARRY_ZONES chưa có cùng loại; không vượt 5 vùng. Trả về số mục đã chép
+  function copyFromPrev(night, src) {
+    var card = night.card, n = 0, sc = (src && src.card) || {};
+    if (sc.answers && sc.answers.q1w && !card.answers.q1w) { card.answers.q1w = sc.answers.q1w; n++; }
+    (sc.zones || []).forEach(function (z) {
+      if (CARRY_ZONES.indexOf(z.type) < 0 || card.zones.length >= R.T.zonesMax) return;
+      if (card.zones.some(function (q) { return q.type === z.type; })) return;
+      var c = { id: newZoneId(card), type: z.type, price: z.price, note: '' };
+      if (z.priceTo !== undefined && z.priceTo !== null) c.priceTo = z.priceTo;
+      card.zones.push(c); n++;
+    });
+    return n;
+  }
+
   // ===== chế độ =====
   function setRegimeMode(night, mode, nowMs) {
     if (night.regime.mode === mode) return;
@@ -149,7 +178,13 @@
     if (res.counter) flags.push('COUNTER_BIAS');
     if (res.half && res.half.on) flags.push('HALF');
     var codes = [];
-    if (o.ruleBreak) codes = (res.reasons && res.reasons.length ? res.reasons : res.missing || []).slice();
+    if (o.ruleBreak) {
+      // đủ mã luật thật: kể cả khi TẮT MÁY (reasons chỉ có OFF_*) thì vẫn ghi ruleReasons (REVIEW-2 mục 4)
+      var add = function (c) { if (codes.indexOf(c) < 0) codes.push(c); };
+      (res.reasons || []).forEach(add);
+      (res.ruleReasons || []).forEach(add);
+      if (!(res.ruleReasons || []).length) (res.missing || []).forEach(add);
+    }
     var isMarket = o.kind !== 'limit';
     var fill = R.num(o.price);
     var trade = {
@@ -207,12 +242,14 @@
     var t = tradeById(night, night.open.tradeId);
     if (!t) { night.open = null; return null; }
     var price = R.num(o.price);
+    var beStop = o.kind === 'SL' && !!night.open.beDone;   // SL đã dời về hòa vốn bị chạm ⇒ hòa, không phải thua (REVIEW-2 mục 3)
     if (price === null) {
       if (o.kind === 'TP') price = t.tp;
-      else if (o.kind === 'SL') price = t.sl;
+      else if (o.kind === 'SL') price = beStop ? t.entry : t.sl;
       else if (o.kind === 'BE') price = t.entry;
     }
     t.exit = { kind: o.kind, price: price, reason: o.reason || null, at: time.fmtMin(o.nowMin) };
+    if (beStop) t.exit.beStop = true;
     t.r = computeR(t, price);
     if (o.kind === 'MANUAL' && o.reason === 'other' && t.flags.indexOf('paper') < 0) {
       if (t.flags.indexOf('RULE_BREAK') < 0) t.flags.push('RULE_BREAK');
@@ -370,7 +407,7 @@
   return {
     fmt: fmt, fmtTrim: fmtTrim, fmtR: fmtR, fmtSigned: fmtSigned, parseNum: parseNum, hm: hm,
     newNight: newNight, normalizeNight: normalizeNight, ensureNight: ensureNight,
-    newZoneId: newZoneId, canLockCard: canLockCard, lockCard: lockCard, cardEditPolicy: cardEditPolicy, applyCardEdit: applyCardEdit,
+    prevCardSource: prevCardSource, copyFromPrev: copyFromPrev, newZoneId: newZoneId, canLockCard: canLockCard, lockCard: lockCard, cardEditPolicy: cardEditPolicy, applyCardEdit: applyCardEdit,
     setRegimeMode: setRegimeMode, breakoutFailed: breakoutFailed, changeScenario: changeScenario,
     createTrade: createTrade, tradeById: tradeById, fillLimit: fillLimit, cancelLimit: cancelLimit,
     computeR: computeR, beStatus: beStatus, markBE: markBE, closeTrade: closeTrade, recomputeTally: recomputeTally,

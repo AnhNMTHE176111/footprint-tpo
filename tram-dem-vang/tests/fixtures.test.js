@@ -84,11 +84,16 @@ test('A4a · 13/10 20:10 — B buy cân bằng ⇒ ENTRY ½ (B_RANK2 + BEFORE_20
   assert.deepEqual(r.half.reasons, ['B_RANK2', 'BEFORE_2030']);
   assert.equal(r.calc.rr, 3);
   assert.equal(r.calc.tpSuggested, 4183.9);
-  assert.equal(r.calc.size, 8); // 20000 × 2% × ½ = 200 $ / 23 $ mỗi hợp đồng
+  // vốn mặc định 2000 $ · 2 %: cỡ chuẩn 1 hợp đồng, cỡ ½ không chia được ⇒ 1 hợp đồng tối thiểu (QĐ-21)
+  assert.equal(r.calc.size, 1); assert.equal(r.calc.sizeMinOne, true); assert.equal(r.calc.sizeFull, 1);
 });
-test('A4a với vốn 2000 $ ⇒ 0 hợp đồng ⇒ NO_SIZE_ZERO (QĐ-20)', () => {
-  const r = run('2026-10-13', '20:10', a4({ mode: 'balanced' }), { dstShift: true, capital: 2000, riskPct: 2 });
-  assert.equal(r.verdict, 'NO'); assert.deepEqual(r.reasons, ['NO_SIZE_ZERO']); assert.equal(r.calc.size, 0);
+test('A4a với vốn 20000 $ ⇒ cỡ ½ = 8 hợp đồng (200 $ / 23 $)', () => {
+  const r = run('2026-10-13', '20:10', a4({ mode: 'balanced' }), { dstShift: true, capital: 20000, riskPct: 2 });
+  assert.equal(r.verdict, 'ENTRY'); assert.equal(r.calc.size, 8); assert.equal(r.calc.sizeMinOne, false);
+});
+test('A4a với vốn 1000 $ ⇒ cỡ chuẩn 0 ⇒ NO_SIZE_ZERO (QĐ-21)', () => {
+  const r = run('2026-10-13', '20:10', a4({ mode: 'balanced' }), { dstShift: true, capital: 1000, riskPct: 2 });
+  assert.equal(r.verdict, 'NO'); assert.deepEqual(r.reasons, ['NO_SIZE_ZERO']); assert.equal(r.calc.size, 0); assert.equal(r.calc.sizeFull, 0);
 });
 test('A4b · biến thể broken ⇒ NO_FIGHT_BREAK', () => {
   const r = run('2026-10-13', '20:10', a4({ mode: 'broken', breakout: { dir: 'down', edgeZoneId: 'z1', at: '20:00', step1: true, step2: true } }));

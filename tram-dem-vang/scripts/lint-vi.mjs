@@ -21,7 +21,7 @@ const LIST_411 = ('buy sell limit market ENTRY TPO VA VAH VAL POC HVN LVN VWAP d
 const viFile = readFileSync(resolve(here, 'vi-khong-dau.txt'), 'utf8').split(/\r?\n/).map((l) => l.replace(/#.*$/, '').trim().toLowerCase()).filter(Boolean);
 const ALLOW = new Set([...LIST_411, ...viFile]);
 
-const SKIP_KEYS = new Set(['htRef', 'ctl', 'img', 'anchor', 'ref', 'v', 'HT_BASE', 'criteria']);
+const SKIP_KEYS = new Set(['htRef', 'ctl', 'img', 'anchor', 'ref', 'v', 'HT_BASE', 'criteria', 'key', 'gloss']);
 const LABEL_KEYS = /^(t\dTitle\d?|t0Alert|t0Note|vwapQ|recheck|boDir|boEdge|boAt|boStep\d|boNth|newsDay|thinDir|swept|entryL|slL|tpL|c6Again|curPrice|exitPrice|fillPrice|manualReason|outsideBar|yourSum|set[A-Z]\w*|kv[A-Z]\w*|jh\d|plan\d|cancelWhen|w[A-Z]\w*|card[A-Z]\w*|tab(Label|Canh|Bam)|t5(Tonight|Week|Export|Settings))$/;
 
 const errors = [];

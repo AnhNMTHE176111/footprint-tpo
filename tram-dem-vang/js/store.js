@@ -4,12 +4,12 @@
   else { root.TDV = root.TDV || {}; root.TDV.store = factory(function (n) { return root.TDV[n]; }); }
 })(this, function (dep) {
   'use strict';
-  var J = dep('journal');
+  var J = dep('journal'), time = dep('time');
   var KEY = 'tdv.v1';
   var VERSION = 1;
 
   function defaultSettings() {
-    return { theme: 'dark', guideLevel: 'new', capital: 2000, riskPct: 2, dstShift: true, shortcuts: true, lastExportAt: null };
+    return { theme: 'dark', guideLevel: 'new', capital: 2000, riskPct: 2, dstShift: true, shortcuts: true, lastExportAt: null, sizeAsked: false };
   }
   function defaultState() { return { version: VERSION, settings: defaultSettings(), nights: {} }; }
 
@@ -47,7 +47,11 @@
     var added = 0;
     other.trades.forEach(function (t) { if (!ids[t.id]) { out.trades.push(JSON.parse(JSON.stringify(t))); added++; } });
     if (added) {
-      out.trades.sort(function (x, y) { return String(x.time).localeCompare(String(y.time)); });
+      // theo thời gian ĐÊM (00:00–05:59 tính là sáng hôm sau), không theo chuỗi giờ đồng hồ (REVIEW-2 mục 5)
+      var ord = function (t) { var m = time.baseMinute(t.time); return m === null ? -1 : m; };
+      out.trades = out.trades.map(function (t, i) { return { t: t, i: i }; })
+        .sort(function (x, y) { return (ord(x.t) - ord(y.t)) || (x.i - y.i); })
+        .map(function (x) { return x.t; });
       J.recomputeTally(out, 0);
     }
     return { night: out, added: added };

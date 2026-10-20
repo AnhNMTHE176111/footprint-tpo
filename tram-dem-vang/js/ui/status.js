@@ -34,14 +34,15 @@
     }
     if (res.warnings.indexOf('WARN_BEFORE_2030') >= 0 && !hit) bar.appendChild(chip(C.warnText.WARN_BEFORE_2030, 'warn'));
 
-    bar.appendChild(chip(T('biasChip', { v: ui.biasText(res.bias) }), 'bias ' + (res.bias === 'BUY' ? 'good' : res.bias === 'SELL' ? 'bad' : 'warn')));
+    bar.appendChild(chip(T('biasChip', { v: ui.biasText(res.bias) }), 'bias ' + ui.dirCls(res.bias)));
     var rb = res.counts.ruleBreaks, ss = res.counts.slStreak;
-    bar.appendChild(chip(T('chipBreaks', { n: rb }), rb >= 2 ? 'bad' : rb ? 'warn' : ''));
-    bar.appendChild(chip(T('chipStreak', { n: ss }), ss >= 3 ? 'bad' : ss ? 'warn' : ''));
+    bar.appendChild(chip(T('chipBreaks', { n: rb }), rb >= 2 ? 'bad' : rb ? 'warn' : 'zero'));
+    bar.appendChild(chip(T('chipStreak', { n: ss }), ss >= 3 ? 'bad' : ss ? 'warn' : 'zero'));
     var paper = res.open && res.open.trade && res.open.trade.flags.indexOf('paper') >= 0;
-    bar.appendChild(chip(T(paper ? 'chipOpenPaper' : 'chipOpen', { n: res.open ? 1 : 0 }), res.open ? 'warn' : ''));
-    if (res.zone) bar.appendChild(chip(T('chipZone', { n: res.counts.zoneN }), res.counts.zoneN >= 2 ? 'bad' : ''));
+    bar.appendChild(chip(T(paper ? 'chipOpenPaper' : 'chipOpen', { n: res.open ? 1 : 0 }), res.open ? 'warn' : 'zero'));
+    if (res.zone) bar.appendChild(chip(T('chipZone', { n: res.counts.zoneN }), res.counts.zoneN >= 2 ? 'bad' : 'zero'));
 
+    bar.appendChild(h('button', { type: 'button', class: 'btn small ghost glossary-btn', 'data-testid': 'glossary-btn', text: T('glossaryBtn'), onclick: function () { app.openGlossary(); } }));
     var wrap = h('div', { class: 'statuswrap' }, bar);
     var notes = time.notices(key, useDst);
     notes.forEach(function (n) { wrap.appendChild(h('div', { class: 'notice', text: C.notices[n.id] })); });
@@ -60,7 +61,7 @@
     root_.appendChild(row(T('cardVwap'), a.vwapW ? C.vwapOpts.filter(function (o) { return o.v === a.vwapW; })[0].label : '—'));
     root_.appendChild(row(T('cardClose'), optLabel('q5', a.q5)));
     root_.appendChild(row(T('cardShape'), optLabel('q1', a.q1)));
-    root_.appendChild(row(T('cardBias'), h('span', { class: 'cardbias ' + (res.bias === 'BUY' ? 'good' : res.bias === 'SELL' ? 'bad' : 'warn'), 'data-testid': 'card-bias', text: ui.biasText(res.bias) + (res.biasOverridden ? ' ' + T('overridden') : '') })));
+    root_.appendChild(row(T('cardBias'), h('span', { class: 'cardbias ' + ui.dirCls(res.bias), 'data-testid': 'card-bias', text: ui.biasText(res.bias) + (res.biasOverridden ? ' ' + T('overridden') : '') })));
     root_.appendChild(row(T('cardMode'), C.modes[res.regime.effective] + (res.regime.dir ? ' ' + (res.regime.dir === 'up' ? T('dirUp') : T('dirDown')) : '')));
 
     var zonesBox = h('div', { class: 'czones' });
@@ -82,7 +83,9 @@
     if (card.cancelWhen) root_.appendChild(row(T('cardCancel'), card.cancelWhen));
     root_.appendChild(h('div', { class: 'cfoot' },
       card.lockedAt ? chip(T('cardLocked', { hm: card.lockedAt }), 'good') : chip(T('cardNotLocked'), 'warn'),
-      card.edits.length ? chip(T('cardEdits', { n: card.edits.length }), 'warn', card.edits.map(function (e) { return e.at + ' ' + e.what; }).join('\n')) : null));
+      null));
+    if (card.edits.length) root_.appendChild(h('details', { class: 'fold edits' }, h('summary', { text: T('editsOpen', { n: card.edits.length }) }),
+      h('ul', { class: 'editlist' }, card.edits.map(function (e) { return h('li', { text: e.at + ' · ' + e.what }); }))));
     return root_;
   }
 

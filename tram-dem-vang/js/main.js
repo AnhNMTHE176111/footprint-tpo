@@ -30,7 +30,11 @@
     if (!nights[app.key]) { nights = Object.assign({}, nights); nights[app.key] = app.night; }
     app.res = E.evaluate({ nights: nights, nightKey: app.key, now: app.nowMs, settings: state.settings });
   }
-  function persist() { S.save(storage, state); }
+  function persist() {
+    var ok = S.save(storage, state);
+    app.saveFailed = !ok;
+    return ok;
+  }
 
   // ---------- cập nhật ----------
   app.update = function (fn, opts) {
@@ -120,7 +124,7 @@
   app.forceEnter = function () {
     var res = freshEnterCtx();
     if (!res.side || !res.calc.numsOk || res.verdict === 'ENTRY' || res.verdict === 'LOCKED') return;
-    var codes = (res.reasons.length ? res.reasons : res.missing).map(function (c) { return ui.codeText(c, { sl: J.fmt(res.calc.slDist), c6: J.fmt(R.num(app.night.setup.c6)) }); });
+    var codes = (res.reasons.length ? res.reasons : res.missing).map(function (c) { return ui.codeText(c, { sl: J.fmt(res.calc.slDist), c6: J.fmt(R.num(app.night.setup.c6)) }).replace(/[.\s]+$/, ''); });
     var paper = res.paper;
     app.confirm({ title: T('forceTitle'), text: T('forceText', { list: codes.join(' · ') }) + (paper ? ' ' + T('forcePaperNote') : ' ' + T('forceCount')), ok: T('forceOk'), danger: true }).then(function (ok) {
       if (!ok) return;
@@ -184,6 +188,10 @@
     document.documentElement.setAttribute('data-theme', state.settings.theme === 'light' ? 'light' : 'dark');
 
     ui.clear($('status')).appendChild(ui.status.render(app));
+    if (app.saveFailed) {
+      $('status').appendChild(h('div', { class: 'banner bad savefail', role: 'alert' }, h('span', { text: T('storeFail') + ' ' }),
+        btn(T('storeFailBtn'), function () { ui.download('tram-dem-vang.json', S.exportJSON(state), 'application/json'); }, 'small')));
+    }
     renderNav();
     ui.clear($('card')).appendChild(ui.card.render(app));
 
@@ -232,11 +240,11 @@
       setSetup(function (s0, n) { n.setup = res.scenario === s ? Object.assign({}, s0) : J.changeScenario(s0, s); });
     } else if ((k === 'b' || k === 'B' || k === 's' || k === 'S') && res.scenario === 'B') {
       var side = (k === 'b' || k === 'B') ? 'buy' : 'sell';
-      setSetup(function (s0) { s0.side = s0.side === side ? undefined : side; if (s0.side === undefined) delete s0.side; });
+      setSetup(function (s0) { s0.side = side; });
     } else if ((k === 'u' || k === 'U' || k === 'v' || k === 'V') && res.scenario && res.scenario !== 'C') {
       var v = (k === 'u' || k === 'U') ? 'U' : 'V';
       app.ui.sub = 'bam';
-      setSetup(function (s0) { if (s0.b1 === v) delete s0.b1; else s0.b1 = v; });
+      setSetup(function (s0) { s0.b1 = v; });
     } else if (k === 'Enter') {
       if (res.verdict === 'ENTRY') { if (res.paper) app.enter({ kind: 'market', paper: true }); else app.openEnter(); e.preventDefault(); }
     } else if (k === 'n' || k === 'N') {
@@ -247,6 +255,15 @@
     var rows = ['1', '2', '3', '4', 'B / S', 'U / V', 'Enter', 'N', 'Esc', '?'].map(function (k, i) { return h('div', { class: 'kv' }, h('span', { class: 'k' }, h('kbd', { text: k })), h('span', { class: 'v', text: T('key' + i) })); });
     openModal(h('div', { class: 'dlg' }, h('h3', { text: T('keysTitle') }), rows, h('div', { class: 'actions' }, btn(T('close'), function () { closeModal(false); }, 'primary'))));
   }
+
+  // ---------- Từ điển ----------
+  app.openGlossary = function () {
+    var dl = h('dl', { class: 'glossary' });
+    C.glossary.forEach(function (g) { dl.appendChild(h('dt', { text: g.term })); dl.appendChild(h('dd', { text: g.def })); });
+    document.querySelectorAll('.pop').forEach(function (p) { p.setAttribute('hidden', ''); });
+    openModal(h('div', { class: 'dlg glossarybox', 'data-testid': 'glossary' }, h('h3', { text: T('glossaryTitle') }), h('p', { class: 'muted', text: T('glossaryHint') }), dl,
+      h('div', { class: 'actions' }, btn(T('close'), function () { closeModal(false); }, 'primary'))));
+  };
 
   // ngăn thẻ phiên trên điện thoại: mở / đóng bằng nút, nút ✕, chạm ra ngoài, Esc (REVIEW-1 mục 2)
   app.toggleCard = function (open) {
@@ -268,7 +285,20 @@
     document.title = T('appTitle');
     $('skip').textContent = T('skip');
     render();
-    setInterval(function () { render({ keep: true }); }, 15000);
+    setInterval(function () {
+      compute();
+      var sig = JSON.stringify([app.res.enabled, !!app.res.newsHit, app.res.longestBarActive, app.res.locks.tier3]);
+      var typing = isTyping(document.activeElement);
+      if (app._sig !== undefined && sig !== app._sig && !typing) render({ keep: false });
+      else render({ keep: true });
+      if (!typing) app._sig = sig;
+    }, 15000);
+    if (root.ResizeObserver) new ResizeObserver(function () { document.documentElement.style.setProperty('--vbar-h', $('verdict').offsetHeight + 'px'); }).observe($('verdict'));
+    window.addEventListener('storage', function (e) {
+      if (e.key !== S.KEY) return;
+      state = S.load(storage); app.state = state; app._draft = null; render({ keep: false });
+      app.toast(T('otherTab'));
+    });
 
     if (/^https?:$/.test(location.protocol)) {
       var link = document.createElement('link'); link.rel = 'manifest'; link.href = 'manifest.webmanifest'; document.head.appendChild(link);

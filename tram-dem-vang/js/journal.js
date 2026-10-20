@@ -24,7 +24,9 @@
   // ô nhập nhận cả dấu chấm lẫn dấu phẩy
   function parseNum(s) {
     if (typeof s === 'number') return isFinite(s) ? s : null;
-    var t = String(s === null || s === undefined ? '' : s).trim().replace(/\s+/g, '').replace(',', '.');
+    var t = String(s === null || s === undefined ? '' : s).trim().replace(/\s+/g, '');
+    if (t.indexOf('.') >= 0 && t.indexOf(',') >= 0) t = t.replace(/\./g, '').replace(',', '.');   // "4.193,5" ⇒ 4193.5
+    else t = t.replace(',', '.');
     if (t === '' || t === '-' || t === '.') return null;
     var v = Number(t);
     return isFinite(v) ? v : null;
@@ -35,7 +37,7 @@
   function newNight(key) {
     return {
       t0: { alert: null, touched: false, windows: R.defaultWindows(key ? time.isThursday(key) : false), newsDay: false, note: '' },
-      card: { answers: {}, bias: {}, zones: [], plan1: '', plan2: '', cancelWhen: '', lockedAt: null, edits: [], drawn: {} },
+      card: { answers: {}, bias: {}, zones: [], zoneSeq: 0, plan1: '', plan2: '', cancelWhen: '', lockedAt: null, edits: [], drawn: {} },
       regime: { mode: 'balanced', thinDir: null, breakout: { dir: null, edgeZoneId: null, at: null, nth: 1, step1: false, step2: false }, longestBarUntil: null, log: [] },
       setup: {}, open: null, trades: [], tally: { machine: 0, manual: null, closedAt: null }
     };
@@ -47,12 +49,21 @@
       t0: Object.assign({}, d.t0, o.t0 || {}),
       card: Object.assign({}, d.card, o.card || {}),
       regime: Object.assign({}, d.regime, o.regime || {}),
-      setup: o.setup || {}, open: o.open || null, trades: o.trades || [], tally: Object.assign({}, d.tally, o.tally || {})
+      setup: o.setup || {}, open: o.open || null,
+      trades: (o.trades || []).map(function (t) { return Object.assign({ flags: [], ruleCodes: [], tests: {}, exit: null, r: null }, t, { flags: (t && t.flags) || [], ruleCodes: (t && t.ruleCodes) || [], tests: (t && t.tests) || {} }); }),
+      tally: Object.assign({}, d.tally, o.tally || {})
     };
     out.t0.windows = (o.t0 && o.t0.windows) || R.defaultWindows(key ? time.isThursday(key) : false);
     out.card.answers = (o.card && o.card.answers) || {};
     out.card.bias = (o.card && o.card.bias) || {};
-    out.card.zones = (o.card && o.card.zones) || [];
+    out.card.zones = ((o.card && o.card.zones) || []).map(function (z) {
+      var o2 = Object.assign({}, z), p = parseNum(z.price), p2 = parseNum(z.priceTo);
+      o2.price = p; if (z.priceTo === undefined || z.priceTo === null || z.priceTo === '') delete o2.priceTo; else o2.priceTo = p2;
+      return o2;
+    });
+    var seq0 = out.card.zoneSeq || 0;
+    out.card.zones.forEach(function (z) { var m = /^z(\d+)$/.exec(z.id); if (m) seq0 = Math.max(seq0, +m[1]); });
+    out.card.zoneSeq = seq0;
     out.card.edits = (o.card && o.card.edits) || [];
     out.regime.breakout = Object.assign({}, d.regime.breakout, (o.regime && o.regime.breakout) || {});
     out.regime.log = (o.regime && o.regime.log) || [];
@@ -65,8 +76,10 @@
 
   // ===== thẻ phiên =====
   function newZoneId(card) {
-    var max = 0;
+    // số thứ tự chỉ tăng: xóa vùng rồi thêm lại không dùng lại mã cũ (REVIEW-1 mục 14)
+    var max = card.zoneSeq || 0;
     (card.zones || []).forEach(function (z) { var m = /^z(\d+)$/.exec(z.id); if (m) max = Math.max(max, +m[1]); });
+    card.zoneSeq = max + 1;
     return 'z' + (max + 1);
   }
   function canLockCard(card, biasValue) {
@@ -220,8 +233,7 @@
     return night.tally.machine;
   }
   function manualTally(night, value, nowMs) {
-    night.tally.manual = R.num(value);
-    if (nowMs) night.tally.closedAt = +nowMs;
+    night.tally.manual = R.num(value); // gõ thử một số không làm bản này "mới hơn" khi gộp JSON (REVIEW-1 mục 30)
   }
   function tallyMismatch(night) {
     var t = night.tally || {};
@@ -270,8 +282,29 @@
   function sweptCount(night) { return (night.trades || []).filter(function (t) { return t.sweptThenTP === true; }).length; }
   function ruleBreakCount(night) { return (night.trades || []).filter(function (t) { return t.flags.indexOf('RULE_BREAK') >= 0 && t.flags.indexOf('paper') < 0; }).length; }
 
+  // khối thẻ phiên cho Markdown (bias, vùng, kế hoạch) để ôn lại đêm đó
+  function cardLines(night) {
+    var card = night.card || {}, a = card.answers || {};
+    if (!card.lockedAt && !Object.keys(a).length && !(card.zones || []).length) return [];
+    function opt(qid, v) { var q = C.questions.filter(function (x) { return x.id === qid; })[0]; var o = q && q.options.filter(function (x) { return x.v === v; })[0]; return o ? o.label : '—'; }
+    var vw = C.vwapOpts.filter(function (o) { return o.v === a.vwapW; })[0];
+    var bias = R.effectiveBias(card).value;
+    var zones = (card.zones || []).map(function (z) {
+      var t = C.zoneTypes[z.type];
+      return z.id + ' ' + (t ? t.label.replace(/ \(.*\)$/, '') : z.type) + ' ' + fmt(z.price) + (z.priceTo !== undefined && z.priceTo !== null ? '–' + fmt(z.priceTo) : '');
+    });
+    var L = ['## ' + W.mdCard + (card.lockedAt ? ' (' + card.lockedAt + ')' : ''), '',
+      '- ' + W.mdBias + ': ' + (bias || '—') + ' · ' + W.mdVwap + ': ' + (vw ? vw.label : '—') + ' · ' + W.mdClose + ': ' + opt('q5', a.q5) + ' · ' + W.mdShape + ': ' + opt('q1', a.q1),
+      '- ' + W.mdMode + ': ' + (C.modes[R.effectiveRegime(night.regime).effective] || '—'),
+      '- ' + W.mdZones + ': ' + (zones.length ? zones.join('; ') : '—')];
+    if (card.plan1) L.push('- ' + W.mdPlan1 + ': ' + card.plan1);
+    if (card.plan2) L.push('- ' + W.mdPlan2 + ': ' + card.plan2);
+    if (card.cancelWhen) L.push('- ' + W.mdCancel + ': ' + card.cancelWhen);
+    L.push('');
+    return L;
+  }
   function toMarkdown(night, key) {
-    var lines = ['# ' + W.mdTitle + ' ' + key, '', W.mdHead, '|---|---|---|---|---|---|---|'];
+    var lines = ['# ' + W.mdTitle + ' ' + key, ''].concat(cardLines(night)).concat([W.mdHead, '|---|---|---|---|---|---|---|']);
     var warns = [];
     (night.trades || []).forEach(function (t) {
       var r = rowOf(t);

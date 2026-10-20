@@ -88,3 +88,67 @@ test('mục 9 · cửa sổ tự thêm múi VN không cộng 1 giờ mùa đông
   assert.equal(time.windowRange({ at: '21:00', tz: 'ET' }, '2026-11-10', true).center, 22 * 60);
   assert.match(require('../js/content.js').ui.timePh, /VN/);
 });
+
+test('mục 14 · mã vùng không dùng lại sau khi xóa', () => {
+  const card = { zones: [{ id: 'z1' }, { id: 'z2' }, { id: 'z3' }], zoneSeq: 0 };
+  assert.equal(J.newZoneId(card), 'z4');
+  card.zones = card.zones.filter((z) => z.id !== 'z3');
+  assert.equal(J.newZoneId(card), 'z5');
+  const n = J.normalizeNight({ card: { zones: [{ id: 'z7', type: 'vwapW', price: '4205' }] } }, '2026-10-13');
+  assert.equal(n.card.zoneSeq, 7); assert.equal(n.card.zones[0].price, 4205);
+});
+
+test('mục 29 · nhập JSON thiếu trường không làm vỡ; giá dạng chuỗi được hiểu', () => {
+  const n = J.normalizeNight({ trades: [{ id: 'x', time: '20:00', scenario: 'A' }] }, '2026-10-13');
+  const t = n.trades[0];
+  assert.deepEqual([t.flags, t.ruleCodes, t.exit], [[], [], null]);
+  assert.doesNotThrow(() => { J.rowOf(t); J.weekStats({ nights: { '2026-10-13': n } }, '2026-10-13'); J.recomputeTally(n, 0); });
+});
+
+test('mục 31 · parseNum nhận "4.193,5", "4193.5", "4193,5"; rác thì null', () => {
+  assert.equal(J.parseNum('4.193,5'), 4193.5);
+  assert.equal(J.parseNum('4193.5'), 4193.5);
+  assert.equal(J.parseNum('4193,5'), 4193.5);
+  assert.equal(J.parseNum('abc'), null);
+  assert.equal(J.parseNum(''), null);
+});
+
+test('mục 16 · biên độ C6 hơn 20 giá ⇒ CHỜ WAIT_C6_BIG, không báo SL nhỏ hơn nến', () => {
+  const r = go('A', { setup: { c6: 4184.5 } });
+  assert.equal(r.verdict, 'WAIT'); assert.equal(r.missing[0], 'WAIT_C6_BIG');
+  assert.ok(!r.reasons.includes('NO_SL_FLOOR'));
+});
+
+test('mục 23 · cảnh báo trước 20:30 chỉ từ 18:00, ban ngày không vàng', () => {
+  assert.ok(!go('A', undefined, '10:00').warnings.includes('WARN_BEFORE_2030'));
+  assert.ok(go('A', undefined, '19:10').warnings.includes('WARN_BEFORE_2030'));
+});
+
+test('USER-TEST 7 · chưa chọn hướng thì không báo bong bóng ngược phe', () => {
+  const r = go('B', { setup: { c4: 'oppHold', side: undefined } });
+  assert.ok(!r.reasons.includes('NO_BUBBLE_AGAINST'));
+});
+
+test('mục 18 · "Tôi vẫn vào" khi CHỜ vẫn có dòng ⚠ có nội dung', () => {
+  const r = go('A', { setup: { b3: 'not' } });
+  const t = J.createTrade(mk('A'), r, { kind: 'market', ruleBreak: true, nowMs: NOWMS, nowMin: 1290 });
+  assert.notEqual(J.warnLine(t), '');
+});
+
+test('Markdown có thẻ phiên: bias, vùng, kế hoạch', () => {
+  const n = mk('B', (x) => { x.card.plan1 = 'Nếu chạm VWAP tuần thì tìm hấp thụ buy'; });
+  const md = J.toMarkdown(n, '2026-10-13');
+  assert.match(md, /## Thẻ phiên/); assert.match(md, /BIAS: BUY/); assert.match(md, /z1 VWAP tuần 4175,0/); assert.match(md, /Kế hoạch 1: Nếu chạm VWAP tuần/);
+});
+
+test('mục 30 · gõ "Bạn cộng" không đổi closedAt', () => {
+  const n = J.newNight('2026-10-13');
+  J.manualTally(n, 2, NOWMS);
+  assert.equal(n.tally.closedAt, null); assert.equal(n.tally.manual, 2);
+});
+
+test('mục 29 · bước 2 chuyển hướng: cuộc nhập vùng giá dạng chuỗi qua store.migrate', () => {
+  const S = require('../js/store.js');
+  const st = S.migrate({ nights: { '2026-10-13': { card: { zones: [{ id: 'z1', type: 'vwapW', price: '4205' }] } } } });
+  assert.equal(st.nights['2026-10-13'].card.zones[0].price, 4205);
+});

@@ -26,7 +26,7 @@
 
   function ctl(id, label, help, body, extra) {
     return h('div', { class: 'ctl' + (extra && extra.cls ? ' ' + extra.cls : ''), 'data-ctl': id },
-      h('div', { class: 'ctl-label' }, h('span', { text: label }), help ? ui.helpBtn(help) : null), body);
+      h('div', { class: 'ctl-label' }, h('span', { text: label }), help ? ui.helpBtn(help, extra && extra.note) : null), body);
   }
 
   // tô sáng ô còn thiếu đầu tiên
@@ -99,11 +99,11 @@
     var c1 = ctl('c1', C.controls.c1.label, C.controls.c1.help, seg(scenOpts, scen || null, function (v) {
       set(function (s0, n) { var next = v ? J.changeScenario(s0, v) : (function () { var c = Object.assign({}, s0); delete c.scenario; return c; })(); n.setup = next; });
     }, { disabled: disabledMap, onDisabled: function (v, why) { app.toast(why); }, cls: 'scen', label: C.controls.c1.label }));
-    if (sub === 'canh') el.appendChild(c1);
+    if (sub === 'canh' || !scen) el.appendChild(c1);
+    if (scen && res.enabled[scen]) { el.appendChild(banner(T('scenLocked', { why: ui.codeText(res.enabled[scen]) }), 'warn')); c1.classList.add('locked-sel'); }
 
     if (!scen) {
-      if (sub === 'canh') el.appendChild(h('p', { class: 'muted pick', text: T('pickScenario') }));
-      else el.appendChild(h('p', { class: 'muted pick', text: T('pickScenario') }));
+      el.appendChild(h('p', { class: 'muted pick', text: T('pickScenario') }));
       applyNeed(el, res);
       el._live = function (a2) { };
       return el;
@@ -125,7 +125,10 @@
         var zopts = res.zones.map(function (z) { return { v: z.id, label: z.id + ' · ' + ui.zoneLabel(z), sub: z.flags.map(function (f) { return C.flagText[f] || f; }).join(' · ') || null }; });
         c3body = zopts.length ? seg(zopts, st.zoneId || null, function (v) { set(function (s0) { if (v) s0.zoneId = v; else delete s0.zoneId; }); }, { cls: 'wrap', label: C.controls.c3.label }) : h('span', { class: 'muted', text: T('noZones') });
       }
-      var c3 = ctl('c3', C.controls.c3.label, C.controls.c3.help, c3body);
+      var c3note = null;
+      if (scen === 'B') c3note = C.qd['QĐ-1'] + ' (' + C.unmeasured + ')';
+      if (scen === 'B' && res.zone && res.zone.type === 'pocCluster') c3note = C.qd['QĐ-3'] + ' (' + C.unmeasured + ')';
+      var c3 = ctl('c3', C.controls.c3.label, C.controls.c3.help, c3body, { note: c3note });
       if (res.zone) {
         var nth = res.counts.zoneN + 1;
         c3.appendChild(h('div', { class: 'zinfo' },
@@ -139,9 +142,9 @@
       if (scen === 'B') {
         c2body = seg(C.controls.c2.options, st.side || null, function (v) { set(function (s0) { if (v) s0.side = v; else delete s0.side; }); }, { label: C.controls.c2.label });
       } else {
-        c2body = h('div', { class: 'autochip' }, res.side ? chip(ui.sideText(res.side), res.side === 'buy' ? 'good' : 'bad') : h('span', { class: 'muted', text: T('sideNone') }), h('span', { class: 'muted', text: T('autoFilled') }));
+        c2body = h('div', { class: 'autochip' }, res.side ? chip(ui.sideText(res.side), ui.dirCls(res.side)) : h('span', { class: 'muted', text: T('sideNone') }), h('span', { class: 'muted', text: T('autoFilled') }));
       }
-      var c2 = ctl('c2', C.controls.c2.label, C.controls.c2.help, c2body);
+      var c2 = ctl('c2', C.controls.c2.label, C.controls.c2.help, c2body, { note: res.counter ? C.qd['QĐ-9'] + ' (' + C.unmeasured + ')' : null });
       if (res.counter) {
         c2.appendChild(h('div', { class: 'counter' }, chip(T('counterBias', { tp: res.exempt9 ? T('counterOk') : T('counterBad') }), res.exempt9 ? 'warn' : 'bad'),
           textInput(st.counterBiasReason || '', function (v) { set(function (s0) { s0.counterBiasReason = v; }); }, { placeholder: T('counterPh'), label: T('counterPh') })));
@@ -173,13 +176,13 @@
     if (sub === 'bam') {
       if (scen !== 'C') {
         el.appendChild(ctl('b1', C.controls.b1.label, C.controls.b1.help, seg(C.controls.b1.options, st.b1 || null, function (v) { set(function (s0) { if (v) s0.b1 = v; else delete s0.b1; }); }, { label: C.controls.b1.label }), {}));
-        if (lv === 'new') el.lastChild.appendChild(h('ul', { class: 'criteria' }, C.controls.b1.criteria.map(function (t) { return h('li', { text: t }); })));
+        if (lv === 'new' && !st.b1) el.lastChild.appendChild(h('ul', { class: 'criteria' }, C.controls.b1.criteria.map(function (t) { return h('li', { text: t }); })));
       }
       if (scen === 'B') {
         el.appendChild(ctl('b2', C.controls.b2.label, C.controls.b2.help, seg(C.controls.b2.options, st.b2 || null, function (v) { set(function (s0) { if (v) s0.b2 = v; else delete s0.b2; }); }, { label: C.controls.b2.label })));
       }
       var b3 = ctl('b3', C.controls.b3.label, C.controls.b3.help, seg(C.controls.b3.options, st.b3 || null, function (v) { set(function (s0) { if (v) s0.b3 = v; else delete s0.b3; }); }, { label: C.controls.b3.label }));
-      if (lv === 'new') b3.appendChild(h('ul', { class: 'criteria' }, C.controls.b3.criteria[scen].map(function (t) { return h('li', { text: t }); })));
+      if (lv === 'new' && !st.b3) b3.appendChild(h('ul', { class: 'criteria' }, C.controls.b3.criteria[scen].map(function (t) { return h('li', { text: t }); })));
       el.appendChild(b3);
 
       var cc0 = st.calc || {};
@@ -192,7 +195,7 @@
       el.appendChild(b4);
 
       var b5 = ctl('b5', C.controls.b5.label, C.controls.b5.help, seg(C.controls.b5.options, st.slPos || null, function (v) { set(function (s0) { if (v) s0.slPos = v; else delete s0.slPos; }); }, { label: C.controls.b5.label }));
-      if (lv === 'new') b5.appendChild(h('p', { class: 'criteria one', text: C.controls.b5.criteria[scen] }));
+      if (lv === 'new' && !st.slPos) b5.appendChild(h('p', { class: 'criteria one', text: C.controls.b5.criteria[scen] }));
       el.appendChild(b5);
     }
 

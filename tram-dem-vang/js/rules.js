@@ -10,6 +10,7 @@
   var EPS = 1e-9;
 
   var T = {
+    c6Max: 20,         // biên độ nến M1 hơn 20 giá ⇒ nghi gõ nhầm mức giá
     slCap: 4,          // trần khoảng SL (giá)
     slPad: 0.3,        // đệm SL
     rrMin: 2,          // R:R sàn 1:2
@@ -228,7 +229,7 @@
     } },
 
     // C4 — bong bóng to gần nhất
-    { code: 'NO_BUBBLE_AGAINST', scope: 'ABCD', effect: 'NO', when: function (c) { return c.s.c4 === 'oppHold' || (c.scen === 'B' && c.s.c4 === 'oppBroken'); } },
+    { code: 'NO_BUBBLE_AGAINST', scope: 'ABCD', effect: 'NO', when: function (c) { return !!c.side && (c.s.c4 === 'oppHold' || (c.scen === 'B' && c.s.c4 === 'oppBroken')); } },
     { code: 'NO_UNCLEAR', id: 'c4', scope: 'ABCD', effect: 'NO', when: function (c) { return c.s.c4 === 'unclear'; } },
     { code: 'WAIT_C4', scope: 'ABCD', effect: 'WAIT', when: function (c) { return !has(c.s.c4); } },
     { code: 'WAIT_C4_SAME', scope: 'B', effect: 'WAIT', when: function (c) { return c.s.c4 === 'none'; } },
@@ -238,6 +239,7 @@
     { code: 'NO_BACK', scope: 'ABCD', effect: 'NO', when: function (c) { return c.s.c5 === 'far'; } },
     // C6 — biên độ nến M1 cao nhất trong 5 nến
     { code: 'WAIT_C6', scope: 'ABCD', effect: 'WAIT', when: function (c) { return !(num(c.s.c6) > 0); } },
+    { code: 'WAIT_C6_BIG', scope: 'ABCD', effect: 'WAIT', when: function (c) { return num(c.s.c6) > T.c6Max; } },
     // C7 — ô riêng
     { code: 'WAIT_C7_DMA', scope: 'B', effect: 'WAIT', when: function (c) { return !has((c.s.c7 || {}).dma); } },
     { code: 'NO_DMA_SLOPE', scope: 'B', effect: 'NO', when: function (c) { return (c.s.c7 || {}).dma === 'sloped'; } },
@@ -264,7 +266,7 @@
     { code: 'WAIT_B5', scope: 'ABCD', effect: 'WAIT', when: function (c) { return c.s.slPos !== 'right' && c.s.slPos !== 'wrong'; } },
     { code: 'NO_SL_POS', scope: 'ABCD', effect: 'NO', when: function (c) { return c.s.slPos === 'wrong'; } },
     { code: 'NO_SL_SIDE', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && !c.calc.slSideOk; } },
-    { code: 'NO_SL_FLOOR', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && num(c.s.c6) > 0 && !c.calc.floorOk; } },
+    { code: 'NO_SL_FLOOR', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && num(c.s.c6) > 0 && num(c.s.c6) <= T.c6Max && !c.calc.floorOk; } },
     { code: 'NO_SL_CAP', scope: 'ABCD', effect: 'NO', when: function (c) { return c.calc.numsOk && !c.calc.capOk; } },
     // R:R, TP, cỡ lệnh: luôn xét (QĐ-20) để ruleCodes đủ; chỉ cần số liệu hợp lệ
     { code: 'NO_RR', scope: 'ABCD', effect: 'NO', when: function (c) {

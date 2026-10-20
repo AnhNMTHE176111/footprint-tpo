@@ -42,7 +42,8 @@
     var pop = h('div', { class: 'pop', role: 'note', hidden: true },
       h('p', { text: help.text }),
       extraNote ? h('p', { class: 'muted', text: extraNote }) : null,
-      help.ref ? h('a', { href: C.HT_BASE + help.ref, target: '_blank', rel: 'noopener', text: T('helpLink') }) : null);
+      help.ref ? h('a', { href: C.HT_BASE + help.ref, target: '_blank', rel: 'noopener', text: T('helpLink') }) : null,
+      (TDV.app && TDV.app.state.settings.guideLevel === 'new') ? h('button', { type: 'button', class: 'btn small ghost glossbtn', text: T('openGlossary'), onclick: function (e) { e.stopPropagation(); TDV.app.openGlossary(); } }) : null);
     var btn = h('button', { class: 'help', type: 'button', 'aria-label': T('helpLabel'), 'aria-expanded': 'false', text: '?',
       onclick: function (e) {
         e.stopPropagation();
@@ -78,8 +79,8 @@
     opt = opt || {};
     var inp = h('input', { type: 'text', inputmode: 'decimal', class: 'field num', autocomplete: 'off', placeholder: opt.placeholder || null, value: fmtIn(value),
       'aria-label': opt.label || null, dataset: opt.id ? { id: opt.id } : null,
-      oninput: function () { onInput(J.parseNum(inp.value), inp); },
-      onchange: function () { var v = J.parseNum(inp.value); if (v !== null) inp.value = fmtIn(v); if (opt.onCommit) opt.onCommit(v, inp); } });
+      oninput: function () { var v = J.parseNum(inp.value); inp.classList.toggle('invalid', v === null && /\S/.test(inp.value) && inp.value.trim() !== '-'); onInput(v, inp); },
+      onchange: function () { var v = J.parseNum(inp.value); inp.classList.toggle('invalid', v === null && /\S/.test(inp.value)); if (v !== null) inp.value = fmtIn(v); if (opt.onCommit) opt.onCommit(v, inp); } });
     var wrap = h('span', { class: 'numwrap' }, inp, opt.unit ? h('span', { class: 'unit', text: opt.unit }) : null);
     wrap.input = inp;
     return wrap;
@@ -103,6 +104,8 @@
       title ? h('h3', { class: 'ptitle' }, h('span', { text: title }), opt.help ? helpBtn(opt.help) : null) : null, body);
   }
 
+  // màu theo hướng (không dùng đỏ/xanh lá của phán quyết): buy xanh dương, sell cam
+  function dirCls(v) { return v === 'BUY' || v === 'buy' ? 'dir-buy' : v === 'SELL' || v === 'sell' ? 'dir-sell' : 'warn'; }
   function biasText(v) { return v === 'BUY' ? T('biasBuy') : v === 'SELL' ? T('biasSell') : v === 'KHÔNG' ? T('biasNone') : v === 'CHỜ' ? T('biasWait') : T('biasUnknown'); }
   function sideText(s) { return s === 'buy' ? 'buy' : s === 'sell' ? 'sell' : '—'; }
   function codeText(code, vars) {
@@ -118,6 +121,6 @@
   }
 
   ui.T = T; ui.h = h; ui.clear = clear; ui.helpBtn = helpBtn; ui.seg = seg; ui.numInput = numInput; ui.textInput = textInput;
-  ui.chip = chip; ui.btn = btn; ui.banner = banner; ui.section = section; ui.biasText = biasText; ui.sideText = sideText;
+  ui.chip = chip; ui.btn = btn; ui.banner = banner; ui.section = section; ui.biasText = biasText; ui.dirCls = dirCls; ui.sideText = sideText;
   ui.codeText = codeText; ui.zoneLabel = zoneLabel; ui.fmtIn = fmtIn;
 })(this);

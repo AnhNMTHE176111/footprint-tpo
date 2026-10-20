@@ -34,15 +34,16 @@
     var nightObj = app.state.nights[key];
     var nowMinO = time.nightMinutes(app.nowMs, key);
 
-    var head = h('div', { class: 'ohead' }, chip(t.side, t.side === 'buy' ? 'good' : 'bad'), h('b', { text: J.rowOf(t).name }), h('span', { class: 'muted', text: (t.zoneType ? C.zoneTypes[t.zoneType].label : '') + ' · ' + (C.modes[t.mode] || '') }),
+    var head = h('div', { class: 'ohead' }, chip(t.side, ui.dirCls(t.side)), h('b', { text: J.rowOf(t).name }), h('span', { class: 'muted', text: (t.zoneType ? C.zoneTypes[t.zoneType].label : '') + ' · ' + (C.modes[t.mode] || '') }),
       paper ? chip(T('openPaper'), 'warn') : null, t.flags.indexOf('RULE_BREAK') >= 0 ? chip(T('ruleBreakFlag'), 'bad') : null, t.flags.indexOf('HALF') >= 0 ? chip(T('sizeHalfShort'), 'warn') : null);
     var grid = h('div', { class: 'kvgrid' },
       kv(T('kvEntry'), t.entry === null ? T('kvPending', { v: J.fmt(op.limitPrice) }) : J.fmt(t.entry)),
-      kv(T('kvSl'), J.fmt(t.sl) + (op.beDone ? ' · ' + T('beDone') : '')),
+      kv(T('kvSl'), op.beDone ? T('beMoveTo', { sl: J.fmt(t.sl), entry: J.fmt(t.entry) }) + ' · ' + T('beDone') : J.fmt(t.sl)),
       kv(T('kvTp'), J.fmt(t.tp)), kv(T('kvRr'), '1:' + J.fmtTrim(t.rrPlanned)),
       kv(T('kvSize'), t.size === null || t.size === undefined ? '—' : String(t.size)), kv(T('kvTime'), t.time));
     el.appendChild(section(T('t4Title'), [head, grid, h('p', { class: 'muted', text: T('noSlEdit') })]));
 
+    if (op.beDone) el.appendChild(banner(T('beReminder', { entry: J.fmt(t.entry) }), 'warn'));
     var dl = time.flatDeadline(R.effectiveWindows(nightObj.t0, key), nowMinO, key, app.useDst);
     if (dl && !paper) el.appendChild(banner(T('flatBefore', { hm: time.fmtMin(dl.at), min: Math.max(0, Math.ceil(dl.at - nowMinO)) }), dl.at - nowMinO <= 15 ? 'bad' : 'warn'));
     if (nowMinO >= time.markMin(R.MARKS.globexMaint, key, app.useDst)) el.appendChild(banner(T('maintNote'), 'warn'));
@@ -81,8 +82,10 @@
 
     // đóng lệnh
     var ck = app.ui.closeKind || null;
+    if (ck === 'BE' && !op.beDone) ck = null;
     var kinds = [{ v: 'TP', label: T('closeTp') }, { v: 'SL', label: T('closeSl'), bad: true }, { v: 'BE', label: T('closeBe') }, { v: 'MANUAL', label: T('closeManual') }];
-    var closeBody = [seg(kinds, ck, function (v) { app.ui.closeKind = v; app.ui.closePrice = undefined; app.ui.closeReason = null; app.render({ keep: false }); }, { cls: 'close', label: T('t4Close') })];
+    var beOff = op.beDone ? null : { BE: T('beNeedDone') };
+    var closeBody = [seg(kinds, ck, function (v) { app.ui.closeKind = v; app.ui.closePrice = undefined; app.ui.closeReason = null; app.render({ keep: false }); }, { cls: 'close', label: T('t4Close'), disabled: beOff, onDisabled: function (v, why) { app.toast(why); } })];
     if (ck) {
       var defPrice = ck === 'TP' ? t.tp : ck === 'SL' ? t.sl : ck === 'BE' ? t.entry : (cur !== null ? cur : null);
       var price = app.ui.closePrice === undefined ? defPrice : app.ui.closePrice;
@@ -120,8 +123,19 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
 
+  ui.download = download;
+
   function tier5(app) {
-    var night = app.night, key = app.key, st = app.state, el = h('div', { class: 'tier', 'data-tier': '5' });
+    var st = app.state, el = h('div', { class: 'tier', 'data-tier': '5' });
+    // chọn đêm xem / nhập: các đêm có thẻ hoặc có lệnh, mới nhất trước (REVIEW-1 mục 20)
+    var keys = Object.keys(st.nights).filter(function (k) { var n0 = st.nights[k]; return n0.card.lockedAt || (n0.trades || []).length; });
+    if (keys.indexOf(app.key) < 0) keys.push(app.key);
+    keys.sort().reverse();
+    var key = app.ui.viewKey && keys.indexOf(app.ui.viewKey) >= 0 ? app.ui.viewKey : app.key;
+    var night = key === app.key ? app.night : st.nights[key];
+    var UO = { key: key, keep: true };
+    if (keys.length > 1) el.appendChild(h('div', { class: 'ctl nightpick' }, h('div', { class: 'ctl-label', text: T('nightPick') }),
+      seg(keys.map(function (k) { return { v: k, label: k + (k === app.key ? ' ·' : '') }; }), key, function (v) { app.ui.viewKey = v === app.key ? null : v; app.render({ keep: false }); }, { noToggle: true, cls: 'small wrap', label: T('nightPick') })));
 
     // --- đêm nay ---
     var rows = night.trades.map(J.rowOf);
@@ -141,12 +155,12 @@
     var mism = J.tallyMismatch(night);
     var foot = h('div', { class: 'jfoot' },
       chip(T('machineSum', { r: J.fmtR(machine) }), ''),
-      h('label', { class: 'mini-l' }, T('yourSum'), numInput(manual === undefined ? null : manual, function (v) { app.update(function (n) { J.manualTally(n, v, app.nowMs); }, { keep: true }); }, { id: 'manual', unit: 'R', label: T('yourSum'),
+      h('label', { class: 'mini-l' }, T('yourSum'), numInput(manual === undefined ? null : manual, function (v) { app.update(function (n) { J.manualTally(n, v, app.nowMs); }, { key: key, keep: true }); }, { id: 'manual', unit: 'R', label: T('yourSum'),
         onCommit: function () { app.render({ keep: false }); } })),
       mism ? chip(T('mismatch'), 'bad') : null,
       chip(T('breaksN', { n: J.ruleBreakCount(night) }), J.ruleBreakCount(night) ? 'bad' : ''),
       chip(T('sweptN', { n: J.sweptCount(night) }), ''),
-      btn(T('endNight'), function () { app.update(function (n) { n.tally.closedAt = app.nowMs; }); app.toast(T('endedToast')); }, 'primary', { disabled: manual === null || manual === undefined ? true : null, title: manual === null || manual === undefined ? T('endNeed') : null }));
+      btn(T('endNight'), function () { app.update(function (n) { n.tally.closedAt = app.nowMs; }, { key: key }); app.toast(T('endedToast')); }, 'primary', { disabled: manual === null || manual === undefined ? true : null, title: manual === null || manual === undefined ? T('endNeed') : null }));
     var tradeExtrasList = night.trades.filter(function (t) { return t.exit; }).map(function (t) { return h('div', { class: 'tx' }, h('span', { class: 'muted', text: t.time + ' ' + J.rowOf(t).name }), tradeExtras(app, t, key)); });
     el.appendChild(section(T('t5Tonight', { key: key }), [h('div', { class: 'tablewrap' }, tbl), foot, tradeExtrasList.length ? h('details', { class: 'fold' }, h('summary', { text: T('afterClose') }), tradeExtrasList) : null], { help: { text: T('t5Help'), ref: 'nhat-ky-lenh' } }));
 

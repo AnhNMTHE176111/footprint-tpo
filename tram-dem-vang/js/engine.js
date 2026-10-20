@@ -64,7 +64,7 @@
     out.slDist = R.round1(risk);
     out.slSideOk = c.side === 'buy' ? sl < entry - EPS : sl > entry + EPS;
     var c6 = num(c.s.c6);
-    out.floorOk = !(c6 > 0) || out.slDist >= c6 - EPS;
+    out.floorOk = !(c6 > 0) || c6 > T.c6Max || out.slDist >= c6 - EPS;
     out.capOk = out.slDist <= T.slCap + EPS;
     if (risk <= EPS) { out.slSideOk = false; return out; }
     var nz = nextZoneFor(c.zones, c.side, entry, c.zone);
@@ -203,7 +203,7 @@
       dots[4] = c4ok;
       dots[5] = scen === 'B' ? s.b2 === 'down' : s.b3 === 'ok';
       dots[6] = s.b3 === 'ok' && !c.longestBarActive;
-      dots[7] = s.slPos === 'right' && cl.numsOk && cl.slSideOk && cl.floorOk && num(s.c6) > 0 && cl.capOk && cl.rr !== null && cl.rr >= T.rrMin - EPS && cl.nextRRok && cl.tpPastOk && zoneN < T.zoneMax;
+      dots[7] = s.slPos === 'right' && cl.numsOk && cl.slSideOk && cl.floorOk && num(s.c6) > 0 && num(s.c6) <= T.c6Max && cl.capOk && cl.rr !== null && cl.rr >= T.rrMin - EPS && cl.nextRRok && cl.tpPastOk && zoneN < T.zoneMax;
     }
 
     var verdict, reasons;

@@ -5,12 +5,11 @@ const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/rules.js', 'js/time.js', 'js/content.js', 'js/engine.js', 'js/journal.js', 'js/store.js',
   'js/ui/dom.js', 'js/ui/status.js', 'js/ui/tier012.js', 'js/ui/tier3.js', 'js/ui/tier45.js', 'js/main.js',
-  'img/kb-a-pha-hoi.png', 'img/kb-b-hap-thu.png', 'img/kb-c-fade-canh.png', 'img/kb-d-trap.png',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png'
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith('tdv-') && k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));

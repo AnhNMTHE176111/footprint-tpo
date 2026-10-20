@@ -35,7 +35,9 @@ test('sổ: dòng ⚠ từ htRef — "phạm 4.1, 4.3 và luật SL" đúng mẫ
   assert.equal(J.warnLine({ ruleCodes: ['NO_SL_POS'] }), 'phạm luật SL');
   assert.equal(J.warnLine({ ruleCodes: ['NO_ZONE_3RD'] }), 'phạm mục 7');
   assert.equal(J.warnLine({ ruleCodes: [] }), '');
-  assert.equal(J.warnLine({ ruleCodes: ['WAIT_B2'] }), '');
+  assert.equal(J.warnLine({ ruleCodes: ['WAIT_B2'] }), 'phạm 4.2');                 // mã CHỜ cũng có htRef (REVIEW-1 mục 18)
+  assert.equal(J.warnLine({ ruleCodes: ['WAIT_B3_NOT'] }), 'phạm mục 5');
+  assert.equal(J.warnLine({ ruleCodes: ['NO_SIZE_ZERO'] }), 'phạm ST §6');
 });
 test('sổ: 7 cột cho 4 kịch bản — cột V/U và Δ', () => {
   const base = { time: '20:00', side: 'sell', mode: 'broken', slDist: 2.4, exit: { kind: 'TP' }, r: 3, flags: [], ruleCodes: [] };

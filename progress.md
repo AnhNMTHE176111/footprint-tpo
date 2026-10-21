@@ -478,3 +478,9 @@ mục tiêu WR 60–70%, 10–20 lệnh/ngày, R:R 1:2–1:3, Telegram kèm ản
 - Agent chính tự mổ SL: `research/report/MO-XE-SL-agent-chinh.md` (72/88 SL của C là phá thật; chart 9 lệnh).
 - Quan điểm Corven 11/10 (trap = giá phải rời bong bóng một đoạn) → QĐ-8, đã đo: chưa ủng hộ trên 90d.
 - ⚠️ Việc người học: add BenzoTrader vào chart M1 GCZ26, điền token/chat id, bấm "Gửi thử"; chạy forward test ≥ 20 phiên rồi đọc bảng.
+
+## 2026-10-21 — Hỗ trợ/kháng cự: tra định nghĩa + đo trên 65 phiên GCZ26
+Người học hỏi Claude có biết định nghĩa S/R, có tra kỹ và đo được không. Đã tra (Osler 2000 FRBNY; Chung & Bellotti 2021; sách phổ thông),
+viết `benzo-trader/research/sr_measure.py` đo đúng 2 định nghĩa đã công bố, có đối chứng mức ngẫu nhiên. Kết quả `report/SR-KET-QUA.md`:
+**không loại mức nào (swing, đỉnh/đáy/đóng phiên trước, VA hôm qua, VA Âu, số tròn, VWAP) bật nhiều hơn mức ngẫu nhiên quá sai số**;
+số lần bật trước và tuổi mức không đổi kết quả. Bài học phương pháp: "chạm bằng râu" cho 80% bật ở mọi mức = lỗi hình học, phải "vào dải bằng giá đóng".

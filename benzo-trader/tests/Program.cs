@@ -414,10 +414,28 @@ static class Tests
         }
     }
 
+    static void TestChartPick()
+    {
+        Console.WriteLine("[13] Chọn cửa sổ con = vùng chart để chụp ảnh");
+        // chart 1000x600; ứng viên: nút nhỏ, vùng chart (1010x630), panel bao cả workspace (1900x1000), thanh bên
+        var rects = new List<int[]>
+        {
+            new[] { 0, 0, 120, 40 },          // nút
+            new[] { 200, 100, 1210, 730 },    // vùng chart + trục (1010x630)
+            new[] { 0, 0, 1900, 1000 },       // workspace
+            new[] { 1500, 0, 1900, 1000 },    // thanh bên
+        };
+        Check(BenzoCore.PickChartRect(rects, 1000, 600) == 1, "chọn đúng vùng chart (nhỏ nhất ≥ kích thước)");
+        Check(BenzoCore.PickChartRect(new List<int[]> { new[] { 0, 0, 1900, 1000 } }, 1000, 600) == -1, "chỉ có panel quá to (>2,5×) ⇒ −1, rơi về chụp cả cửa sổ");
+        Check(BenzoCore.PickChartRect(new List<int[]> { new[] { 0, 0, 500, 300 } }, 1000, 600) == -1, "không cửa sổ nào đủ lớn ⇒ −1");
+        Check(BenzoCore.PickChartRect(rects, 10, 10) == -1, "kích thước chart không hợp lệ ⇒ −1");
+        Check(BenzoCore.PickChartRect(null, 1000, 600) == -1, "danh sách null ⇒ −1");
+    }
+
     static int Main()
     {
         TestSimulate(); TestStats(); TestResetMark(); TestCaption(); TestCache(); TestEngine();
-        TestKernel(); TestZonesAndC(); TestObserve(); TestVirtualOpen(); TestRealData();
+        TestKernel(); TestZonesAndC(); TestObserve(); TestVirtualOpen(); TestChartPick(); TestRealData();
 #if DEBUG
         TestDemo();
 #endif

@@ -31,6 +31,59 @@ namespace BenzoTraderNs
         [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr h);
         [DllImport("user32.dll")] private static extern int GetSystemMetrics(int n);
+        [DllImport("user32.dll")] private static extern IntPtr WindowFromDC(IntPtr hdc);
+        [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr h, uint flags);
+        [DllImport("user32.dll")] private static extern bool IsWindow(IntPtr h);
+        [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr h);
+        private delegate bool EnumProc(IntPtr h, IntPtr l);
+        [DllImport("user32.dll")] private static extern bool EnumChildWindows(IntPtr parent, EnumProc cb, IntPtr l);
+        private static volatile IntPtr _chartHwnd;
+        private static int _chartW, _chartH;
+        private static long _lastProbe;
+
+        /// <summary>Gọi trong OnPaintChart (trước khi vẽ): nhớ handle cửa sổ chart (WindowFromDC) + kích thước vùng chart,
+        /// để chụp ĐÚNG vùng chart thay vì cả cửa sổ Optimus Flow.</summary>
+        public static void NoteChart(Graphics gr, int chartW, int chartH)
+        {
+            _chartW = chartW; _chartH = chartH;
+            long now = Environment.TickCount64;
+            if (_chartHwnd != IntPtr.Zero && IsWindow(_chartHwnd) && now - _lastProbe < 5000) return;
+            _lastProbe = now;
+            IntPtr hdc = IntPtr.Zero;
+            try
+            {
+                hdc = gr.GetHdc();
+                IntPtr h = WindowFromDC(hdc);
+                if (h != IntPtr.Zero && IsWindow(h) && h != GetAncestor(h, 2 /*GA_ROOT*/)) _chartHwnd = h;
+            }
+            catch { }
+            finally { if (hdc != IntPtr.Zero) { try { gr.ReleaseHdc(hdc); } catch { } } }
+        }
+
+        private static bool TryChartRect(out RECT r, out string src)
+        {
+            r = default; src = null;
+            try
+            {
+                IntPtr h = _chartHwnd;
+                if (h != IntPtr.Zero && IsWindow(h) && IsWindowVisible(h) && !IsIconic(h) && GetWindowRect(h, out r)
+                    && r.Right - r.Left >= 300 && r.Bottom - r.Top >= 200) { src = "vùng chart (handle từ DC vẽ)"; return true; }
+                IntPtr main = Process.GetCurrentProcess().MainWindowHandle;
+                if (main != IntPtr.Zero && _chartW >= 50 && _chartH >= 50)
+                {
+                    var list = new List<int[]>();
+                    EnumChildWindows(main, (c, l) =>
+                    {
+                        if (IsWindowVisible(c) && GetWindowRect(c, out var rc)) list.Add(new[] { rc.Left, rc.Top, rc.Right, rc.Bottom });
+                        return true;
+                    }, IntPtr.Zero);
+                    int i = BenzoCore.PickChartRect(list, _chartW, _chartH);
+                    if (i >= 0) { r = new RECT { Left = list[i][0], Top = list[i][1], Right = list[i][2], Bottom = list[i][3] }; src = "vùng chart (cửa sổ con khớp kích thước)"; return true; }
+                }
+            }
+            catch { }
+            return false;
+        }
         private const int SM_CXSCREEN = 0, SM_CYSCREEN = 1, SM_XVIRTUALSCREEN = 76, SM_YVIRTUALSCREEN = 77,
                           SM_CXVIRTUALSCREEN = 78, SM_CYVIRTUALSCREEN = 79;
 
@@ -39,6 +92,18 @@ namespace BenzoTraderNs
         public static byte[] CapturePng(out string how)
         {
             Exception first = null;
+            try
+            {
+                if (TryChartRect(out var cr, out string csrc))
+                {
+                    int vx0 = GetSystemMetrics(SM_XVIRTUALSCREEN), vy0 = GetSystemMetrics(SM_YVIRTUALSCREEN);
+                    int vw0 = GetSystemMetrics(SM_CXVIRTUALSCREEN), vh0 = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+                    int l0 = Math.Max(cr.Left, vx0), t0 = Math.Max(cr.Top, vy0);
+                    int r0 = Math.Min(cr.Right, vx0 + vw0), b0 = Math.Min(cr.Bottom, vy0 + vh0);
+                    if (r0 - l0 >= 300 && b0 - t0 >= 200) { var png0 = Grab(l0, t0, r0 - l0, b0 - t0); how = csrc; return png0; }
+                }
+            }
+            catch (Exception ex0) { first = ex0; }
             try
             {
                 IntPtr h = IntPtr.Zero;
@@ -81,7 +146,14 @@ namespace BenzoTraderNs
             using var bmp = new Bitmap(w, h, PixelFormat.Format24bppRgb);
             using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(x, y, 0, 0, new Size(w, h), CopyPixelOperation.SourceCopy);
             using var ms = new MemoryStream();
-            bmp.Save(ms, ImageFormat.Png);
+            if (w > 1600)
+            {   // thu nhỏ để ảnh Telegram gọn, vẫn đọc được số
+                int nw = 1600, nh = (int)Math.Round(h * 1600.0 / w);
+                using var small = new Bitmap(nw, nh, PixelFormat.Format24bppRgb);
+                using (var g2 = Graphics.FromImage(small)) { g2.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic; g2.DrawImage(bmp, 0, 0, nw, nh); }
+                small.Save(ms, ImageFormat.Png);
+            }
+            else bmp.Save(ms, ImageFormat.Png);
             return ms.ToArray();
         }
     }
@@ -438,6 +510,8 @@ namespace BenzoTraderNs
                     bool ok = false;
                     try
                     {
+                        try { CurrentChart?.RedrawBuffer(); } catch { }
+                        await Task.Delay(1200).ConfigureAwait(false);          // chờ chart vẽ xong hộp SL/TP của lệnh mới
                         byte[] png = WinShot.CapturePng(out string how);
                         tele.Log("chụp ảnh OK (" + how + ", " + png.Length / 1024 + " KB)");
                         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -473,6 +547,13 @@ namespace BenzoTraderNs
             RenderState rs; lock (_sync) rs = _render;
             if (rs == null) return;
             var gr = args.Graphics; var conv = win.CoordinatesConverter; var clip = win.ClientRectangle;
+            try
+            {   // kích thước cả vùng chart (mọi cửa sổ con: nến + volume + delta) để chụp đúng vùng chart
+                int minL = int.MaxValue, minT = int.MaxValue, maxR = 0, maxB = 0;
+                foreach (var w in CurrentChart.Windows) { var rc = w.ClientRectangle; minL = Math.Min(minL, rc.Left); minT = Math.Min(minT, rc.Top); maxR = Math.Max(maxR, rc.Right); maxB = Math.Max(maxB, rc.Bottom); }
+                if (maxR > minL && maxB > minT) WinShot.NoteChart(gr, maxR - minL, maxB - minT);
+            }
+            catch { }
             var prevClip = gr.ClipBounds; gr.SetClip(clip);
             try
             {

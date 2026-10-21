@@ -133,6 +133,23 @@ namespace BenzoTraderNs
         public const int NewsBlockMinutes = 15;
         /// <summary>"Mở ảo" (Hệ thống 3.2): 19:20-20:30 VN theo mốc neo Mỹ (sm 860..929) — không phát tín hiệu mới.</summary>
         public static bool InVirtualOpen(int sm) => sm >= 860 && sm < 930;
+
+        /// <summary>Chọn cửa sổ con chứa vùng chart: nhỏ nhất mà vẫn ≥ kích thước chart (trừ 2px), và không quá 2,5× diện tích chart
+        /// (loại panel bao cả workspace). Trả chỉ số trong danh sách hoặc −1.</summary>
+        public static int PickChartRect(IList<int[]> rects, int chartW, int chartH)
+        {
+            if (rects == null || chartW < 50 || chartH < 50) return -1;
+            int best = -1; long bestArea = long.MaxValue;
+            for (int i = 0; i < rects.Count; i++)
+            {
+                int w = rects[i][2] - rects[i][0], h = rects[i][3] - rects[i][1];
+                if (w < chartW - 2 || h < chartH - 2) continue;
+                long area = (long)w * h;
+                if (area > 2.5 * chartW * chartH) continue;
+                if (area < bestArea) { bestArea = area; best = i; }
+            }
+            return best;
+        }
         public const int TeleMaxAgeSec = 90;
 
         public static readonly char[] Setups = { 'A', 'B', 'C', 'D' };

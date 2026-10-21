@@ -56,8 +56,11 @@ Vào 4193,1 · SL 4190,6 (2,5 giá) · TP 4200,6 (3R)
 ```
 - Chống trùng: lần quét đầu sau reload chỉ nạp id; chỉ bắn khi tín hiệu ở **nến vừa đóng** và tuổi ≤ 90 giây; khoá file nguyên tử
   `%LOCALAPPDATA%\BenzoTrader\sent\` để nhiều chart cùng symbol chỉ gửi 1 lần mỗi id.
-- Ảnh (`WinShot`): `GetWindowRect(Process.MainWindowHandle)` (không có thì cửa sổ foreground) → `Graphics.CopyFromScreen` → PNG.
-  Lỗi ⇒ chụp toàn màn hình chính (`GetSystemMetrics`) ⇒ vẫn lỗi ⇒ gửi text không ảnh. Chụp + gửi chạy `Task.Run`, gửi ảnh tối đa 10 giây.
+- Ảnh (`WinShot`) chỉ chụp **vùng chart** (nến + volume + delta, như ảnh mẫu), không chụp cả cửa sổ Optimus Flow. Thứ tự thử:
+  (1) handle cửa sổ chart lấy từ DC lúc vẽ (`WindowFromDC` trong `OnPaintChart`) → `GetWindowRect`;
+  (2) không có thì duyệt cửa sổ con của cửa sổ chính, chọn cái nhỏ nhất vẫn ≥ kích thước vùng chart (`BenzoCore.PickChartRect`, có test);
+  (3) không được nữa ⇒ cả cửa sổ chính ⇒ toàn màn hình chính ⇒ gửi text không ảnh. Mỗi lần chụp ghi cách chụp vào `tele_log.txt`.
+  Trước khi chụp: vẽ lại chart + chờ 1,2 giây để hộp SL/TP của lệnh mới đã hiện. Rộng > 1600px thì thu nhỏ. Chụp + gửi chạy `Task.Run`, gửi tối đa 10 giây.
   **Giới hạn:** chụp từ màn hình thật nên cửa sổ Optimus Flow phải đang **hiện, không thu nhỏ, không bị cửa sổ khác che**.
 - Log `%LOCALAPPDATA%\BenzoTrader\tele_log.txt` (token được che bằng `***`). Lỗi code ghi `error_log.txt`.
 

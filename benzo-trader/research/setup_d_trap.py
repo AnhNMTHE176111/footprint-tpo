@@ -235,13 +235,13 @@ def detect(P: Prep, min_move: float = 5.0, max_retr: float = 0.7, method: str = 
                         if r is None:
                             st_ = 'risk'
                             break
-                        ent = dict(idx=int(i), side=S, entry=r['entry'], sl=r['sl'], tp=r['tp'], setup='D-V5', zone='NONE', j=int(j),
+                        ent = dict(idx=int(i), side=S, entry=r['entry'], sl=r['sl'], tp=r['tp'], setup='D-V5', zone='NONE', j=int(j), pair=int(p2),
                                    swept=bool(abs(struct - ext) > 1e-9),
                                    note='move %.1f retr %.0f%% bubble %.1f d %.2f (j=%d)' % (move, 100 * depth / move, ext, dd, j))
                         st_ = 'entry'
                         break
                 if trace is not None:
-                    trace.append(dict(j=int(j), status=st_))
+                    trace.append(dict(j=int(j), pair=int(p2), status=st_))
                 if ent is not None:
                     out.append(ent)
                     break
@@ -278,7 +278,7 @@ def detect(P: Prep, min_move: float = 5.0, max_retr: float = 0.7, method: str = 
                 if r is None:
                     dg('x_risk'); break
                 dg('entry')
-                ent = dict(idx=int(i), side=S, entry=r['entry'], sl=r['sl'], tp=r['tp'], setup='D-' + method, zone=best[0], j=int(j),
+                ent = dict(idx=int(i), side=S, entry=r['entry'], sl=r['sl'], tp=r['tp'], setup='D-' + method, zone=best[0], j=int(j), pair=int(p2),
                            note='move %.1f retr %.0f%% Z %s %.1f ext %.1f (j=%d)' % (move, 100 * depth / move, best[0], best[2], ext, j))
                 break
             if ent is not None:
@@ -560,25 +560,41 @@ def round3(P, L):
     e3 = detect(P, min_move=5.0, max_retr=0.7, **V3)
     r3 = K.simulate(P.df, e3, one_at_a_time=False)
     L += ['### So V5 voi V3 tren cung tap nen bay', '',
-          'V3 co %d lenh (thang %d, thua %d). Moi lenh V3 gan voi nen bong bong j; xem V5 lam gi voi chinh nen bong bong do.' % (len(r3), int((r3['r'] > 0).sum()), int((r3['r'] <= 0).sum())), '']
+          'V3 co %d lenh (thang %d, thua %d). Moi lenh V3 gan voi cap (day,dinh) cua move; xem V5 lam gi voi chinh cap do (V5 co the vao o bong bong khac, som hon, cua cung cap; V5 con co them lenh o cap ma V3 khong co CF).' % (len(r3), int((r3['r'] > 0).sum()), int((r3['r'] <= 0).sum())), '']
     for key, lab in names:
         tr = []
         e5 = detect(P, min_move=5.0, max_retr=0.7, wait_d=key, trace=tr, **V5)
         r5 = K.simulate(P.df, e5, one_at_a_time=False)
-        st = {x['j']: x['status'] for x in tr}
-        m5 = {int(x.j): x for x in r5.itertuples()}
+        st = {}
+        for x in tr:
+            st.setdefault(x['pair'], []).append(x['status'])
+        m5 = {int(x.pair): x for x in r5.itertuples()}
         c = {}
         why = {}
         for x in r3.itertuples():
             w = 'thua' if x.r <= 0 else 'thang'
-            j = int(x.j)
+            j = int(x.pair)
             if j in m5:
                 k = 'vao_thang' if m5[j].r > 0 else 'vao_thua'
             else:
                 k = 'khong_vao'
-                why[(w, st.get(j, 'khac'))] = why.get((w, st.get(j, 'khac')), 0) + 1
+                sts = st.get(j, ['khong_co_bong_bong'])
+                key_ = '+'.join(sorted(set(sts)))
+                why[(w, key_)] = why.get((w, key_), 0) + 1
             c[(w, k)] = c.get((w, k), 0) + 1
         sw = int(sum(1 for x in r5.itertuples() if x.swept))
+        hi_, lo_ = P.hi, P.lo
+        sweep_tp, sweep_v5 = 0, [0, 0, 0]
+        for x in r3.itertuples():
+            if x.r > 0 or x.outcome != 'SL':
+                continue
+            a_, b_ = int(x.exit_idx), min(len(hi_), int(x.exit_idx) + 61)
+            reach = (hi_[a_ + 1:b_] >= x.tp).any() if x.side > 0 else (lo_[a_ + 1:b_] <= x.tp).any()
+            if reach:
+                sweep_tp += 1
+                y = m5.get(int(x.pair))
+                sweep_v5[0 if y is None else (1 if y.r > 0 else 2)] += 1
+        L += ['- (d = %s) Trong 19 lenh thua cua V3, %d lenh bi SL roi trong 60 nen sau do gia VAN cham TP cu cua V3 (dau hieu bi quet rau): V5 cho chinh cac cap do: khong vao %d, vao & thang %d, vao & thua %d.' % (lab, sweep_tp, *sweep_v5)]
         nl = sum(v for (w, _), v in c.items() if w == 'thua')
         nw = sum(v for (w, _), v in c.items() if w == 'thang')
         L += ['- **d = %s**: V5 (khong gioi han) %d lenh, trong do %d lenh phai dat SL thap hon muc bong bong vi gia da quet them truoc khi vao. '
@@ -587,7 +603,9 @@ def round3(P, L):
                   lab, len(r5), sw, nl, c.get(('thua', 'vao_thang'), 0), c.get(('thua', 'vao_thua'), 0), c.get(('thua', 'khong_vao'), 0),
                   nw, c.get(('thang', 'vao_thang'), 0), c.get(('thang', 'vao_thua'), 0), c.get(('thang', 'khong_vao'), 0),
                   ', '.join('%s/%s=%d' % (a_, b_, c_) for (a_, b_), c_ in sorted(why.items())) or '-')]
-    L += ['']
+    L += ['', '**Ket luan vong 3 (viet tay tu so tren):** V5 KHONG cai thien. (1) Bo CF chat (dung nghia "khong vao ngay sau bong bong") lam so lenh tang 5-6 lan (148-193 so voi V3 31) va R TB ve ~0 am (-0,03 den -0,15; bootstrap bao tron 0, TEST n=72-87 nhung R am o ca ba d; doi chung P 0,23-0,76 = khong hon ngau nhien). '
+          '(2) Tren cung cac cap (day,dinh): V3 thua 19, V5 van thua 17 (d=1 gia, 1u) hoac 17 (bien do); chi 1-2 ca duoc cuu. Trong 10 ca V3 bi quet SL roi gia van cham TP cu, V5 vao va van thua 9 ca (d=1 gia, 1u) hoac 9 + 1 khong vao (bien do): cho gia roi 1 gia khong tranh duoc quet vi gia con hoi lai nua; 87 / 74 / 66 lenh V5 phai dat SL thap hon muc bong bong (da bi quet truoc khi vao). '
+          '(3) V5 bo lo it: chi 0-1 trong 12 ca V3 thang khong vao (past_top / timeout) nhung V5 cung bien 1 ca V3 thang thanh thua. (4) Phep do khong ung ho QD-8 tren du lieu 90d: ca thuc 11/10 la 1 ca, khong chung minh quy luat. D van tat mac dinh, chi doc chart.', '']
 
 
 def main():

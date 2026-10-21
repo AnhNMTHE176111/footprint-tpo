@@ -2,6 +2,37 @@
 
 **QD-6: chi do tren file 90d GCZ26. Bang 2 nam cu nam o `RESULTS-D-2y-cu-tham-khao.md` va chi de tham khao (sai ma hop dong), khong dung quyet dinh.** Dinh nghia: plan 3-D. Hang so co dinh: move ro hinh thanh <= 30 nen; nhip hoi <= 30 nen, sau >= 1.0 gia; CF trong 3 nen sau nen cuc tri; Z cach cuc tri <= 1.0 gia hoac rau cham; o volume >= 2x trung vi o (>= 3 muc). Chi phi 0,2 gia/lenh, 1 lenh mo cung luc, SL = kernel.risk (cau truc = cuc tri nhip hoi). Gio UTC / VN = UTC+7. 2 tham so tu do: min_move x retr max (luoi 3x3).
 
+## VONG 3 - V5 "cho gia roi bong bong" (QD-8, Corven)
+
+Nen tang = V3 (khong Z, move >= 5 gia cung bias, hoi <= 70%, loc sideway A/Au vo hieu vi loai 0 ca). Bong bong = nen cuc tri hoi co (delta thuan chieu hoi ma dong nua phia S) HOAC o per-level o cuc tri >= 2x trung vi o (>= 3 muc). KHONG vao ngay sau CF: cho nen M1 DONG cach gia cuc tri hoi (muc bong bong) >= d theo chieu move cu, toi da 10 nen; vao o gia dong nen do; SL = cuc tri nhip hoi (thap/cao nhat tu cuoi move den nen vao) + 0,3 (san/tran kernel.risk, > 4 gia loai); TP 2R/3R tu gia vao moi. Tham so duy nhat d in {1,0 gia ; bien do nen bong bong ; 1u (trung vi bien do 50 nen)}. Cau hinh move 5, hoi 70%, 90d, doi chung 200 lan seed 0, bootstrap 10.000 lan. Bang chinh dung 1 lenh mo cung luc; phan so sanh V3/V5 ben duoi dung simulate khong gioi han (de moi nen bay deu co ket qua).
+
+**V3 tham chieu (cung cau hinh, CF chat ngay):**
+
+| | n | WR | R TB | ky vong (gia/lenh) | tong R | chuoi thua dai nhat |
+|---|---|---|---|---|---|---|
+| V3 5/70% TP 2R | 31 | 38.7% | 0.08 | 0.70 | 2.4 | 5 |
+
+| d | n | WR | R TB (2R) | TRAIN R (n) | TEST R (n) | R TB @3R | bootstrap 95% (2R) | doi chung P | BUY R (n) | SELL R (n) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1,0 gia | 193 | 34.2% | -0.06 | -0.03 (106) | -0.09 (87) | -0.15 | -0.06 [-0.26 .. 0.15] | 0.37 | -0.06 (94) | -0.05 (99) |
+| bien do nen bong bong | 161 | 35.4% | -0.03 | 0.05 (87) | -0.12 (74) | 0.04 | -0.03 [-0.25 .. 0.20] | 0.23 | -0.08 (83) | 0.03 (78) |
+| 1u | 148 | 31.1% | -0.15 | -0.25 (76) | -0.04 (72) | -0.18 | -0.15 [-0.37 .. 0.08] | 0.76 | -0.20 (78) | -0.10 (70) |
+
+Ghi chu: TEST n < 30 => chua ket luan.
+
+### So V5 voi V3 tren cung tap nen bay
+
+V3 co 31 lenh (thang 12, thua 19). Moi lenh V3 gan voi cap (day,dinh) cua move; xem V5 lam gi voi chinh cap do (V5 co the vao o bong bong khac, som hon, cua cung cap; V5 con co them lenh o cap ma V3 khong co CF).
+
+- (d = 1,0 gia) Trong 19 lenh thua cua V3, 10 lenh bi SL roi trong 60 nen sau do gia VAN cham TP cu cua V3 (dau hieu bi quet rau): V5 cho chinh cac cap do: khong vao 0, vao & thang 1, vao & thua 9.
+- **d = 1,0 gia**: V5 (khong gioi han) 196 lenh, trong do 87 lenh phai dat SL thap hon muc bong bong vi gia da quet them truoc khi vao. V3 THUA 19 ca -> V5 vao & THANG 2, vao & thua 17, khong vao (tranh duoc) 0. V3 THANG 12 ca -> V5 vao & thang 11, vao & thua 1, khong vao (bo lo) 0. Ly do V5 khong vao (thang/thua cua V3 / trang thai): -
+- (d = bien do nen bong bong) Trong 19 lenh thua cua V3, 10 lenh bi SL roi trong 60 nen sau do gia VAN cham TP cu cua V3 (dau hieu bi quet rau): V5 cho chinh cac cap do: khong vao 1, vao & thang 0, vao & thua 9.
+- **d = bien do nen bong bong**: V5 (khong gioi han) 163 lenh, trong do 74 lenh phai dat SL thap hon muc bong bong vi gia da quet them truoc khi vao. V3 THUA 19 ca -> V5 vao & THANG 1, vao & thua 17, khong vao (tranh duoc) 1. V3 THANG 12 ca -> V5 vao & thang 10, vao & thua 1, khong vao (bo lo) 1. Ly do V5 khong vao (thang/thua cua V3 / trang thai): thang/past_top=1, thua/timeout=1
+- (d = 1u) Trong 19 lenh thua cua V3, 10 lenh bi SL roi trong 60 nen sau do gia VAN cham TP cu cua V3 (dau hieu bi quet rau): V5 cho chinh cac cap do: khong vao 0, vao & thang 1, vao & thua 9.
+- **d = 1u**: V5 (khong gioi han) 150 lenh, trong do 66 lenh phai dat SL thap hon muc bong bong vi gia da quet them truoc khi vao. V3 THUA 19 ca -> V5 vao & THANG 2, vao & thua 17, khong vao (tranh duoc) 0. V3 THANG 12 ca -> V5 vao & thang 10, vao & thua 1, khong vao (bo lo) 1. Ly do V5 khong vao (thang/thua cua V3 / trang thai): thang/past_top=1
+
+**Ket luan vong 3 (viet tay tu so tren):** V5 KHONG cai thien. (1) Bo CF chat (dung nghia "khong vao ngay sau bong bong") lam so lenh tang 5-6 lan (148-193 so voi V3 31) va R TB ve ~0 am (-0,03 den -0,15; bootstrap bao tron 0, TEST n=72-87 nhung R am o ca ba d; doi chung P 0,23-0,76 = khong hon ngau nhien). (2) Tren cung cac cap (day,dinh): V3 thua 19, V5 van thua 17 (d=1 gia, 1u) hoac 17 (bien do); chi 1-2 ca duoc cuu. Trong 10 ca V3 bi quet SL roi gia van cham TP cu, V5 vao va van thua 9 ca (d=1 gia, 1u) hoac 9 + 1 khong vao (bien do): cho gia roi 1 gia khong tranh duoc quet vi gia con hoi lai nua; 87 / 74 / 66 lenh V5 phai dat SL thap hon muc bong bong (da bi quet truoc khi vao). (3) V5 bo lo it: chi 0-1 trong 12 ca V3 thang khong vao (past_top / timeout) nhung V5 cung bien 1 ca V3 thang thanh thua. (4) Phep do khong ung ho QD-8 tren du lieu 90d: ca thuc 11/10 la 1 ca, khong chung minh quy luat. D van tat mac dinh, chi doc chart.
+
 ## File 90d (GCZ26, 2026-07-23 -> 2026-10-21)
 
 Phien: 65 (sach 61). Nen M1: 86333.

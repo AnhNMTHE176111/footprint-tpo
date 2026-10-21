@@ -75,6 +75,7 @@ Giới hạn: feed chỉ phủ **tuần hiện tại** ⇒ với nến lịch s�
 Chung: chỉ nến M1 đã đóng, vào ở **giá đóng nến xác nhận (CF)**; CF theo chiều S = đóng theo chiều S, thân ≥ 50% biên độ, Δ cùng dấu,
 |Δ| ≥ trung vị |Δ| 50 nến. **SL lai** = cấu trúc ∓ 0,3 giá, sàn = biên độ nến cao nhất 5 nến, **trần 4 giá ⇒ bỏ lệnh**.
 Không phát tín hiệu trong ±15′ tin USD mức cao (`IsNewsBlocked`). Mỗi lần chỉ 1 lệnh mở; ưu tiên A > B > D > C.
+**Luật chung "mở ảo" (Hệ thống 3.2, đo trên C: R TB −0,26 → −0,06, 85% SL trong khung này):** KHÔNG phát tín hiệu khi giờ VN theo mốc neo Mỹ nằm trong **19:20–20:30** (sm 860..929; sau 1/11 là 20:20–21:30 VN). Đặt MỘT chỗ trong `BenzoEngine.Advance` trước `TryDetect` (`BenzoCore.InVirtualOpen`); `Observe` vẫn chạy nên trạng thái detector liên tục. `LogicVersion = port-2`.
 Giờ neo theo giờ Mỹ như `kernel.py` (mùa đông Mỹ thì mọi mốc 19:00/19:20/20:20 VN lùi +1 giờ).
 
 - **A · Phá hồi (TP 3R).** 1 nến M5 đóng ngoài cạnh VA Âu (chưa có thì IB; trước 19:00 VN dùng VA hôm qua) theo chiều S, không nằm trong
@@ -111,8 +112,8 @@ Nhớ: n nhỏ (< 30 lệnh/setup) thì WR và ΣR chỉ là nhiễu.
 
 ## Parity C# ↔ Python
 `research/parity_check.py` chạy `tools/ReplayCsv` (C#) và Python `setup_*.py` (ô chính) trên file 90d, mỗi setup độc lập (1 lệnh mở/setup), từ phiên 29/7
-(4 phiên đầu file là "thin": Python loại, C# không biết). Kết quả (`research/report/PARITY.md`): **A 20/20 · B 11/11 · C 121/121 · D 31/31 khớp hoàn toàn**
-(giờ, chiều, entry, SL, TP, kết quả TP/SL), không có lệch. Hồi quy trong `tests/` (mục [11]) giữ số tín hiệu 20/13/123/33 trên toàn file.
+(4 phiên đầu file là "thin": Python loại, C# không biết). Kết quả (`research/report/PARITY.md`): **A 18/18 · B 10/10 · C 99/99 · D 31/31 khớp hoàn toàn** sau khi loại ở phía Python các lệnh rơi vào khung mở ảo (A −2, B −1, C −22, D −0 so với 20/11/121/31 trước luật)
+(giờ, chiều, entry, SL, TP, kết quả TP/SL), không có lệch. **Parity nay lệch CÓ CHỦ ĐÍCH đúng số lệnh trong 19:20–20:30** (luật mở ảo chỉ có ở C#). Số tín hiệu trên toàn file 90d (gồm 4 phiên thin), trước → sau luật: A 20→18, B 13→12, C 123→101, D 33→32; hồi quy trong `tests/` (mục [11]) giữ số sau.
 Sai khác đã biết (không xảy ra trên dữ liệu thử): (1) nến M5 thiếu nến phút cuối được đóng muộn một nến; (2) D chọn nhịp hồi sớm nhất theo thời gian thực,
 Python nhìn trước cả cửa sổ nên có thể chọn khác ở ca hiếm; (3) bộ lọc "splice/thin" của Python không có trong live; (4) bộ lọc tin USD là mới, không có trong Python.
 
@@ -120,7 +121,7 @@ Python nhìn trước cả cửa sổ nên có thể chọn khác ở ca hiếm;
 1. Kế thừa `DetectorBase` (hoặc `IObservingDetector`): `Evaluate(ctx, i)` nhìn `ctx.Bars[0..i]` + `ctx.Zones` (đã cập nhật tới nến i), trả `Signal{Side,Entry,Sl,Tp,Reason,Zone}` hoặc `null`.
    `Observe` được gọi cho MỌI nến (kể cả khi đang có lệnh mở / setup tắt) nên trạng thái nội bộ luôn liên tục; `TryDetect` chỉ gọi khi rảnh lệnh và setup bật.
 2. Thêm vào `BenzoTrader.CreateDetectors()` theo thứ tự ưu tiên (hiện A, B, D, C); thêm file vào `build.sh`, `tests.csproj`, `tools/ReplayCsv`.
-3. Sửa logic ⇒ tăng `BenzoCore.LogicVersion` (hiện `port-1`) để cache niêm phong cũ bị bỏ.
+3. Sửa logic ⇒ tăng `BenzoCore.LogicVersion` (hiện `port-2`) để cache niêm phong cũ bị bỏ.
 
 `SetupContext`: `Symbol, Tick, TzOffset, BarMinutes, Bars (ClosedBars), Signals, Zones, GetLevels(idx) → LevelVol{Price,Bid,Ask,Vol}`, `IsNewsBlocked(utc)`, `ToVn(utc)`.
 `BarData`: `Idx, Time (giờ MỞ, UTC), O,H,L,C, Vol, BuyVol, SellVol, Delta`.

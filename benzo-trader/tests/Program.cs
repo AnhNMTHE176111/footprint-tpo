@@ -16,7 +16,7 @@ static class Tests
     }
     static bool Near(double a, double b, double eps = 1e-9) => Math.Abs(a - b) < eps;
 
-    static readonly DateTime T0 = new DateTime(2026, 10, 21, 13, 0, 0, DateTimeKind.Utc);
+    static readonly DateTime T0 = new DateTime(2026, 10, 21, 3, 0, 0, DateTimeKind.Utc);   // 10:00 VN: ngoài khung mở ảo
     static BarData Bar(int i, double o, double h, double l, double c) =>
         new BarData { Idx = i, Time = T0.AddMinutes(i), O = o, H = h, L = l, C = c, Vol = 100, Delta = 10 };
     static Signal Buy(double e = 100, double sl = 98, double tp = 104, char setup = 'A') =>
@@ -387,21 +387,37 @@ static class Tests
             if (!pos.TryGetValue(int.Parse(f[0], inv), out int p)) continue;
             (levels[p] ??= new List<LevelVol>()).Add(new LevelVol(double.Parse(f[2], inv), double.Parse(f[3], inv), double.Parse(f[4], inv), double.Parse(f[5], inv)));
         }
-        var exp = new Dictionary<char, int> { ['A'] = 20, ['B'] = 13, ['C'] = 123, ['D'] = 33 };
+        var exp = new Dictionary<char, int> { ['A'] = 18, ['B'] = 12, ['C'] = 101, ['D'] = 32 };
         foreach (var kv in exp)
         {
             ISetupDetector d = kv.Key switch { 'A' => new DetectorA(), 'B' => new DetectorB(), 'C' => new DetectorC(), _ => new DetectorD() };
             var e = new BenzoEngine("GCZ26", 0.1, null, new[] { d }) { GetLevels = i => (IReadOnlyList<LevelVol>)levels[i] ?? Array.Empty<LevelVol>() };
             foreach (var b in bars) e.Bars.Add(b);
             e.Advance(bars.Count - 1);
-            Check(e.Signals.Count == kv.Value, $"setup {kv.Key}: {kv.Value} tín hiệu (khớp Python)", e.Signals.Count.ToString());
+            Check(e.Signals.Count == kv.Value, $"setup {kv.Key}: {kv.Value} tín hiệu (= Python trừ các lệnh trong 19:20-20:30)", e.Signals.Count.ToString());
+        }
+    }
+
+    static void TestVirtualOpen()
+    {
+        Console.WriteLine("[12] Luật mở ảo 19:20-20:30 VN (engine, trước TryDetect)");
+        Check(BenzoCore.InVirtualOpen(860) && BenzoCore.InVirtualOpen(929) && !BenzoCore.InVirtualOpen(859) && !BenzoCore.InVirtualOpen(930), "mốc sm 860..929");
+        // 12:30 UTC = 19:30 VN (trong khung) ; 03:00 UTC = 10:00 VN (ngoài khung)
+        foreach (var (start, expect, name) in new[] { (new DateTime(2026, 10, 21, 12, 30, 0, DateTimeKind.Utc), 0, "trong 19:20-20:30 ⇒ không phát"),
+                                                     (new DateTime(2026, 10, 21, 3, 0, 0, DateTimeKind.Utc), 1, "ngoài khung ⇒ vẫn phát") })
+        {
+            var det = new ObserveCount { OpenAt = 3 };
+            var e = new BenzoEngine("X", 0.1, null, new ISetupDetector[] { det });
+            for (int k = 0; k < 6; k++) e.Bars.Add(new BarData { Idx = k, Time = start.AddMinutes(k), O = 100, H = 100.2, L = 99.8, C = 100, Vol = 10 });
+            e.Advance(5);
+            Check(e.Signals.Count == expect, name, e.Signals.Count.ToString());
         }
     }
 
     static int Main()
     {
         TestSimulate(); TestStats(); TestResetMark(); TestCaption(); TestCache(); TestEngine();
-        TestKernel(); TestZonesAndC(); TestObserve(); TestRealData();
+        TestKernel(); TestZonesAndC(); TestObserve(); TestVirtualOpen(); TestRealData();
 #if DEBUG
         TestDemo();
 #endif

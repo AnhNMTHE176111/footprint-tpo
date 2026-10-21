@@ -127,10 +127,12 @@ namespace BenzoTraderNs
     public static class BenzoCore
     {
         /// <summary>Đổi số này mỗi khi logic detector đổi → cache niêm phong cũ bị bỏ (không giữ kết quả của logic cũ).</summary>
-        public const string LogicVersion = "port-1";
+        public const string LogicVersion = "port-2";
         /// <summary>Chi phí mỗi lệnh (giá): spread + trượt, GC tick 0,1.</summary>
         public const double CostPrice = 0.2;
         public const int NewsBlockMinutes = 15;
+        /// <summary>"Mở ảo" (Hệ thống 3.2): 19:20-20:30 VN theo mốc neo Mỹ (sm 860..929) — không phát tín hiệu mới.</summary>
+        public static bool InVirtualOpen(int sm) => sm >= 860 && sm < 930;
         public const int TeleMaxAgeSec = 90;
 
         public static readonly char[] Setups = { 'A', 'B', 'C', 'D' };
@@ -482,8 +484,10 @@ namespace BenzoTraderNs
                 else
                 {
                     _view.Limit = i + 1;
+                    bool virtualOpen = BenzoCore.InVirtualOpen(Zones.Sm);   // luật chung: không phát tín hiệu trong 19:20-20:30 (giờ neo Mỹ)
                     foreach (var d in Detectors)
                     {
+                        if (virtualOpen) break;
                         if (!IsEnabled(d.Setup)) continue;
                         s = d.TryDetect(_ctx, i);
                         if (s != null) { s.Setup = d.Setup; break; }

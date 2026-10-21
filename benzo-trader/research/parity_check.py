@@ -66,6 +66,10 @@ def main():
     for s in 'ABCD':
         p = py[s]
         p = p[p['session_id'] >= FROM] if len(p) else p
+        n_all = len(p)
+        smv = dict(zip(df['t_utc'], df['sm']))
+        p = p[[not (860 <= smv[t] < 930) for t in p['t_utc']]] if len(p) else p   # luat mo ao: C# engine khong phat trong 19:20-20:30
+        print(s, 'Python bi loai boi luat mo ao:', n_all - len(p))
         c = cs[cs['setup'] == s].copy()
         c['sid'] = [sess.get(t, '') for t in c['time_utc']]
         c = c[c['sid'] >= FROM]

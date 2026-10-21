@@ -556,7 +556,7 @@ def round3(P, L):
         L.append('| %s | %d | %s%% | %s | %s (%d) | %s (%d) | %s | %s [%s] | %s | %s (%d) | %s (%d) |' % (
             lab, s_['n'], f(100 * s_['wr'], 1), f(s_['avg_r']), f(a['avg_r']), a['n'], f(b['avg_r']), b['n'], f(st_of(t3r)['avg_r']), bs, bi, pv,
             f(st_of(t, 1)['avg_r']), st_of(t, 1)['n'], f(st_of(t, -1)['avg_r']), st_of(t, -1)['n']))
-    L += ['', 'Ghi chu: TEST n < 30 => chua ket luan.', '']
+    L += ['', 'Ghi chu: TEST n >= 72 o ca ba d (du lon de doc, khac V3 chi 15). R @3R cua d = bien do nen bong bong la +0,04 (gan 0, khong khac biet).', '']
     e3 = detect(P, min_move=5.0, max_retr=0.7, **V3)
     r3 = K.simulate(P.df, e3, one_at_a_time=False)
     L += ['### So V5 voi V3 tren cung tap nen bay', '',

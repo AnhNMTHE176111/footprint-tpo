@@ -18,7 +18,7 @@ Nen tang = V3 (khong Z, move >= 5 gia cung bias, hoi <= 70%, loc sideway A/Au vo
 | bien do nen bong bong | 161 | 35.4% | -0.03 | 0.05 (87) | -0.12 (74) | 0.04 | -0.03 [-0.25 .. 0.20] | 0.23 | -0.08 (83) | 0.03 (78) |
 | 1u | 148 | 31.1% | -0.15 | -0.25 (76) | -0.04 (72) | -0.18 | -0.15 [-0.37 .. 0.08] | 0.76 | -0.20 (78) | -0.10 (70) |
 
-Ghi chu: TEST n < 30 => chua ket luan.
+Ghi chu: TEST n >= 72 o ca ba d (du lon de doc, khac V3 chi 15). R @3R cua d = bien do nen bong bong la +0,04 (gan 0, khong khac biet).
 
 ### So V5 voi V3 tren cung tap nen bay
 

@@ -734,6 +734,23 @@ namespace TpoSuite
             return "🟠";
         }
 
+        // Né tin: true nếu utcNow nằm trong ±minutes phút quanh tin USD mức CAO (không tính tin cả ngày).
+        // tzOffset PHẢI trùng giá trị đã truyền cho Refresh (cache lưu giờ VN theo tzOffset đó).
+        // Chỉ biết tin của TUẦN hiện tại (feed ff_calendar_thisweek) → với nến cũ hơn tuần này trả false.
+        public static bool IsBlocked(DateTime utcNow, int tzOffset, int minutes)
+        {
+            List<Ev> src;
+            lock (Gate) src = _cache;
+            if (src == null) return false;
+            var vn = utcNow.AddHours(tzOffset);
+            foreach (var e in src)
+            {
+                if (e.Ccy != "USD" || e.Impact != "High" || e.AllDay) continue;
+                if (Math.Abs((e.WhenVn - vn).TotalMinutes) <= minutes) return true;
+            }
+            return false;
+        }
+
         // Dòng lịch tin chèn vào tin Telegram. preUsOnly = chỉ tin còn LẠI từ giờ trở đi.
         public static List<string> Lines(DateTime nowVn, bool preUsOnly)
         {

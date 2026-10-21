@@ -492,9 +492,20 @@ namespace BenzoTraderNs
                     Color dir = s.Side > 0 ? up : dn;
                     int a = open ? 255 : 150;
                     float xb = Math.Max(xE, clip.Left);
-                    using (var pTp = new Pen(Color.FromArgb(a, up), 1f) { DashStyle = DashStyle.Dash }) gr.DrawLine(pTp, xb, yTp, xEnd, yTp);
-                    using (var pSl = new Pen(Color.FromArgb(a, dn), 1f) { DashStyle = DashStyle.Dash }) gr.DrawLine(pSl, xb, ySl, xEnd, ySl);
-                    using (var pE = new Pen(Color.FromArgb(a / 2, dir), 1f)) gr.DrawLine(pE, xb, yE, xEnd, yE);
+                    // vùng tô nền: xanh = từ giá vào tới TP, đỏ = từ giá vào tới SL (đậm hơn ở phía đã xảy ra khi lệnh đóng)
+                    int aTp = open ? 55 : (s.Outcome == "TP" ? 95 : 28);
+                    int aSl = open ? 55 : (s.Outcome == "SL" ? 95 : 28);
+                    float wBox = xEnd - xb;
+                    if (wBox > 0)
+                    {
+                        using (var bTp = new SolidBrush(Color.FromArgb(aTp, up)))
+                            gr.FillRectangle(bTp, xb, Math.Min(yE, yTp), wBox, Math.Max(1f, Math.Abs(yTp - yE)));
+                        using (var bSl = new SolidBrush(Color.FromArgb(aSl, dn)))
+                            gr.FillRectangle(bSl, xb, Math.Min(yE, ySl), wBox, Math.Max(1f, Math.Abs(ySl - yE)));
+                    }
+                    using (var pTp = new Pen(Color.FromArgb(a, up), 1.6f)) gr.DrawLine(pTp, xb, yTp, xEnd, yTp);
+                    using (var pSl = new Pen(Color.FromArgb(a, dn), 1.6f)) gr.DrawLine(pSl, xb, ySl, xEnd, ySl);
+                    using (var pE = new Pen(Color.FromArgb(Math.Min(255, a), dir), 1.2f) { DashStyle = DashStyle.Dash }) gr.DrawLine(pE, xb, yE, xEnd, yE);
                     // mũi tên tại nến vào (BUY chỉ lên bên dưới giá vào, SELL chỉ xuống bên trên)
                     float sz = 6f;
                     var tri = s.Side > 0
@@ -503,7 +514,10 @@ namespace BenzoTraderNs
                     using (var br = new SolidBrush(Color.FromArgb(a, dir))) gr.FillPolygon(br, tri);
                     string lbl = s.Setup + " " + BenzoCore.SetupName(s.Setup) + (s.IsClosed ? (s.Outcome == "TP" ? " ✓" : " ✗") : "");
                     float ly = s.Side > 0 ? yE + sz * 2 + 8 : yE - sz * 2 - 22;
-                    using (var br = new SolidBrush(Color.FromArgb(a, dir))) gr.DrawString(lbl, fLbl, br, xE + 8, ly);
+                    var szLbl = gr.MeasureString(lbl, fLbl);
+                    using (var bgLbl = new SolidBrush(Color.FromArgb(open ? 215 : 150, dir)))
+                        gr.FillRectangle(bgLbl, xE + 6, ly - 1, szLbl.Width + 4, szLbl.Height + 1);
+                    using (var br = new SolidBrush(Color.FromArgb(255, 255, 255, 255))) gr.DrawString(lbl, fLbl, br, xE + 8, ly);
                 }
 
                 if (ShowTable)

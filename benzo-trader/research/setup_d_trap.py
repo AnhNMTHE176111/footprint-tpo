@@ -34,6 +34,7 @@ LEG_MAX_BARS = 30
 PULL_MAX_BARS = 30
 PULL_MIN_DEPTH = 1.0
 CF_WINDOW = 3
+WAIT_BARS = 10
 ZONE_TOL = 1.0
 CELL_MULT = 2.0
 # Vong 1 = delta, cell (plan). Bien the co che (toi da 2, chot TRUOC khi xem ket qua bien the):
@@ -113,6 +114,7 @@ class Prep:
         self.bias = pd.Series(np.where(first, raw, np.nan)).groupby(grp).transform('first').to_numpy()
         # V3: 'co move ro' = bien do 60 nen gan nhat (gom nen i) >= 2 x u (u = trung vi bien do 50 nen); khong dat => coi la BALANCE
         r60 = df['high'].rolling(60, min_periods=60).max() - df['low'].rolling(60, min_periods=60).min()
+        self.u = K.median_range(df).to_numpy()
         self.move_clear = (r60 >= 2.0 * K.median_range(df)).to_numpy()
         self.st = K.session_table(df)
         clean = (~self.st['splice'].to_numpy()) & (~self.st['thin'].to_numpy()) & (self.st['n'].to_numpy() >= K.CONST['min_bars_prof'])
@@ -125,7 +127,7 @@ class Prep:
 # DETECT
 # ----------------------------------------------------------------------------------------------
 def detect(P: Prep, min_move: float = 5.0, max_retr: float = 0.7, method: str = 'delta', rr: float = 2.0,
-           sides=(1, -1), no_bias: bool = False, extra_zones=(), diag=None, cf_mode: str = 'strict', use_zone: bool = True, sideway: bool = False) -> list:
+           sides=(1, -1), no_bias: bool = False, extra_zones=(), diag=None, cf_mode: str = 'strict', use_zone: bool = True, sideway: bool = False, wait_d=None, trace=None) -> list:
     """Tra list entry cho kernel.simulate: dict(idx, side, entry, sl, tp, setup, zone, note).
     method 'delta' | 'cell' | 'either'. no_bias=True bo dieu kien bias (de bien the).
     cf_mode 'strict' = kernel.is_confirm_bar (plan); 'soft' = nen dong theo S va dong VUOT dinh/day nen cuc tri (phe hoi bi nhot).
@@ -195,6 +197,55 @@ def detect(P: Prep, min_move: float = 5.0, max_retr: float = 0.7, method: str = 
             if best is None:
                 continue
             dg('trap_zone')
+            if wait_d is not None:
+                # V5 (QD-8): bong bong chua phai trap; cho nen M1 DONG cach muc bong bong (= cuc tri hoi) >= d theo chieu S, toi da 10 nen
+                dd = {'abs1': 1.0, 'bar': hi[j] - lo[j], 'u': P.u[j]}[wait_d]
+                st_ = 'timeout'
+                ent = None
+                if dd == dd and dd > 0:
+                    lvl = ext
+                    for i in range(j + 1, min(n, j + WAIT_BARS + 1)):
+                        if P.sno[i] != P.sno[j]:
+                            st_ = 'session'
+                            break
+                        if (S > 0 and hi[i] > top) or (S < 0 and lo[i] < top):
+                            st_ = 'past_top'
+                            break
+                        if S * (cl[i] - lvl) < dd - 1e-9:
+                            continue
+                        if i < b['confirm_pos']:
+                            continue
+                        if not P.ok_bar[i] or P.phase[i] == 'OFF':
+                            st_ = 'filt_bar'
+                            break
+                        if P.mode_a[i] == 'BALANCE':
+                            st_ = 'filt_balance'
+                            break
+                        if 1 <= P.since_big[i] <= 3:
+                            st_ = 'filt_big'
+                            break
+                        if sideway and P.phase[i] in ('A', 'EU') and not P.move_clear[i]:
+                            st_ = 'filt_sideway'
+                            break
+                        if not no_bias and P.bias[i] != S:
+                            st_ = 'filt_bias'
+                            break
+                        struct = float(lo[p2 + 1:i + 1].min()) if S > 0 else float(hi[p2 + 1:i + 1].max())
+                        r = K.risk(df, i, S, struct, rr=rr)
+                        if r is None:
+                            st_ = 'risk'
+                            break
+                        ent = dict(idx=int(i), side=S, entry=r['entry'], sl=r['sl'], tp=r['tp'], setup='D-V5', zone='NONE', j=int(j),
+                                   swept=bool(abs(struct - ext) > 1e-9),
+                                   note='move %.1f retr %.0f%% bubble %.1f d %.2f (j=%d)' % (move, 100 * depth / move, ext, dd, j))
+                        st_ = 'entry'
+                        break
+                if trace is not None:
+                    trace.append(dict(j=int(j), status=st_))
+                if ent is not None:
+                    out.append(ent)
+                    break
+                continue
             # --- CF theo S trong CF_WINDOW nen sau j, khong nen nao pha cuc tri ---
             ent = None
             for i in range(j + 1, min(n, j + CF_WINDOW + 1)):
@@ -227,7 +278,7 @@ def detect(P: Prep, min_move: float = 5.0, max_retr: float = 0.7, method: str = 
                 if r is None:
                     dg('x_risk'); break
                 dg('entry')
-                ent = dict(idx=int(i), side=S, entry=r['entry'], sl=r['sl'], tp=r['tp'], setup='D-' + method, zone=best[0],
+                ent = dict(idx=int(i), side=S, entry=r['entry'], sl=r['sl'], tp=r['tp'], setup='D-' + method, zone=best[0], j=int(j),
                            note='move %.1f retr %.0f%% Z %s %.1f ext %.1f (j=%d)' % (move, 100 * depth / move, best[0], best[2], ext, j))
                 break
             if ent is not None:
@@ -478,6 +529,67 @@ def round2(P90, P2, L):
         round2_block(P90, nm + ' 90d', kw0, mv, rt, key, L)
 
 
+def round3(P, L):
+    kw3 = dict(use_zone=False, sideway=True)
+    V3 = dict(method='delta', **kw3)
+    V5 = dict(method='either', **kw3)
+    L += ['## VONG 3 - V5 "cho gia roi bong bong" (QD-8, Corven)', '',
+          'Nen tang = V3 (khong Z, move >= 5 gia cung bias, hoi <= 70%%, loc sideway A/Au vo hieu vi loai 0 ca). Bong bong = nen cuc tri hoi co (delta thuan chieu hoi ma dong nua phia S) HOAC o per-level o cuc tri >= 2x trung vi o (>= 3 muc). '
+          'KHONG vao ngay sau CF: cho nen M1 DONG cach gia cuc tri hoi (muc bong bong) >= d theo chieu move cu, toi da %d nen; vao o gia dong nen do; SL = cuc tri nhip hoi (thap/cao nhat tu cuoi move den nen vao) + 0,3 (san/tran kernel.risk, > 4 gia loai); TP 2R/3R tu gia vao moi. '
+          'Tham so duy nhat d in {1,0 gia ; bien do nen bong bong ; 1u (trung vi bien do 50 nen)}. Cau hinh move 5, hoi 70%%, 90d, doi chung 200 lan seed 0, bootstrap 10.000 lan. '
+          'Bang chinh dung 1 lenh mo cung luc; phan so sanh V3/V5 ben duoi dung simulate khong gioi han (de moi nen bay deu co ket qua).' % WAIT_BARS, '']
+    _, t3 = run(P, min_move=5.0, max_retr=0.7, **V3)
+    L += ['**V3 tham chieu (cung cau hinh, CF chat ngay):**', '', HDR, srow('V3 5/70% TP 2R', st_of(t3)), '']
+    L += ['| d | n | WR | R TB (2R) | TRAIN R (n) | TEST R (n) | R TB @3R | bootstrap 95% (2R) | doi chung P | BUY R (n) | SELL R (n) |', '|---|---|---|---|---|---|---|---|---|---|---|']
+    names = (('abs1', '1,0 gia'), ('bar', 'bien do nen bong bong'), ('u', '1u'))
+    for key, lab in names:
+        _, t = run(P, min_move=5.0, max_retr=0.7, wait_d=key, **V5)
+        _, t3r = run(P, min_move=5.0, max_retr=0.7, rr=3.0, wait_d=key, **V5)
+        s_ = st_of(t)
+        tr_ = t[t['split'] == 'TRAIN'] if len(t) else t
+        te_ = t[t['split'] == 'TEST'] if len(t) else t
+        a, b = st_of(tr_), st_of(te_)
+        bs = boot_md(t, '')[0].split('**')[1] if len(t) > 1 else '-'
+        bi = boot_md(t, '')[0].split('[')[-1].split(']')[0] if len(t) > 1 else ''
+        means, _n = control_reps(P, t)
+        pv = f(float((means >= s_['avg_r']).mean())) if len(means) else '-'
+        L.append('| %s | %d | %s%% | %s | %s (%d) | %s (%d) | %s | %s [%s] | %s | %s (%d) | %s (%d) |' % (
+            lab, s_['n'], f(100 * s_['wr'], 1), f(s_['avg_r']), f(a['avg_r']), a['n'], f(b['avg_r']), b['n'], f(st_of(t3r)['avg_r']), bs, bi, pv,
+            f(st_of(t, 1)['avg_r']), st_of(t, 1)['n'], f(st_of(t, -1)['avg_r']), st_of(t, -1)['n']))
+    L += ['', 'Ghi chu: TEST n < 30 => chua ket luan.', '']
+    e3 = detect(P, min_move=5.0, max_retr=0.7, **V3)
+    r3 = K.simulate(P.df, e3, one_at_a_time=False)
+    L += ['### So V5 voi V3 tren cung tap nen bay', '',
+          'V3 co %d lenh (thang %d, thua %d). Moi lenh V3 gan voi nen bong bong j; xem V5 lam gi voi chinh nen bong bong do.' % (len(r3), int((r3['r'] > 0).sum()), int((r3['r'] <= 0).sum())), '']
+    for key, lab in names:
+        tr = []
+        e5 = detect(P, min_move=5.0, max_retr=0.7, wait_d=key, trace=tr, **V5)
+        r5 = K.simulate(P.df, e5, one_at_a_time=False)
+        st = {x['j']: x['status'] for x in tr}
+        m5 = {int(x.j): x for x in r5.itertuples()}
+        c = {}
+        why = {}
+        for x in r3.itertuples():
+            w = 'thua' if x.r <= 0 else 'thang'
+            j = int(x.j)
+            if j in m5:
+                k = 'vao_thang' if m5[j].r > 0 else 'vao_thua'
+            else:
+                k = 'khong_vao'
+                why[(w, st.get(j, 'khac'))] = why.get((w, st.get(j, 'khac')), 0) + 1
+            c[(w, k)] = c.get((w, k), 0) + 1
+        sw = int(sum(1 for x in r5.itertuples() if x.swept))
+        nl = sum(v for (w, _), v in c.items() if w == 'thua')
+        nw = sum(v for (w, _), v in c.items() if w == 'thang')
+        L += ['- **d = %s**: V5 (khong gioi han) %d lenh, trong do %d lenh phai dat SL thap hon muc bong bong vi gia da quet them truoc khi vao. '
+              'V3 THUA %d ca -> V5 vao & THANG %d, vao & thua %d, khong vao (tranh duoc) %d. '
+              'V3 THANG %d ca -> V5 vao & thang %d, vao & thua %d, khong vao (bo lo) %d. Ly do V5 khong vao (thang/thua cua V3 / trang thai): %s' % (
+                  lab, len(r5), sw, nl, c.get(('thua', 'vao_thang'), 0), c.get(('thua', 'vao_thua'), 0), c.get(('thua', 'khong_vao'), 0),
+                  nw, c.get(('thang', 'vao_thang'), 0), c.get(('thang', 'vao_thua'), 0), c.get(('thang', 'khong_vao'), 0),
+                  ', '.join('%s/%s=%d' % (a_, b_, c_) for (a_, b_), c_ in sorted(why.items())) or '-')]
+    L += ['']
+
+
 def main():
     t0 = time.time()
     L = ['# RESULTS-D - Setup D Trap (sinh boi setup_d_trap.py, deterministic)', '',
@@ -486,6 +598,9 @@ def main():
          'Gio UTC / VN = UTC+7. 2 tham so tu do: min_move x retr max (luoi 3x3).' % (LEG_MAX_BARS, PULL_MAX_BARS, PULL_MIN_DEPTH, CF_WINDOW, ZONE_TOL, CELL_MULT), '']
     P90 = Prep(D90 + '_bars.csv', D90 + '.csv')
     res90 = full_eval(P90, 'File 90d (GCZ26, 2026-07-23 -> 2026-10-21)', L, variants=VARIANTS, ex=True)
+    L3 = []
+    round3(P90, L3)
+    L[4:4] = L3
     round2(P90, None, L)
     ass = os.path.join(HERE, 'report', '_assessment_D.md')
     if os.path.exists(ass):

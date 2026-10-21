@@ -1,3 +1,224 @@
+# RESULTS-B (VONG 2) - Setup B Hap thu tai VWAP tuan / ngay
+
+Sinh boi `setup_b_hap_thu.py` (deterministic). Bang vong 1 giu nguyen o CUOI file de so sanh. Gio UTC (VN = UTC+7). R sau chi phi 0,2 gia/lenh; vao o close CF, mo phong tu nen ke tiep; cung nen SL+TP => SL; 1 lenh mo; toi da 2 lenh / (vung, phien).
+
+**WR hoa von sau chi phi:** TP 2R ~ 33-34%, TP 3R ~ 26-27% (chi phi 0,2 gia / SL ~2,5 gia ~ 0,08R). **Phase A (05:00-12:30 VN) bao RIENG**, khong tron vao EU+US (phase A khong co che do nen bo loc TREND/pha VA khong ap dung).
+
+Du lieu: 90d (61 phien sach; TRAIN 35 / TEST 26 phien) va 2 nam (nua 1 <= 2025-08-19: 248 phien sach; nua 2: 237 phien).
+
+Cau hinh: **BASE** = dinh nghia vong 1 (than/|delta| giam dan RONG, cum N nen, theta); **H1** = BASE + bias (chi Z = VWAP ngay; BUY chi khi close nen vao > VWAP tuan, SELL chi khi < VWAP tuan); **H2** = thay "giam dan" bang "no luc co, ket qua khong" (cum K nen: tong |delta| cac nen cung chieu M >= |delta| nen lon nhat cua move, bien do cum <= 1,5u, cuc tri cum <= Z+0,5u, nen cuoi cum cham Z); **H1+H2**. Moi cau hinh chay TP 2R va 3R (H3). Luoi = theta {0,3; 0,5} x K (BASE/H1: N) {2,3,4}. O chinh = theta 0,5, K/N 3 (khong chon theo ket qua).
+
+Ghi chu thiet ke H2 (minh bach): "tong |delta| cung chieu M" = tong |delta| cua cac nen trong cum co delta cung dau voi M; chi nen cuoi cum phai cham Z (bien do cum <= 1,5u va cuc tri <= Z+0,5u da giu cum sat Z).
+
+## 0. Cac o DUONG o ca 90d-TEST lan hai nua 2 nam (R TB > 0)
+
+4 / 96 o duong o ca 3 phep do. n o TEST 90d nho => **chi la ung vien, khong phai ket luan** (n TEST < 30 => chua ket luan).
+
+| cau hinh | TP | phase | theta | K/N | 90d TRAIN n, R | 90d TEST n, R | 2y nua1 n, R | 2y nua2 n, R |
+|---|---|---|---|---|---|---|---|---|
+| BASE | 3R | A | 0.3 | 3 | 5, -0.30 | 7, 0.05 | 53, 0.23 | 35, 0.04 |
+| BASE | 3R | A | 0.5 | 3 | 5, -0.30 | 3, 0.25 | 35, 0.35 | 23, 0.12 |
+| H1 | 2R | EU+US | 0.5 | 2 | 0, - | 2, 0.44 | 41, 0.05 | 19, 0.33 |
+| H1 | 3R | EU+US | 0.3 | 2 | 2, -1.09 | 3, 0.27 | 63, 0.08 | 23, 0.48 |
+
+## 1. Luoi theo cau hinh (moi o: `90d: TRAIN n,R | TEST n,R` va `2y: nua1 n,R | nua2 n,R`; R = R TB sau chi phi)
+
+### BASE - dinh nghia vong 1 ("giam dan rong") - TP 2R - phase EU+US
+
+| theta \ N | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 3,-1.10 \| 6,-0.09<br>2y: 132,-0.08 \| 53,-0.13 | 90d: 5,0.11 \| 3,-0.07<br>2y: 76,-0.11 \| 30,-0.10 | 90d: 2,-1.10 \| 1,1.92<br>2y: 54,-0.18 \| 9,-0.76 |
+| 0.5 | 90d: 0,- \| 4,-0.33<br>2y: 88,-0.13 \| 38,0.09 | 90d: 2,0.41 \| 1,-1.05<br>2y: 43,-0.01 \| 21,0.19 | 90d: 0,- \| 0,-<br>2y: 30,-0.42 \| 8,-0.72 |
+
+### BASE - dinh nghia vong 1 ("giam dan rong") - TP 2R - phase A
+
+| theta \ N | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 16,-0.18 \| 9,-0.09<br>2y: 79,0.16 \| 75,-0.02 | 90d: 5,-0.50 \| 7,-0.24<br>2y: 53,0.11 \| 35,0.10 | 90d: 4,-0.33 \| 3,-1.11<br>2y: 30,-0.24 \| 15,-0.09 |
+| 0.5 | 90d: 11,0.25 \| 6,0.41<br>2y: 58,0.17 \| 46,-0.18 | 90d: 5,-0.50 \| 3,-0.08<br>2y: 35,0.24 \| 23,0.08 | 90d: 2,0.43 \| 2,-1.12<br>2y: 19,0.28 \| 12,-0.34 |
+
+### BASE - dinh nghia vong 1 ("giam dan rong") - TP 3R - phase EU+US
+
+| theta \ N | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 3,-1.10 \| 6,0.25<br>2y: 132,-0.12 \| 53,-0.11 | 90d: 5,0.51 \| 3,0.27<br>2y: 76,-0.19 \| 30,-0.03 | 90d: 2,-1.10 \| 1,-1.08<br>2y: 54,-0.09 \| 9,-1.10 |
+| 0.5 | 90d: 0,- \| 4,-0.08<br>2y: 88,-0.30 \| 38,0.07 | 90d: 2,0.91 \| 1,-1.05<br>2y: 43,-0.10 \| 21,0.24 | 90d: 0,- \| 0,-<br>2y: 30,-0.32 \| 8,-1.09 |
+
+### BASE - dinh nghia vong 1 ("giam dan rong") - TP 3R - phase A
+
+| theta \ N | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 16,-0.12 \| 9,-0.20<br>2y: 78,-0.00 \| 75,-0.03 | 90d: 5,-0.30 \| 7,0.05<br>2y: 53,0.23 \| 35,0.04 | 90d: 4,-0.08 \| 3,-1.11<br>2y: 30,-0.21 \| 15,-0.29 |
+| 0.5 | 90d: 11,-0.02 \| 6,0.24<br>2y: 57,-0.00 \| 46,-0.40 | 90d: 5,-0.30 \| 3,0.25<br>2y: 35,0.35 \| 23,0.12 | 90d: 2,0.93 \| 2,-1.12<br>2y: 19,0.33 \| 12,-0.42 |
+
+### H1 - BASE + bias (chi Z=VWAP ngay, huong theo VWAP tuan) - TP 2R - phase EU+US
+
+| theta \ N | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 2,-1.09 \| 3,-0.07<br>2y: 63,0.11 \| 23,0.35 | 90d: 1,1.90 \| 3,-0.07<br>2y: 41,-0.04 \| 12,-0.10 | 90d: 1,-1.08 \| 0,-<br>2y: 27,-0.35 \| 2,-1.10 |
+| 0.5 | 90d: 0,- \| 2,0.44<br>2y: 41,0.05 \| 19,0.33 | 90d: 1,1.90 \| 1,-1.05<br>2y: 24,0.12 \| 10,0.11 | 90d: 0,- \| 0,-<br>2y: 15,-0.72 \| 2,-1.10 |
+
+### H1 - BASE + bias (chi Z=VWAP ngay, huong theo VWAP tuan) - TP 2R - phase A
+
+| theta \ N | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 9,-0.44 \| 5,-0.50<br>2y: 43,0.06 \| 29,0.15 | 90d: 4,-0.32 \| 4,-1.08<br>2y: 22,0.10 \| 13,0.05 | 90d: 3,-0.07 \| 2,-1.10<br>2y: 14,-0.04 \| 5,0.72 |
+| 0.5 | 90d: 4,-0.33 \| 3,-0.10<br>2y: 31,0.04 \| 15,-0.28 | 90d: 4,-0.32 \| 2,-1.09<br>2y: 13,-0.20 \| 10,0.09 | 90d: 2,0.43 \| 1,-1.11<br>2y: 9,0.55 \| 4,0.42 |
+
+### H1 - BASE + bias (chi Z=VWAP ngay, huong theo VWAP tuan) - TP 3R - phase EU+US
+
+| theta \ N | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 2,-1.09 \| 3,0.27<br>2y: 63,0.08 \| 23,0.48 | 90d: 1,2.90 \| 3,0.27<br>2y: 41,-0.06 \| 12,-0.10 | 90d: 1,-1.08 \| 0,-<br>2y: 27,-0.24 \| 2,-1.10 |
+| 0.5 | 90d: 0,- \| 2,0.94<br>2y: 41,-0.24 \| 19,0.38 | 90d: 1,2.90 \| 1,-1.05<br>2y: 24,-0.13 \| 10,0.11 | 90d: 0,- \| 0,-<br>2y: 15,-0.85 \| 2,-1.10 |
+
+### H1 - BASE + bias (chi Z=VWAP ngay, huong theo VWAP tuan) - TP 3R - phase A
+
+| theta \ N | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 9,-0.66 \| 5,-0.30<br>2y: 43,0.09 \| 29,0.15 | 90d: 4,-0.07 \| 4,-1.08<br>2y: 22,0.15 \| 13,0.43 | 90d: 3,0.26 \| 2,-1.10<br>2y: 14,0.31 \| 5,1.32 |
+| 0.5 | 90d: 4,-1.08 \| 3,0.23<br>2y: 31,0.04 \| 15,-0.55 | 90d: 4,-0.07 \| 2,-1.09<br>2y: 13,-0.20 \| 10,0.49 | 90d: 2,0.93 \| 1,-1.11<br>2y: 9,1.11 \| 4,0.92 |
+
+### H2 - "no luc co, ket qua khong" (khong bias) - TP 2R - phase EU+US
+
+| theta \ K | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 4,-1.08 \| 4,-0.32<br>2y: 43,0.06 \| 53,-0.28 | 90d: 5,-1.07 \| 6,-0.58<br>2y: 40,-0.08 \| 43,-0.03 | 90d: 3,-0.08 \| 4,-1.08<br>2y: 27,-0.12 \| 28,0.09 |
+| 0.5 | 90d: 3,-1.08 \| 4,-0.32<br>2y: 38,0.06 \| 49,-0.22 | 90d: 4,-1.07 \| 4,-1.08<br>2y: 30,-0.03 \| 38,-0.05 | 90d: 3,-0.08 \| 3,-1.08<br>2y: 21,0.03 \| 25,0.12 |
+
+### H2 - "no luc co, ket qua khong" (khong bias) - TP 2R - phase A
+
+| theta \ K | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 5,-0.49 \| 4,-1.09<br>2y: 25,-0.04 \| 43,-0.12 | 90d: 2,-1.16 \| 4,-1.11<br>2y: 20,-0.38 \| 29,0.34 | 90d: 3,-0.13 \| 3,-1.10<br>2y: 12,0.12 \| 19,0.48 |
+| 0.5 | 90d: 4,-0.33 \| 4,-1.09<br>2y: 19,-0.02 \| 36,-0.18 | 90d: 1,-1.12 \| 4,-1.11<br>2y: 15,-0.33 \| 26,0.39 | 90d: 1,-1.12 \| 3,-1.10<br>2y: 11,0.23 \| 17,0.67 |
+
+### H2 - "no luc co, ket qua khong" (khong bias) - TP 3R - phase EU+US
+
+| theta \ K | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 4,-1.08 \| 4,-0.07<br>2y: 42,-0.08 \| 52,-0.38 | 90d: 5,-1.07 \| 6,-0.41<br>2y: 40,-0.13 \| 43,-0.06 | 90d: 3,0.25 \| 4,-1.08<br>2y: 27,-0.23 \| 28,0.20 |
+| 0.5 | 90d: 3,-1.08 \| 4,-0.07<br>2y: 37,-0.16 \| 48,-0.33 | 90d: 4,-1.07 \| 4,-1.08<br>2y: 30,-0.06 \| 38,-0.13 | 90d: 3,0.25 \| 3,-1.08<br>2y: 21,0.03 \| 25,0.20 |
+
+### H2 - "no luc co, ket qua khong" (khong bias) - TP 3R - phase A
+
+| theta \ K | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 5,-0.29 \| 4,-1.09<br>2y: 25,-0.16 \| 43,-0.26 | 90d: 2,-1.16 \| 4,-1.11<br>2y: 20,-0.53 \| 29,0.69 | 90d: 3,0.21 \| 3,-1.10<br>2y: 12,-0.13 \| 19,0.79 |
+| 0.5 | 90d: 4,-0.08 \| 4,-1.09<br>2y: 19,-0.28 \| 36,-0.43 | 90d: 1,-1.12 \| 4,-1.11<br>2y: 15,-0.60 \| 26,0.74 | 90d: 1,-1.12 \| 3,-1.10<br>2y: 11,-0.04 \| 17,1.02 |
+
+### H1+H2 - H2 + bias - TP 2R - phase EU+US
+
+| theta \ K | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 1,-1.09 \| 2,0.43<br>2y: 22,-0.04 \| 24,-0.33 | 90d: 2,-1.07 \| 5,-0.47<br>2y: 19,-0.03 \| 17,0.33 | 90d: 3,-0.08 \| 4,-1.08<br>2y: 10,0.06 \| 13,0.30 |
+| 0.5 | 90d: 0,- \| 2,0.43<br>2y: 18,0.04 \| 23,-0.29 | 90d: 1,-1.07 \| 3,-1.08<br>2y: 14,-0.06 \| 14,0.42 | 90d: 3,-0.08 \| 3,-1.08<br>2y: 8,0.38 \| 12,0.17 |
+
+### H1+H2 - H2 + bias - TP 2R - phase A
+
+| theta \ K | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 1,-1.12 \| 3,-1.10<br>2y: 15,0.29 \| 16,0.03 | 90d: 1,-1.12 \| 3,-1.11<br>2y: 10,0.38 \| 12,0.40 | 90d: 1,-1.12 \| 1,-1.11<br>2y: 7,1.01 \| 8,0.77 |
+| 0.5 | 90d: 1,-1.12 \| 3,-1.10<br>2y: 10,0.38 \| 13,-0.17 | 90d: 1,-1.12 \| 3,-1.11<br>2y: 7,0.60 \| 10,0.69 | 90d: 1,-1.12 \| 1,-1.11<br>2y: 6,1.36 \| 7,1.03 |
+
+### H1+H2 - H2 + bias - TP 3R - phase EU+US
+
+| theta \ K | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 1,-1.09 \| 2,0.93<br>2y: 22,-0.58 \| 24,-0.58 | 90d: 2,-1.07 \| 5,-0.27<br>2y: 19,-0.08 \| 17,0.09 | 90d: 3,0.25 \| 4,-1.08<br>2y: 10,0.06 \| 13,0.46 |
+| 0.5 | 90d: 0,- \| 2,0.93<br>2y: 18,-0.68 \| 23,-0.56 | 90d: 1,-1.07 \| 3,-1.08<br>2y: 14,-0.27 \| 14,0.06 | 90d: 3,0.25 \| 3,-1.08<br>2y: 8,0.38 \| 12,0.25 |
+
+### H1+H2 - H2 + bias - TP 3R - phase A
+
+| theta \ K | 2 | 3 | 4 |
+|---|---|---|---|
+| 0.3 | 90d: 1,-1.12 \| 3,-1.10<br>2y: 15,0.22 \| 16,0.15 | 90d: 1,-1.12 \| 3,-1.11<br>2y: 10,0.08 \| 12,0.90 | 90d: 1,-1.12 \| 1,-1.11<br>2y: 7,0.58 \| 8,1.40 |
+| 0.5 | 90d: 1,-1.12 \| 3,-1.10<br>2y: 10,0.08 \| 13,-0.17 | 90d: 1,-1.12 \| 3,-1.11<br>2y: 7,0.03 \| 10,1.29 | 90d: 1,-1.12 \| 1,-1.11<br>2y: 6,0.86 \| 7,1.75 |
+
+## 2. O chinh (theta 0,5; K/N = 3): tong hop, lenh/ngay, ky vong, doi chung
+
+Doi chung = rut 1 nen ngau nhien / lenh that, cung vung, che do, chieu, R:R; **200 lan tren 90d, 60 lan tren 2 nam**. "p" = ty le lan rut co R TB >= R TB that.
+
+| cau hinh | TP | phase | 90d: n, WR, R TB, ky vong (gia/lenh) | 90d doi chung R TB (sd), p | 2y: n, WR, R TB, ky vong | 2y lenh/ngay | 2y doi chung R TB (sd), p |
+|---|---|---|---|---|---|---|---|
+| BASE | 2R | EU+US | 3, 33.3%, -0.08, -0.87 | -0.14 (1.02), p=41.2% | 64, 39.1%, 0.06, -0.05 | 0.13 | -0.20 (0.17), p=8.3% |
+| BASE | 2R | A | 8, 25.0%, -0.34, -0.55 | -0.20 (0.51), p=59.5% | 58, 43.1%, 0.17, 0.31 | 0.12 | -0.22 (0.20), p=3.3% |
+| BASE | 3R | EU+US | 3, 33.3%, 0.26, -0.17 | -0.03 (1.23), p=36.2% | 64, 28.1%, 0.01, -0.06 | 0.13 | -0.22 (0.19), p=10.0% |
+| BASE | 3R | A | 8, 25.0%, -0.09, 0.16 | -0.17 (0.65), p=40.0% | 58, 34.5%, 0.26, 0.30 | 0.12 | -0.23 (0.24), p=1.7% |
+| H1 | 2R | EU+US | 2, 50.0%, 0.43, -0.00 | - | 34, 41.2%, 0.12, 0.05 | 0.07 | -0.22 (0.26), p=5.0% |
+| H1 | 2R | A | 6, 16.7%, -0.58, -1.65 | -0.12 (0.65), p=74.0% | 23, 34.8%, -0.07, -0.21 | 0.05 | -0.22 (0.32), p=35.0% |
+| H1 | 3R | EU+US | 2, 50.0%, 0.93, 1.05 | - | 34, 26.5%, -0.06, -0.20 | 0.07 | -0.27 (0.32), p=25.0% |
+| H1 | 3R | A | 6, 16.7%, -0.41, -1.27 | -0.12 (0.78), p=61.0% | 23, 30.4%, 0.10, 0.08 | 0.05 | -0.24 (0.42), p=21.7% |
+| H2 | 2R | EU+US | 8, 0.0%, -1.07, -3.06 | -0.22 (0.53), p=89.5% | 68, 35.3%, -0.04, -0.07 | 0.14 | -0.20 (0.17), p=13.3% |
+| H2 | 2R | A | 5, 0.0%, -1.11, -2.06 | -0.13 (0.69), p=92.5% | 41, 41.5%, 0.13, 0.20 | 0.08 | -0.22 (0.25), p=8.3% |
+| H2 | 3R | EU+US | 8, 0.0%, -1.07, -3.06 | -0.29 (0.57), p=80.5% | 68, 25.0%, -0.10, -0.23 | 0.14 | -0.22 (0.22), p=28.3% |
+| H2 | 3R | A | 5, 0.0%, -1.11, -2.06 | -0.12 (0.89), p=88.0% | 41, 34.1%, 0.25, 0.44 | 0.08 | -0.26 (0.27), p=6.7% |
+| H1+H2 | 2R | EU+US | 4, 0.0%, -1.08, -3.00 | -0.25 (0.90), p=68.0% | 28, 42.9%, 0.18, 0.50 | 0.06 | -0.17 (0.28), p=16.7% |
+| H1+H2 | 2R | A | 4, 0.0%, -1.11, -1.98 | -0.04 (0.81), p=91.5% | 17, 58.8%, 0.65, 0.95 | 0.04 | -0.28 (0.38), p=0.0% |
+| H1+H2 | 3R | EU+US | 4, 0.0%, -1.08, -3.00 | -0.24 (1.13), p=58.5% | 28, 25.0%, -0.11, -0.18 | 0.06 | -0.16 (0.32), p=41.7% |
+| H1+H2 | 3R | A | 4, 0.0%, -1.11, -1.98 | -0.07 (0.94), p=88.0% | 17, 47.1%, 0.77, 1.34 | 0.04 | -0.29 (0.48), p=3.3% |
+
+Lenh/ngay 90d o chinh (TP 3R): BASE EU+US = 0.05; BASE A = 0.13; H1 EU+US = 0.03; H1 A = 0.10; H2 EU+US = 0.13; H2 A = 0.08; H1+H2 EU+US = 0.07; H1+H2 A = 0.07
+
+## 3. Tach BUY / SELL (o chinh, EU+US)
+
+| cau hinh | TP | huong | 90d n, WR, R TB | 2y nua1 n, R | 2y nua2 n, R |
+|---|---|---|---|---|---|
+| BASE | 2R | BUY | 1, 0.0%, -1.08 | 21, -0.28 | 8, 0.40 |
+| BASE | 2R | SELL | 2, 50.0%, 0.43 | 22, 0.25 | 13, 0.06 |
+| BASE | 3R | BUY | 1, 0.0%, -1.08 | 21, -0.18 | 8, 0.40 |
+| BASE | 3R | SELL | 2, 50.0%, 0.93 | 22, -0.03 | 13, 0.14 |
+| H1 | 2R | BUY | 0, -, - | 14, -0.07 | 5, 0.11 |
+| H1 | 2R | SELL | 2, 50.0%, 0.43 | 10, 0.38 | 5, 0.10 |
+| H1 | 3R | BUY | 0, -, - | 14, 0.01 | 5, -0.29 |
+| H1 | 3R | SELL | 2, 50.0%, 0.93 | 10, -0.32 | 5, 0.50 |
+| H2 | 2R | BUY | 4, 0.0%, -1.07 | 10, -0.23 | 18, -0.08 |
+| H2 | 2R | SELL | 4, 0.0%, -1.08 | 20, 0.07 | 20, -0.03 |
+| H2 | 3R | BUY | 4, 0.0%, -1.07 | 10, -0.33 | 18, -0.19 |
+| H2 | 3R | SELL | 4, 0.0%, -1.08 | 20, 0.07 | 20, -0.08 |
+| H1+H2 | 2R | BUY | 0, -, - | 7, -0.29 | 4, 0.44 |
+| H1+H2 | 2R | SELL | 4, 0.0%, -1.08 | 7, 0.17 | 10, 0.41 |
+| H1+H2 | 3R | BUY | 0, -, - | 7, -0.00 | 4, -0.06 |
+| H1+H2 | 3R | SELL | 4, 0.0%, -1.08 | 7, -0.54 | 10, 0.11 |
+
+## 4. Phieu loc cua H2 o chinh (theta 0,5, K=3, TP 3R, moi phase; so ung vien con lai sau tung dieu kien)
+
+| buoc | 90d | 2 nam | 90d (H1+H2) | 2 nam (H1+H2) |
+|---|---|---|---|---|
+| 1 CF dung (than>=50%, delta cung chieu) + cum hop le + nen cuoi cum cham Z | 3279 | 42756 | 2114 | 30153 |
+| 2 + bien do cum <= 1,5u | 857 | 11810 | 534 | 8376 |
+| 3 + cuc tri cum <= Z + 0,5u | 403 | 5406 | 250 | 3850 |
+| 4 + khong TREND cung chieu / pha VA-IB / nen lon nhat phien <=3 nen | 378 | 5143 | 240 | 3698 |
+| 4b + bias: BUY tren / SELL duoi VWAP tuan | 0 | 0 | 161 | 2245 |
+| 5 + move >= 3 gia | 236 | 1870 | 96 | 744 |
+| 6 + no luc cum >= |delta| lon nhat cua move | 35 | 292 | 14 | 122 |
+| 7 + |delta_CF| >= theta*max | 23 | 162 | 10 | 66 |
+| 8 + risk() hop le (SL<=4 gia) | 17 | 130 | 8 | 46 |
+
+(Dem cong ca hai vung va hai chieu M, chua gom one-at-a-time va tran 2 lenh/vung/phien. Dong 1-4b dem nen; dong 5-8 dem ung vien duyet tuan tu.)
+
+(Thoi gian chay: 257 giay.)
+
+
+## Danh gia trung thuc (vong 2)
+
+**Ket luan: khong o nao duong o CA 90d-TEST lan hai nua 2 nam voi n du de tin. Nen TAT B mac dinh.**
+
+1. **90d van la nut that.** Moi cau hinh o chinh chi co 2-8 lenh/phase tren 65 phien (H2 EU+US 8 lenh, thua het 8/8; H2 A 5 lenh thua het; H1+H2 4 lenh thua het). Phieu loc H2 cho thay dieu kien giet n la **"no luc cum >= |delta| lon nhat cua move"**: 236 -> 35 ung vien (90d) va 1.870 -> 292 (2 nam), tuc 85% bi loai. Ba dieu kien tiep theo (bien do cum <= 1,5u: -74%; cuc tri <= Z+0,5u: -53%; move >= 3 gia: -38% (90d) .. -64% (2 nam)) cung rat gat. Bias H1 cat them ~40-55% so nen. Ket qua: lenh/ngay 90d chi 0,03-0,13 moi phase, con xa muc 10-20 lenh/ngay.
+2. **4/96 o duong o ca 3 phep do** (muc 0), nhung n TEST 90d chi 2-7 lenh => khong co gia tri thong ke; 96 o x 3 phep do cung co kha nang 4 o la ngau nhien. Hai o BASE-A (theta 0,3/0,5, N=3, TP 3R) dang ghi nhan nhat: 2 nam nua1 +0,23/+0,35 (n=53/35), nua2 +0,04/+0,12 (n=35/23), nhung 90d TRAIN am (-0,30, n=5) va TEST n=3-7.
+3. **H1 (bias VWAP tuan) khong giai quyet duoc:** o chinh 2 nam EU+US H1 3R: -0,06 (n=34) vs BASE 3R +0,01 (n=64): khong tot hon, va moi o giam ~45% n. Tach BUY/SELL khong thay thien lech on dinh (BUY 3R: nua1 +0,01, nua2 -0,29; SELL 3R: nua1 -0,32, nua2 +0,50 => dao chieu giua hai nua).
+4. **H2 ("no luc co, ket qua khong") khong tot hon "giam dan":** 2 nam EU+US 3R: -0,10 (n=68) vs BASE +0,01 (n=64); K=3 theta 0,5 nua1 -0,06 / nua2 -0,13; o 90d thua het. Doi chung 2 nam co R TB -0,22 (sd 0,22), H2 EU+US 3R p=28% => khong khac doi chung. Phase A, H2 K=3-4 co nua2 rat duong (+0,7..+1,0) nhung nua1 am (-0,60..-0,04) => **khong ben** (dao theo nua thoi gian).
+5. **H3 (TP 2R vs 3R):** WR cao hon nhieu o 2R (EU+US BASE 39% vs 28%) nhung ky vong gan nhu khong doi (0,06 vs 0,01; phase A 0,17 vs 0,26). Khong o nao ma 2R cuu duoc setup; TP khong phai van de.
+6. **Phase A (rieng):** BASE phase A la ung vien duy nhat nhin duoc o 2 nam: n=58 (~0,12 lenh/ngay), 3R R TB +0,26, WR 34,5%, doi chung -0,23 (sd 0,24) p=1,7%. NHUNG bootstrap 95% [-0,22 ; +0,74] chua 0, bo 2 thang tot nhat (2024-10, 2025-07) con n=48, R TB -0,12, chi 9/20 thang duong; 90d A o chinh n=8, R -0,09. Phase A khong co che do (NA) nen TREND/pha VA khong loai duoc; chi la mau nho, chua nen coi la loi the.
+7. **Tom lai:** hai nua sua (bias + "no luc co, ket qua khong") deu khong cai thien so voi vong 1; co che nghe dung (hap thu o nhip hoi) nhung dieu kien do duoc qua khat khe, chon tin hieu qua it de vuot nhieu thua ngau nhien. Doi chung (random cung vung/che do/chieu) lai co ky vong ~-0,2R nen B khong the chi dua vao "dat trong vung".
+
+**De xuat:** theo QD-5 dat B **tat mac dinh** (van giu cong tac). Neu muon thu tiep, 3 huong da bi do va bac bo: giam dan, "no luc co ket qua khong", bias VWAP tuan. Huong chua do: (a) doi nen xac nhan CF bang test lai Z lan 2 co volume (V1 vong 1 khong thang), (b) gop B vao A/C nhu mot bo loc cuc tri thay vi setup doc lap, (c) chi phase A voi du lieu moi >= 3 thang truoc khi tin.
+
+
+---
+
+# VONG 1 (giu nguyen de so sanh)
+
 # RESULTS-B - Setup B Hap thu tai VWAP tuan / ngay
 
 Sinh boi `setup_b_hap_thu.py` (deterministic). Gio UTC (VN = UTC+7). R tinh sau chi phi 0,2 gia/lenh, TP 3R, vao o close nen xac nhan, mo phong tu nen ke tiep, cung nen SL+TP => SL, 1 lenh mo cung luc, toi da 2 lenh/(vung, phien).
@@ -248,11 +469,11 @@ Bo 2 thang tot nhat (2024-10, 2025-08): n=96, WR 26.0%, R TB -0.07.
 | 0.5 | 43, 30.2%, 0.09<br>15, 13.3%, -0.57 | 32, 34.4%, 0.25<br>14, 21.4%, -0.25 | 22, 27.3%, -0.04<br>4, 0.0%, -1.10 |
 | 0.7 | 31, 29.0%, 0.05<br>11, 18.2%, -0.37 | 20, 45.0%, 0.68<br>10, 10.0%, -0.69 | 16, 31.2%, 0.13<br>4, 0.0%, -1.10 |
 
-(2 nam: 61 giay.)
+(2 nam: 66 giay.)
 
-(Tong thoi gian chay: 73 giay.)
+(Tong thoi gian chay: 79 giay.)
 
-## Danh gia trung thuc
+## Danh gia trung thuc (vong 1)
 
 **Ket luan ngan: CHUA co loi the, chua dat de dua vao indicator. B khong dat muc tieu WR 60-70% / 10-20 lenh/ngay (dang o ~30% WR va ~0,2 lenh/ngay).**
 

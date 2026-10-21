@@ -1,0 +1,19 @@
+## Đánh giá trung thực (viết tay sau khi đọc số ở trên)
+
+**Kết luận một dòng: chưa có lợi thế đo được. Trap (D) theo định nghĩa plan 3-D cho ~0,1 lệnh/ngày, WR 34% ở 2R (hòa vốn cần ~37%), kỳ vọng âm nhẹ trên 2 năm và n quá nhỏ ở mọi nửa thời gian.**
+
+1. **Số lệnh quá ít để kết luận.** File 90d: 7 lệnh (0,11/ngày), TEST chỉ **4 lệnh** (<30: chưa kết luận). Phễu cho thấy chỗ chết: trong 216 lần "bẫy + ô ở Z" chỉ 22 có nến CF chặt trong 3 nến, rồi bias, BALANCE, SL>4 giá còn 7. 2 năm: 50 lệnh (0,10/ngày). So với mục tiêu 10–20 lệnh/ngày, D đóng góp ~1%.
+2. **Lợi thế thật?** 2 năm, delta, cấu hình 5 giá / hồi ≤70%: R TB **−0,09**, WR 34,0%. Đối chứng 200 lần (cùng vùng/chế độ/chiều, cùng R:R): −0,23 (5–95%: −0,50..+0,06); P(đối chứng ≥ thật) = 0,21. Tức setup *có thể* hơn ngẫu nhiên ~0,14R nhưng chưa vượt ngưỡng 5% và vẫn âm tuyệt đối. Cách `cell` (ô volume ≥2× trung vị): 18 lệnh, R −0,45, đối chứng P=0,74 ⇒ **không có gì**; 90d chỉ 2 lệnh (cả hai thua).
+3. **Bất đối xứng BUY/SELL (đúng như phép đo cũ báo trước):** 2 năm delta BUY n=28 R +0,06 / SELL n=22 R −0,29; nửa 2 BUY +0,25 (n=11) / SELL −0,32 (n=4). Không tách được "BUY trap thật mạnh hơn" khỏi "vàng 2 năm tăng nên mọi BUY đều đỡ". Không dùng làm cơ sở tắt/bật một chiều.
+4. **Ô nào bền cả hai nửa?** Chỉ hàng "move ≥7 giá" của lưới 2 năm dương ở cả hai nửa (retr 70%: +0,41 n=4 / +0,62 n=7), nhưng tổng **n=11** và trên file 90d cùng ô đó TRAIN −1,05 (n=1) / TEST −0,08 (n=3; file 90d trùng 4 tuần cuối của nửa 2 nên không độc lập). Hàng xóm "5 giá" gần như bằng 0 hoặc âm. ⇒ **không chọn ô nào**: ô tốt nhất mà n=11 và hàng xóm xấu là dấu hiệu khớp quá mức, đúng cảnh báo plan 4.6.
+5. **Theo phase (2 năm, delta):** Á n=26 R −0,19 · Âu n=19 R **+0,15** · Mỹ n=5 R −0,50. Gợi ý cơ chế (chưa kiểm định): luật "loại chế độ BALANCE" chỉ có hiệu lực **sau 19:00 VN** (trước đó chế độ = NA vì chưa có band VA Âu/IB), nên ở Á/Âu bẫy trong sideway **không bị lọc** — đúng lỗi 24/9 mà RULES.md mục B muốn loại. Á là phase tệ nhất, khớp giả thuyết này.
+6. **Hai biến thể cơ chế (chốt trước khi xem kết quả biến thể, chọn vì phễu cho thấy CF chặt quá hiếm):**
+   - V1 *delta + CF mềm* (nến đóng theo S **vượt đỉnh/đáy nến bẫy** thay vì CF chặt |Δ| ≥ trung vị): 117 lệnh (0,24/ngày), R **−0,24**, nửa 1 −0,11 / nửa 2 −0,44, đối chứng P=0,63. Tệ hơn bản chặt, âm ở cả hai nửa.
+   - V2 *delta hoặc ô lớn + CF mềm*: 134 lệnh, R **−0,26**, nửa 1 −0,10 / nửa 2 −0,49, đối chứng P=0,72.
+   ⇒ Nới CF để có thêm lệnh chỉ **thêm lệnh thua**: bằng chứng (yếu) rằng thông tin nằm ở nến CF chặt (|Δ| lớn), không nằm ở "giá vượt nến bẫy" (đó là đuổi giá sau khi nhịp hồi đã đi xong). Cả hai biến thể bị loại.
+7. **Đề xuất sửa định nghĩa (chưa chạy, mỗi cái kèm cơ chế):**
+   - Thêm bộ lọc sideway cho phase Á/Âu (vd biên độ 60 nến gần nhất < 1,5× trung vị biên độ move, hoặc VA phiên trước hẹp): cơ chế = bẫy chỉ có nghĩa khi có người bị nhốt theo xu hướng, mà trong sideway không có xu hướng.
+   - Gộp D vào setup A/B thay vì chạy riêng: trap tại VWAP ngày/POC hôm qua trùng vùng B (hấp thụ ở VWAP), chia dữ liệu mỏng thêm là vô nghĩa với n này.
+   - Chỉ khi có dữ liệu mã/kỳ khác (n ≥100 lệnh) mới thử "move ≥7 giá": hiện chỉ là giả thuyết từ 11 lệnh.
+8. **Khuyến nghị theo QĐ-5:** D có WR 34% < 50% ở 2R và không dương rõ ở cả hai nửa ⇒ **tắt mặc định** trong indicator (giữ công tắc), dùng như *đọc chart* (nhãn "có bẫy ở Z"), **không** code thành signal vào lệnh.
+9. **Giới hạn của phép đo này:** (a) zigzag 2 giá + hằng số cố định (move hình thành ≤30 nến, hồi ≤30 nến và ≥1 giá, CF trong 3 nến sau nến cực trị, Z cách cực trị ≤1 giá) là lựa chọn của mình, không có trong plan — đổi các hằng này sẽ đổi n; (b) 1 lệnh mở cùng lúc nên một số lệnh bị bỏ; (c) bias lấy một lần ở đầu phase (đúng yêu cầu) nên phase dài có bias cũ; (d) file 90d và 2 năm trùng 4 tuần, không coi là hai mẫu độc lập; (e) 3R còn tệ hơn 2R trên 90d (WR 14%, n=7) nên không có lý do nới TP.

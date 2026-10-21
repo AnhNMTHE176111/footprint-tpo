@@ -112,6 +112,9 @@ class Prep:
         first = key.ne(key.shift(1)).to_numpy()
         grp = np.cumsum(first)
         self.bias = pd.Series(np.where(first, raw, np.nan)).groupby(grp).transform('first').to_numpy()
+        # V3: 'co move ro' = bien do 60 nen gan nhat (gom nen i) >= 2 x u (u = trung vi bien do 50 nen); khong dat => coi la BALANCE
+        r60 = df['high'].rolling(60, min_periods=60).max() - df['low'].rolling(60, min_periods=60).min()
+        self.move_clear = (r60 >= 2.0 * K.median_range(df)).to_numpy()
         self.st = K.session_table(df)
         clean = (~self.st['splice'].to_numpy()) & (~self.st['thin'].to_numpy()) & (self.st['n'].to_numpy() >= K.CONST['min_bars_prof'])
         self.n_days = int(clean.sum())
@@ -123,7 +126,7 @@ class Prep:
 # DETECT
 # ----------------------------------------------------------------------------------------------
 def detect(P: Prep, min_move: float = 5.0, max_retr: float = 0.7, method: str = 'delta', rr: float = 2.0,
-           sides=(1, -1), no_bias: bool = False, extra_zones=(), diag=None, cf_mode: str = 'strict') -> list:
+           sides=(1, -1), no_bias: bool = False, extra_zones=(), diag=None, cf_mode: str = 'strict', use_zone: bool = True, sideway: bool = False) -> list:
     """Tra list entry cho kernel.simulate: dict(idx, side, entry, sl, tp, setup, zone, note).
     method 'delta' | 'cell' | 'either'. no_bias=True bo dieu kien bias (de bien the).
     cf_mode 'strict' = kernel.is_confirm_bar (plan); 'soft' = nen dong theo S va dong VUOT dinh/day nen cuc tri (phe hoi bi nhot).
@@ -188,6 +191,8 @@ def detect(P: Prep, min_move: float = 5.0, max_retr: float = 0.7, method: str = 
                 if touched or d <= ZONE_TOL:
                     if best is None or d < best[1]:
                         best = (nm, d, zv)
+            if not use_zone:
+                best = ('NONE', 0.0, float('nan'))
             if best is None:
                 continue
             dg('trap_zone')
@@ -215,6 +220,8 @@ def detect(P: Prep, min_move: float = 5.0, max_retr: float = 0.7, method: str = 
                     dg('x_balance'); break
                 if 1 <= P.since_big[i] <= 3:
                     dg('x_big'); break
+                if sideway and P.phase[i] in ('A', 'EU') and not P.move_clear[i]:
+                    dg('x_sideway'); break
                 if not no_bias and P.bias[i] != S:
                     dg('x_bias'); break
                 r = K.risk(df, i, S, ext, rr=rr)
@@ -392,6 +399,76 @@ def full_eval(P: Prep, title: str, L: list, variants=(('delta', dict(method='del
     return out
 
 
+def cell_table(P, kw0, moves, retrs, rr=2.0):
+    return {(mv, rt): run(P, min_move=mv, max_retr=rt, rr=rr, **kw0)[1] for mv in moves for rt in retrs}
+
+
+def grid2(cell, moves, retrs, f_cell, label):
+    L = ['**%s**' % label, '', '| min_move \ retr max | ' + ' | '.join('%d%%' % round(100 * r) for r in retrs) + ' |', '|---|' + '---|' * len(retrs)]
+    for mv in moves:
+        L.append('| %g gia | %s |' % (mv, ' | '.join(f_cell(cell[(mv, rt)]) for rt in retrs)))
+    return L + ['']
+
+
+def round2_block(P, name, kw0, moves, retrs, base_key, L, two_year=False):
+    cell = cell_table(P, kw0, moves, retrs)
+    cut = pd.Timestamp('2025-08-01')
+
+    def halves(t):
+        if not len(t):
+            return st_of(t), st_of(t)
+        if two_year:
+            tt = pd.to_datetime(t['t_utc'])
+            return st_of(t[tt < cut]), st_of(t[tt >= cut])
+        return st_of(t[t['split'] == 'TRAIN']), st_of(t[t['split'] == 'TEST'])
+    h1, h2 = ('nua 1', 'nua 2') if two_year else ('TRAIN', 'TEST')
+
+    def fc(t):
+        s_ = st_of(t); a, b = halves(t)
+        return 'n=%d R %s | %s %s (n%d) / %s %s (n%d)' % (s_['n'], f(s_['avg_r']), h1, f(a['avg_r']), a['n'], h2, f(b['avg_r']), b['n'])
+    L += grid2(cell, moves, retrs, fc, 'Luoi %s (R TB tong | %s / %s)' % (name, h1, h2))
+    base = cell[base_key]
+    a, b = halves(base)
+    days = P.n_days
+    L += ['Chi tiet cau hinh (move %g, hoi <= %d%%): ' % (base_key[0], round(100 * base_key[1])), '', HDR, srow('Tong', st_of(base)), srow('BUY', st_of(base, 1)), srow('SELL', st_of(base, -1)),
+          srow(h1, a), srow(h2, b)]
+    if len(base):
+        L += [srow('Phase ' + p + ' (%.3f lenh/ngay)' % (len(base[base['phase'] == p]) / days), st_of(base[base['phase'] == p])) for p in K.PHASES]
+        L += [srow(h1 + ' BUY', st_of(halves_df(base, two_year, cut, 0), 1)), srow(h1 + ' SELL', st_of(halves_df(base, two_year, cut, 0), -1)),
+              srow(h2 + ' BUY', st_of(halves_df(base, two_year, cut, 1), 1)), srow(h2 + ' SELL', st_of(halves_df(base, two_year, cut, 1), -1))]
+    L += ['', 'Lenh/ngay tong: %s (%d phien sach). TEST/nua 2 n=%d%s' % (f(len(base) / days, 3), days, b['n'], ' (< 30: CHUA KET LUAN)' if b['n'] < 30 else ''), '']
+    L += funnel_md2(P, kw0, base_key)
+    L += ['**Doi chung**', ''] + control_md(P, base, 'cung vung(khong co)/che do/chieu, 200 lan') + ['']
+    return cell
+
+
+def halves_df(t, two_year, cut, k):
+    if two_year:
+        tt = pd.to_datetime(t['t_utc'])
+        return t[tt < cut] if k == 0 else t[tt >= cut]
+    return t[t['split'] == ('TRAIN' if k == 0 else 'TEST')]
+
+
+def funnel_md2(P, kw0, key):
+    d = {}
+    detect(P, min_move=key[0], max_retr=key[1], diag=d, **kw0)
+    nm = [('trap_zone', 'bay (move+hoi+delta that bai)'), ('cf', 'co nen CF chat trong 3 nen'), ('x_bar', 'loai splice/thin/OFF'), ('x_balance', 'loai BALANCE (che do)'),
+          ('x_big', 'loai 3 nen sau nen dai nhat'), ('x_sideway', 'loai sideway A/Au (60 nen < 2u)'), ('x_bias', 'loai nguoc bias'), ('x_risk', 'loai SL > 4 gia'), ('entry', 'vao lenh (truoc luat 1 lenh mo)')]
+    return ['Pheu: ' + ' -> '.join('%s %d' % (b, d.get(a, 0)) for a, b in nm), '']
+
+
+def round2(P90, P2, L):
+    L += ['## VONG 2 - bo yeu cau vung Z (V3, V4)', '',
+          'V3 = delta, CF chat, KHONG can Z, them loc sideway phase A/Au (bien do 60 nen gan nhat < 2 x u, u = trung vi bien do 50 nen => loai). Luoi 3x3 nhu cu. '
+          'V4 = V3 voi luoi move {3,4,5} x hoi {50,70%}. Cung seed 0, doi chung 200 lan. Chi tiet in cho cau hinh: V3 5/70%, V4 3/70% (o co n lon nhat - chon vi muc tieu V4 la xem n).', '']
+    V3, V4 = dict(method='delta', use_zone=False, sideway=True), dict(method='delta', use_zone=False, sideway=True)
+    for nm, kw0, mv, rt, key in (('V3', V3, GRID_MOVE, GRID_RETR, (5.0, 0.7)), ('V4', V4, (3.0, 4.0, 5.0), (0.5, 0.7), (3.0, 0.7))):
+        L += ['### %s - file 90d' % nm, '']
+        round2_block(P90, nm + ' 90d', kw0, mv, rt, key, L)
+        L += ['### %s - file 2 nam' % nm, '']
+        round2_block(P2, nm + ' 2 nam', kw0, mv, rt, key, L, two_year=True)
+
+
 def main():
     t0 = time.time()
     L = ['# RESULTS-D - Setup D Trap (sinh boi setup_d_trap.py, deterministic)', '',
@@ -432,6 +509,7 @@ def main():
         L += rows + ['']
         L += funnel_md(P2, kw0)
         L += ['**Doi chung 2 nam (%s)**' % mth, ''] + control_md(P2, base, 'cau hinh 5/70%') + ['']
+    round2(P90, P2, L)
     ass = os.path.join(HERE, 'report', '_assessment_D.md')
     if os.path.exists(ass):
         L += [open(ass, encoding='utf-8').read()]

@@ -639,6 +639,150 @@ Pheu (5/70%): bay + o Z (move>=5, hoi<=70%) 2051 -> co nen CF trong 3 nen 446 ->
 
 - cau hinh 5/70%: that R TB **-0.26** (n=134) | doi chung 200 lan: R TB -0.19 (5-95%: -0.38 .. 0.00); P(doi chung >= that) = **0.72**
 
+## VONG 2 - bo yeu cau vung Z (V3, V4)
+
+V3 = delta, CF chat, KHONG can Z, them loc sideway phase A/Au (bien do 60 nen gan nhat < 2 x u, u = trung vi bien do 50 nen => loai). Luoi 3x3 nhu cu. V4 = V3 voi luoi move {3,4,5} x hoi {50,70%}. Cung seed 0, doi chung 200 lan. Chi tiet in cho cau hinh: V3 5/70%, V4 3/70% (o co n lon nhat - chon vi muc tieu V4 la xem n).
+
+### V3 - file 90d
+
+**Luoi V3 90d (R TB tong | TRAIN / TEST)**
+
+| min_move \ retr max | 50% | 70% | 90% |
+|---|---|---|---|
+| 4 gia | n=17 R -0.39 | TRAIN -0.43 (n9) / TEST -0.35 (n8) | n=52 R -0.17 | TRAIN -0.13 (n28) / TEST -0.22 (n24) | n=78 R -0.05 | TRAIN 0.07 (n44) / TEST -0.21 (n34) |
+| 5 gia | n=13 R -0.41 | TRAIN -0.24 (n7) / TEST -0.60 (n6) | n=31 R 0.08 | TRAIN 0.42 (n16) / TEST -0.29 (n15) | n=44 R 0.01 | TRAIN 0.23 (n23) / TEST -0.23 (n21) |
+| 7 gia | n=8 R -0.73 | TRAIN -0.12 (n3) / TEST -1.09 (n5) | n=13 R -0.40 | TRAIN 0.11 (n5) / TEST -0.71 (n8) | n=15 R -0.28 | TRAIN -0.09 (n6) / TEST -0.42 (n9) |
+
+Chi tiet cau hinh (move 5, hoi <= 70%): 
+
+| | n | WR | R TB | ky vong (gia/lenh) | tong R | chuoi thua dai nhat |
+|---|---|---|---|---|---|---|
+| Tong | 31 | 38.7% | 0.08 | 0.70 | 2.4 | 5 |
+| BUY | 20 | 35.0% | -0.04 | 0.31 | -0.8 | 5 |
+| SELL | 11 | 45.5% | 0.28 | 1.39 | 3.1 | 2 |
+| TRAIN | 16 | 50.0% | 0.42 | 1.69 | 6.7 | 3 |
+| TEST | 15 | 26.7% | -0.29 | -0.37 | -4.4 | 5 |
+| Phase A (0.311 lenh/ngay) | 19 | 42.1% | 0.18 | 0.95 | 3.3 | 3 |
+| Phase EU (0.098 lenh/ngay) | 6 | 50.0% | 0.42 | 1.82 | 2.5 | 2 |
+| Phase US (0.098 lenh/ngay) | 6 | 16.7% | -0.58 | -1.23 | -3.5 | 3 |
+| TRAIN BUY | 10 | 50.0% | 0.42 | 1.41 | 4.2 | 2 |
+| TRAIN SELL | 6 | 50.0% | 0.43 | 2.17 | 2.6 | 2 |
+| TEST BUY | 10 | 20.0% | -0.49 | -0.78 | -4.9 | 5 |
+| TEST SELL | 5 | 40.0% | 0.11 | 0.46 | 0.5 | 2 |
+
+Lenh/ngay tong: 0.508 (61 phien sach). TEST/nua 2 n=15 (< 30: CHUA KET LUAN)
+
+Pheu: bay (move+hoi+delta that bai) 1200 -> co nen CF chat trong 3 nen 91 -> loai splice/thin/OFF 6 -> loai BALANCE (che do) 7 -> loai 3 nen sau nen dai nhat 1 -> loai sideway A/Au (60 nen < 2u) 0 -> loai nguoc bias 38 -> loai SL > 4 gia 8 -> vao lenh (truoc luat 1 lenh mo) 31
+
+**Doi chung**
+
+- cung vung(khong co)/che do/chieu, 200 lan: that R TB **0.08** (n=31) | doi chung 200 lan: R TB -0.05 (5-95%: -0.43 .. 0.36); P(doi chung >= that) = **0.28**
+
+### V3 - file 2 nam
+
+**Luoi V3 2 nam (R TB tong | nua 1 / nua 2)**
+
+| min_move \ retr max | 50% | 70% | 90% |
+|---|---|---|---|
+| 4 gia | n=162 R -0.28 | nua 1 -0.26 (n102) / nua 2 -0.30 (n60) | n=419 R -0.16 | nua 1 -0.14 (n235) / nua 2 -0.18 (n184) | n=647 R -0.12 | nua 1 -0.16 (n332) / nua 2 -0.08 (n315) |
+| 5 gia | n=118 R -0.17 | nua 1 -0.23 (n78) / nua 2 -0.05 (n40) | n=257 R -0.12 | nua 1 -0.17 (n151) / nua 2 -0.04 (n106) | n=366 R -0.11 | nua 1 -0.17 (n196) / nua 2 -0.04 (n170) |
+| 7 gia | n=38 R 0.01 | nua 1 0.02 (n24) / nua 2 -0.02 (n14) | n=65 R 0.15 | nua 1 0.01 (n38) / nua 2 0.36 (n27) | n=86 R 0.10 | nua 1 0.02 (n43) / nua 2 0.17 (n43) |
+
+Chi tiet cau hinh (move 5, hoi <= 70%): 
+
+| | n | WR | R TB | ky vong (gia/lenh) | tong R | chuoi thua dai nhat |
+|---|---|---|---|---|---|---|
+| Tong | 257 | 32.7% | -0.12 | -0.18 | -29.9 | 7 |
+| BUY | 156 | 32.1% | -0.14 | -0.35 | -21.2 | 8 |
+| SELL | 101 | 33.7% | -0.09 | 0.08 | -8.7 | 6 |
+| nua 1 | 151 | 31.1% | -0.17 | -0.26 | -25.8 | 7 |
+| nua 2 | 106 | 34.9% | -0.04 | -0.07 | -4.1 | 6 |
+| Phase A (0.171 lenh/ngay) | 84 | 33.3% | -0.10 | -0.04 | -8.4 | 6 |
+| Phase EU (0.215 lenh/ngay) | 106 | 34.9% | -0.05 | 0.01 | -5.4 | 7 |
+| Phase US (0.136 lenh/ngay) | 67 | 28.4% | -0.24 | -0.67 | -16.1 | 8 |
+| nua 1 BUY | 88 | 30.7% | -0.18 | -0.44 | -16.1 | 8 |
+| nua 1 SELL | 63 | 31.7% | -0.15 | 0.00 | -9.7 | 5 |
+| nua 2 BUY | 68 | 33.8% | -0.07 | -0.24 | -5.1 | 7 |
+| nua 2 SELL | 38 | 36.8% | 0.03 | 0.22 | 1.0 | 6 |
+
+Lenh/ngay tong: 0.522 (492 phien sach). TEST/nua 2 n=106
+
+Pheu: bay (move+hoi+delta that bai) 8043 -> co nen CF chat trong 3 nen 729 -> loai splice/thin/OFF 48 -> loai BALANCE (che do) 53 -> loai 3 nen sau nen dai nhat 8 -> loai sideway A/Au (60 nen < 2u) 0 -> loai nguoc bias 325 -> loai SL > 4 gia 38 -> vao lenh (truoc luat 1 lenh mo) 257
+
+**Doi chung**
+
+- cung vung(khong co)/che do/chieu, 200 lan: that R TB **-0.12** (n=257) | doi chung 200 lan: R TB -0.16 (5-95%: -0.31 .. -0.01); P(doi chung >= that) = **0.35**
+
+### V4 - file 90d
+
+**Luoi V4 90d (R TB tong | TRAIN / TEST)**
+
+| min_move \ retr max | 50% | 70% |
+|---|---|---|
+| 3 gia | n=19 R -0.47 | TRAIN -0.56 (n11) / TEST -0.35 (n8) | n=60 R -0.29 | TRAIN -0.32 (n35) / TEST -0.25 (n25) |
+| 4 gia | n=17 R -0.39 | TRAIN -0.43 (n9) / TEST -0.35 (n8) | n=52 R -0.17 | TRAIN -0.13 (n28) / TEST -0.22 (n24) |
+| 5 gia | n=13 R -0.41 | TRAIN -0.24 (n7) / TEST -0.60 (n6) | n=31 R 0.08 | TRAIN 0.42 (n16) / TEST -0.29 (n15) |
+
+Chi tiet cau hinh (move 3, hoi <= 70%): 
+
+| | n | WR | R TB | ky vong (gia/lenh) | tong R | chuoi thua dai nhat |
+|---|---|---|---|---|---|---|
+| Tong | 60 | 26.7% | -0.29 | -0.35 | -17.6 | 8 |
+| BUY | 35 | 25.7% | -0.32 | -0.41 | -11.2 | 8 |
+| SELL | 25 | 28.0% | -0.26 | -0.28 | -6.4 | 9 |
+| TRAIN | 35 | 25.7% | -0.32 | -0.18 | -11.3 | 8 |
+| TEST | 25 | 28.0% | -0.25 | -0.60 | -6.3 | 6 |
+| Phase A (0.475 lenh/ngay) | 29 | 37.9% | 0.04 | 0.48 | 1.2 | 4 |
+| Phase EU (0.279 lenh/ngay) | 17 | 23.5% | -0.38 | -0.68 | -6.4 | 8 |
+| Phase US (0.230 lenh/ngay) | 14 | 7.1% | -0.88 | -1.69 | -12.4 | 9 |
+| TRAIN BUY | 20 | 30.0% | -0.19 | -0.03 | -3.9 | 5 |
+| TRAIN SELL | 15 | 20.0% | -0.49 | -0.39 | -7.4 | 9 |
+| TEST BUY | 15 | 20.0% | -0.49 | -0.93 | -7.3 | 8 |
+| TEST SELL | 10 | 40.0% | 0.10 | -0.11 | 1.0 | 4 |
+
+Lenh/ngay tong: 0.984 (61 phien sach). TEST/nua 2 n=25 (< 30: CHUA KET LUAN)
+
+Pheu: bay (move+hoi+delta that bai) 2580 -> co nen CF chat trong 3 nen 154 -> loai splice/thin/OFF 10 -> loai BALANCE (che do) 9 -> loai 3 nen sau nen dai nhat 1 -> loai sideway A/Au (60 nen < 2u) 0 -> loai nguoc bias 64 -> loai SL > 4 gia 8 -> vao lenh (truoc luat 1 lenh mo) 62
+
+**Doi chung**
+
+- cung vung(khong co)/che do/chieu, 200 lan: that R TB **-0.29** (n=60) | doi chung 200 lan: R TB -0.10 (5-95%: -0.40 .. 0.25); P(doi chung >= that) = **0.81**
+
+### V4 - file 2 nam
+
+**Luoi V4 2 nam (R TB tong | nua 1 / nua 2)**
+
+| min_move \ retr max | 50% | 70% |
+|---|---|---|
+| 3 gia | n=165 R -0.27 | nua 1 -0.26 (n102) / nua 2 -0.29 (n63) | n=532 R -0.14 | nua 1 -0.13 (n308) / nua 2 -0.14 (n224) |
+| 4 gia | n=162 R -0.28 | nua 1 -0.26 (n102) / nua 2 -0.30 (n60) | n=419 R -0.16 | nua 1 -0.14 (n235) / nua 2 -0.18 (n184) |
+| 5 gia | n=118 R -0.17 | nua 1 -0.23 (n78) / nua 2 -0.05 (n40) | n=257 R -0.12 | nua 1 -0.17 (n151) / nua 2 -0.04 (n106) |
+
+Chi tiet cau hinh (move 3, hoi <= 70%): 
+
+| | n | WR | R TB | ky vong (gia/lenh) | tong R | chuoi thua dai nhat |
+|---|---|---|---|---|---|---|
+| Tong | 532 | 32.3% | -0.14 | -0.28 | -73.0 | 14 |
+| BUY | 323 | 34.1% | -0.09 | -0.27 | -27.6 | 12 |
+| SELL | 209 | 29.7% | -0.22 | -0.31 | -45.4 | 10 |
+| nua 1 | 308 | 32.8% | -0.13 | -0.24 | -40.9 | 10 |
+| nua 2 | 224 | 31.7% | -0.14 | -0.33 | -32.1 | 14 |
+| Phase A (0.360 lenh/ngay) | 177 | 31.6% | -0.16 | -0.25 | -28.5 | 7 |
+| Phase EU (0.415 lenh/ngay) | 204 | 34.3% | -0.08 | -0.21 | -16.0 | 9 |
+| Phase US (0.307 lenh/ngay) | 151 | 30.5% | -0.19 | -0.41 | -28.5 | 11 |
+| nua 1 BUY | 185 | 35.1% | -0.06 | -0.24 | -11.6 | 12 |
+| nua 1 SELL | 123 | 29.3% | -0.24 | -0.25 | -29.3 | 10 |
+| nua 2 BUY | 138 | 32.6% | -0.12 | -0.30 | -16.0 | 10 |
+| nua 2 SELL | 86 | 30.2% | -0.19 | -0.39 | -16.1 | 10 |
+
+Lenh/ngay tong: 1.081 (492 phien sach). TEST/nua 2 n=224
+
+Pheu: bay (move+hoi+delta that bai) 18670 -> co nen CF chat trong 3 nen 1388 -> loai splice/thin/OFF 87 -> loai BALANCE (che do) 111 -> loai 3 nen sau nen dai nhat 11 -> loai sideway A/Au (60 nen < 2u) 0 -> loai nguoc bias 600 -> loai SL > 4 gia 39 -> vao lenh (truoc luat 1 lenh mo) 540
+
+**Doi chung**
+
+- cung vung(khong co)/che do/chieu, 200 lan: that R TB **-0.14** (n=532) | doi chung 200 lan: R TB -0.17 (5-95%: -0.26 .. -0.07); P(doi chung >= that) = **0.34**
+
 ## Đánh giá trung thực (viết tay sau khi đọc số ở trên)
 
 **Kết luận một dòng: chưa có lợi thế đo được. Trap (D) theo định nghĩa plan 3-D cho ~0,1 lệnh/ngày, WR 34% ở 2R (hòa vốn cần ~37%), kỳ vọng âm nhẹ trên 2 năm và n quá nhỏ ở mọi nửa thời gian.**

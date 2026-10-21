@@ -1,0 +1,21 @@
+
+# Danh gia trung thuc
+
+(Doan nay viet tay sau khi doc so lieu cua lan chay 2026-10-21; neu chay lai --all voi du lieu moi thi phai doc lai.)
+
+**1. Setup A co loi the that khong? Chua thay.** Tren 2 nam (492 phien sach) cell chinh cho n=263, WR 27,0%, R TB -0,01, tuc ngay tai muc hoa von (~27% WR o 3R sau chi phi). Tren file 90d la -0,62R (n=26, WR 11,5%, chuoi thua 13). Hai ket qua cung huong "khong duong", va nua sau cua 2 nam (2025-08 -> 2026-08, n=102) la -0,14R, khop voi 90d gan day xau hon nua. Khong co dau hieu setup nay dua duoc WR 60-70% hay ky vong duong; WR that ~27% voi TP 3R.
+
+**2. Doi chung: nhip hoi + CF khong them duoc gi ro rang.** Nen ngau nhien cung trang thai pha, cung chieu, cung SL/TP: -0,08R (2 nam; 24% so lan boc >= lenh that, tuc lenh that nam trong nhieu cua doi chung) va -0,21R (90d; lenh that con te hon doi chung, 87% so lan boc >= lenh that). Doi chung theo kernel.control_sample (khong can trang thai pha) -0,19R (2 nam; 6% >= lenh that): nghia la "cham canh VA bat ky luc nao" thua o 3R, va loc nhip hoi + CF keo ve ~0 nhung khong len duong. Lenh that tot hon doi chung ~+0,07..+0,18R, nho hon bien nhieu.
+
+**3. Luoi 3x3: khong o nao ben o ca hai nua.** Tren 2 nam, ca 9 o deu am o nua 2 (-0,03..-0,31R) du nua 1 duong (+0,07..+0,29R). O tot nhat (n_hoi 4, than CF 0,6): +0,16R tong, nhung hang xom than CF 0,4/0,5 cung n_hoi am hoac xap xi 0 va nua 2 van -0,08R, n=64. Tren 90d: 8/9 o am o TEST; o (4; 0,6) TEST +0,05 chi n=7. **Khong chon o nao.** Xu huong "than CF cang lon cang tot" (+0,1..+0,16R o 0,6) nhat quan tren ca 3 hang n_hoi cua 2 nam, co the co co che that (CF manh hon = phe giu canh ro hon) nhung nho (n giam 25%) va chua qua duoc nua 2; ghi nhan, chua dung.
+
+**4. Chi tiet co the dang de y (chua phai ket luan):**
+- Phase EU (12:30-19:00 VN, E = VA hom qua) am nhat quan: -0,29R (2 nam, n=50, WR 20%), cung -0,30 o V1 va -0,26 o V2. Co che gioi thieu: plan muc 3.2 noi truoc COMEX hay co pha gia; vao theo canh VA hom qua luc chau Au co the bi quet. Nhung n=50, sai so cua WR ~ +-6% nen chi ~1,2 sigma duoi hoa von; day la thong ke tim thay SAU khi nhin so, chua dung de loc.
+- US (n=130) +0,08R, vung VAH_EU +0,21R (n=68): duong nhung nho va khong qua doi chung ro rang; chua dam noi VAH la thien.
+- Tan suat chi **0,4-0,5 lenh/ngay** (US ~0,2-0,26/ngay): setup A KHONG the dong gop vao muc 10-20 lenh/ngay; cung 2 nua cua 90d TEST chi n=9 (<30) nen **chua ket luan** o nua TEST.
+
+**5. Hai bien the co che (bao rieng):** V1 (delta nen M5 pha cung chieu) 2 nam +0,03R, 90d -0,45R, nua 2 van -0,14R; V2 (CF dong o phia ngoai E) 2 nam +0,01R, 90d -0,51R. Ca hai khong sua duoc nua 2 va khong vuot doi chung ro rang (V1: 16% lan doi chung >= that o 2 nam, tot hon mot chut, nhung chua dang ke). Khong co bien the nao du manh de doi dinh nghia.
+
+**6. De xuat (co co che, chua do):** (a) theo QD-5, setup A **nen tat mac dinh** trong indicator (van co cong tat): ky vong am o ca hai nua cua 90d va o nua 2 cua 2 nam. (b) Neu muon cuu: plan muc 3.2 noi "lan phа 1 chui lai thi khong duoi, lan 2 moi la pha sach" va "pha sau 20:30 dang tin hon" - bo do hien tai dang coi moi cu M5 dong ngoai la mot cu pha moi; thu rieng "chi vao sau cu pha thu 2 / sau 20:30 VN" va "het han trang thai sau N nen" (hien tai mot so lenh vao sau 289 nen hoi, tuc retest nhieu gio sau, khong con la phá hoi). Day la 2 y tuong co co che, can do tren ban ghi rieng, KHONG phai ket qua da kiem.
+
+**7. Dieu chua chac:** (i) SL: mep xa vung E dat E +-1,0 gia (toi dien giai 'cach vung <= 1 gia'); nho la co ban chat hay cat tran 4 gia (SL TB ~2,5 gia) - doi nua be rong co the doi ket qua; (ii) 'move pha' (de lay L) toi dinh nghia bang cac nen M1 lui toi nen cuoi cung dong o phia trong, toi da 60 nen; (iii) trang thai pha khong het han (xem tren); (iv) WR 90d rat thap (11,5%) so voi 27% cua 2 nam co the phan anh che do thi truong 2026-08..10 (bien do lon, SL cat tran) hon la loi dinh nghia; (v) khong co ca kiem 2 lenh cung E bi `one_at_a_time` bo qua nhung van tinh vao dem 2/phien/E (bao thu).

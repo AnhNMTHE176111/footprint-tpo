@@ -170,3 +170,7 @@ Tham số tự do: độ xuyên tối thiểu (2 tick), khoảng cách cạnh đ
 - **QĐ-4** Ảnh Telegram = chụp cửa sổ Optimus Flow (Win32), không phải vẽ lại chart. Chart phải đang hiện trên màn hình.
 - **QĐ-5** Nếu sau 3 vòng một setup vẫn < 50% WR ở 2R hoặc kỳ vọng âm ở cả hai nửa thời gian ⇒ setup đó **tắt mặc định**
   trong indicator (vẫn có công tắc), và báo rõ trong README. Không ép.
+- **QĐ-6 (người học chốt 2026-10-21):** **CHỈ đo trên file 90 ngày `fp_GCZ26_XCEC_Time_20260723-20261021_90d*`** (3 tháng
+  gần nhất, một hợp đồng GCZ26). **Bỏ hẳn file 2 năm `fp_GC_XCEC_*`** vì dữ liệu footprint trước đó sai mã hợp đồng, lệch
+  nhiều. Hệ quả: n nhỏ hơn, TRAIN ≤ 2026-09-15 / TEST từ 2026-09-16 là phép kiểm duy nhất; mọi bảng "2 năm" trong các
+  RESULTS vòng 1 chỉ còn giá trị tham khảo, không dùng để quyết định. Khi có export mới cùng mã thì nối thêm vào.

@@ -425,8 +425,8 @@ def round2_block(P, name, kw0, moves, retrs, base_key, L, two_year=False):
 
     def fc(t):
         s_ = st_of(t); a, b = halves(t)
-        return 'n=%d R %s | %s %s (n%d) / %s %s (n%d)' % (s_['n'], f(s_['avg_r']), h1, f(a['avg_r']), a['n'], h2, f(b['avg_r']), b['n'])
-    L += grid2(cell, moves, retrs, fc, 'Luoi %s (R TB tong | %s / %s)' % (name, h1, h2))
+        return 'n=%d R %s ; %s %s (n%d) / %s %s (n%d)' % (s_['n'], f(s_['avg_r']), h1, f(a['avg_r']), a['n'], h2, f(b['avg_r']), b['n'])
+    L += grid2(cell, moves, retrs, fc, 'Luoi %s (R TB tong ; %s / %s)' % (name, h1, h2))
     base = cell[base_key]
     a, b = halves(base)
     days = P.n_days

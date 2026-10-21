@@ -366,6 +366,10 @@ def main_all():
         for lab, DD_, ct in (('90d', D, None), ('2 nam', D2, cut)):
             L, _ = full_block('%s - %s' % (name, lab), DD_, vkw, cut=ct, kernel_ctrl=False)
             out += L
+    ev = os.path.join(HERE, 'report', '_eval_a_source.txt')
+    if os.path.exists(ev):
+        with open(ev, encoding='utf-8') as fh:
+            out.append(fh.read())
     return out
 
 

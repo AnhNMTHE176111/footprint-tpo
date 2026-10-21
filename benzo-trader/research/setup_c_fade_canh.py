@@ -59,7 +59,8 @@ def prepare(base: str) -> dict:
 
 def detect(df: pd.DataFrame, zones: pd.DataFrame, mode: pd.DataFrame, pen_ticks: int = 2, min_width: float = 6.0,
            tp_mode: str = 'poc', confirm: bool = False, second_touch: bool = False, strong_delta: bool = False,
-           mad: pd.Series | None = None, conf=None, min_conf: int = 0, v4: bool = False, u: pd.Series | None = None) -> list:
+           mad: pd.Series | None = None, conf=None, min_conf: int = 0, v4: bool = False, u: pd.Series | None = None,
+           excl: tuple = (780, 860), gate=None) -> list:
     """Tra list entry cho kernel.simulate. zones = zone_columns da doi band (xem prepare), mode = mode_frame."""
     n = len(df)
     hi, lo, cl, op, dl = (df[c].to_numpy(float) for c in ('high', 'low', 'close', 'open', 'delta'))
@@ -73,7 +74,7 @@ def detect(df: pd.DataFrame, zones: pd.DataFrame, mode: pd.DataFrame, pen_ticks:
     with np.errstate(invalid='ignore'):
         width = bh - bl
         base = (mode['mode'].to_numpy() == 'BALANCE') & (width >= min_width - 1e-9) & (~df['splice'].to_numpy()) & \
-               (~df['thin'].to_numpy()) & ~((sm >= 780) & (sm < 860)) & np.isin(phase, ['A', 'EU', 'US'])
+               (~df['thin'].to_numpy()) & ~((sm >= excl[0]) & (sm < excl[1])) & np.isin(phase, ['A', 'EU', 'US'])
     cm = pd.Series(rng).groupby(sno).cummax().to_numpy()
     prev = np.r_[-np.inf, cm[:-1]]
     first = np.r_[True, sno[1:] != sno[:-1]]
@@ -140,6 +141,8 @@ def detect(df: pd.DataFrame, zones: pd.DataFrame, mode: pd.DataFrame, pen_ticks:
             nm = ('IB_H' if side < 0 else 'IB_L') if bsrc[i] == 'ib' else ('VAH_EU' if side < 0 else 'VAL_EU')
         else:
             nm = 'VAH_Y' if side < 0 else 'VAL_Y'
+        if gate is not None and not gate(int(i), int(j), int(side)):
+            continue
         nconf = 1
         if conf is not None:
             nconf = conf.count(int(i), float(E))
@@ -405,7 +408,7 @@ def main():
 def compose():
     rd = os.path.join(HERE, 'report')
     parts = []
-    for fn in ('RESULTS-C.round2.md', 'RESULTS-C.round1.md'):
+    for fn in ('RESULTS-C.round3.md', 'RESULTS-C.round2.md', 'RESULTS-C.round1.md'):
         fp = os.path.join(rd, fn)
         if os.path.exists(fp):
             txt = open(fp, encoding='utf-8').read()

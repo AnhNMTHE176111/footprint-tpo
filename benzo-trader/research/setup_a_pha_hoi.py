@@ -70,7 +70,7 @@ def band_arrays(df, zc, m5):
 
 
 def detect(df, zcols, m5=None, n_min=3, body=0.5, delta_break=False, cands=None, hold_edge=False,
-           expire=None, zone_half=None, rr=None, conf_min=0, conf_r=0.7, time_filter=False, zobj=None):
+           expire=None, zone_half=None, rr=None, conf_min=0, conf_r=0.7, time_filter=False, zobj=None, extra=None):
     """Tra list entries. cands (list) neu cho: nhan them cac nen 'ung vien doi chung' (trong trang thai pha, cham E, hop le) -
     chua kiem nhip hoi / CF. delta_break (bien the V1): nen M5 pha phai co delta cung chieu S.
     hold_edge (bien the V2): nen CF phai dong o phia NGOAI E (buy: close >= E; sell: close <= E)."""
@@ -138,7 +138,8 @@ def detect(df, zcols, m5=None, n_min=3, body=0.5, delta_break=False, cands=None,
                         cands.append(dict(idx=i, side=S, E=E, zone=zname, key=key))
                 npb = i - 1 - pk_pos
                 if (npb >= n_min and pbmax < L and cf[S][i] and count.get(key, 0) < 2
-                        and (not hold_edge or (cl[i] - E) * S >= 0)):
+                        and (not hold_edge or (cl[i] - E) * S >= 0)
+                        and (extra is None or extra(i, S, E, pk_pos))):
                     struct = min(lo[i], E - zone_half) if S > 0 else max(hi[i], E + zone_half)
                     r = K.risk(df, i, S, struct, rr=rr)
                     nc = nconf(i, S, E, zname) if zobj is not None else -1
@@ -525,7 +526,198 @@ def round2():
     print('ghi RESULTS-A.md vong 2 + vong 1')
 
 
+# ---------------------------------------------------------------------------------------------
+# VONG 3: (1) mo xe 18 lenh SL cua V3 (2) V6 = V3 + "tuong limit" tu footprint tung muc gia
+# ---------------------------------------------------------------------------------------------
+class Wall:
+    """Footprint tung muc gia theo nen. Tuong limit tai cuc tri rau hoi: 3 muc sat cuc tri; tong volume >= kV x trung vi volume/muc cua
+    50 nen (gom nen dang xet); delta nguoc chieu hoi: pha len/hoi xuong => ask >= kD x bid tai 3 muc day rau; pha xuong gương ngược."""
+
+    def __init__(self, D, levels):
+        pos = pd.Index(D.df['bar_idx'].to_numpy()).get_indexer(levels['bar_idx'].to_numpy())
+        ok = pos >= 0
+        lv = levels[ok].copy()
+        lv['pos'] = pos[ok]
+        lv = lv.sort_values(['pos', 'price'], kind='stable')
+        self.pos = lv['pos'].to_numpy()
+        self.price = lv['price'].to_numpy(float)
+        self.vol = lv['volume'].to_numpy(float)
+        self.bid = lv['bid_vol'].to_numpy(float)
+        self.ask = lv['ask_vol'].to_numpy(float)
+        n = len(D.df)
+        self.lo_i = np.searchsorted(self.pos, np.arange(n), 'left')
+        self.hi_i = np.searchsorted(self.pos, np.arange(n), 'right')
+        self.cl = D.df['close'].to_numpy(float)
+        self.hi = D.df['high'].to_numpy(float)
+        self.lo = D.df['low'].to_numpy(float)
+        self.med_cache = {}
+
+    def med(self, i):
+        if i not in self.med_cache:
+            a, b = self.lo_i[max(0, i - 49)], self.hi_i[i]
+            self.med_cache[i] = float(np.median(self.vol[a:b])) if b > a else float('nan')
+        return self.med_cache[i]
+
+    def info(self, i, S, E, pk_pos):
+        """(j, vol3, ask3, bid3, med) o nen hoi cham E co cuc tri xa nhat (day cho S>0, dinh cho S<0); None neu khong co."""
+        best = None
+        for j in range(pk_pos + 1, i):
+            if abs(self.cl[j] - E) <= 1.0 or (self.lo[j] <= E <= self.hi[j]):
+                key = -self.lo[j] if S > 0 else self.hi[j]
+                if best is None or key > best[0]:
+                    best = (key, j)
+        if best is None:
+            return None
+        j = best[1]
+        a, b = self.lo_i[j], self.hi_i[j]
+        if b <= a:
+            return None
+        sl = slice(a, a + 3) if S > 0 else slice(max(a, b - 3), b)
+        return j, float(self.vol[sl].sum()), float(self.ask[sl].sum()), float(self.bid[sl].sum()), self.med(j)
+
+    def check(self, i, S, E, pk_pos, kV, kD):
+        r = self.info(i, S, E, pk_pos)
+        if r is None:
+            return False
+        j, v3, a3, b3, md = r
+        if not (md == md) or v3 < kV * md:
+            return False
+        return (a3 >= kD * b3 and a3 > 0) if S > 0 else (b3 >= kD * a3 and b3 > 0)
+
+
+def dissect_sl(D, tr, win_back=20, win_sweep=60):
+    """Phan loai lenh SL: HOI XUYEN = trong win_back nen M1 sau SL co nen dong lai trong range >= 1u qua canh E;
+    QUET = trong win_sweep nen sau SL (cung phien) gia cham TP cu."""
+    df = D.df
+    u = K.median_range(df).to_numpy(float)
+    cl, hi, lo = (df[c].to_numpy(float) for c in ('close', 'high', 'low'))
+    sn = df['session_no'].to_numpy()
+    rows = []
+    for x in tr[tr['outcome'] == 'SL'].itertuples():
+        i, ex, S, E = int(x.idx), int(x.exit_idx), int(x.side), float(x.E)
+        uu = u[i]
+        end = min(len(df) - 1, ex + win_back)
+        w = np.arange(ex + 1, end + 1)
+        w = w[sn[w] == sn[ex]] if len(w) else w
+        a = bool(len(w) and ((cl[w] <= E - uu).any() if S > 0 else (cl[w] >= E + uu).any()))
+        end2 = min(len(df) - 1, ex + win_sweep)
+        w2 = np.arange(ex + 1, end2 + 1)
+        w2 = w2[sn[w2] == sn[ex]] if len(w2) else w2
+        b = bool(len(w2) and ((hi[w2] >= x.tp).any() if S > 0 else (lo[w2] <= x.tp).any()))
+        seg = np.arange(i + 1, ex + 1)
+        mfe = float(((hi[seg].max() - x.entry) if S > 0 else (x.entry - lo[seg].min())) / x.risk_pts) if len(seg) else 0.0
+        lab = 'ca hai' if (a and b) else ('HOI XUYEN' if a else ('QUET' if b else 'khong ro'))
+        rows.append(dict(t_vn=str(x.t_vn)[:16], side='BUY' if S > 0 else 'SELL', phase=x.phase, zone=x.zone, E=E, entry=x.entry, sl=x.sl,
+                         bars=ex - i, mfe=mfe, u=uu, a=a, b=b, lab=lab))
+    return pd.DataFrame(rows)
+
+
+def boot_ci(r, n=5000, seed=7):
+    r = np.asarray(r, float)
+    if len(r) == 0:
+        return float('nan'), float('nan')
+    bs = np.random.default_rng(seed).choice(r, size=(n, len(r))).mean(axis=1)
+    return float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5))
+
+
+def round3():
+    D = Data(D90)
+    levels = K.load_levels(D90 + '.csv')
+    W = Wall(D, levels)
+    L = ['# VONG 3 - mo xe SL cua V3 va V6 (tuong limit footprint)', '',
+         '**QD-6: chi file 90d GCZ26.** Cung seed. V3 = het han 30 nen, mep xa E +-1,0, o chinh (n_hoi 3, than CF 0,5). Moi so lieu bang 2 nam o phan duoi la tham khao.', '']
+    # ---- 1. mo xe
+    _, t3 = run(D, 3, 0.5, expire=30, rr=3.0)
+    ds = dissect_sl(D, t3)
+    L += ['## 1. Phan loai %d lenh SL cua V3 (TP 3R, n=%d lenh)' % (len(ds), len(t3)), '',
+          'HOI XUYEN = trong 20 nen M1 sau SL co nen dong lai trong range >= 1u (u = trung vi bien do 50 nen) qua canh E. QUET = trong 60 nen sau SL gia cham TP cu. Hai loai co the chong nhau.', '',
+          '| loai | so lenh | ti le |', '|---|---|---|']
+    for lab in ('HOI XUYEN', 'QUET', 'ca hai', 'khong ro'):
+        c = int((ds['lab'] == lab).sum())
+        L.append('| %s | %d | %.0f%% |' % (lab, c, 100 * c / max(1, len(ds))))
+    L += ['', '- Co nen dong xuyen lai (a) tinh ca hai: **%d / %d**; co cham TP cu (b) tinh ca hai: **%d / %d**.' % (int(ds['a'].sum()), len(ds), int(ds['b'].sum()), len(ds)),
+          '- So nen den SL: trung vi %.0f; da di >= 1R truoc khi SL: %d / %d; SL trung vi %.2f u.' % (
+              ds['bars'].median(), int((ds['mfe'] >= 1).sum()), len(ds), float((ds['sl'] * 0 + (ds['entry'] - ds['sl']).abs() / ds['u']).median())), '',
+          '| gio VN | chieu | phase | vung | E | vao | SL | nen den SL | MFE (R) | xuyen lai | quet | loai |', '|---|---|---|---|---|---|---|---|---|---|---|---|']
+    for x in ds.itertuples():
+        L.append('| %s | %s | %s | %s | %.1f | %.1f | %.1f | %d | %.2f | %s | %s | %s |' % (x.t_vn, x.side, x.phase, x.zone, x.E, x.entry, x.sl, x.bars, x.mfe, 'x' if x.a else '', 'x' if x.b else '', x.lab))
+    L.append('')
+    # ---- 2. V6
+    L += ['## 2. V6 = V3 + tuong limit tai cuc tri rau hoi', '',
+          'Nen hoi cham E co cuc tri xa nhat (day cho pha len) trong nhip hoi; 3 muc gia sat cuc tri rau do: (i) tong volume 3 muc >= kV x trung vi volume/muc cua 50 nen; '
+          '(ii) pha len/hoi xuong: ask >= kD x bid tai 3 muc (pha xuong: bid >= kD x ask tai 3 muc dinh). Luoi kV {1,5; 2,0} x kD {2; 3}; n_hoi 3, than CF 0,5 co dinh. '
+          'Do ro: (i) so sanh tong 3 muc voi trung vi MOT muc (dung nguyen van de bai), nen de qua; (ii) la dieu kien chinh.', '']
+    verdict = []
+    for rr in (3.0, 2.0):
+        _, base = run(D, 3, 0.5, expire=30, rr=rr)
+        bst = stat(base)
+        cc = []
+        ent_b = detect(D.df, D.zc, D.m5, 3, 0.5, cands=cc, zobj=D, expire=30, rr=rr)
+        lo_b, hi_b = boot_ci(base[base['outcome'].isin(['TP', 'SL'])]['r']) if len(base) else (float('nan'),) * 2
+        L += ['### TP %dR (V3 tham chieu: n=%d, WR %s%%, R TB %s, CI95 [%s ; %s])' % (rr, bst['n'], f(100 * bst['wr'], 1), f(bst['avg_r']), f(lo_b), f(hi_b)), '',
+              '| kV | kD | n | WR | R TB | CI95 bootstrap | TRAIN n / R | TEST n / R | doi chung state (200) | doi chung thinning V3 (200) | do duoc? |', '|---|---|---|---|---|---|---|---|---|---|---|']
+        rbase = base['r'].to_numpy() if len(base) else np.array([])
+        for kV in (1.5, 2.0):
+            for kD in (2.0, 3.0):
+                ex = (lambda i, S, E, pk, kV=kV, kD=kD: W.check(i, S, E, pk, kV, kD))
+                ent, t6 = run(D, 3, 0.5, expire=30, rr=rr, extra=ex)
+                s6 = stat(t6)
+                a, b = split_stats(t6, None)
+                lo6, hi6 = boot_ci(t6[t6['outcome'].isin(['TP', 'SL'])]['r']) if len(t6) else (float('nan'),) * 2
+                ctl_s = 'n/a'
+                ctl_t = 'n/a'
+                if len(t6):
+                    ctl, npool = control_state(D, ent, cc, n_draw=200, rr=rr)
+                    if len(ctl):
+                        ctl_s = '%s (%s%% >= that)' % (f(np.nanmean(ctl)), f(100 * np.mean(ctl >= s6['avg_r']), 0))
+                    g = np.random.default_rng(31)
+                    th = np.array([g.choice(rbase, size=min(len(t6), len(rbase)), replace=False).mean() for _ in range(200)])
+                    ctl_t = '%s (%s%% >= that)' % (f(th.mean()), f(100 * np.mean(th >= s6['avg_r']), 0))
+                ok = 'KHONG DO DUOC (n TEST < 15)' if b['n'] < 15 else ('du n' + (', TEST > 0' if b['avg_r'] > 0 else ', TEST <= 0'))
+                L.append('| %.1f | %.0f | %d | %s%% | %s | [%s ; %s] | %d / %s | %d / %s | %s | %s | %s |' % (
+                    kV, kD, s6['n'], f(100 * s6['wr'], 1), f(s6['avg_r']), f(lo6), f(hi6), a['n'], f(a['avg_r']), b['n'], f(b['avg_r']), ctl_s, ctl_t, ok))
+                verdict.append((rr, kV, kD, s6['n'], a, b))
+        L.append('')
+    # chan doan: ti le tung dieu kien tren 20 lenh V3 (tai nen vao)
+    cap = {}
+
+    def _cap(i, S, E, pk):
+        cap[i] = W.info(i, S, E, pk)
+        return True
+    ent3, _t = run(D, 3, 0.5, expire=30, rr=3.0, extra=_cap)
+    infos = [(e['side'], cap.get(e['idx'])) for e in ent3]
+    nn = len(infos)
+    have = [(S, r) for S, r in infos if r is not None]
+    L += ['### Chan doan V6 tren cac lenh V3 (%d lenh vao; %d co nen hoi cham E trong nhip hoi de do footprint)' % (nn, len(have)), '',
+          '| dieu kien | so lenh dat |', '|---|---|']
+    for kV in (1.5, 2.0):
+        L.append('| tong volume 3 muc >= %.1f x trung vi/muc | %d / %d |' % (kV, sum(1 for S, r in have if r[4] == r[4] and r[1] >= kV * r[4]), len(have)))
+    for kD in (2.0, 3.0):
+        c = sum(1 for S, r in have if ((r[2] >= kD * r[3] and r[2] > 0) if S > 0 else (r[3] >= kD * r[2] and r[3] > 0)))
+        L.append('| delta dung chieu hoi-dao (ask >= %.0f x bid o day / bid >= %.0f x ask o dinh) | %d / %d |' % (kD, kD, c, len(have)))
+    c = sum(1 for S, r in have if ((r[3] >= 2 * r[2] and r[3] > 0) if S > 0 else (r[2] >= 2 * r[3] and r[2] > 0)))
+    L.append('| (tham khao) delta CUNG chieu hoi: bid >= 2 x ask o day / ask >= 2 x bid o dinh | %d / %d |' % (c, len(have)))
+    L.append('')
+    # ti le qua tuong tren cac lenh V3
+    ok15 = [v for v in verdict if v[5]['n'] >= 15]
+    L += ['## Phan quyet vong 3', '',
+          '- So o V6 co n TEST >= 15: **%d / %d**. So o co n TEST >= 30 va TEST > 0 va TRAIN > 0: **%d**.' % (
+              len(ok15), len(verdict), sum(1 for v in verdict if v[5]['n'] >= 30 and v[5]['avg_r'] > 0 and v[4]['avg_r'] > 0)), '']
+    ev = os.path.join(HERE, 'report', '_eval_a_r3.txt')
+    if os.path.exists(ev):
+        with open(ev, encoding='utf-8') as fh:
+            L.append(fh.read())
+    with open(os.path.join(HERE, 'report', '_round12_A.md'), encoding='utf-8') as fh:
+        old = fh.read()
+    with open(os.path.join(HERE, 'report', 'RESULTS-A.md'), 'w', encoding='utf-8') as fh:
+        fh.write('\n'.join(L) + '\n\n---\n\n' + old)
+    print('ghi RESULTS-A.md vong 3 + vong 2 + vong 1')
+
+
 if __name__ == '__main__':
+    if '--round3' in sys.argv:
+        round3()
+        sys.exit(0)
     if '--round2' in sys.argv:
         round2()
         sys.exit(0)

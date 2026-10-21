@@ -1,0 +1,7 @@
+## Danh gia vong 3 (viet tay)
+
+1. **Bai kiem tra KHONG tach duoc 72 ca pha that.** Quy tac dung de bai (do len: bid >= kD x ask) gan nhu khong bao gio kich hoat: chi 0-6 / 121 lenh co tuong; trong 88 SL co 0-5 tuong, ca 5 deu la PHA_THAT, 0 la QUET RAU, nhung n qua nho de noi gi. Quy tac guong (ask >= kD x bid) kich hoat 8-20 lenh: 13/72 PHA_THAT (18%), 3/16 QUET (19%), 4/33 TP (12%) => ti le co tuong gan nhu nhau o ca ba nhom, khong tach duoc.
+2. **V5 (de bai) khong o nao dat:** n 2-12 lenh, n TEST 1-6 (< 20), khong o nao duong ca TRAIN va TEST. V5-guong: n 9-25, n TEST 4-15, **am o ca TRAIN va TEST o ca 8 o** (R TB TEST -0,09..-1,09). Khong ket luan duoc voi V5 de bai (n nho); voi V5-guong thi ket luan duoc la khong co loi the.
+3. **Dieu duy nhat dang chu y la luat gio, khong phai tuong:** chi bo 19:20-20:30 VN (fade khong tuong ~ co ban bo gio): n 109, R TB -0,06 [-0,33 ; +0,21] (co ban chua bo gio: -0,26), TEST +0,17 (n 53) nhung TRAIN -0,27 => van khong duong o ca hai nua; KTC bao gom 0.
+4. **V5-nghich** (khong tuong, stop ngoai rau, SL = E lui 0,5u, TP 2R, bo 19:20-20:30): n 70-74, R TB -0,04..-0,10 [KTC ~ -0,4 ; +0,3], TRAIN -0,20..-0,23, TEST +0,06..+0,17 (n TEST 30-32) => ban tho cung ket qua gan nhu y het (73 lenh, -0,07) vi tuong gan nhu khong loc duoc gi. Yeu, TRAIN am: giong ket luan cua agent chinh (-0,05/+0,18) chu khong tot hon.
+5. **Ket luan cuoi:** khong o V5 nao duong ca TRAIN lan TEST voi n TEST >= 20 => **C tat mac dinh**. Luat gio 19:20-20:30 nen giu trong Be thong chung (giam lo ro) du C co tat.

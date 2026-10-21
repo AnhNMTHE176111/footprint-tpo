@@ -1,3 +1,89 @@
+# VONG 3 - mo xe SL cua V3 va V6 (tuong limit footprint)
+
+**QD-6: chi file 90d GCZ26.** Cung seed. V3 = het han 30 nen, mep xa E +-1,0, o chinh (n_hoi 3, than CF 0,5). Moi so lieu bang 2 nam o phan duoi la tham khao.
+
+## 1. Phan loai 18 lenh SL cua V3 (TP 3R, n=20 lenh)
+
+HOI XUYEN = trong 20 nen M1 sau SL co nen dong lai trong range >= 1u (u = trung vi bien do 50 nen) qua canh E. QUET = trong 60 nen sau SL gia cham TP cu. Hai loai co the chong nhau.
+
+| loai | so lenh | ti le |
+|---|---|---|
+| HOI XUYEN | 11 | 61% |
+| QUET | 2 | 11% |
+| ca hai | 2 | 11% |
+| khong ro | 3 | 17% |
+
+- Co nen dong xuyen lai (a) tinh ca hai: **13 / 18**; co cham TP cu (b) tinh ca hai: **4 / 18**.
+- So nen den SL: trung vi 7; da di >= 1R truoc khi SL: 6 / 18; SL trung vi 1.77 u.
+
+| gio VN | chieu | phase | vung | E | vao | SL | nen den SL | MFE (R) | xuyen lai | quet | loai |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-07-29 06:39 | SELL | A | VAL_Y | 4079.2 | 4078.6 | 4080.5 | 5 | 0.63 | x |  | HOI XUYEN |
+| 2026-07-31 14:42 | SELL | EU | VAL_Y | 4129.6 | 4129.9 | 4132.0 | 6 | 0.48 |  | x | QUET |
+| 2026-08-01 01:52 | SELL | US | VAL_EU | 4106.4 | 4105.9 | 4107.7 | 8 | 0.28 |  |  | khong ro |
+| 2026-08-13 19:52 | BUY | US | VAH_EU | 4450.4 | 4452.2 | 4448.8 | 9 | 2.00 |  |  | khong ro |
+| 2026-08-20 06:17 | BUY | A | VAH_Y | 4576.8 | 4577.0 | 4574.8 | 6 | 0.23 | x |  | HOI XUYEN |
+| 2026-08-25 03:22 | BUY | US | VAH_EU | 4707.6 | 4707.9 | 4706.0 | 4 | 0.42 | x |  | HOI XUYEN |
+| 2026-08-27 23:45 | BUY | US | VAH_EU | 4665.6 | 4667.6 | 4664.3 | 5 | 0.45 | x |  | HOI XUYEN |
+| 2026-08-28 11:49 | SELL | A | VAL_Y | 4633.2 | 4632.9 | 4634.6 | 2 | -0.12 | x | x | ca hai |
+| 2026-09-01 01:25 | SELL | US | VAL_EU | 4482.4 | 4479.7 | 4483.7 | 26 | 1.05 | x |  | HOI XUYEN |
+| 2026-09-01 02:58 | BUY | US | VAH_EU | 4499.2 | 4498.8 | 4496.4 | 23 | 2.54 | x |  | HOI XUYEN |
+| 2026-09-08 23:23 | SELL | US | VAL_EU | 4437.2 | 4436.6 | 4440.5 | 2 | 0.21 | x |  | HOI XUYEN |
+| 2026-09-10 12:51 | BUY | EU | VAH_Y | 4468.4 | 4470.3 | 4466.3 | 18 | 2.40 | x |  | HOI XUYEN |
+| 2026-09-22 00:56 | SELL | US | VAL_EU | 4383.2 | 4381.7 | 4384.8 | 10 | -0.03 | x |  | HOI XUYEN |
+| 2026-09-28 21:14 | SELL | US | VAL_EU | 4173.6 | 4171.5 | 4175.4 | 8 | 0.59 |  | x | QUET |
+| 2026-10-02 07:02 | BUY | A | VAH_Y | 4210.4 | 4209.7 | 4207.6 | 1 | -0.29 | x |  | HOI XUYEN |
+| 2026-10-09 19:29 | SELL | US | VAL_EU | 4209.6 | 4208.6 | 4210.9 | 1 | 0.35 | x | x | ca hai |
+| 2026-10-15 11:22 | BUY | A | VAH_Y | 4166.0 | 4165.8 | 4163.9 | 59 | 1.63 | x |  | HOI XUYEN |
+| 2026-10-21 13:19 | SELL | EU | VAL_Y | 4135.2 | 4134.1 | 4136.5 | 14 | 1.83 |  |  | khong ro |
+
+## 2. V6 = V3 + tuong limit tai cuc tri rau hoi
+
+Nen hoi cham E co cuc tri xa nhat (day cho pha len) trong nhip hoi; 3 muc gia sat cuc tri rau do: (i) tong volume 3 muc >= kV x trung vi volume/muc cua 50 nen; (ii) pha len/hoi xuong: ask >= kD x bid tai 3 muc (pha xuong: bid >= kD x ask tai 3 muc dinh). Luoi kV {1,5; 2,0} x kD {2; 3}; n_hoi 3, than CF 0,5 co dinh. Do ro: (i) so sanh tong 3 muc voi trung vi MOT muc (dung nguyen van de bai), nen de qua; (ii) la dieu kien chinh.
+
+### TP 3R (V3 tham chieu: n=20, WR 10.0%, R TB -0.68, CI95 [-1.09 ; -0.08])
+
+| kV | kD | n | WR | R TB | CI95 bootstrap | TRAIN n / R | TEST n / R | doi chung state (200) | doi chung thinning V3 (200) | do duoc? |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1.5 | 2 | 1 | 0.0% | -1.10 | [-1.10 ; -1.10] | 1 / -1.10 | 0 / - | -0.17 (79% >= that) | -0.64 (76% >= that) | KHONG DO DUOC (n TEST < 15) |
+| 1.5 | 3 | 0 | -% | - | [- ; -] | 0 / - | 0 / - | n/a | n/a | KHONG DO DUOC (n TEST < 15) |
+| 2.0 | 2 | 1 | 0.0% | -1.10 | [-1.10 ; -1.10] | 1 / -1.10 | 0 / - | -0.17 (79% >= that) | -0.64 (76% >= that) | KHONG DO DUOC (n TEST < 15) |
+| 2.0 | 3 | 0 | -% | - | [- ; -] | 0 / - | 0 / - | n/a | n/a | KHONG DO DUOC (n TEST < 15) |
+
+### TP 2R (V3 tham chieu: n=20, WR 25.0%, R TB -0.33, CI95 [-0.93 ; 0.27])
+
+| kV | kD | n | WR | R TB | CI95 bootstrap | TRAIN n / R | TEST n / R | doi chung state (200) | doi chung thinning V3 (200) | do duoc? |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1.5 | 2 | 1 | 0.0% | -1.10 | [-1.10 ; -1.10] | 1 / -1.10 | 0 / - | -0.05 (82% >= that) | -0.32 (76% >= that) | KHONG DO DUOC (n TEST < 15) |
+| 1.5 | 3 | 0 | -% | - | [- ; -] | 0 / - | 0 / - | n/a | n/a | KHONG DO DUOC (n TEST < 15) |
+| 2.0 | 2 | 1 | 0.0% | -1.10 | [-1.10 ; -1.10] | 1 / -1.10 | 0 / - | -0.05 (82% >= that) | -0.32 (76% >= that) | KHONG DO DUOC (n TEST < 15) |
+| 2.0 | 3 | 0 | -% | - | [- ; -] | 0 / - | 0 / - | n/a | n/a | KHONG DO DUOC (n TEST < 15) |
+
+### Chan doan V6 tren cac lenh V3 (21 lenh vao; 21 co nen hoi cham E trong nhip hoi de do footprint)
+
+| dieu kien | so lenh dat |
+|---|---|
+| tong volume 3 muc >= 1.5 x trung vi/muc | 19 / 21 |
+| tong volume 3 muc >= 2.0 x trung vi/muc | 16 / 21 |
+| delta dung chieu hoi-dao (ask >= 2 x bid o day / bid >= 2 x ask o dinh) | 1 / 21 |
+| delta dung chieu hoi-dao (ask >= 3 x bid o day / bid >= 3 x ask o dinh) | 0 / 21 |
+| (tham khao) delta CUNG chieu hoi: bid >= 2 x ask o day / ask >= 2 x bid o dinh | 12 / 21 |
+
+## Phan quyet vong 3
+
+- So o V6 co n TEST >= 15: **0 / 8**. So o co n TEST >= 30 va TEST > 0 va TRAIN > 0: **0**.
+
+## Danh gia trung thuc vong 3 (viet tay sau khi doc so, chi file 90d)
+
+1. **Mo xe 18 lenh SL cua V3 (khop huong cua agent chinh):** 13/18 (72%) co nen M1 dong lai trong range >= 1u qua canh E trong 20 nen sau SL (HOI XUYEN, ke ca 2 lenh vua xuyen vua quet); chi 4/18 (22%) gia quay lai cham TP cu trong 60 nen (QUET); 3 lenh khong thuoc loai nao. Trung vi 7 nen den SL; 6/18 da di >= 1R roi moi SL. Phan nhieu lenh thua la cu pha khong duoc chap nhan, khong phai quet rau. Luu y so lenh phan loai la 18 (n nho), nen ti le chi mang tinh mo ta.
+2. **V6 (tuong limit) KHONG DO DUOC.** n TEST = 0 o ca 8 o (kV x kD x TP), n tong chi 0-1 lenh. Nguyen nhan co the doc ra: trong 21 tin hieu V3, dieu kien volume (3 muc >= 1,5 / 2,0 x trung vi) dat 19 / 16 lan (gan nhu luon dat, vi tong 3 muc so voi trung vi MOT muc), nhung dieu kien delta dao chieu o cuc tri rau hoi (ask >= 2 x bid o day, hoac guong guong) chi dat **1/21** (kD=3: 0/21). Ngoai le: delta CUNG chieu hoi (phe ban van thang o day rau) dat 12/21. Noi cach khac: o cuoi nhip hoi cua da so lenh V3, footprint o cuc tri rau van la phe hoi chu dong, chua co tuong limit chan lai - khop voi viec cu pha sau do bi hoi xuyen lai. Day la mo ta, khong phai bang chung loc: 20 lenh, 18 thua, khong du de noi dieu kien nguoc lai (chi vao khi phe hoi van thang) se tot hon.
+3. **Doi chung:** state control cua V3 -0,17R (3R) / -0,05R (2R); thinning ngau nhien V3 -0,64R / -0,32R; lenh V6 duy nhat (-1,10R) khong mang y nghia.
+4. **Ket luan cuoi cung cho A: TAT MAC DINH, giu nguyen.** 3 vong (het han, hop luu, thoi gian, tuong limit) deu khong cho o nao du n va duong o ca TRAIN va TEST. Neu muon thu tiep, huong dang thu la bai kiem tra footprint cho CHINH setup nay nhung voi dieu kien nguoc (chi vao khi delta o cuc tri rau hoi da het phe hoi) nhung can du lieu nhieu hon (QD-6 hien chi cho 90d); hien chua do, khong ket luan.
+5. **Dieu chua chac:** (i) viec chon nen hoi "cham E co cuc tri xa nhat" trong nhip hoi la dien giai cua toi (spec khong noi ro nen nao); (ii) volume per-level cua file 90d rat mong (trung vi vai hop dong/muc), nen ti le ask/bid tren 3 muc bi nhieu cua so nguyen nho; (iii) n=18 SL qua nho cho moi ti le.
+
+
+---
+
 # VONG 2 - sua 2 lo hong co che (het han, hop luu, thoi gian)
 
 **QD-6 (nguoi hoc chot): CHI do tren file 90d GCZ26. Moi bang 2 nam (vong 1, o cuoi file) chi con de THAM KHAO, khong dung de quyet dinh (du lieu footprint truoc do sai ma hop dong).** Sinh boi `setup_a_pha_hoi.py --round2` (deterministic). Cac bien the TICH LUY: V3 -> V4 -> V5; moi bien the bao rieng. TP 3R va 2R chay song song, cung seed. Het han: CF phai nam trong 30 nen M1 sau nen cuoi cua M5 dong ngoai (nhip hoi bat dau va ket thuc trong khoang do). Hop luu: so vung KHAC (ten khac nhau, tinh theo as_of tai nen vao, khong nhin truoc) nam trong 0,7 gia quanh E, trong cac vung VWAP ngay/tuan, POC/VAH/VAL hom qua va Au, HVN ngay/tuan, naked POC, IB; "tach 0 / 1 / 2 / >=3" la so vung KHAC them o E. Pha lan 2 = trang thai pha thu >= 2 cung canh (cung nguon band) trong phien. Phase Au KHONG dung loc.

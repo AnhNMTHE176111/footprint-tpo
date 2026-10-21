@@ -174,3 +174,8 @@ Tham số tự do: độ xuyên tối thiểu (2 tick), khoảng cách cạnh đ
   gần nhất, một hợp đồng GCZ26). **Bỏ hẳn file 2 năm `fp_GC_XCEC_*`** vì dữ liệu footprint trước đó sai mã hợp đồng, lệch
   nhiều. Hệ quả: n nhỏ hơn, TRAIN ≤ 2026-09-15 / TEST từ 2026-09-16 là phép kiểm duy nhất; mọi bảng "2 năm" trong các
   RESULTS vòng 1 chỉ còn giá trị tham khảo, không dùng để quyết định. Khi có export mới cùng mã thì nối thêm vào.
+- **QĐ-8 (Corven, chat 11/10/2026, người học đưa 2026-10-21) — định nghĩa lại điểm vào TRAP:** bong bóng xanh/đỏ ở đỉnh/đáy nhịp
+  hồi **chưa phải trap**. Trap chỉ được tính khi **giá đã rời khỏi mức bong bóng một đoạn** theo chiều move cũ (phe hồi ở bong bóng
+  đã kẹt). Ca thật: 20:53 sell ngay tại bong bóng 4170 ⇒ râu quét SL 4172 rồi mới rơi về TP 4163,5. Luật cho bot: sau bong bóng
+  ở đỉnh hồi, **chờ nến M1 đóng cách mức bong bóng ≥ d** (d = 1 giá hoặc biên độ nến bong bóng, đo cả hai) rồi mới vào; SL trên đỉnh
+  bong bóng + 0,3; TP tính từ giá vào mới. Áp tương tự cho A/C: vào sau khi giá đã rời cạnh, không vào ngay tại cạnh.

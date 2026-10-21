@@ -315,8 +315,8 @@ def full_section(title, P, base_kw, reps, half_mode=False, with_ctrl=True):
 def main():
     reps, reps2 = 200, 60
     if '--round2' in sys.argv:
-        q = [int(x) for x in sys.argv[sys.argv.index('--round2') + 1:sys.argv.index('--round2') + 3] if x.isdigit()]
-        return round2(*(q if len(q) == 2 else (reps, reps2)))
+        q = [int(x) for x in sys.argv[sys.argv.index('--round2') + 1:sys.argv.index('--round2') + 2] if x.isdigit()]
+        return round2(q[0] if q else reps)
     if '--reps' in sys.argv:
         reps = int(sys.argv[sys.argv.index('--reps') + 1])
     if '--reps2y' in sys.argv:
@@ -408,7 +408,11 @@ def compose():
     for fn in ('RESULTS-C.round2.md', 'RESULTS-C.round1.md'):
         fp = os.path.join(rd, fn)
         if os.path.exists(fp):
-            parts.append(open(fp, encoding='utf-8').read())
+            txt = open(fp, encoding='utf-8').read()
+            if fn.endswith('round1.md'):
+                txt = ('**LUU Y (QD-6): VONG 1 duoi day. Cac bang `file 2 nam` (muc 6-9 va phan "PHAN 2 NAM") chi con THAM KHAO, KHONG dung de quyet dinh '
+                       '(du lieu footprint truoc do sai ma hop dong). Chi file 90d co gia tri quyet dinh.**') + chr(10) + chr(10) + txt
+            parts.append(txt)
     with open(os.path.join(rd, 'RESULTS-C.md'), 'w', encoding='utf-8') as fh:
         fh.write('\n\n---\n\n'.join(parts))
 
@@ -422,57 +426,78 @@ def bucket_rows(t_all, t_filt):
     return rows
 
 
-def round2(reps, reps2):
+def boot_ci(r, n_boot=10000, seed=0):
+    """Khoang tin cay bootstrap 95% cho R TB (percentile, seed co dinh)."""
+    r = np.asarray(r, float)
+    if len(r) < 2:
+        return (float('nan'), float('nan'))
+    rng = np.random.default_rng(seed)
+    m = rng.choice(r, size=(n_boot, len(r)), replace=True).mean(axis=1)
+    return float(np.percentile(m, 2.5)), float(np.percentile(m, 97.5))
+
+
+def ci_txt(t, label):
+    c = closed(t)
+    if len(c) == 0:
+        return '%s: khong co lenh' % label
+    lo, hi = boot_ci(c['r'].to_numpy())
+    return '%s: R TB %s, KTC bootstrap 95%% [%s ; %s], n = %d' % (label, f(c['r'].mean()), f(lo), f(hi), len(c))
+
+
+def round2(reps):
+    """Vong 2 (QD-6): CHI file 90d. V3 hop luu, V4 = V3 + ngay khong xu huong."""
     t0 = time.time()
     P = prepare(D90)
-    P2 = prepare(D2Y)
-    L = ['# VONG 2 - Setup C: hop luu (V3) va ngay khong xu huong (V4)', '',
-         'Cung seed (doi chung seed 1000+k), cung o khoi diem (xuyen 2 tick, rong >= 6). V3 = chi fade canh E khi trong ban kinh 0,7 gia quanh E co them >= 1 vung khac '
+    L = ['# VONG 2 - Setup C: hop luu (V3) va ngay khong xu huong (V4) - CHI file 90d (QD-6)', '',
+         '**QD-6: chi do tren file 90d GCZ26. File 2 nam (`fp_GC_XCEC_*`) bi bo vi du lieu footprint truoc do sai ma hop dong; moi bang 2 nam trong phan Vong 1 ben duoi chi de tham khao, KHONG dung de quyet dinh.**', '',
+         'TRAIN <= 2026-09-15, TEST tu 2026-09-16. Cung seed, o khoi diem (xuyen 2 tick, rong >= 6). V3 = chi fade canh E khi trong ban kinh 0,7 gia quanh E co them >= 1 vung khac '
          '(VWAP ngay/tuan, POC/VAH/VAL hom qua, POC/VAH/VAL Au, IB, HVN ngay/tuan, naked POC; vung trung gia E bi bo). V4 = V3 + |VWAP ngay - VWAP tuan| <= 2u (u = trung vi bien do 50 nen) '
-         'va close nen vao nam trong VA hom qua. Doi chung %d lan (90d) / %d lan (2 nam).' % (reps, reps2), '']
-    cells = []
+         'va close nen vao nam trong VA hom qua. Doi chung %d lan. Vi n nho, bao them khoang tin cay bootstrap 95%% (10.000 lan, seed 0) cho R TB.' % reps, '']
     base_kw = dict(pen_ticks=CENTER[0], min_width=CENTER[1])
+    L += ['## 0. Moc so sanh: o khoi diem vong 1 (khong loc hop luu), file 90d', '']
+    for tm in ('poc', 'fixed2'):
+        _, tb0 = run(P, **dict(base_kw, tp_mode=tm))
+        c0 = closed(tb0)
+        L += ['- TP %s: n %d, WR %s, %s; TEST: %s' % (tm, len(c0), pct(S(tb0)['wr']), ci_txt(tb0, 'tong'), ci_txt(tb0[tb0['split'] == 'TEST'] if len(tb0) else tb0, 'TEST'))]
+    L += ['']
+    cells = []
     for vname, vkw in (('V3 hop luu', dict(min_conf=2)), ('V4 = V3 + ngay khong xu huong', dict(min_conf=2, v4=True))):
         for tm in ('poc', 'fixed2'):
             title = '%s, TP %s' % (vname, 'canh/POC >= 2R' if tm == 'poc' else 'co dinh 2R')
             L += ['## ' + title, '']
             kw = dict(base_kw, tp_mode=tm)
             _, tall = run(P, annotate=True, **kw)
-            _, tf = run(P, **dict(kw, **vkw))
-            _, tall2 = run(P2, annotate=True, **kw)
-            _, tf2 = run(P2, **dict(kw, **vkw))
-            res = {}
-            for nm, tt, tb, key, dfp, rp in (('File 90d', tf, tall, 'split', P, reps), ('File 2 nam', tf2, tall2, 'half', P2, reps2)):
-                c = closed(tt)
-                ks = ('TRAIN', 'TEST') if key == 'split' else ('H1', 'H2')
-                L += ['### ' + nm, '', 'Lenh/ngay: **%s** (%s)' % (f(S(tt)['n'] / dfp['days'], 3), per_phase_day(tt, dfp['days'])), '', HDR, srow('Tong', S(tt))]
-                if len(c):
-                    for k in ks:
-                        L.append(srow(k, S(c[c[key] == k])))
-                    L.append(srow('rieng phase US', S(c[c['phase'] == 'US'])))
-                    for k in ks:
-                        L.append(srow('US ' + k, S(c[(c['phase'] == 'US') & (c[key] == k)])))
-                L += bucket_rows(tb, tt) + ['', ctrl_md(control(dfp, tt, rp)) if len(c) else 'Khong co lenh.', '']
-                res[nm] = c
-            c1, c2 = res['File 90d'], res['File 2 nam']
-            te = S(c1[c1['split'] == 'TEST']) if len(c1) else S(c1)
-            h1 = S(c2[c2['half'] == 'H1']) if len(c2) else S(c2)
-            h2 = S(c2[c2['half'] == 'H2']) if len(c2) else S(c2)
-            cells.append((title, te['n'], te['avg_r'], h1['avg_r'], h2['avg_r']))
+            _, tt = run(P, **dict(kw, **vkw))
+            c = closed(tt)
+            L += ['Lenh/ngay: **%s** (%s) tren %d phien sach' % (f(S(tt)['n'] / P['days'], 3), per_phase_day(tt, P['days']), P['days']), '', HDR, srow('Tong', S(tt))]
+            if len(c):
+                for k in ('TRAIN', 'TEST'):
+                    L.append(srow(k, S(c[c['split'] == k])))
+                L.append(srow('rieng phase US', S(c[c['phase'] == 'US'])))
+                for k in ('TRAIN', 'TEST'):
+                    L.append(srow('US ' + k, S(c[(c['phase'] == 'US') & (c['split'] == k)])))
+                L += [srow('phase ' + p, S(c[c['phase'] == p])) for p in ('A', 'EU')]
+            L += bucket_rows(tall, tt) + ['']
+            L += ['- ' + ci_txt(tt, 'tong'), '- ' + ci_txt(tt[tt['split'] == 'TEST'] if len(tt) else tt, 'TEST'), '']
+            L += [ctrl_md(control(P, tt, reps)) if len(c) else 'Khong co lenh.', '']
+            if len(c):
+                L += ['Vi du (toi da 5 thang + 5 thua, dan deu):', ''] + examples(tt, P['df'], True) + [''] + examples(tt, P['df'], False) + ['']
+            te = S(c[c['split'] == 'TEST']) if len(c) else S(c)
+            cells.append((title, S(tt)['n'], te['n'], te['avg_r']))
             print(title, 'xong %.0fs' % (time.time() - t0), flush=True)
-    L += ['## Ket luan vong 2', '', '| o | n TEST 90d | R TB TEST 90d | R TB H1 2 nam | R TB H2 2 nam | du tieu chuan? |', '|---|---|---|---|---|---|']
+    L += ['## Ket luan vong 2', '', '| o | n tong 90d | n TEST | R TB TEST | du tieu chuan (n TEST >= 30 va R TB TEST > 0)? |', '|---|---|---|---|---|']
     passed = False
-    for t, n, rt, a, b in cells:
-        ok = (n >= 30) and rt > 0 and a > 0 and b > 0
+    for t, nt, n, rt in cells:
+        ok = (n >= 30) and rt == rt and rt > 0
         passed |= ok
-        L.append('| %s | %d | %s | %s | %s | %s |' % (t, n, f(rt), f(a), f(b), 'CO' if ok else 'khong'))
-    L += ['', ('Co o dat tieu chuan: xem bang.' if passed else
-               '**Khong o nao dat tieu chuan (n TEST >= 30 va duong o ca 90d-TEST lan hai nua 2 nam) => ket luan cuoi: C tat mac dinh.**')]
+        L.append('| %s | %d | %d | %s | %s |' % (t, nt, n, f(rt), 'CO' if ok else 'khong'))
+    L += ['', ('Co o dat tieu chuan: xem bang (van phai kiem khoang tin cay).' if passed else
+               '**Khong o nao co n TEST >= 30 va R TB TEST duong => ket luan cuoi: C tat mac dinh.**')]
     ev = os.path.join(HERE, 'report', 'RESULTS-C.round2.danhgia.md')
     if os.path.exists(ev):
         L += ['', open(ev, encoding='utf-8').read()]
     with open(os.path.join(HERE, 'report', 'RESULTS-C.round2.md'), 'w', encoding='utf-8') as fh:
-        fh.write('\n'.join(L) + '\n')
+        fh.write(chr(10).join(L) + chr(10))
     compose()
     print('round2 xong %.0fs' % (time.time() - t0))
 

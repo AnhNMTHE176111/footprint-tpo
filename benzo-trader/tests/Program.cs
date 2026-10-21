@@ -253,9 +253,155 @@ static class Tests
     }
 #endif
 
+    // ---------------------------------------------------------------- kernel / vùng / detector
+    static void TestKernel()
+    {
+        Console.WriteLine("[8] BenzoKernel: giờ Mỹ, SmOf, ValueArea, Risk, CF");
+        Check(BenzoKernel.UsDst(new DateTime(2026, 10, 21, 0, 0, 0, DateTimeKind.Utc)), "21/10/2026 Mỹ còn giờ mùa hè");
+        Check(!BenzoKernel.UsDst(new DateTime(2026, 11, 2, 0, 0, 0, DateTimeKind.Utc)), "02/11/2026 Mỹ đã giờ mùa đông");
+        Check(!BenzoKernel.UsDst(new DateTime(2026, 3, 8, 6, 59, 0, DateTimeKind.Utc)) && BenzoKernel.UsDst(new DateTime(2026, 3, 8, 7, 0, 0, DateTimeKind.Utc)), "mốc CN thứ 2 tháng 3 07:00 UTC");
+        Check(BenzoKernel.SmOf(new DateTime(2026, 10, 21, 22, 0, 0, DateTimeKind.Utc), 7) == 0, "22:00 UTC = 05:00 VN ⇒ sm 0 (mùa hè)");
+        Check(BenzoKernel.SmOf(new DateTime(2026, 10, 21, 12, 0, 0, DateTimeKind.Utc), 7) == 840, "12:00 UTC = 19:00 VN ⇒ sm 840 (mùa hè)");
+        Check(BenzoKernel.SmOf(new DateTime(2026, 12, 21, 13, 0, 0, DateTimeKind.Utc), 7) == 840, "13:00 UTC = 20:00 VN ⇒ sm 840 (mùa đông, neo giờ Mỹ lùi +1h)");
+        Check(BenzoKernel.PhaseOf(0) == "A" && BenzoKernel.PhaseOf(449) == "A" && BenzoKernel.PhaseOf(450) == "EU" && BenzoKernel.PhaseOf(840) == "US" && BenzoKernel.PhaseOf(1380) == "OFF", "phase A/EU/US/OFF");
+        var pr = new double[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+        var w = new double[] { 1, 2, 4, 8, 20, 8, 4, 2, 1 };
+        Check(BenzoKernel.ValueArea(pr, w, out double poc, out double vah, out double val) && poc == 5 && vah == 7 && val == 3, "ValueArea 70% (POC 5, 3..7)", $"{poc} {vah} {val}");
+        Check(!BenzoKernel.ValueArea(new double[0], new double[0], out _, out _, out _), "ValueArea rỗng ⇒ false");
+        var bars = new List<BarData>();
+        for (int i = 0; i < 6; i++) bars.Add(new BarData { Idx = i, Time = T0.AddMinutes(i), O = 100, H = 100.5, L = 99.5, C = 100 });
+        var r = BenzoRisk.Calc(bars, 5, 1, 99.0, 2.0);
+        Check(r != null && Near(r.Sl, 98.7) && Near(r.Tp, 102.6) && Near(r.Risk, 1.3), "Risk BUY: SL = struct − 0,3, TP 2R", r == null ? "null" : $"{r.Sl} {r.Tp}");
+        var r2 = BenzoRisk.Calc(bars, 5, 1, 99.9, 2.0);
+        Check(r2 != null && r2.FloorApplied && Near(r2.Risk, 1.0), "Risk: sàn = biên độ nến cao nhất 5 nến (1,0)", r2 == null ? "null" : r2.Risk.ToString());
+        Check(BenzoRisk.Calc(bars, 5, 1, 95.0, 2.0) == null, "Risk: SL > 4 giá ⇒ bỏ lệnh");
+        var r3 = BenzoRisk.Calc(bars, 5, -1, 101.0, 3.0);
+        Check(r3 != null && Near(r3.Sl, 101.3) && Near(r3.Tp, 96.1), "Risk SELL: SL = struct + 0,3, TP 3R", r3 == null ? "null" : $"{r3.Sl} {r3.Tp}");
+        var cf = new BarData { O = 100, H = 101, L = 99.9, C = 100.8, Delta = 20 };
+        Check(BenzoKernel.IsConfirmBar(cf, 1, 15) && !BenzoKernel.IsConfirmBar(cf, -1, 15) && !BenzoKernel.IsConfirmBar(cf, 1, 25) && !BenzoKernel.IsConfirmBar(cf, 1, double.NaN),
+            "IsConfirmBar: đúng chiều, |Δ| ≥ trung vị, NaN ⇒ false");
+    }
+
+    /// <summary>Phiên 1 (400 nến, giá tuần hoàn 100..110) rồi phiên 2: nến benign quanh 105 + một nến "phá hụt" cạnh VAH hôm qua.</summary>
+    static BenzoEngine BuildDay2(Func<double, BarData> poke, bool news = false)
+    {
+        var det = new DetectorC();
+        var eng = new BenzoEngine("GCZ26", 0.1, null, new ISetupDetector[] { det });
+        if (news) eng.IsNewsBlocked = _ => true;
+        var lv = new Dictionary<int, List<LevelVol>>();
+        eng.GetLevels = i => lv.TryGetValue(i, out var l) ? (IReadOnlyList<LevelVol>)l : Array.Empty<LevelVol>();
+        DateTime d1 = new DateTime(2026, 10, 19, 22, 0, 0, DateTimeKind.Utc);
+        int idx = 0;
+        for (int k = 0; k < 400; k++, idx++)
+        {
+            double c = 100.0 + (k % 100) * 0.1;
+            eng.Bars.Add(new BarData { Idx = idx, Time = d1.AddMinutes(k), O = c, H = c + 0.1, L = c - 0.1, C = c, Vol = 10, Delta = 1 });
+            lv[idx] = new List<LevelVol> { new LevelVol(Math.Round(c, 1), 5, 5) };
+        }
+        DateTime d2 = new DateTime(2026, 10, 20, 22, 0, 0, DateTimeKind.Utc);
+        for (int k = 0; k < 20; k++, idx++)
+        {
+            double c = 105 + (k % 2 == 0 ? 0.1 : -0.1);
+            double hi = k == 3 ? c + 1.5 : c + 0.2, lo = k == 3 ? c - 1.5 : c - 0.2;   // nến 3 là nến dài nhất phiên
+            eng.Bars.Add(new BarData { Idx = idx, Time = d2.AddMinutes(k), O = c, H = hi, L = lo, C = c, Vol = 10, Delta = 2 });
+        }
+        eng.Advance(idx - 1);
+        var pk = poke(eng.Zones.YdVah);
+        pk.Idx = idx; pk.Time = d2.AddMinutes(20);
+        eng.Bars.Add(pk);
+        eng.Advance(idx);
+        return eng;
+    }
+
+    static void TestZonesAndC()
+    {
+        Console.WriteLine("[9] BenzoZones (phiên, VA hôm qua, VWAP, chế độ) + DetectorC trên dữ liệu tổng hợp");
+        var eng = BuildDay2(vah => new BarData { O = vah - 0.1, H = vah + 0.4, L = vah - 0.55, C = vah - 0.5, Vol = 10, Delta = -9 });
+        var z = eng.Zones;
+        Check(z.SessionNo == 1 && z.SessionStartIdx == 400, "tách phiên theo khoảng trống > 30 phút", $"{z.SessionNo} {z.SessionStartIdx}");
+        Check(z.HasYd && z.YdVah >= z.YdPoc && z.YdPoc >= z.YdVal && z.YdVah - z.YdVal >= 6.0 && z.YdVah <= 110.0 && z.YdVal >= 100.0, "VA phiên hôm qua có POC/VAH/VAL hợp lý", $"{z.YdVal} {z.YdPoc} {z.YdVah}");
+        Check(Math.Abs(z.VwapD - 105) < 0.5 && z.VwapW > 100 && z.VwapW < 110, "VWAP ngày reset ở phiên mới (quanh 105)", z.VwapD.ToString());
+        Check(z.ModeC.Mode == "BALANCE" && z.ModeDef.Mode == "NA", "chế độ: C (band hôm qua) = BALANCE, mặc định (chưa có VA Âu/IB) = NA", $"{z.ModeC.Mode}/{z.ModeDef.Mode}");
+        Check(eng.Signals.Count == 1 && eng.Signals[0].Side == -1 && eng.Signals[0].Setup == 'C', "C: râu xuyên VAH ≥ 2 tick, đóng lại trong, Δ âm ⇒ SELL", eng.Signals.Count.ToString());
+        if (eng.Signals.Count == 1)
+        {
+            var s = eng.Signals[0];
+            Check(Near(s.Tp - s.Entry, -2 * (s.Sl - s.Entry)) && s.Sl > s.Entry, "C: TP = 2R cố định, SL trên râu", $"{s.Entry} {s.Sl} {s.Tp}");
+            Check(s.Reason.Contains("VAH hôm qua") && s.Reason.Contains("tick"), "Reason tiếng Việt có số thật", s.Reason);
+        }
+        var e2 = BuildDay2(vah => new BarData { O = vah - 0.1, H = vah + 0.4, L = vah - 0.55, C = vah - 0.5, Vol = 10, Delta = +9 });
+        Check(e2.Signals.Count == 0, "C: Δ dương (không ủng hộ chiều vào) ⇒ không có tín hiệu");
+        var e3 = BuildDay2(vah => new BarData { O = vah - 0.1, H = vah + 0.2, L = vah - 0.2, C = vah - 0.05, Vol = 10, Delta = -9 });
+        Check(e3.Signals.Count == 0, "C: râu xuyên chỉ 1 tick (< 2 tick) ⇒ không có tín hiệu");
+        var e4 = BuildDay2(vah => new BarData { O = vah - 0.1, H = vah + 2.0, L = vah - 1.8, C = vah - 1.7, Vol = 10, Delta = -9 });
+        Check(e4.Signals.Count == 0, "C: nến xuyên là nến dài nhất phiên ⇒ loại");
+        var e5 = BuildDay2(vah => new BarData { O = vah - 0.1, H = vah + 0.4, L = vah - 0.55, C = vah - 0.5, Vol = 10, Delta = -9 }, news: true);
+        Check(e5.Signals.Count == 0, "tin USD mức cao ±15′ ⇒ không phát tín hiệu");
+    }
+
+    sealed class ObserveCount : IObservingDetector
+    {
+        public char Setup => 'A';
+        public int Observed, Tried, OpenAt = -1;
+        public void Observe(SetupContext ctx, int i) { Observed++; }
+        public Signal TryDetect(SetupContext ctx, int i)
+        {
+            Tried++;
+            return i == OpenAt ? new Signal { Side = 1, Entry = 100, Sl = 50, Tp = 150 } : null;
+        }
+    }
+
+    static void TestObserve()
+    {
+        Console.WriteLine("[10] Engine: Observe chạy mọi nến, TryDetect chỉ khi không có lệnh mở");
+        DateTime d2 = new DateTime(2026, 10, 20, 22, 0, 0, DateTimeKind.Utc);
+        var cnt2 = new ObserveCount { OpenAt = 2 };
+        var e3 = new BenzoEngine("X", 0.1, null, new ISetupDetector[] { cnt2 });
+        for (int k = 0; k < 10; k++) e3.Bars.Add(new BarData { Idx = k, Time = d2.AddMinutes(k), O = 100, H = 100.2, L = 99.8, C = 100, Vol = 10 });
+        e3.Advance(9);
+        Check(cnt2.Observed == 10 && cnt2.Tried == 3 && e3.Signals.Count == 1, "có lệnh mở: vẫn Observe 10 nến, chỉ TryDetect 3 nến (0..2)", $"{cnt2.Observed}/{cnt2.Tried}");
+        Check(e3.Zones.NewM5.Count <= 1 && e3.Zones.Idx == 9, "Zones theo kịp nến cuối");
+    }
+
+    /// <summary>Hồi quy trên dữ liệu thật (nếu có file 90d trong repo): số tín hiệu từng setup phải đúng như đã đối chiếu Python (parity).</summary>
+    static void TestRealData()
+    {
+        Console.WriteLine("[11] Hồi quy trên file 90d GCZ26 (bỏ qua nếu không có file)");
+        string root = null;
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
+            if (Directory.Exists(Path.Combine(d.FullName, "data-export", "data-footprint"))) { root = d.FullName; break; }
+        string bs = root == null ? null : Path.Combine(root, "data-export", "data-footprint", "fp_GCZ26_XCEC_Time_20260723-20261021_90d");
+        if (bs == null || !File.Exists(bs + "_bars.csv") || !File.Exists(bs + ".csv")) { Console.WriteLine("  (không có file 90d — bỏ qua)"); return; }
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var bars = new List<BarData>(); var pos = new Dictionary<int, int>();
+        foreach (var line in File.ReadLines(bs + "_bars.csv").Skip(1))
+        {
+            var f = line.Split(',');
+            pos[int.Parse(f[0], inv)] = bars.Count;
+            bars.Add(new BarData { Idx = bars.Count, Time = DateTime.ParseExact(f[1], "yyyy-MM-dd HH:mm:ss", inv), O = double.Parse(f[2], inv), H = double.Parse(f[3], inv), L = double.Parse(f[4], inv), C = double.Parse(f[5], inv), Vol = double.Parse(f[10], inv), Delta = double.Parse(f[11], inv) });
+        }
+        var levels = new List<LevelVol>[bars.Count];
+        foreach (var line in File.ReadLines(bs + ".csv").Skip(1))
+        {
+            var f = line.Split(',');
+            if (!pos.TryGetValue(int.Parse(f[0], inv), out int p)) continue;
+            (levels[p] ??= new List<LevelVol>()).Add(new LevelVol(double.Parse(f[2], inv), double.Parse(f[3], inv), double.Parse(f[4], inv), double.Parse(f[5], inv)));
+        }
+        var exp = new Dictionary<char, int> { ['A'] = 20, ['B'] = 13, ['C'] = 123, ['D'] = 33 };
+        foreach (var kv in exp)
+        {
+            ISetupDetector d = kv.Key switch { 'A' => new DetectorA(), 'B' => new DetectorB(), 'C' => new DetectorC(), _ => new DetectorD() };
+            var e = new BenzoEngine("GCZ26", 0.1, null, new[] { d }) { GetLevels = i => (IReadOnlyList<LevelVol>)levels[i] ?? Array.Empty<LevelVol>() };
+            foreach (var b in bars) e.Bars.Add(b);
+            e.Advance(bars.Count - 1);
+            Check(e.Signals.Count == kv.Value, $"setup {kv.Key}: {kv.Value} tín hiệu (khớp Python)", e.Signals.Count.ToString());
+        }
+    }
+
     static int Main()
     {
         TestSimulate(); TestStats(); TestResetMark(); TestCaption(); TestCache(); TestEngine();
+        TestKernel(); TestZonesAndC(); TestObserve(); TestRealData();
 #if DEBUG
         TestDemo();
 #endif

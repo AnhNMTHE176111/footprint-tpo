@@ -4,8 +4,7 @@
 //  Add vào chart M1 có Volume Analysis. Chỉ xử lý nến ĐÃ ĐÓNG, đúng 1 lần/nến, niêm phong theo
 //  thời gian mở nến (sống qua reload). Logic thuần nằm ở BenzoCore.cs (test được). File này chỉ
 //  là lớp dán: Settings, vòng đời, vẽ (bảng + mũi tên + SL/TP), Telegram + chụp ảnh Win32.
-//  4 detector A/B/C/D sẽ được cắm vào CreateDetectors() (xem README) — hiện danh sách RỖNG
-//  ở bản Release (bản DEBUG có DemoDetector để thử đường ống).
+//  4 detector A/B/D/C (BenzoDetectors.cs) được cắm trong CreateDetectors() theo ưu tiên A > B > D > C.
 //  Build: concat ProfileEngine.cs + BenzoCore.cs + file này (build.sh). Mọi `using` nằm trong namespace.
 // ============================================================================
 namespace BenzoTraderNs
@@ -150,11 +149,7 @@ namespace BenzoTraderNs
         /// <summary>Danh sách detector THEO THỨ TỰ ƯU TIÊN A > B > D > C. Agent port setup cắm vào đây.</summary>
         private static List<ISetupDetector> CreateDetectors()
         {
-            var l = new List<ISetupDetector>();
-#if DEBUG
-            l.Add(new DemoDetector());
-#endif
-            return l;
+            return new List<ISetupDetector> { new DetectorA(), new DetectorB(), new DetectorD(), new DetectorC() };
         }
 
         /// <summary>Tin USD mức cao trong ±15 phút (expose cho detector; cần lịch tin đã tải — chỉ phủ tuần hiện tại).</summary>
@@ -355,7 +350,7 @@ namespace BenzoTraderNs
                         var pl = b.VolumeAnalysisData?.PriceLevels;
                         if (pl == null) return Array.Empty<LevelVol>();
                         var list = new List<LevelVol>(pl.Count);
-                        foreach (var kv in pl) list.Add(new LevelVol(kv.Key, kv.Value.SellVolume, kv.Value.BuyVolume));
+                        foreach (var kv in pl) list.Add(new LevelVol(kv.Key, kv.Value.SellVolume, kv.Value.BuyVolume, kv.Value.Volume));
                         list.Sort((x, y) => x.Price.CompareTo(y.Price));
                         return list;
                     }

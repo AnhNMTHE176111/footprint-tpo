@@ -63,7 +63,10 @@ namespace BenzoTraderNs
     public struct LevelVol
     {
         public double Price, Bid, Ask;
-        public LevelVol(double price, double bid, double ask) { Price = price; Bid = bid; Ask = ask; }
+        /// <summary>Tổng volume mức giá (có thể lớn hơn Bid+Ask khi có lệnh không phân loại được bên).</summary>
+        public double Vol;
+        public LevelVol(double price, double bid, double ask) { Price = price; Bid = bid; Ask = ask; Vol = bid + ask; }
+        public LevelVol(double price, double bid, double ask, double vol) { Price = price; Bid = bid; Ask = ask; Vol = vol; }
     }
 
     /// <summary>Danh sách nến CHỈ ĐỌC được tới nến đã đóng đang xét — chống nhìn trước (look-ahead) bằng cấu trúc.</summary>
@@ -96,6 +99,7 @@ namespace BenzoTraderNs
         public IReadOnlyList<Signal> Signals;     // mọi tín hiệu đã mở TRƯỚC nến này (đếm lệnh/vùng, ngắt mạch 3 SL...)
         public Func<int, IReadOnlyList<LevelVol>> GetLevels = _ => Array.Empty<LevelVol>(); // footprint từng mức giá của nến idx
         public Func<DateTime, bool> IsNewsBlocked = _ => false;  // utc → trong ±15' tin USD mức cao
+        public BenzoZones Zones;                  // vùng/VWAP/chế độ M5/helper — engine đẩy mỗi nến đóng TRƯỚC khi gọi detector
         public DateTime ToVn(DateTime utc) => utc.AddHours(TzOffset);
     }
 
@@ -110,11 +114,20 @@ namespace BenzoTraderNs
         Signal TryDetect(SetupContext ctx, int closedIdx);
     }
 
+    /// <summary>
+    /// Detector có trạng thái: engine gọi Observe cho MỌI nến đã đóng (kể cả khi đang có lệnh mở / setup đang tắt / nến đã niêm phong)
+    /// để trạng thái nội bộ (nhịp hồi, đếm lệnh/vùng...) liên tục; TryDetect chỉ trả kết quả đã tính ở Observe của chính nến đó.
+    /// </summary>
+    public interface IObservingDetector : ISetupDetector
+    {
+        void Observe(SetupContext ctx, int closedIdx);
+    }
+
     // ---------------------------------------------------------------- lõi tính toán
     public static class BenzoCore
     {
         /// <summary>Đổi số này mỗi khi logic detector đổi → cache niêm phong cũ bị bỏ (không giữ kết quả của logic cũ).</summary>
-        public const string LogicVersion = "frame-1";
+        public const string LogicVersion = "port-1";
         /// <summary>Chi phí mỗi lệnh (giá): spread + trượt, GC tick 0,1.</summary>
         public const double CostPrice = 0.2;
         public const int NewsBlockMinutes = 15;
@@ -417,13 +430,14 @@ namespace BenzoTraderNs
         private readonly SignalCache _cache;
         private readonly ClosedBars _view;
         private readonly SetupContext _ctx;
+        public readonly BenzoZones Zones = new BenzoZones();
 
         public BenzoEngine(string symbol, double tick, SignalCache cache, IEnumerable<ISetupDetector> detectors)
         {
             Symbol = symbol; Tick = tick; _cache = cache;
             Detectors = detectors?.ToList() ?? new List<ISetupDetector>();
             _view = new ClosedBars(Bars);
-            _ctx = new SetupContext { Symbol = symbol, Tick = tick, Bars = _view, Signals = Signals };
+            _ctx = new SetupContext { Symbol = symbol, Tick = tick, Bars = _view, Signals = Signals, Zones = Zones };
         }
 
         public sealed class AdvanceResult
@@ -438,12 +452,17 @@ namespace BenzoTraderNs
             var res = new AdvanceResult();
             closedIdx = Math.Min(closedIdx, Bars.Count - 1);
             if (closedIdx < Processed) return res;
-            _ctx.TzOffset = TzOffset; _ctx.BarMinutes = BarMinutes;
+            _ctx.TzOffset = TzOffset; _ctx.BarMinutes = BarMinutes; Zones.TzOffset = TzOffset;
             _ctx.GetLevels = GetLevels; _ctx.IsNewsBlocked = IsNewsBlocked;
             long firstTicks = Bars[Processed].Time.Ticks;
             for (int i = Processed; i <= closedIdx; i++)
             {
                 var bar = Bars[i];
+                // 0) cập nhật vùng + cho mọi detector có trạng thái quan sát nến này (chỉ nhìn tới nến i)
+                _view.Limit = i + 1;
+                Zones.Push(i, bar, GetLevels(i));
+                foreach (var d in Detectors) if (d is IObservingDetector od) od.Observe(_ctx, i);
+                _view.Limit = Bars.Count;
                 // 1) lệnh đang mở gặp nến này (nến SAU nến vào)
                 if (Open != null && i > Open.BarIdx && BenzoCore.StepBar(Open, bar))
                 {

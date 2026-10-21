@@ -15,5 +15,7 @@
       <HintPath>$(HOME)/quantower-libs/System.Drawing.Common.dll</HintPath><Private>false</Private>
     </Reference>
     <Compile Include="../BenzoCore.cs" />
+    <Compile Include="../BenzoZones.cs" />
+    <Compile Include="../BenzoDetectors.cs" />
   </ItemGroup>
 </Project>

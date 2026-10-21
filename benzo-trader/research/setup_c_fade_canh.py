@@ -53,13 +53,13 @@ def prepare(base: str) -> dict:
     mf = K.mode_frame(df, zc2, m5)
     st = K.session_table(df)
     ok = (~st['splice'].to_numpy()) & (~st['thin'].to_numpy()) & (st['n'].to_numpy() >= K.CONST['min_bars_prof'])
-    P = dict(df=df, zc=zc2, mf=mf, st=st, days=int(ok.sum()), mad=K.med_abs_delta(df))
+    P = dict(df=df, zc=zc2, zc0=zc, mf=mf, st=st, days=int(ok.sum()), mad=K.med_abs_delta(df), prof=prof, ctx=ctx, u=K.median_range(df))
     return P
 
 
 def detect(df: pd.DataFrame, zones: pd.DataFrame, mode: pd.DataFrame, pen_ticks: int = 2, min_width: float = 6.0,
            tp_mode: str = 'poc', confirm: bool = False, second_touch: bool = False, strong_delta: bool = False,
-           mad: pd.Series | None = None) -> list:
+           mad: pd.Series | None = None, conf=None, min_conf: int = 0, v4: bool = False, u: pd.Series | None = None) -> list:
     """Tra list entry cho kernel.simulate. zones = zone_columns da doi band (xem prepare), mode = mode_frame."""
     n = len(df)
     hi, lo, cl, op, dl = (df[c].to_numpy(float) for c in ('high', 'low', 'close', 'open', 'delta'))
@@ -140,14 +140,56 @@ def detect(df: pd.DataFrame, zones: pd.DataFrame, mode: pd.DataFrame, pen_ticks:
             nm = ('IB_H' if side < 0 else 'IB_L') if bsrc[i] == 'ib' else ('VAH_EU' if side < 0 else 'VAL_EU')
         else:
             nm = 'VAH_Y' if side < 0 else 'VAL_Y'
+        nconf = 1
+        if conf is not None:
+            nconf = conf.count(int(i), float(E))
+            if nconf < min_conf:
+                continue
+        if v4:
+            vd, vw = zones['vwap_d'].to_numpy(float)[i], zones['vwap_w'].to_numpy(float)[i]
+            yv, yl = conf.zc0['yd_vah'].to_numpy(float)[i], conf.zc0['yd_val'].to_numpy(float)[i]
+            ui = float(u.iloc[i]) if u is not None else float('nan')
+            if not (abs(vd - vw) <= 2 * ui and yl <= cl[i] <= yv):          # NaN => False => bo
+                continue
         count[key] = count.get(key, 0) + 1
-        out.append(dict(idx=int(i), side=int(side), entry=ent, sl=r['sl'], tp=tp, setup='C', zone=nm, edge=float(E),
+        out.append(dict(nconf=nconf, idx=int(i), side=int(side), entry=ent, sl=r['sl'], tp=tp, setup='C', zone=nm, edge=float(E),
                         poke_idx=int(j), width=float(width[i]), note='fade %s E=%.1f' % (nm, E)))
     return out
 
 
+
+class Conf:
+    """Dem so vung hop luu quanh canh E (ban kinh 0,7 gia), chi dung vung da biet tai nen i (khong nhin truoc)."""
+    R = 0.7
+
+    def __init__(self, P):
+        if 'zones_all' not in P:
+            P['zones_all'] = K.zones_by_session(P['df'], P['prof'])
+        self.z = P['zones_all']
+        self.zc0 = P['zc0']
+        self.sno = P['df']['session_no'].to_numpy()
+        self.cols = {c: self.zc0[c].to_numpy(float) for c in K.ZONE_COLS}
+
+    def count(self, i, E):
+        z = self.z[int(self.sno[i])]
+        lv = [self.cols[c][i] for c in K.ZONE_COLS]
+        lv += [p for p, _ in (z.get('hvn_day') or [])]
+        if z.get('hvn_week'):
+            lv += [p for p, _ in z['hvn_week']['hvn']]
+        nk = [x for x in (z.get('naked') or []) if x['touch_pos'] is None or x['touch_pos'] > i][-K.CONST['naked_max']:]
+        lv += [x['price'] for x in nk]
+        n = 1
+        for p in lv:
+            if p == p and abs(p - E) >= 1e-6 and abs(p - E) <= self.R + 1e-9:
+                n += 1
+        return n
+
 # ----------------------------------------------------------------------------------------------
 def run(P: dict, **kw):
+    if kw.get('min_conf', 0) or kw.get('annotate') or kw.get('v4'):
+        kw = dict(kw); kw.pop('annotate', None)
+        kw['conf'] = Conf(P); kw['u'] = P['u']
+    kw.pop('annotate', None)
     ent = detect(P['df'], P['zc'], P['mf'], mad=P['mad'], **kw)
     t = K.simulate(P['df'], ent)
     if len(t):
@@ -272,6 +314,9 @@ def full_section(title, P, base_kw, reps, half_mode=False, with_ctrl=True):
 
 def main():
     reps, reps2 = 200, 60
+    if '--round2' in sys.argv:
+        q = [int(x) for x in sys.argv[sys.argv.index('--round2') + 1:sys.argv.index('--round2') + 3] if x.isdigit()]
+        return round2(*(q if len(q) == 2 else (reps, reps2)))
     if '--reps' in sys.argv:
         reps = int(sys.argv[sys.argv.index('--reps') + 1])
     if '--reps2y' in sys.argv:
@@ -351,10 +396,88 @@ def main():
     ev = os.path.join(HERE, 'report', 'RESULTS-C.danhgia.md')
     if os.path.exists(ev):
         L += ['', open(ev, encoding='utf-8').read()]
-    out = os.path.join(HERE, 'report', 'RESULTS-C.md')
-    with open(out, 'w', encoding='utf-8') as fh:
+    with open(os.path.join(HERE, 'report', 'RESULTS-C.round1.md'), 'w', encoding='utf-8') as fh:
+        fh.write(chr(10).join(L) + chr(10))
+    compose()
+    print('ghi RESULTS-C.md')
+
+
+def compose():
+    rd = os.path.join(HERE, 'report')
+    parts = []
+    for fn in ('RESULTS-C.round2.md', 'RESULTS-C.round1.md'):
+        fp = os.path.join(rd, fn)
+        if os.path.exists(fp):
+            parts.append(open(fp, encoding='utf-8').read())
+    with open(os.path.join(rd, 'RESULTS-C.md'), 'w', encoding='utf-8') as fh:
+        fh.write('\n\n---\n\n'.join(parts))
+
+
+def bucket_rows(t_all, t_filt):
+    """Tach theo so vung hop luu: 1 = chi E (lan chay KHONG loc), 2, >=3 (lan chay da loc)."""
+    ca, cf = closed(t_all), closed(t_filt)
+    rows = [srow('nconf = 1 (chi E, khong hop luu; lan chay khong loc)', S(ca[ca['nconf'] == 1]) if len(ca) else S(ca))]
+    rows.append(srow('nconf = 2', S(cf[cf['nconf'] == 2]) if len(cf) else S(cf)))
+    rows.append(srow('nconf >= 3', S(cf[cf['nconf'] >= 3]) if len(cf) else S(cf)))
+    return rows
+
+
+def round2(reps, reps2):
+    t0 = time.time()
+    P = prepare(D90)
+    P2 = prepare(D2Y)
+    L = ['# VONG 2 - Setup C: hop luu (V3) va ngay khong xu huong (V4)', '',
+         'Cung seed (doi chung seed 1000+k), cung o khoi diem (xuyen 2 tick, rong >= 6). V3 = chi fade canh E khi trong ban kinh 0,7 gia quanh E co them >= 1 vung khac '
+         '(VWAP ngay/tuan, POC/VAH/VAL hom qua, POC/VAH/VAL Au, IB, HVN ngay/tuan, naked POC; vung trung gia E bi bo). V4 = V3 + |VWAP ngay - VWAP tuan| <= 2u (u = trung vi bien do 50 nen) '
+         'va close nen vao nam trong VA hom qua. Doi chung %d lan (90d) / %d lan (2 nam).' % (reps, reps2), '']
+    cells = []
+    base_kw = dict(pen_ticks=CENTER[0], min_width=CENTER[1])
+    for vname, vkw in (('V3 hop luu', dict(min_conf=2)), ('V4 = V3 + ngay khong xu huong', dict(min_conf=2, v4=True))):
+        for tm in ('poc', 'fixed2'):
+            title = '%s, TP %s' % (vname, 'canh/POC >= 2R' if tm == 'poc' else 'co dinh 2R')
+            L += ['## ' + title, '']
+            kw = dict(base_kw, tp_mode=tm)
+            _, tall = run(P, annotate=True, **kw)
+            _, tf = run(P, **dict(kw, **vkw))
+            _, tall2 = run(P2, annotate=True, **kw)
+            _, tf2 = run(P2, **dict(kw, **vkw))
+            res = {}
+            for nm, tt, tb, key, dfp, rp in (('File 90d', tf, tall, 'split', P, reps), ('File 2 nam', tf2, tall2, 'half', P2, reps2)):
+                c = closed(tt)
+                ks = ('TRAIN', 'TEST') if key == 'split' else ('H1', 'H2')
+                L += ['### ' + nm, '', 'Lenh/ngay: **%s** (%s)' % (f(S(tt)['n'] / dfp['days'], 3), per_phase_day(tt, dfp['days'])), '', HDR, srow('Tong', S(tt))]
+                if len(c):
+                    for k in ks:
+                        L.append(srow(k, S(c[c[key] == k])))
+                    L.append(srow('rieng phase US', S(c[c['phase'] == 'US'])))
+                    for k in ks:
+                        L.append(srow('US ' + k, S(c[(c['phase'] == 'US') & (c[key] == k)])))
+                L += bucket_rows(tb, tt) + ['', ctrl_md(control(dfp, tt, rp)) if len(c) else 'Khong co lenh.', '']
+                res[nm] = c
+            c1, c2 = res['File 90d'], res['File 2 nam']
+            te = S(c1[c1['split'] == 'TEST']) if len(c1) else S(c1)
+            h1 = S(c2[c2['half'] == 'H1']) if len(c2) else S(c2)
+            h2 = S(c2[c2['half'] == 'H2']) if len(c2) else S(c2)
+            cells.append((title, te['n'], te['avg_r'], h1['avg_r'], h2['avg_r']))
+            print(title, 'xong %.0fs' % (time.time() - t0), flush=True)
+    L += ['## Ket luan vong 2', '', '| o | n TEST 90d | R TB TEST 90d | R TB H1 2 nam | R TB H2 2 nam | du tieu chuan? |', '|---|---|---|---|---|---|']
+    passed = False
+    for t, n, rt, a, b in cells:
+        ok = (n >= 30) and rt > 0 and a > 0 and b > 0
+        passed |= ok
+        L.append('| %s | %d | %s | %s | %s | %s |' % (t, n, f(rt), f(a), f(b), 'CO' if ok else 'khong'))
+    L += ['', ('Co o dat tieu chuan: xem bang.' if passed else
+               '**Khong o nao dat tieu chuan (n TEST >= 30 va duong o ca 90d-TEST lan hai nua 2 nam) => ket luan cuoi: C tat mac dinh.**')]
+    ev = os.path.join(HERE, 'report', 'RESULTS-C.round2.danhgia.md')
+    if os.path.exists(ev):
+        L += ['', open(ev, encoding='utf-8').read()]
+    with open(os.path.join(HERE, 'report', 'RESULTS-C.round2.md'), 'w', encoding='utf-8') as fh:
         fh.write('\n'.join(L) + '\n')
-    print('ghi %s, tong %.1fs' % (out, time.time() - t0))
+    compose()
+    print('round2 xong %.0fs' % (time.time() - t0))
+
+
+
 
 
 if __name__ == '__main__':

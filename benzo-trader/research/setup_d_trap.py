@@ -28,7 +28,6 @@ import kernel as K  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DD = os.path.join(ROOT, 'data-export', 'data-footprint')
 D90 = os.path.join(DD, 'fp_GCZ26_XCEC_Time_20260723-20261021_90d')
-D2Y = os.path.join(DD, 'fp_GC_XCEC_Time_20240801-20260819_748d9h')
 REPORT = os.path.join(HERE, 'report', 'RESULTS-D.md')
 
 LEG_MAX_BARS = 30
@@ -368,6 +367,16 @@ def funnel_md(P, kw0):
     return ['Pheu (5/70%): ' + ' -> '.join('%s %d' % (b, d.get(a, 0)) for a, b in nm), '']
 
 
+def boot_md(trades, label, n_boot=10000, seed=0):
+    tr = trades[trades['outcome'].isin(['TP', 'SL'])] if len(trades) else trades
+    if len(tr) < 2:
+        return ['- Bootstrap %s: n < 2, khong tinh.' % label]
+    r = tr['r'].to_numpy(float)
+    rng = np.random.default_rng(seed)
+    m = r[rng.integers(0, len(r), size=(n_boot, len(r)))].mean(axis=1)
+    return ['- Bootstrap 95%% (%d lan) R TB %s: **%s** [%s .. %s], n=%d' % (n_boot, label, f(r.mean()), f(np.percentile(m, 2.5)), f(np.percentile(m, 97.5)), len(r))]
+
+
 def control_md(P, trades, label):
     means, nc = control_reps(P, trades)
     tr = trades[trades['outcome'].isin(['TP', 'SL'])]
@@ -391,6 +400,7 @@ def full_eval(P: Prep, title: str, L: list, variants=(('delta', dict(method='del
         L += grid_md(cell, 'Luoi 3x3 (%s, TP 2R, toan bo thoi gian)' % mth)
         L += split_grid_md(cell, 'Luoi 3x3 theo TRAIN/TEST (%s)' % mth)
         L += funnel_md(P, kw0)
+        L += boot_md(base, mth + ' 5/70%') + ['']
         if do_ctrl:
             L += ['**Doi chung (%s)**' % mth, ''] + control_md(P, base, 'cau hinh 5/70%') + ['']
         if ex:
@@ -438,6 +448,7 @@ def round2_block(P, name, kw0, moves, retrs, base_key, L, two_year=False):
               srow(h2 + ' BUY', st_of(halves_df(base, two_year, cut, 1), 1)), srow(h2 + ' SELL', st_of(halves_df(base, two_year, cut, 1), -1))]
     L += ['', 'Lenh/ngay tong: %s (%d phien sach). TEST/nua 2 n=%d%s' % (f(len(base) / days, 3), days, b['n'], ' (< 30: CHUA KET LUAN)' if b['n'] < 30 else ''), '']
     L += funnel_md2(P, kw0, base_key)
+    L += boot_md(base, 'cau hinh chinh') + ['']
     L += ['**Doi chung**', ''] + control_md(P, base, 'cung vung(khong co)/che do/chieu, 200 lan') + ['']
     return cell
 
@@ -465,51 +476,17 @@ def round2(P90, P2, L):
     for nm, kw0, mv, rt, key in (('V3', V3, GRID_MOVE, GRID_RETR, (5.0, 0.7)), ('V4', V4, (3.0, 4.0, 5.0), (0.5, 0.7), (3.0, 0.7))):
         L += ['### %s - file 90d' % nm, '']
         round2_block(P90, nm + ' 90d', kw0, mv, rt, key, L)
-        L += ['### %s - file 2 nam' % nm, '']
-        round2_block(P2, nm + ' 2 nam', kw0, mv, rt, key, L, two_year=True)
 
 
 def main():
     t0 = time.time()
     L = ['# RESULTS-D - Setup D Trap (sinh boi setup_d_trap.py, deterministic)', '',
-         'Dinh nghia: plan 3-D. Hang so co dinh: move ro hinh thanh <= %d nen; nhip hoi <= %d nen, sau >= %.1f gia; CF trong %d nen sau nen cuc tri; '
+         '**QD-6: chi do tren file 90d GCZ26. Bang 2 nam cu nam o `RESULTS-D-2y-cu-tham-khao.md` va chi de tham khao (sai ma hop dong), khong dung quyet dinh.** Dinh nghia: plan 3-D. Hang so co dinh: move ro hinh thanh <= %d nen; nhip hoi <= %d nen, sau >= %.1f gia; CF trong %d nen sau nen cuc tri; '
          'Z cach cuc tri <= %.1f gia hoac rau cham; o volume >= %gx trung vi o (>= 3 muc). Chi phi 0,2 gia/lenh, 1 lenh mo cung luc, SL = kernel.risk (cau truc = cuc tri nhip hoi). '
          'Gio UTC / VN = UTC+7. 2 tham so tu do: min_move x retr max (luoi 3x3).' % (LEG_MAX_BARS, PULL_MAX_BARS, PULL_MIN_DEPTH, CF_WINDOW, ZONE_TOL, CELL_MULT), '']
     P90 = Prep(D90 + '_bars.csv', D90 + '.csv')
     res90 = full_eval(P90, 'File 90d (GCZ26, 2026-07-23 -> 2026-10-21)', L, variants=VARIANTS, ex=True)
-    P2 = Prep(D2Y + '_bars.csv', D2Y + '.csv')
-    L += ['## File 2 nam (loc splice +-2 phien, volume o duoc tinh tu per-level that)', '']
-    res2 = {}
-    for mth, kw0 in VARIANTS:
-        cell = grid_table(P2, kw0)
-        res2[mth] = cell
-        base = cell[(5.0, 0.7)]
-        cut = pd.Timestamp('2025-08-01')
-        h1, h2 = base[pd.to_datetime(base['t_utc']) < cut], base[pd.to_datetime(base['t_utc']) >= cut]
-        L += ['### 2 nam - %s (5 gia, retr <= 70%%, TP 2R)' % mth, '', HDR, srow('Tong', st_of(base)), srow('BUY', st_of(base, 1)), srow('SELL', st_of(base, -1)),
-              srow('Nua 1 (2024-08 -> 2025-07)', st_of(h1)), srow('  nua 1 BUY', st_of(h1, 1)), srow('  nua 1 SELL', st_of(h1, -1)),
-              srow('Nua 2 (2025-08 -> 2026-08)', st_of(h2)), srow('  nua 2 BUY', st_of(h2, 1)), srow('  nua 2 SELL', st_of(h2, -1)), '']
-        L += ['Lenh/ngay (%d phien sach): %s; theo phase A %s EU %s US %s' % (P2.n_days, f(len(base) / P2.n_days, 3),
-              *(f(len(base[base['phase'] == p]) / P2.n_days, 3) for p in K.PHASES)), '']
-        L += ['**Theo phase**', '', HDR] + [srow(p, st_of(base[base['phase'] == p])) for p in K.PHASES] + ['']
-        if len(base):
-            L += ['**Theo thang**', '', HDR] + [srow(k, st_of(g)) for k, g in base.groupby('month')] + ['']
-        L += grid_md(cell, 'Luoi 3x3 (2 nam, %s)' % mth)
-        # luoi theo 2 nua
-        rows = ['**Luoi 3x3 R TB: nua 1 / nua 2 (%s)**' % mth, '', '| min_move \\ retr max | 50% | 70% | 90% |', '|---|---|---|---|']
-        for mv in GRID_MOVE:
-            rr_ = []
-            for rt in GRID_RETR:
-                t = cell[(mv, rt)]
-                tt = pd.to_datetime(t['t_utc']) if len(t) else None
-                a = st_of(t[tt < cut]) if len(t) else st_of(t)
-                b = st_of(t[tt >= cut]) if len(t) else st_of(t)
-                rr_.append('%s (n%d) / %s (n%d)' % (f(a['avg_r']), a['n'], f(b['avg_r']), b['n']))
-            rows.append('| %g gia | %s |' % (mv, ' | '.join(rr_)))
-        L += rows + ['']
-        L += funnel_md(P2, kw0)
-        L += ['**Doi chung 2 nam (%s)**' % mth, ''] + control_md(P2, base, 'cau hinh 5/70%') + ['']
-    round2(P90, P2, L)
+    round2(P90, None, L)
     ass = os.path.join(HERE, 'report', '_assessment_D.md')
     if os.path.exists(ass):
         L += [open(ass, encoding='utf-8').read()]

@@ -1,3 +1,498 @@
+# VONG 2 - sua 2 lo hong co che (het han, hop luu, thoi gian)
+
+**QD-6 (nguoi hoc chot): CHI do tren file 90d GCZ26. Moi bang 2 nam (vong 1, o cuoi file) chi con de THAM KHAO, khong dung de quyet dinh (du lieu footprint truoc do sai ma hop dong).** Sinh boi `setup_a_pha_hoi.py --round2` (deterministic). Cac bien the TICH LUY: V3 -> V4 -> V5; moi bien the bao rieng. TP 3R va 2R chay song song, cung seed. Het han: CF phai nam trong 30 nen M1 sau nen cuoi cua M5 dong ngoai (nhip hoi bat dau va ket thuc trong khoang do). Hop luu: so vung KHAC (ten khac nhau, tinh theo as_of tai nen vao, khong nhin truoc) nam trong 0,7 gia quanh E, trong cac vung VWAP ngay/tuan, POC/VAH/VAL hom qua va Au, HVN ngay/tuan, naked POC, IB; "tach 0 / 1 / 2 / >=3" la so vung KHAC them o E. Pha lan 2 = trang thai pha thu >= 2 cung canh (cung nguon band) trong phien. Phase Au KHONG dung loc.
+
+## V3 het han 30 nen, mep xa E +-1,0
+
+### 90d, TP 3R - o chinh (n_hoi 3, than 0,5); lenh/ngay = 0.33
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| Tong | 20 | 10.0% | -0.68 | -1.98 | 12 | 12 / -1.08 | 8 / -0.08 |
+
+Bootstrap 5000 lan (seed 7) R TB o chinh: **-0.68**, khoang tin cay 95% **[-1.09 ; -0.08]** (n=20)
+
+Theo phase (khong dung de loc):
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| A | 6 | 16.7% | -0.43 | -0.73 | 3 | 3 / -1.10 | 3 / 0.24 |
+| EU | 3 | 0.0% | -1.08 | -3.03 | 3 | 2 / -1.07 | 1 / -1.08 |
+| US | 11 | 9.1% | -0.71 | -2.38 | 7 | 7 / -1.07 | 4 / -0.08 |
+
+Tach theo so vung KHAC them o E:
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| 0 vung | 19 | 10.5% | -0.66 | -1.98 | 11 | 11 / -1.08 | 8 / -0.08 |
+| 1 vung | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+| 2 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| >=3 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+
+Luoi 3x3:
+
+| n_hoi | than | n | WR | R TB | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|
+| 2 | 0.4 | 28 | 7.1% | -0.80 | 16 / -1.08 | 12 / -0.42 |
+| 2 | 0.5 | 25 | 8.0% | -0.76 | 15 / -1.08 | 10 / -0.29 |
+| 2 | 0.6 | 20 | 10.0% | -0.68 | 11 / -1.08 | 9 / -0.20 |
+| 3 | 0.4 | 23 | 8.7% | -0.73 | 13 / -1.08 | 10 / -0.29 |
+| 3 | 0.5 | 20 | 10.0% | -0.68 | 12 / -1.08 | 8 / -0.08 |
+| 3 | 0.6 | 15 | 13.3% | -0.55 | 8 / -1.09 | 7 / 0.06 |
+| 4 | 0.4 | 19 | 10.5% | -0.66 | 11 / -1.08 | 8 / -0.08 |
+| 4 | 0.5 | 17 | 11.8% | -0.61 | 10 / -1.08 | 7 / 0.06 |
+| 4 | 0.6 | 14 | 14.3% | -0.52 | 8 / -1.09 | 6 / 0.25 |
+
+Doi chung cung trang thai pha (cung chieu, cung E, cung SL/TP, cung het han/hop luu/thoi gian, bo nhip hoi + CF); o tot nhat chon SAU khi nhin so nen chi tham khao:
+- o chinh (200 lan, ho 1164 nen): R TB doi chung **-0.14** (5-95%: -0.89 .. 0.45); lenh that -0.68; ti le lan doi chung >= that **87.5%**.
+- o tot nhat theo R TB (4, 0.6) (200 lan, ho 1171 nen): R TB doi chung **-0.15** (5-95%: -0.81 .. 0.63); lenh that -0.52; ti le lan doi chung >= that **78.5%**.
+
+### 90d, TP 2R - o chinh (n_hoi 3, than 0,5); lenh/ngay = 0.33
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| Tong | 20 | 25.0% | -0.33 | -0.72 | 5 | 12 / -0.33 | 8 / -0.33 |
+
+Bootstrap 5000 lan (seed 7) R TB o chinh: **-0.33**, khoang tin cay 95% **[-0.93 ; 0.27]** (n=20)
+
+Theo phase (khong dung de loc):
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| A | 6 | 16.7% | -0.60 | -1.10 | 3 | 3 / -1.10 | 3 / -0.10 |
+| EU | 3 | 33.3% | -0.08 | 0.97 | 1 | 2 / 0.43 | 1 / -1.08 |
+| US | 11 | 27.3% | -0.26 | -0.98 | 3 | 7 / -0.22 | 4 / -0.33 |
+
+Tach theo so vung KHAC them o E:
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| 0 vung | 19 | 26.3% | -0.29 | -0.66 | 5 | 11 / -0.26 | 8 / -0.33 |
+| 1 vung | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+| 2 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| >=3 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+
+Luoi 3x3:
+
+| n_hoi | than | n | WR | R TB | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|
+| 2 | 0.4 | 28 | 21.4% | -0.44 | 16 / -0.51 | 12 / -0.34 |
+| 2 | 0.5 | 25 | 20.0% | -0.48 | 15 / -0.48 | 10 / -0.49 |
+| 2 | 0.6 | 20 | 10.0% | -0.78 | 11 / -1.08 | 9 / -0.42 |
+| 3 | 0.4 | 23 | 26.1% | -0.30 | 13 / -0.39 | 10 / -0.19 |
+| 3 | 0.5 | 20 | 25.0% | -0.33 | 12 / -0.33 | 8 / -0.33 |
+| 3 | 0.6 | 15 | 13.3% | -0.69 | 8 / -1.09 | 7 / -0.23 |
+| 4 | 0.4 | 19 | 21.1% | -0.45 | 11 / -0.81 | 8 / 0.04 |
+| 4 | 0.5 | 17 | 17.6% | -0.55 | 10 / -0.78 | 7 / -0.23 |
+| 4 | 0.6 | 14 | 14.3% | -0.66 | 8 / -1.09 | 6 / -0.08 |
+
+Doi chung cung trang thai pha (cung chieu, cung E, cung SL/TP, cung het han/hop luu/thoi gian, bo nhip hoi + CF); o tot nhat chon SAU khi nhin so nen chi tham khao:
+- o chinh (200 lan, ho 1164 nen): R TB doi chung **-0.08** (5-95%: -0.52 .. 0.48); lenh that -0.33; ti le lan doi chung >= that **74.0%**.
+- o tot nhat theo R TB (3, 0.4) (200 lan, ho 1161 nen): R TB doi chung **-0.08** (5-95%: -0.59 .. 0.41); lenh that -0.30; ti le lan doi chung >= that **74.5%**.
+
+## V3b nhu V3 nhung mep xa E +-0,5 (do nhay)
+
+### 90d, TP 3R - o chinh (n_hoi 3, than 0,5); lenh/ngay = 0.33
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| Tong | 20 | 10.0% | -0.69 | -2.01 | 12 | 12 / -1.09 | 8 / -0.09 |
+
+Bootstrap 5000 lan (seed 7) R TB o chinh: **-0.69**, khoang tin cay 95% **[-1.09 ; -0.09]** (n=20)
+
+Theo phase (khong dung de loc):
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| A | 6 | 16.7% | -0.44 | -0.85 | 3 | 3 / -1.12 | 3 / 0.23 |
+| EU | 3 | 0.0% | -1.08 | -2.90 | 3 | 2 / -1.07 | 1 / -1.10 |
+| US | 11 | 9.1% | -0.72 | -2.39 | 7 | 7 / -1.08 | 4 / -0.08 |
+
+Tach theo so vung KHAC them o E:
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| 0 vung | 19 | 10.5% | -0.67 | -2.03 | 11 | 11 / -1.08 | 8 / -0.09 |
+| 1 vung | 1 | 0.0% | -1.14 | -1.60 | 1 | 1 / -1.14 | 0 / - |
+| 2 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| >=3 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+
+Luoi 3x3:
+
+| n_hoi | than | n | WR | R TB | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|
+| 2 | 0.4 | 28 | 7.1% | -0.80 | 16 / -1.08 | 12 / -0.43 |
+| 2 | 0.5 | 25 | 8.0% | -0.77 | 15 / -1.08 | 10 / -0.29 |
+| 2 | 0.6 | 20 | 10.0% | -0.69 | 11 / -1.09 | 9 / -0.21 |
+| 3 | 0.4 | 23 | 8.7% | -0.74 | 13 / -1.09 | 10 / -0.30 |
+| 3 | 0.5 | 20 | 10.0% | -0.69 | 12 / -1.09 | 8 / -0.09 |
+| 3 | 0.6 | 15 | 13.3% | -0.57 | 8 / -1.10 | 7 / 0.05 |
+| 4 | 0.4 | 19 | 10.5% | -0.67 | 11 / -1.09 | 8 / -0.10 |
+| 4 | 0.5 | 17 | 11.8% | -0.62 | 10 / -1.09 | 7 / 0.05 |
+| 4 | 0.6 | 14 | 14.3% | -0.53 | 8 / -1.10 | 6 / 0.24 |
+
+Doi chung cung trang thai pha (cung chieu, cung E, cung SL/TP, cung het han/hop luu/thoi gian, bo nhip hoi + CF); o tot nhat chon SAU khi nhin so nen chi tham khao:
+- o chinh (200 lan, ho 1165 nen): R TB doi chung **-0.11** (5-95%: -0.72 .. 0.61); lenh that -0.69; ti le lan doi chung >= that **91.0%**.
+- o tot nhat theo R TB (4, 0.6) (200 lan, ho 1172 nen): R TB doi chung **-0.12** (5-95%: -0.81 .. 0.62); lenh that -0.53; ti le lan doi chung >= that **79.5%**.
+
+### 90d, TP 2R - o chinh (n_hoi 3, than 0,5); lenh/ngay = 0.33
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| Tong | 20 | 30.0% | -0.19 | -0.40 | 5 | 12 / -0.34 | 8 / 0.03 |
+
+Bootstrap 5000 lan (seed 7) R TB o chinh: **-0.19**, khoang tin cay 95% **[-0.79 ; 0.41]** (n=20)
+
+Theo phase (khong dung de loc):
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| A | 6 | 16.7% | -0.61 | -1.15 | 3 | 3 / -1.12 | 3 / -0.10 |
+| EU | 3 | 66.7% | 0.92 | 3.10 | 1 | 2 / 0.43 | 1 / 1.90 |
+| US | 11 | 27.3% | -0.26 | -0.95 | 3 | 7 / -0.22 | 4 / -0.33 |
+
+Tach theo so vung KHAC them o E:
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| 0 vung | 19 | 31.6% | -0.14 | -0.34 | 5 | 11 / -0.27 | 8 / 0.03 |
+| 1 vung | 1 | 0.0% | -1.14 | -1.60 | 1 | 1 / -1.14 | 0 / - |
+| 2 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| >=3 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+
+Luoi 3x3:
+
+| n_hoi | than | n | WR | R TB | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|
+| 2 | 0.4 | 28 | 25.0% | -0.34 | 16 / -0.52 | 12 / -0.10 |
+| 2 | 0.5 | 25 | 24.0% | -0.37 | 15 / -0.48 | 10 / -0.19 |
+| 2 | 0.6 | 20 | 15.0% | -0.64 | 11 / -1.09 | 9 / -0.09 |
+| 3 | 0.4 | 23 | 30.4% | -0.18 | 13 / -0.39 | 10 / 0.10 |
+| 3 | 0.5 | 20 | 30.0% | -0.19 | 12 / -0.34 | 8 / 0.03 |
+| 3 | 0.6 | 15 | 20.0% | -0.50 | 8 / -1.10 | 7 / 0.19 |
+| 4 | 0.4 | 19 | 26.3% | -0.30 | 11 / -0.82 | 8 / 0.40 |
+| 4 | 0.5 | 17 | 23.5% | -0.39 | 10 / -0.79 | 7 / 0.19 |
+| 4 | 0.6 | 14 | 21.4% | -0.46 | 8 / -1.10 | 6 / 0.41 |
+
+Doi chung cung trang thai pha (cung chieu, cung E, cung SL/TP, cung het han/hop luu/thoi gian, bo nhip hoi + CF); o tot nhat chon SAU khi nhin so nen chi tham khao:
+- o chinh (200 lan, ho 1165 nen): R TB doi chung **-0.08** (5-95%: -0.53 .. 0.48); lenh that -0.19; ti le lan doi chung >= that **58.0%**.
+- o tot nhat theo R TB (3, 0.4) (200 lan, ho 1162 nen): R TB doi chung **-0.10** (5-95%: -0.60 .. 0.41); lenh that -0.18; ti le lan doi chung >= that **57.5%**.
+
+## V4 = V3 + hop luu >= 1 vung khac trong 0,7 gia
+
+### 90d, TP 3R - o chinh (n_hoi 3, than 0,5); lenh/ngay = 0.02
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| Tong | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+
+Bootstrap 5000 lan (seed 7) R TB o chinh: **-1.11**, khoang tin cay 95% **[-1.11 ; -1.11]** (n=1)
+
+Theo phase (khong dung de loc):
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| A | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| EU | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| US | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+
+Tach theo so vung KHAC them o E:
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| 0 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| 1 vung | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+| 2 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| >=3 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+
+Luoi 3x3:
+
+| n_hoi | than | n | WR | R TB | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|
+| 2 | 0.4 | 3 | 0.0% | -1.10 | 1 / -1.11 | 2 / -1.09 |
+| 2 | 0.5 | 2 | 0.0% | -1.10 | 1 / -1.11 | 1 / -1.09 |
+| 2 | 0.6 | 2 | 0.0% | -1.10 | 1 / -1.11 | 1 / -1.09 |
+| 3 | 0.4 | 2 | 0.0% | -1.10 | 1 / -1.11 | 1 / -1.10 |
+| 3 | 0.5 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 3 | 0.6 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 4 | 0.4 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 4 | 0.5 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 4 | 0.6 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+
+Doi chung cung trang thai pha (cung chieu, cung E, cung SL/TP, cung het han/hop luu/thoi gian, bo nhip hoi + CF); o tot nhat chon SAU khi nhin so nen chi tham khao:
+- o chinh (200 lan, ho 159 nen): R TB doi chung **-0.09** (5-95%: -1.12 .. 2.91); lenh that -1.11; ti le lan doi chung >= that **93.5%**.
+
+### 90d, TP 2R - o chinh (n_hoi 3, than 0,5); lenh/ngay = 0.02
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| Tong | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+
+Bootstrap 5000 lan (seed 7) R TB o chinh: **-1.11**, khoang tin cay 95% **[-1.11 ; -1.11]** (n=1)
+
+Theo phase (khong dung de loc):
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| A | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| EU | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| US | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+
+Tach theo so vung KHAC them o E:
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| 0 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| 1 vung | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+| 2 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| >=3 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+
+Luoi 3x3:
+
+| n_hoi | than | n | WR | R TB | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|
+| 2 | 0.4 | 3 | 0.0% | -1.10 | 1 / -1.11 | 2 / -1.09 |
+| 2 | 0.5 | 2 | 0.0% | -1.10 | 1 / -1.11 | 1 / -1.09 |
+| 2 | 0.6 | 2 | 0.0% | -1.10 | 1 / -1.11 | 1 / -1.09 |
+| 3 | 0.4 | 2 | 0.0% | -1.10 | 1 / -1.11 | 1 / -1.10 |
+| 3 | 0.5 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 3 | 0.6 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 4 | 0.4 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 4 | 0.5 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 4 | 0.6 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+
+Doi chung cung trang thai pha (cung chieu, cung E, cung SL/TP, cung het han/hop luu/thoi gian, bo nhip hoi + CF); o tot nhat chon SAU khi nhin so nen chi tham khao:
+- o chinh (200 lan, ho 159 nen): R TB doi chung **-0.27** (5-95%: -1.12 .. 1.92); lenh that -1.11; ti le lan doi chung >= that **93.5%**.
+
+## V4x (do nhay, KHONG phai bien the) hop luu ban kinh 1,5 gia
+
+### 90d, TP 3R - o chinh (n_hoi 3, than 0,5); lenh/ngay = 0.10
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| Tong | 6 | 16.7% | -0.42 | -1.13 | 3 | 3 / -1.10 | 3 / 0.26 |
+
+Bootstrap 5000 lan (seed 7) R TB o chinh: **-0.42**, khoang tin cay 95% **[-1.10 ; 0.91]** (n=6)
+
+Theo phase (khong dung de loc):
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| A | 3 | 33.3% | 0.24 | 0.63 | 2 | 2 / -1.10 | 1 / 2.91 |
+| EU | 1 | 0.0% | -1.08 | -2.60 | 1 | 0 / - | 1 / -1.08 |
+| US | 2 | 0.0% | -1.08 | -3.05 | 2 | 1 / -1.11 | 1 / -1.05 |
+
+Tach theo so vung KHAC them o E:
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| 0 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| 1 vung | 5 | 0.0% | -1.09 | -2.64 | 5 | 3 / -1.10 | 2 / -1.07 |
+| 2 vung | 1 | 100.0% | 2.91 | 6.40 | 0 | 0 / - | 1 / 2.91 |
+| >=3 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+
+Luoi 3x3:
+
+| n_hoi | than | n | WR | R TB | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|
+| 2 | 0.4 | 9 | 11.1% | -0.64 | 4 / -1.09 | 5 / -0.28 |
+| 2 | 0.5 | 7 | 14.3% | -0.52 | 3 / -1.10 | 4 / -0.08 |
+| 2 | 0.6 | 7 | 14.3% | -0.52 | 3 / -1.10 | 4 / -0.08 |
+| 3 | 0.4 | 8 | 12.5% | -0.59 | 4 / -1.09 | 4 / -0.08 |
+| 3 | 0.5 | 6 | 16.7% | -0.42 | 3 / -1.10 | 3 / 0.26 |
+| 3 | 0.6 | 6 | 16.7% | -0.42 | 3 / -1.10 | 3 / 0.26 |
+| 4 | 0.4 | 7 | 14.3% | -0.51 | 4 / -1.09 | 3 / 0.26 |
+| 4 | 0.5 | 6 | 16.7% | -0.42 | 3 / -1.10 | 3 / 0.26 |
+| 4 | 0.6 | 6 | 16.7% | -0.42 | 3 / -1.10 | 3 / 0.26 |
+
+Doi chung cung trang thai pha (cung chieu, cung E, cung SL/TP, cung het han/hop luu/thoi gian, bo nhip hoi + CF); o tot nhat chon SAU khi nhin so nen chi tham khao:
+- o chinh (200 lan, ho 319 nen): R TB doi chung **0.05** (5-95%: -1.09 .. 1.20); lenh that -0.42; ti le lan doi chung >= that **65.5%**.
+
+### 90d, TP 2R - o chinh (n_hoi 3, than 0,5); lenh/ngay = 0.10
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| Tong | 6 | 16.7% | -0.59 | -1.50 | 3 | 3 / -1.10 | 3 / -0.08 |
+
+Bootstrap 5000 lan (seed 7) R TB o chinh: **-0.59**, khoang tin cay 95% **[-1.10 ; 0.41]** (n=6)
+
+Theo phase (khong dung de loc):
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| A | 3 | 33.3% | -0.10 | -0.10 | 2 | 2 / -1.10 | 1 / 1.91 |
+| EU | 1 | 0.0% | -1.08 | -2.60 | 1 | 0 / - | 1 / -1.08 |
+| US | 2 | 0.0% | -1.08 | -3.05 | 2 | 1 / -1.11 | 1 / -1.05 |
+
+Tach theo so vung KHAC them o E:
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| 0 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| 1 vung | 5 | 0.0% | -1.09 | -2.64 | 5 | 3 / -1.10 | 2 / -1.07 |
+| 2 vung | 1 | 100.0% | 1.91 | 4.20 | 0 | 0 / - | 1 / 1.91 |
+| >=3 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+
+Luoi 3x3:
+
+| n_hoi | than | n | WR | R TB | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|
+| 2 | 0.4 | 9 | 11.1% | -0.75 | 4 / -1.09 | 5 / -0.48 |
+| 2 | 0.5 | 7 | 14.3% | -0.66 | 3 / -1.10 | 4 / -0.33 |
+| 2 | 0.6 | 7 | 14.3% | -0.66 | 3 / -1.10 | 4 / -0.33 |
+| 3 | 0.4 | 8 | 12.5% | -0.71 | 4 / -1.09 | 4 / -0.33 |
+| 3 | 0.5 | 6 | 16.7% | -0.59 | 3 / -1.10 | 3 / -0.08 |
+| 3 | 0.6 | 6 | 16.7% | -0.59 | 3 / -1.10 | 3 / -0.08 |
+| 4 | 0.4 | 7 | 14.3% | -0.66 | 4 / -1.09 | 3 / -0.08 |
+| 4 | 0.5 | 6 | 16.7% | -0.59 | 3 / -1.10 | 3 / -0.08 |
+| 4 | 0.6 | 6 | 16.7% | -0.59 | 3 / -1.10 | 3 / -0.08 |
+
+Doi chung cung trang thai pha (cung chieu, cung E, cung SL/TP, cung het han/hop luu/thoi gian, bo nhip hoi + CF); o tot nhat chon SAU khi nhin so nen chi tham khao:
+- o chinh (200 lan, ho 319 nen): R TB doi chung **-0.04** (5-95%: -0.71 .. 0.67); lenh that -0.59; ti le lan doi chung >= that **79.5%**.
+
+## V5 = V4 + chi phase My, pha sau 20:30 VN hoac pha lan 2
+
+### 90d, TP 3R - o chinh (n_hoi 3, than 0,5); lenh/ngay = 0.02
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| Tong | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+
+Bootstrap 5000 lan (seed 7) R TB o chinh: **-1.11**, khoang tin cay 95% **[-1.11 ; -1.11]** (n=1)
+
+Theo phase (khong dung de loc):
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| A | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| EU | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| US | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+
+Tach theo so vung KHAC them o E:
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| 0 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| 1 vung | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+| 2 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| >=3 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+
+Tach V5 (hai dieu kien co the chong nhau):
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| pha sau 20:30 | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+| pha lan 2+ cung canh | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+
+Luoi 3x3:
+
+| n_hoi | than | n | WR | R TB | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|
+| 2 | 0.4 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 2 | 0.5 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 2 | 0.6 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 3 | 0.4 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 3 | 0.5 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 3 | 0.6 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 4 | 0.4 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 4 | 0.5 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 4 | 0.6 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+
+Doi chung cung trang thai pha (cung chieu, cung E, cung SL/TP, cung het han/hop luu/thoi gian, bo nhip hoi + CF); o tot nhat chon SAU khi nhin so nen chi tham khao:
+- o chinh (200 lan, ho 83 nen): R TB doi chung **0.07** (5-95%: -1.13 .. 2.92); lenh that -1.11; ti le lan doi chung >= that **81.5%**.
+
+### 90d, TP 2R - o chinh (n_hoi 3, than 0,5); lenh/ngay = 0.02
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| Tong | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+
+Bootstrap 5000 lan (seed 7) R TB o chinh: **-1.11**, khoang tin cay 95% **[-1.11 ; -1.11]** (n=1)
+
+Theo phase (khong dung de loc):
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| A | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| EU | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| US | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+
+Tach theo so vung KHAC them o E:
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| 0 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| 1 vung | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+| 2 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+| >=3 vung | 0 | -% | - | - | 0 | 0 / - | 0 / - |
+
+Tach V5 (hai dieu kien co the chong nhau):
+
+| | n | WR | R TB | ky vong (gia) | chuoi thua | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|---|
+| pha sau 20:30 | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+| pha lan 2+ cung canh | 1 | 0.0% | -1.11 | -2.00 | 1 | 1 / -1.11 | 0 / - |
+
+Luoi 3x3:
+
+| n_hoi | than | n | WR | R TB | TRAIN n / R | TEST n / R |
+|---|---|---|---|---|---|---|
+| 2 | 0.4 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 2 | 0.5 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 2 | 0.6 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 3 | 0.4 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 3 | 0.5 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 3 | 0.6 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 4 | 0.4 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 4 | 0.5 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+| 4 | 0.6 | 1 | 0.0% | -1.11 | 1 / -1.11 | 0 / - |
+
+Doi chung cung trang thai pha (cung chieu, cung E, cung SL/TP, cung het han/hop luu/thoi gian, bo nhip hoi + CF); o tot nhat chon SAU khi nhin so nen chi tham khao:
+- o chinh (200 lan, ho 83 nen): R TB doi chung **-0.22** (5-95%: -1.13 .. 1.92); lenh that -1.11; ti le lan doi chung >= that **81.5%**.
+
+## Phan quyet vong 2 (QD-6: chi file 90d)
+
+Dat khi: n TEST(90d) >= 30 VA R TEST(90d) > 0, cung mot o/variant/TP (them: R TRAIN > 0 de khong chi dung do may mat nua).
+
+- O dat DU tieu chi (n TEST >= 30, TEST > 0, TRAIN > 0): **0**
+- O co R TEST > 0 nhung n TEST < 30 hoac TRAIN <= 0 (chi tham khao, khong ket luan): **18** tren tong 90 o (5 muc x 2 TP x 9 o luoi)
+
+| variant | TP | n_hoi | than | n TRAIN | R TRAIN | n TEST | R TEST |
+|---|---|---|---|---|---|---|---|
+| V3 | 3R | 3 | 0.6 | 8 | -1.09 | 7 | 0.06 |
+| V3 | 3R | 4 | 0.5 | 10 | -1.08 | 7 | 0.06 |
+| V3 | 3R | 4 | 0.6 | 8 | -1.09 | 6 | 0.25 |
+| V3 | 2R | 4 | 0.4 | 11 | -0.81 | 8 | 0.04 |
+| V3b | 3R | 3 | 0.6 | 8 | -1.10 | 7 | 0.05 |
+| V3b | 3R | 4 | 0.5 | 10 | -1.09 | 7 | 0.05 |
+| V3b | 3R | 4 | 0.6 | 8 | -1.10 | 6 | 0.24 |
+| V3b | 2R | 3 | 0.4 | 13 | -0.39 | 10 | 0.10 |
+| V3b | 2R | 3 | 0.5 | 12 | -0.34 | 8 | 0.03 |
+| V3b | 2R | 3 | 0.6 | 8 | -1.10 | 7 | 0.19 |
+| V3b | 2R | 4 | 0.4 | 11 | -0.82 | 8 | 0.40 |
+| V3b | 2R | 4 | 0.5 | 10 | -0.79 | 7 | 0.19 |
+| V3b | 2R | 4 | 0.6 | 8 | -1.10 | 6 | 0.41 |
+| V4x | 3R | 3 | 0.5 | 3 | -1.10 | 3 | 0.26 |
+| V4x | 3R | 3 | 0.6 | 3 | -1.10 | 3 | 0.26 |
+| V4x | 3R | 4 | 0.4 | 4 | -1.09 | 3 | 0.26 |
+| V4x | 3R | 4 | 0.5 | 3 | -1.10 | 3 | 0.26 |
+| V4x | 3R | 4 | 0.6 | 3 | -1.10 | 3 | 0.26 |
+
+## Danh gia trung thuc vong 2 (viet tay sau khi doc so, chi file 90d)
+
+**Ket luan cuoi: A TAT MAC DINH.** Khong o nao dat tieu chi (n TEST >= 30, R TEST > 0, R TRAIN > 0): so o thoa = 0 tren 90 o (5 bien the x 2 muc TP x 9 o luoi). 18 o co R TEST > 0 nhung moi o chi co n TEST 3-10 va R TRAIN -0,3..-1,1: day la nhieu cua mau nho, khong phai bang chung.
+
+1. **Het han 30 nen (V3):** sua dung lo hong (khong con lenh vao sau 289 nen) nhung khong cuu duoc setup. O chinh con n=20 (tu 26), WR 10%, R TB -0,68 o 3R, bootstrap 95% **[-1,09 ; -0,08]** (loai tru 0, tuc am that o muc nay); o 2R -0,33 voi khoang **[-0,93 ; 0,27]**. TRAIN 12 lenh gan nhu thua het (-1,08R). Do nhay mep xa E +-0,5 (V3b): gan nhu khong doi (-0,69R o 3R, -0,19R o 2R), nen ket qua khong phu thuoc vao viec toi chon +-1,0. Doi chung cung trang thai: -0,14R (3R) va -0,08R (2R); lenh that te hon hoac bang doi chung (87,5% / 74% lan boc doi chung >= lenh that) - chua co dau hieu nhip hoi + CF them duoc gi.
+2. **Hop luu (V4):** hop luu trong 0,7 gia quanh E **rat hiem**: chi 1/20 lenh cua V3 co them 1 vung khac (thua, -1,11R); V4 o chinh n=1, o luoi n=1..3, khong phan tich duoc. Tach 1 / 2 / >=3 vung: 1 vung = 1 lenh, 2 vung = 0, >=3 = 0. Day la ket qua thuc: vung do tren du lieu 90d it khi trung E hon 0,7 gia, khac voi EntrySignal vi EntrySignal lay vung bat ky o bat ky cho, con A can E la canh VA va dung cung luc cu pha + nhip hoi + CF. Do nhay (V4x, KHONG phai bien the, ban kinh 1,5): n=6, R TB -0,42 (3R), bootstrap [-1,10 ; 0,91]; tach: 1 vung 5 lenh deu thua, 2 vung 1 lenh thang (+2,91R) - 1 lenh khong the dung de ket luan.
+3. **Thoi gian (V5):** cung n=1 (lenh duy nhat la lenh thua do V4 de lai; no vua pha sau 20:30 vua pha lan 2). Khong do duoc gi. Luu y: "pha lan 2+" gan nhu luon dung vi M5 dong ngoai/trong band lap lai nhieu lan trong phien (trung binh ~3 trang thai pha cung canh moi phien), nen dieu kien nay it phan biet.
+4. **Phase Au:** am o moi bien the co n (V3: EU n=3, -1,08R o 3R) - chi bao lai, khong dung loc, n qua nho de noi them.
+5. **Dieu chua chac:** (i) V4/V5 n qua nho de loai han kha nang hop luu co ich - chi biet la tren 90d E hiem khi co vung thu hai trong 0,7 gia; muon biet can du lieu dai hon dung ma hop dong (QD-6 hien khong cho); (ii) het han 30 nen toi dien giai la CF phai trong 30 nen sau nen cuoi M5 pha (nhip hoi cung nam trong khoang do); (iii) o tot nhat va doi chung o tot nhat chon sau khi nhin so nen chi tham khao; (iv) bang 2 nam cua vong 1 chi con tham khao theo QD-6.
+
+
+---
+
+# VONG 1 (giu nguyen; phan 2 nam CHI THAM KHAO theo QD-6, khong dung quyet dinh)
+
 # RESULTS-A - Setup A Pha hoi (Benzo Trader)
 
 Sinh boi `setup_a_pha_hoi.py --all` (deterministic, seed co dinh). Chi phi 0,2 gia/lenh, TP 3R, gio UTC va VN (UTC+7). Dinh nghia chi tiet o docstring cua script.

@@ -69,11 +69,25 @@ def band_arrays(df, zc, m5):
     return bh, bl, src
 
 
-def detect(df, zcols, m5=None, n_min=3, body=0.5, delta_break=False, cands=None, hold_edge=False):
+def detect(df, zcols, m5=None, n_min=3, body=0.5, delta_break=False, cands=None, hold_edge=False,
+           expire=None, zone_half=None, rr=None, conf_min=0, conf_r=0.7, time_filter=False, zobj=None):
     """Tra list entries. cands (list) neu cho: nhan them cac nen 'ung vien doi chung' (trong trang thai pha, cham E, hop le) -
     chua kiem nhip hoi / CF. delta_break (bien the V1): nen M5 pha phai co delta cung chieu S.
     hold_edge (bien the V2): nen CF phai dong o phia NGOAI E (buy: close >= E; sell: close <= E)."""
-    extra_filter = None
+    zone_half = ZONE_HALF if zone_half is None else zone_half
+    rr = RR if rr is None else rr
+    sno_a = df['session_no'].to_numpy()
+    vw_w = zcols['vwap_w'].to_numpy(float)
+    bcount = {}
+
+    def nconf(i, S, E, zname):
+        """So vung KHAC (ten khac nhau) nam trong conf_r gia quanh E tai nen i (khong nhin truoc: as_of=i)."""
+        z = K.zones_for_session(df, int(sno_a[i]), zobj.prof, as_of=i, ctx=zobj.ctx)
+        names = set()
+        for d in K.flat_zones(z, vw_d[i], vw_w[i], pos=i):
+            if d['name'] != zname and abs(d['price'] - E) <= conf_r:
+                names.add(d['name'])
+        return len(names)
     m5 = K.m5_bars(df) if m5 is None else m5
     bh, bl, src = band_arrays(df, zcols, m5)
     cl, op, hi, lo = (df[c].to_numpy(float) for c in ('close', 'open', 'high', 'low'))
@@ -99,6 +113,10 @@ def detect(df, zcols, m5=None, n_min=3, body=0.5, delta_break=False, cands=None,
     def scan(state, q):
         """Quet nen M1 i trong (p0, q) cua trang thai."""
         S, E, p0, L, srcn, s = state['S'], state['E'], state['p0'], state['L'], state['src'], state['s']
+        if time_filter and not (state['after2030'] or state['brk_no'] >= 2):
+            return
+        if expire is not None:
+            q = min(q, p0 + expire + 1)
         pk_pos, pk_val = state['pk_pos'], state['pk_val']
         pbmax = 0.0
         for k in range(pk_pos + 1, p0 + 1):
@@ -111,19 +129,23 @@ def detect(df, zcols, m5=None, n_min=3, body=0.5, delta_break=False, cands=None,
             zname = ('VAH' if S > 0 else 'VAL') + ('_Y' if srcn == 'Y' else '_EU')
         key = (s, srcn, S, round(E, 1))
         for i in range(p0 + 1, q):
-            ok = (not bad[i]) and phase[i] != 'OFF' and not (1 <= sbig[i] <= 3)
+            ok = (not bad[i]) and phase[i] != 'OFF' and not (1 <= sbig[i] <= 3) and (not time_filter or phase[i] == 'US')
             near = abs(cl[i] - E) <= 1.0 or (lo[i] <= E <= hi[i])
             if ok and near:
                 if cands is not None:
-                    cands.append(dict(idx=i, side=S, E=E, zone=zname, key=key))
+                    nc = nconf(i, S, E, zname) if conf_min > 0 else 0
+                    if nc >= conf_min:
+                        cands.append(dict(idx=i, side=S, E=E, zone=zname, key=key))
                 npb = i - 1 - pk_pos
                 if (npb >= n_min and pbmax < L and cf[S][i] and count.get(key, 0) < 2
                         and (not hold_edge or (cl[i] - E) * S >= 0)):
-                    struct = min(lo[i], E - ZONE_HALF) if S > 0 else max(hi[i], E + ZONE_HALF)
-                    r = K.risk(df, i, S, struct, rr=RR)
-                    if r is not None:
+                    struct = min(lo[i], E - zone_half) if S > 0 else max(hi[i], E + zone_half)
+                    r = K.risk(df, i, S, struct, rr=rr)
+                    nc = nconf(i, S, E, zname) if zobj is not None else -1
+                    if r is not None and (conf_min == 0 or nc >= conf_min):
                         entries.append(dict(idx=i, side=S, entry=r['entry'], sl=r['sl'], tp=r['tp'], setup='A', zone=zname,
-                                            E=E, L=L, npb=npb, p0=p0,
+                                            E=E, L=L, npb=npb, p0=p0, n_conf=nc, brk_no=state['brk_no'],
+                                            after2030=state['after2030'], since_break=i - p0,
                                             note='pha %s E=%.1f hoi %d nen' % ('len' if S > 0 else 'xuong', E, npb)))
                         count[key] = count.get(key, 0) + 1
                         pk_pos, pk_val, pbmax = i, (hi[i] if S > 0 else lo[i]), 0.0
@@ -141,7 +163,10 @@ def detect(df, zcols, m5=None, n_min=3, body=0.5, delta_break=False, cands=None,
         leg = np.arange(k + 1, lp + 1) if k < lp else np.array([lp])
         L = float(rng[leg].max())
         pk_pos = int(leg[np.argmax(hi[leg])] if out > 0 else leg[np.argmin(lo[leg])])
+        kb = (int(s), srcn, out)
+        bcount[kb] = bcount.get(kb, 0) + 1
         return dict(S=out, E=float(E), p0=lp, L=L, src=srcn, s=int(s), pk_pos=pk_pos,
+                    brk_no=bcount[kb], after2030=bool(sm[lp] >= 930),
                     pk_val=float(hi[pk_pos] if out > 0 else lo[pk_pos]))
 
     for s in st.index.to_numpy():
@@ -198,7 +223,7 @@ class Data:
 
 
 def run(D, n_min=3, body=0.5, **kw):
-    ent = detect(D.df, D.zc, D.m5, n_min=n_min, body=body, **kw)
+    ent = detect(D.df, D.zc, D.m5, n_min=n_min, body=body, zobj=D, **kw)
     tr = K.simulate(D.df, ent)
     return ent, tr
 
@@ -220,7 +245,7 @@ def control_kernel(D, ent, n_draw=200, seed0=0):
     return np.array(res)
 
 
-def control_state(D, ent, cands, n_draw=200, seed0=1000):
+def control_state(D, ent, cands, n_draw=200, seed0=1000, zone_half=None, rr=None):
     """Doi chung cung trang thai pha: nen ngau nhien trong trang thai pha, cham E, cung chieu, SL/TP y het (khong dung nhip hoi / CF)."""
     real = {e['idx'] for e in ent}
     pool = []
@@ -228,8 +253,9 @@ def control_state(D, ent, cands, n_draw=200, seed0=1000):
         if c['idx'] in real:
             continue
         i, S = c['idx'], c['side']
-        struct = min(D.df['low'].iat[i], c['E'] - ZONE_HALF) if S > 0 else max(D.df['high'].iat[i], c['E'] + ZONE_HALF)
-        r = K.risk(D.df, i, S, struct, rr=RR)
+        zh = ZONE_HALF if zone_half is None else zone_half
+        struct = min(D.df['low'].iat[i], c['E'] - zh) if S > 0 else max(D.df['high'].iat[i], c['E'] + zh)
+        r = K.risk(D.df, i, S, struct, rr=RR if rr is None else rr)
         if r:
             pool.append(dict(idx=i, side=S, entry=r['entry'], sl=r['sl'], tp=r['tp'], setup='CTRL-A', zone=c['zone']))
     res = []
@@ -373,7 +399,136 @@ def main_all():
     return out
 
 
+# ---------------------------------------------------------------------------------------------
+# VONG 2: bien the tich luy V3 (het han 30 nen) -> V4 (+hop luu) -> V5 (+thoi gian), TP 3R va 2R
+# ---------------------------------------------------------------------------------------------
+R2_VARIANTS = [
+    ('V3 het han 30 nen, mep xa E +-1,0', dict(expire=30)),
+    ('V3b nhu V3 nhung mep xa E +-0,5 (do nhay)', dict(expire=30, zone_half=0.5)),
+    ('V4 = V3 + hop luu >= 1 vung khac trong 0,7 gia', dict(expire=30, conf_min=1)),
+    ('V4x (do nhay, KHONG phai bien the) hop luu ban kinh 1,5 gia', dict(expire=30, conf_min=1, conf_r=1.5)),
+    ('V5 = V4 + chi phase My, pha sau 20:30 VN hoac pha lan 2', dict(expire=30, conf_min=1, time_filter=True)),
+]
+
+
+def grid_trades(D, kw, rr):
+    out = {}
+    for nm in GRID_N:
+        for bd in GRID_BODY:
+            out[(nm, bd)] = run(D, nm, bd, rr=rr, **kw)[1]
+    return out
+
+
+def split_stats(tr, cut):
+    if len(tr) == 0:
+        return stat(tr), stat(tr)
+    if cut is None:
+        return stat(tr[tr['split'] == 'TRAIN']), stat(tr[tr['split'] == 'TEST'])
+    return halves(tr, cut)
+
+
+def mini_hdr(cut):
+    return '| | n | WR | R TB | ky vong (gia) | chuoi thua | %s | %s |\n|---|---|---|---|---|---|---|---|' % (
+        'TRAIN n / R' if cut is None else 'Nua1 n / R', 'TEST n / R' if cut is None else 'Nua2 n / R')
+
+
+def mini_row(lab, tr, cut):
+    s = stat(tr)
+    a, b = split_stats(tr, cut)
+    return '| %s | %d | %s%% | %s | %s | %d | %d / %s | %d / %s |' % (
+        lab, s['n'], f(100 * s['wr'], 1), f(s['avg_r']), f(s['exp_pts']), s['max_loss_streak'], a['n'], f(a['avg_r']), b['n'], f(b['avg_r']))
+
+
+def variant_block(name, kw, Ds, verdict):
+    L = ['## ' + name, '']
+    for ds, (D, cut) in Ds.items():
+        for rr in (3.0, 2.0):
+            G = grid_trades(D, kw, rr)
+            main = G[(3, 0.5)]
+            L += ['### %s, TP %dR - o chinh (n_hoi 3, than 0,5); lenh/ngay = %s' % (ds, rr, f(len(main) / D.days)), '', mini_hdr(cut), mini_row('Tong', main, cut), '']
+            if len(main):
+                rs = main[main['outcome'].isin(['TP', 'SL', 'TIME'])]['r'].to_numpy()
+                bs = np.random.default_rng(7).choice(rs, size=(5000, len(rs))).mean(axis=1)
+                L += ['Bootstrap 5000 lan (seed 7) R TB o chinh: **%s**, khoang tin cay 95%% **[%s ; %s]** (n=%d)' % (f(rs.mean()), f(np.percentile(bs, 2.5)), f(np.percentile(bs, 97.5)), len(rs)), '']
+            L += ['Theo phase (khong dung de loc):', '', mini_hdr(cut)]
+            L += [mini_row(ph, main[main['phase'] == ph] if len(main) else main, cut) for ph in K.PHASES] + ['']
+            if len(main):
+                nc = main['n_conf']
+                L += ['Tach theo so vung KHAC them o E:', '', mini_hdr(cut), mini_row('0 vung', main[nc == 0], cut), mini_row('1 vung', main[nc == 1], cut),
+                      mini_row('2 vung', main[nc == 2], cut), mini_row('>=3 vung', main[nc >= 3], cut), '']
+                if kw.get('time_filter'):
+                    L += ['Tach V5 (hai dieu kien co the chong nhau):', '', mini_hdr(cut), mini_row('pha sau 20:30', main[main['after2030']], cut),
+                          mini_row('pha lan 2+ cung canh', main[main['brk_no'] >= 2], cut), '']
+            L += ['Luoi 3x3:', '', '| n_hoi | than | n | WR | R TB | %s | %s |' % ('TRAIN n / R' if cut is None else 'Nua1 n / R', 'TEST n / R' if cut is None else 'Nua2 n / R'),
+                  '|---|---|---|---|---|---|---|']
+            best = None
+            for (nm, bd), t in G.items():
+                s_ = stat(t)
+                a, b = split_stats(t, cut)
+                L.append('| %d | %.1f | %d | %s%% | %s | %d / %s | %d / %s |' % (nm, bd, s_['n'], f(100 * s_['wr'], 1), f(s_['avg_r']), a['n'], f(a['avg_r']), b['n'], f(b['avg_r'])))
+                verdict.setdefault((name, rr, nm, bd), {})[ds] = (s_['n'], a, b)
+                if s_['n'] >= 10 and (best is None or s_['avg_r'] > best[1]):
+                    best = ((nm, bd), s_['avg_r'])
+            L.append('')
+            ctl_lines = []
+            for lab, cell, nd in (('o chinh', (3, 0.5), 200), ('o tot nhat theo R TB' + (' %s' % (best[0],) if best else ''), best[0] if best else None, 200)):
+                if cell is None or not len(G[cell]):
+                    continue
+                cc = []
+                ent_c = detect(D.df, D.zc, D.m5, cell[0], cell[1], cands=cc, zobj=D, rr=rr, **kw)
+                ctl, npool = control_state(D, ent_c, cc, n_draw=nd, zone_half=kw.get('zone_half'), rr=rr)
+                if len(ctl):
+                    m_ = stat(G[cell])['avg_r']
+                    ctl_lines.append('- %s (%d lan, ho %d nen): R TB doi chung **%s** (5-95%%: %s .. %s); lenh that %s; ti le lan doi chung >= that **%s%%**.' % (
+                        lab, nd, npool, f(np.nanmean(ctl)), f(np.nanpercentile(ctl, 5)), f(np.nanpercentile(ctl, 95)), f(m_), f(100 * np.mean(ctl >= m_), 1)))
+            L += ['Doi chung cung trang thai pha (cung chieu, cung E, cung SL/TP, cung het han/hop luu/thoi gian, bo nhip hoi + CF); o tot nhat chon SAU khi nhin so nen chi tham khao:'] + (ctl_lines or ['- khong du lenh']) + ['']
+    return L
+
+
+def round2():
+    D = Data(D90)
+    Ds = {'90d': (D, None)}   # QD-6: chi file 90d (file 2 nam bi bo: sai ma hop dong)
+    verdict = {}
+    L = ['# VONG 2 - sua 2 lo hong co che (het han, hop luu, thoi gian)', '',
+         '**QD-6 (nguoi hoc chot): CHI do tren file 90d GCZ26. Moi bang 2 nam (vong 1, o cuoi file) chi con de THAM KHAO, khong dung de quyet dinh (du lieu footprint truoc do sai ma hop dong).** Sinh boi `setup_a_pha_hoi.py --round2` (deterministic). Cac bien the TICH LUY: V3 -> V4 -> V5; moi bien the bao rieng. TP 3R va 2R chay song song, cung seed. '
+         'Het han: CF phai nam trong 30 nen M1 sau nen cuoi cua M5 dong ngoai (nhip hoi bat dau va ket thuc trong khoang do). '
+         'Hop luu: so vung KHAC (ten khac nhau, tinh theo as_of tai nen vao, khong nhin truoc) nam trong 0,7 gia quanh E, trong cac vung VWAP ngay/tuan, POC/VAH/VAL hom qua va Au, HVN ngay/tuan, naked POC, IB; '
+         '"tach 0 / 1 / 2 / >=3" la so vung KHAC them o E. Pha lan 2 = trang thai pha thu >= 2 cung canh (cung nguon band) trong phien. Phase Au KHONG dung loc.', '']
+    for name, kw in R2_VARIANTS:
+        L += variant_block(name, kw, Ds, verdict)
+    L += ['## Phan quyet vong 2 (QD-6: chi file 90d)', '',
+          'Dat khi: n TEST(90d) >= 30 VA R TEST(90d) > 0, cung mot o/variant/TP (them: R TRAIN > 0 de khong chi dung do may mat nua).', '']
+    ok_full, ok_sign = [], []
+    for (name, rr, nm, bd), d in verdict.items():
+        n9, a9, b9 = d['90d']
+        if b9['n'] and b9['avg_r'] > 0:
+            r = (name.split(' ')[0], rr, nm, bd, a9['n'], a9['avg_r'], b9['n'], b9['avg_r'])
+            ok_sign.append(r)
+            if b9['n'] >= 30 and a9['avg_r'] > 0:
+                ok_full.append(r)
+    L += ['- O dat DU tieu chi (n TEST >= 30, TEST > 0, TRAIN > 0): **%d**' % len(ok_full),
+          '- O co R TEST > 0 nhung n TEST < 30 hoac TRAIN <= 0 (chi tham khao, khong ket luan): **%d** tren tong %d o (5 muc x 2 TP x 9 o luoi)' % (len(ok_sign) - len(ok_full), len(verdict))]
+    if ok_sign:
+        L += ['', '| variant | TP | n_hoi | than | n TRAIN | R TRAIN | n TEST | R TEST |', '|---|---|---|---|---|---|---|---|']
+        for r in ok_sign:
+            L.append('| %s | %dR | %d | %.1f | %d | %s | %d | %s |' % (r[0], r[1], r[2], r[3], r[4], f(r[5]), r[6], f(r[7])))
+    L.append('')
+    ev = os.path.join(HERE, 'report', '_eval_a_r2.txt')
+    if os.path.exists(ev):
+        with open(ev, encoding='utf-8') as fh:
+            L.append(fh.read())
+    r1 = os.path.join(HERE, 'report', '_round1_A.md')
+    with open(r1, encoding='utf-8') as fh:
+        old = '# VONG 1 (giu nguyen; phan 2 nam CHI THAM KHAO theo QD-6, khong dung quyet dinh)\n\n' + fh.read()
+    with open(os.path.join(HERE, 'report', 'RESULTS-A.md'), 'w', encoding='utf-8') as fh:
+        fh.write('\n'.join(L) + '\n\n---\n\n' + old)
+    print('ghi RESULTS-A.md vong 2 + vong 1')
+
+
 if __name__ == '__main__':
+    if '--round2' in sys.argv:
+        round2()
+        sys.exit(0)
     if '--all' in sys.argv:
         lines = main_all()
         with open(os.path.join(HERE, 'report', 'RESULTS-A.md'), 'w', encoding='utf-8') as fh:

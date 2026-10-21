@@ -608,7 +608,7 @@ namespace BenzoTraderNs
                     if (!string.IsNullOrEmpty(rs.Warn)) lines.Add("⚠ " + rs.Warn);
                     float lh = fTab.GetHeight(gr) + 1, w = 0;
                     foreach (var l in lines) w = Math.Max(w, gr.MeasureString(l, fTab).Width);
-                    float x0 = clip.Left + 6, y0 = clip.Top + 6;
+                    float x0 = clip.Left + 6, y0 = clip.Bottom - lh * lines.Count - 8;   // góc dưới bên trái
                     using (var bg = new SolidBrush(Color.FromArgb(170, 14, 16, 22)))
                         gr.FillRectangle(bg, x0 - 3, y0 - 2, w + 8, lh * lines.Count + 4);
                     for (int i = 0; i < lines.Count; i++)

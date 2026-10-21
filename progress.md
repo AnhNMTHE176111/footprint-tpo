@@ -464,3 +464,17 @@ trị của move ngược · E nhịp hồi của move ngược. Log `_stack_cau
 - ❌ **"Chờ hồi bao nhiêu phần trăm" KHÔNG phân biệt được gì:** mua hồi nông ra 29,4% ở ngưỡng 2,0 nhưng
   50,0% ở ngưỡng 4,0; hồi sâu 42,9→54,3%. Đảo lộn khi đổi ngưỡng nhận sóng ⇒ không kết luận, và các con
   số "hồi nông kém" ở lượt trước phải rút lại.
+
+## 2026-10-21 — Benzo Trader: indicator signal mới, 4 setup theo Hệ thống Đêm Vàng, backtest trung thực
+Người học yêu cầu: agent chính (Fable) research + brainstorm, mỗi setup một agent Sonnet chạy độc lập, backtest trên data footprint,
+mục tiêu WR 60–70%, 10–20 lệnh/ngày, R:R 1:2–1:3, Telegram kèm ảnh, cấu hình tối giản, bảng ngắn.
+- **Plan:** `plans/BENZO-TRADER-plan.md` (QĐ-1…8). QĐ-6: chỉ đo trên `fp_GCZ26_*_90d` (65 phiên), bỏ file 2 năm (sai mã hợp đồng).
+- **Mã:** `benzo-trader/` — `BenzoTrader.cs` + `BenzoCore/Zones/Detectors.cs`, Telegram sendPhoto chụp cửa sổ Optimus Flow (Win32),
+  bảng 5 dòng, 8 input, SignalCache, CSV log; `research/kernel.py` + `setup_[abcd]_*.py`; parity Python↔C# 183/183; 85 test xanh;
+  DLL đã deploy `C:\OptimusFLOW\Settings\Scripts\Indicators\BenzoTrader\`.
+- **Kết quả thật (sau 3 vòng, 90d, chi phí 0,2 giá):** A −0,68R (n=20), B 0,00 (n=11), C −0,26 (n=121, thua có ý nghĩa), D +0,08
+  (n=31, TEST −0,29). Đối chứng cùng vùng/chế độ cũng âm. Sửa kỹ thuật (be 1R, SL ngoài cạnh 1u, không vào ở lưng, lọc nến dài)
+  không đổi dấu. Lỗi gốc: VA Âu/VA hôm qua trong giai đoạn này không phải cạnh cân bằng thật. Luật có số: **không vào 19:20–20:30**.
+- Agent chính tự mổ SL: `research/report/MO-XE-SL-agent-chinh.md` (72/88 SL của C là phá thật; chart 9 lệnh).
+- Quan điểm Corven 11/10 (trap = giá phải rời bong bóng một đoạn) → QĐ-8, đã đo: chưa ủng hộ trên 90d.
+- ⚠️ Việc người học: add BenzoTrader vào chart M1 GCZ26, điền token/chat id, bấm "Gửi thử"; chạy forward test ≥ 20 phiên rồi đọc bảng.

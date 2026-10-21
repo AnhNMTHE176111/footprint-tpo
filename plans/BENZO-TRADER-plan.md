@@ -179,3 +179,7 @@ Tham số tự do: độ xuyên tối thiểu (2 tick), khoảng cách cạnh đ
   đã kẹt). Ca thật: 20:53 sell ngay tại bong bóng 4170 ⇒ râu quét SL 4172 rồi mới rơi về TP 4163,5. Luật cho bot: sau bong bóng
   ở đỉnh hồi, **chờ nến M1 đóng cách mức bong bóng ≥ d** (d = 1 giá hoặc biên độ nến bong bóng, đo cả hai) rồi mới vào; SL trên đỉnh
   bong bóng + 0,3; TP tính từ giá vào mới. Áp tương tự cho A/C: vào sau khi giá đã rời cạnh, không vào ngay tại cạnh.
+- **QĐ-7 (agent chính, 2026-10-21, sau 3 vòng):** cả 4 setup đều **chưa có lợi thế đo được** trên 65 phiên GCZ26 (xem
+  `benzo-trader/research/report/TONG-KET-VONG-1-2.md`, `MO-XE-SL-agent-chinh.md`, `RESULTS-*.md`). Indicator vẫn port đủ 4 setup,
+  **4 công tắc bật mặc định để chạy forward test** (bảng + CSV thu thống kê live); README ghi rõ sự thật. Luật duy nhất có số ủng hộ
+  được gắn cứng vào engine: **không vào 19:20–20:30 VN**. QĐ-8 (trap theo Corven) đã đo: n=148–193, R TB −0,03…−0,15 ⇒ chưa ủng hộ.

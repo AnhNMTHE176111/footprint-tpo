@@ -484,3 +484,10 @@ Người học hỏi Claude có biết định nghĩa S/R, có tra kỹ và đo 
 viết `benzo-trader/research/sr_measure.py` đo đúng 2 định nghĩa đã công bố, có đối chứng mức ngẫu nhiên. Kết quả `report/SR-KET-QUA.md`:
 **không loại mức nào (swing, đỉnh/đáy/đóng phiên trước, VA hôm qua, VA Âu, số tròn, VWAP) bật nhiều hơn mức ngẫu nhiên quá sai số**;
 số lần bật trước và tuổi mức không đổi kết quả. Bài học phương pháp: "chạm bằng râu" cho 80% bật ở mọi mức = lỗi hình học, phải "vào dải bằng giá đóng".
+
+## 2026-10-22 — Vùng Canh Lệnh: indicator hỗ trợ/kháng cự cho scalp vàng M1 (5 vòng Fable ↔ Opus)
+Người học yêu cầu: research internet + brainstorm (Fable) → Opus implement + test trên `fp_GCZ26_XCEC_Time_20260816-20260915_29d2h` → Fable review, tối đa 5 vòng. Thiết kế: `vung-canh-lenh/PLAN.md`; report từng vòng `vung-canh-lenh/research/report/VCL-VONG-1..4.md`, `PARITY-VCL.md`; code C# `VclCore.cs` + `VungCanhLenh.cs`, DLL `dist/`.
+- **Kết luận đo (lần thứ 3 độc lập, khớp SR-KET-QUA và HVN):** vị trí vùng KHÔNG mang thông tin. Bật/xuyên, quét thanh khoản, "tới được", TP/SL sau phí của mọi loại mức (swing M5/M15, mốc phiên, VA, số tròn, lệnh lớn footprint, đỉnh/đáy bằng nhau) ≈ đối chứng **khớp khoảng cách** ở cả TRAIN lẫn TEST. P(chạm) chỉ phụ thuộc khoảng cách (u), bền TRAIN/TEST lệch ≤ 3 điểm.
+- Bẫy phương pháp vòng 1: đối chứng đặt trong biên phiên trước ⇒ luôn xa giá hơn vùng thật ⇒ dấu ▼ giả. Sửa bằng đối chứng khớp khoảng cách (vòng 2).
+- **Indicator chốt:** bản đồ mốc ổn định (B swing M5, B15 swing M15, C mốc phiên + POC trần, D số tròn; gộp 1u, kẹp [1u,4u]; vùng chứa giá + 2 gần + 1 xa mỗi phía; hành lang +1u, giữ top-3, tuổi tối thiểu 10 nến ⇒ đổi vùng 3/giờ, tuổi thọ ~60 phút) + **bảng tra** P(chạm trong 15/30/60/120 nến) theo khoảng cách × pha, P(SL bị quét 0,25/0,5/1u), P(chạm rồi quay ≥2u). Parity C# ↔ Python 100% (28.846 nến), 40 test C# xanh, build 0 warning.
+- ⚠️ Việc người học: copy `vung-canh-lenh/dist/VungCanhLenh.dll` vào `C:\OptimusFLOW\Settings\Scripts\Indicators\VungCanhLenh\`, add vào chart M1 GCZ26 có Volume Analysis, chạy 10 phiên, chụp 3 ảnh gửi lại để hiệu chỉnh vẽ. Chưa chạy trên Optimus Flow thật.

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Vẽ 4 phiên (2 TRAIN, 2 TEST): nến M1 + vùng hiển thị (gộp 1,0u) + nhãn loại·điểm.
 Đỏ = vùng phía trên giá (kháng cự), xanh = phía dưới (hỗ trợ); tô đậm = 2 vùng gần, tô nhạt viền đứt = vùng xa vừa phải.
-Chạy sau vcl.py (đọc report/vcl_records_1.0.csv.gz; chưa có thì tự chạy engine).  python3 ve_vcl.py"""
+Chạy sau vcl.py (đọc report/vcl_records_1.0.csv.gz; chưa có thì tự chạy engine).  python3 ve_vcl.py
+Vòng 2: python3 ve_vcl.py --vong 2  (đọc report/vcl2_records.csv.gz) → report/img/v2_*.png"""
 import os
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -10,6 +12,9 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection, LineCollection
 import vcl
+import vcl2
+
+VONG = 2 if '--vong' in sys.argv and sys.argv[sys.argv.index('--vong') + 1] == '2' else 1
 
 SESSIONS = {'TRAIN': ['2026-08-20', '2026-09-01'], 'TEST': ['2026-09-08', '2026-09-11']}
 OUT = os.path.join(vcl.REPORT, 'img')
@@ -17,7 +22,8 @@ UP, DN, INK, MUTED = '#c0392b', '#1e8449', '#222222', '#888888'
 
 
 def types_of(mask):
-    return '+'.join(t for t in vcl.TYPES if mask & vcl.BIT[t])
+    T, B = (vcl2.TYPES, vcl2.BIT) if VONG == 2 else (vcl.TYPES, vcl.BIT)
+    return '+'.join(t for t in T if mask & B[t])
 
 
 def draw(ctx, rec, sid, split):
@@ -64,13 +70,13 @@ def draw(ctx, rec, sid, split):
     ax.tick_params(axis='y', labelsize=9, labelright=True)
     ax.set_xlabel('giờ VN (UTC+7)', color=MUTED)
     u = vcl.K.median_range(df).to_numpy()[a:b + 1]
-    ax.set_title(f'VCL vòng 1 · GCZ26 M1 · phiên {sid} ({split}) · gộp 1,0u · u trung vị {np.nanmedian(u):.2f} USD · '
+    ax.set_title(f'VCL vòng {VONG} · GCZ26 M1 · phiên {sid} ({split}) · gộp 1,0u · u trung vị {np.nanmedian(u):.2f} USD · '
                  'đỏ = vùng trên giá, xanh = vùng dưới giá; đậm = 2 vùng gần, nhạt = vùng xa vừa phải; nhãn = loại·điểm',
                  fontsize=11, loc='left')
     for sp in ('top', 'right'):
         ax.spines[sp].set_visible(False)
     os.makedirs(OUT, exist_ok=True)
-    p = os.path.join(OUT, f'vcl_{split}_{sid}.png')
+    p = os.path.join(OUT, (f'v2_{split}_{sid}.png' if VONG == 2 else f'vcl_{split}_{sid}.png'))
     fig.tight_layout()
     fig.savefig(p)
     plt.close(fig)
@@ -80,8 +86,12 @@ def draw(ctx, rec, sid, split):
 def main():
     bars, lv = vcl.load_all()
     ctx = vcl.prepare(bars, lv)
-    path = os.path.join(vcl.REPORT, f'vcl_records_{vcl.MAIN_LINK}.csv.gz')
-    rec = pd.read_csv(path) if os.path.exists(path) else vcl.run_engine(ctx, vcl.MAIN_LINK)['rec']
+    if VONG == 2:
+        path = os.path.join(vcl.REPORT, 'vcl2_records.csv.gz')
+        rec = pd.read_csv(path) if os.path.exists(path) else vcl2.run_engine(ctx)['rec']
+    else:
+        path = os.path.join(vcl.REPORT, f'vcl_records_{vcl.MAIN_LINK}.csv.gz')
+        rec = pd.read_csv(path) if os.path.exists(path) else vcl.run_engine(ctx, vcl.MAIN_LINK)['rec']
     for split, sids in SESSIONS.items():
         for sid in sids:
             print(draw(ctx, rec, sid, split))

@@ -321,6 +321,8 @@ def run_engine(ctx: dict, link: float, cands: pd.DataFrame = None, stop: int = N
     n_alive_bars = 0
     nz_sum = 0.0
     cov_sum = 0.0
+    z10_sum = 0
+    z10_bar = np.full(len(df), np.nan)
 
     def init_side(j, i):
         dd = C[i] - price[j]
@@ -379,6 +381,8 @@ def run_engine(ctx: dict, link: float, cands: pd.DataFrame = None, stop: int = N
         lab, zlo, zhi = build_zones(price[act], u, link)
         nz = len(zlo)
         nz_sum += nz
+        z10_bar[i] = int(((zhi >= C[i] - 10 * u) & (zlo <= C[i] + 10 * u)).sum())
+        z10_sum += z10_bar[i]   # số vùng sống trong dải ±10u (để so v2)
         a5, b5 = C[i] - 5 * u, C[i] + 5 * u                 # độ phủ: phần của [giá ±5u] nằm trong vùng (mọi vùng, chưa lọc hiển thị)
         cov_sum += np.clip(np.minimum(zhi, b5) - np.maximum(zlo, a5), 0, None).sum() / (10 * u)
         val = w[act] * np.where(i >= half[act], 0.5, 1.0) * (1 + P['touch_k'] * np.minimum(touch[act], P['touch_cap'])) \
@@ -404,7 +408,8 @@ def run_engine(ctx: dict, link: float, cands: pd.DataFrame = None, stop: int = N
             prev.append((zlo[z], zhi[z], eid, slot))
     rec = pd.DataFrame(recs, columns=REC_COLS)
     stats = dict(alive_mean={t: 0.0 for t in TYPES}, e_count=cands.attrs.get('e_count', {}),
-                 zones_mean=nz_sum / max(n_alive_bars, 1), cover5u=cov_sum / max(n_alive_bars, 1))
+                 zones_mean=nz_sum / max(n_alive_bars, 1), cover5u=cov_sum / max(n_alive_bars, 1),
+                 z10_mean=z10_sum / max(n_alive_bars, 1), z10_bar=z10_bar)
     for k_, t in KINDS.items():
         stats['alive_mean'][t] += alive_cnt[k_] / max(n_alive_bars, 1)
     return dict(rec=rec, stats=stats)

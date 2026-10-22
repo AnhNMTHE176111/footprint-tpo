@@ -14,6 +14,7 @@ from matplotlib.collections import PolyCollection, LineCollection
 import vcl
 import vcl2
 import vcl3
+import vcl4
 
 VONG = int(sys.argv[sys.argv.index('--vong') + 1]) if '--vong' in sys.argv else 1
 
@@ -23,7 +24,7 @@ UP, DN, INK, MUTED, KCOL = '#c0392b', '#1e8449', '#222222', '#888888', '#d68910'
 
 
 def types_of(mask):
-    T, B = {1: (vcl.TYPES, vcl.BIT), 2: (vcl2.TYPES, vcl2.BIT), 3: (vcl3.TYPES, vcl3.BIT)}[VONG]
+    T, B = {1: (vcl.TYPES, vcl.BIT), 2: (vcl2.TYPES, vcl2.BIT), 3: (vcl3.TYPES, vcl3.BIT), 4: (vcl3.TYPES, vcl3.BIT)}[VONG]
     return '+'.join(t for t in T if mask & B[t])
 
 
@@ -72,7 +73,7 @@ def draw(ctx, rec, sid, split):
     ax.set_xlabel('giờ VN (UTC+7)', color=MUTED)
     u = vcl.K.median_range(df).to_numpy()[a:b + 1]
     ax.set_title(f'VCL vòng {VONG} · GCZ26 M1 · phiên {sid} ({split}) · gộp 1,0u · u trung vị {np.nanmedian(u):.2f} USD · '
-                 'đỏ = vùng trên giá, xanh = vùng dưới giá' + (', cam = vùng đang chứa giá' if VONG == 3 else '') + '; đậm = 2 vùng gần, nhạt = vùng xa vừa phải; nhãn = loại·điểm',
+                 'đỏ = vùng trên giá, xanh = vùng dưới giá' + (', cam = vùng đang chứa giá' if VONG >= 3 else '') + '; đậm = 2 vùng gần, nhạt = vùng xa vừa phải; nhãn = loại·điểm',
                  fontsize=11, loc='left')
     for sp in ('top', 'right'):
         ax.spines[sp].set_visible(False)
@@ -87,7 +88,10 @@ def draw(ctx, rec, sid, split):
 def main():
     bars, lv = vcl.load_all()
     ctx = vcl.prepare(bars, lv)
-    if VONG == 3:
+    if VONG == 4:
+        path = os.path.join(vcl.REPORT, 'vcl4_records.csv.gz')
+        rec = pd.read_csv(path) if os.path.exists(path) else vcl4.run_engine(ctx)['rec']
+    elif VONG == 3:
         path = os.path.join(vcl.REPORT, 'vcl3_records.csv.gz')
         rec = pd.read_csv(path) if os.path.exists(path) else vcl3.run_engine(ctx)['rec']
     elif VONG == 2:

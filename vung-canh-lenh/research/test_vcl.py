@@ -6,6 +6,7 @@ import pandas as pd
 import vcl
 import vcl2
 import vcl3
+import vcl4
 
 _DATA = {}
 
@@ -248,9 +249,41 @@ def test_v3_hanh_lang():
     assert [lo5[z] for z, s, _, sd in o5 if s == 'F' and sd == 1] == [115.0]
 
 
+# ------------------------------- VÒNG 4 -------------------------------
+def test_v4_khong_nhin_truoc():
+    bars, lv = _data()
+    fb, fl = _cut(bars, lv, 8999)
+    rec_full = vcl4.run_engine(vcl.prepare(fb, fl))['rec']
+    cols = ['bar', 'lo', 'hi', 'score', 'mask', 'eid', 'side', 'slot']
+    for c in (2500, 5521, 7777):
+        cb, cl = _cut(bars, lv, c)
+        rec_cut = vcl4.run_engine(vcl.prepare(cb, cl))['rec']
+        a = rec_full[rec_full['bar'] <= c][cols].reset_index(drop=True)
+        assert (a['bar'] == c).any(), c
+        pd.testing.assert_frame_equal(a, rec_cut[cols].reset_index(drop=True), check_exact=False, rtol=1e-12, atol=1e-9)
+
+
+def test_v4_keep_gan_tuoi_hanh_lang():
+    lo = np.array([90.0, 94.0, 103.0, 104.5, 106.0, 112.0]); hi = lo + 1.0
+    sc = np.ones(6); d10 = np.zeros(6, bool)
+    el = np.ones(6, bool)
+    # (a) vùng gần cũ 106 (thứ 3 gần nhất) được giữ thay cho 104,5
+    o = vcl4.fresh_select(lo, hi, sc, d10, el, 100.0, 1.0, 30.0, keep_near=frozenset([4]))
+    assert sorted(lo[z] for z, s, sd in o if s == 'N' and sd == 1) == [103.0, 106.0]
+    # (c) vùng chưa đủ tuổi không được chọn
+    el2 = el.copy(); el2[2] = False
+    o = vcl4.fresh_select(lo, hi, sc, d10, el2, 100.0, 1.0, 30.0)
+    assert sorted(lo[z] for z, s, sd in o if s == 'N' and sd == 1) == [104.5, 106.0]
+    # (b) hành lang nới 1u: cạnh trên vùng gần-1 (104) + 1 = 105
+    sel = [(2, 'N', 1), (1, 'N', -1)]
+    bot, top = vcl4.corridor_of(sel, lo, hi, 100.0, 1.0)
+    assert np.isclose(top, 105.0) and np.isclose(bot, 93.0)
+
+
 if __name__ == '__main__':
     for f in (test_gop_va_kep_do_rong, test_chuyen_vai, test_chon_vung_chong_nhap_nhay, test_ung_vien_khong_nhin_truoc,
               test_khong_nhin_truoc, test_v2_dinh_bang_nhau_F, test_v2_chon_theo_o, test_v2_ung_vien_khong_nhin_truoc,
-              test_v2_khong_nhin_truoc, test_v3_hanh_lang, test_v3_khong_nhin_truoc):
+              test_v2_khong_nhin_truoc, test_v3_hanh_lang, test_v3_khong_nhin_truoc,
+              test_v4_keep_gan_tuoi_hanh_lang, test_v4_khong_nhin_truoc):
         f()
         print('OK', f.__name__)

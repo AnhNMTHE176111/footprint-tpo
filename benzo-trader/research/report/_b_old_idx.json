@@ -1,0 +1,19 @@
+{
+ "note": "B cu o chinh (theta 0.5, N 3, TP 3R, VWAP_W+VWAP_D) tren 90d GCZ26 - idx lenh tho tu setup_b_hap_thu.detect TRUOC khi sua (2026-10-22)",
+ "n": 11,
+ "wr": 0.2727,
+ "avg_r": 0.0013,
+ "idx": [
+  9537,
+  15449,
+  24107,
+  26844,
+  37828,
+  40688,
+  45175,
+  51564,
+  55386,
+  61227,
+  66447
+ ]
+}

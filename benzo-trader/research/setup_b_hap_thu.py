@@ -52,8 +52,11 @@ MAIN = (0.5, 3)
 
 
 # ------------------------------------------------------------------ chuan bi du lieu
-def prepare(df: pd.DataFrame, prof) -> dict:
-    """Tinh 1 lan: cot vung, che do, mang numpy dung cho detect."""
+def prepare(df: pd.DataFrame, prof, extra_zones: dict = None) -> dict:
+    """Tinh 1 lan: cot vung, che do, mang numpy dung cho detect.
+    extra_zones (B-v2, plans/BENZO-B-v2-plan.md muc 2.1): dict ten_muc -> (mang gia theo nen, ztype), them vao SAU 2 VWAP theo dung
+    thu tu chen (= thu tu uu tien trong detect). Vung co dinh => warm = True moi nen. Ten 'VWAP_W'/'VWAP_D' trong extra_zones = THAY
+    mang VWAP (dung cho doi chung doi vung), giu nguyen dieu kien warm 30 nen. extra_zones=None => hanh vi cu y nguyen."""
     zc = K.zone_columns(df, prof)
     mdf = K.mode_frame(df, zc)
     n = len(df)
@@ -78,10 +81,18 @@ def prepare(df: pd.DataFrame, prof) -> dict:
     P['vww'] = zc['vwap_w'].to_numpy(float)
     P['u'] = K.median_range(df).to_numpy(float)
     P['modecode'] = pd.Series(pd.factorize(mdf['mode'])[0], index=df.index)
+    P['ztype'] = {'VWAP_W': 'VWAP_W', 'VWAP_D': 'VWAP_D'}
+    fixed = set()
+    for name, (arr, zt) in (extra_zones or {}).items():
+        P['Z'][name] = np.asarray(arr, float)
+        P['ztype'][name] = zt
+        if name not in ('VWAP_W', 'VWAP_D'):
+            fixed.add(name)
     P['touch'], P['warm'] = {}, {}
     for name, zv in P['Z'].items():
-        P['touch'][name] = (np.abs(P['cl'] - zv) <= TOUCH_TOL) | ((P['lo'] <= zv) & (zv <= P['hi']))
-        P['warm'][name] = (P['posin'] if name == 'VWAP_D' else P['wposin']) >= WARM
+        with np.errstate(invalid='ignore'):
+            P['touch'][name] = (np.abs(P['cl'] - zv) <= TOUCH_TOL) | ((P['lo'] <= zv) & (zv <= P['hi']))
+        P['warm'][name] = np.ones(n, bool) if name in fixed else (P['posin'] if name == 'VWAP_D' else P['wposin']) >= WARM
     return P
 
 
@@ -118,9 +129,9 @@ def detect(P: dict, theta: float = 0.5, N: int = 3, zones=('VWAP_W', 'VWAP_D'), 
     df = P['df']
     hi, lo, op, cl, dl, body, rng, adl = P['hi'], P['lo'], P['op'], P['cl'], P['dl'], P['body'], P['rng'], P['adl']
     n, sno = P['n'], P['sno']
-    found = {}   # (i) -> entry (uu tien VWAP_W)
+    found = {}   # (i) -> entry (uu tien theo thu tu P['Z']: VWAP_W, VWAP_D, roi vung them cua B-v2)
     idx = np.arange(n)
-    for name in ('VWAP_W', 'VWAP_D'):
+    for name in P['Z']:
         if name not in zones:
             continue
         zv, touch, warm = P['Z'][name], P['touch'][name], P['warm'][name]
@@ -211,13 +222,15 @@ def detect(P: dict, theta: float = 0.5, N: int = 3, zones=('VWAP_W', 'VWAP_D'), 
                     continue
                 cnt('7 + risk() hop le (SL<=4 gia)', 1)
                 if i in found:
+                    found[i]['zones_hit'].append(name)     # B-v2: ghi moi muc cung khop tai i, lenh dau van giu
                     continue
                 found[i] = dict(idx=i, side=s, entry=r['entry'], sl=r['sl'], tp=r['tp'], setup='B', zone=name, zprice=z,
+                                ztype=P['ztype'][name], zones_hit=[name],
                                 note='B %s M=%+d move=%.1f N=%d th=%.1f' % (name, M, move, N, theta))
     out = sorted(found.values(), key=lambda e: e['idx'])
     cnt, keep = {}, []
     for e in out:
-        k = (e['zone'], int(P['sno'][e['idx']]))
+        k = (e['ztype'], int(P['sno'][e['idx']]))       # tran theo LOAI vung (VWAP: ztype == ten => nhu cu)
         if cnt.get(k, 0) >= MAX_PER_ZONE_SESSION:
             continue
         cnt[k] = cnt.get(k, 0) + 1

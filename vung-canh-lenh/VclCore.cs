@@ -295,6 +295,73 @@ namespace VungCanhLenhNs
         }
     }
 
+
+    // ---------------------------------------------------------------- vòng đời lõi khi chạy live (thuần, test được)
+    /// <summary>Giữ một VclCore đồng bộ với lịch sử nến của platform. Dựng lại TỪ ĐẦU khi:
+    /// (1) chưa có lõi hoặc đổi lệch giờ; (2) lịch sử ngắn đi (platform cắt lịch sử/đổi mã);
+    /// (3) footprint (Volume Analysis) vừa sẵn sàng mà lõi đang dựng KHÔNG có footprint — vì ứng viên C (VA/POC hôm qua, VA Âu,
+    ///     POC trần) chỉ sinh ở đầu phiên / mốc giờ, đẩy tiếp sẽ không bao giờ có lại; (4) dữ liệu nạp lại khác: giờ nến cuối
+    /// đã đẩy không còn khớp nguồn, hoặc nến mới có giờ SỚM hơn nến cuối trong lõi.</summary>
+    public sealed class VclFeeder
+    {
+        public VclCore Core;
+        public bool BuiltWithLevels;
+        public int Resets;
+        public string LastResetReason = "";
+        private int _tz = int.MinValue;
+
+        /// <summary>closedCount = số nến ĐÃ ĐÓNG (chỉ số 0..closedCount−1). getBar(i) trả null nếu ô lịch sử không phải nến
+        /// (khi đó đẩy nến giả lặp giá trước để giữ chỉ số). levelsReady = footprint đã tính xong. Trả true nếu có đẩy nến mới.</summary>
+        public bool Sync(int closedCount, Func<int, VBar> getBar, Func<int, IReadOnlyList<VLevel>> getLevels, bool levelsReady, int tz)
+        {
+            string why = null;
+            if (Core == null) why = "khởi tạo";
+            else if (tz != _tz) why = "đổi lệch giờ";
+            else if (Core.Bars.Count > closedCount) why = "lịch sử ngắn đi";
+            else if (levelsReady && !BuiltWithLevels) why = "footprint vừa sẵn sàng";
+            else if (Core.Bars.Count > 0)
+            {
+                int k = Core.Bars.Count - 1;
+                var src = getBar(k);
+                if (src != null && src.Time != Core.Bars[k].Time) why = "dữ liệu nạp lại khác (giờ nến cuối không khớp)";
+            }
+            if (why != null) Reset(why, levelsReady, tz);
+            bool pushed = false;
+            for (int pass = 0; pass < 2; pass++)
+            {
+                bool restart = false;
+                for (int i = Core.Bars.Count; i < closedCount; i++)
+                {
+                    var b = getBar(i);
+                    var last = Core.Bars.Count > 0 ? Core.Bars[Core.Bars.Count - 1] : null;
+                    if (b == null)
+                    {
+                        double c = last?.C ?? 0;
+                        b = new VBar { Time = (last?.Time ?? DateTime.MinValue).AddMinutes(1), O = c, H = c, L = c, C = c };
+                    }
+                    else if (pass == 0 && last != null && b.Time < last.Time)
+                    {
+                        Reset("nến mới có giờ sớm hơn nến cuối trong lõi", levelsReady, tz);
+                        restart = true;
+                        break;
+                    }
+                    Core.Push(b, levelsReady ? (getLevels(i) ?? Array.Empty<VLevel>()) : Array.Empty<VLevel>());
+                    pushed = true;
+                }
+                if (!restart) break;
+            }
+            return pushed;
+        }
+
+        private void Reset(string why, bool levelsReady, int tz)
+        {
+            if (Core != null) { Resets++; LastResetReason = why; }
+            Core = new VclCore { TzOffset = tz };
+            _tz = tz;
+            BuiltWithLevels = levelsReady;
+        }
+    }
+
     // ---------------------------------------------------------------- engine
     public sealed class VclCore
     {

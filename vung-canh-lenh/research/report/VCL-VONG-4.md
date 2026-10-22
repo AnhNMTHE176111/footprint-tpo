@@ -157,3 +157,9 @@ static readonly int[] REVERT2U = { 60, 61, 62, 65, 64, 68, 70 };
   - Vùng chứa giá ghi "giá đang trong vùng" thay cho xác suất chạm.
   - Chỉ vẽ bộ vùng HIỆN TẠI, từ lúc vùng vào bộ tới mép phải. Vùng đã rời bộ không vẽ lại.
   - Đổi "Lệch giờ" thì dựng lại lõi từ đầu.
+
+## Vòng 5 (chốt) — sửa vận hành
+- **Không còn chặn khi thiếu Volume Analysis.** Indicator vẫn chạy với footprint rỗng và ghi dòng "⚠ Chưa có Volume Analysis…" trong bảng. Khi footprint sẵn sàng (callback hoặc trạng thái Finished), `VclFeeder` dựng lại lõi TỪ ĐẦU có footprint, cờ `BuiltWithLevels`.
+  - Test C#: trên dữ liệu giả lập, bộ vùng không có footprint khác bộ có footprint ở 1370/2900 nến. Sau khi dựng lại, bộ vùng giống hệt chạy thẳng có footprint.
+- **Reset khi dữ liệu nạp lại khác:** giờ nến cuối không khớp nguồn, nến mới có giờ sớm hơn nến cuối, hoặc lịch sử ngắn đi. Mỗi trường hợp có test.
+- **Kết quả:** build 0 cảnh báo · 40 kiểm tra C# xanh · parity vẫn 28 846/28 846 (100%, lệch 0).

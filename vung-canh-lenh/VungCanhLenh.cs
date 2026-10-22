@@ -1,7 +1,8 @@
 // ============================================================================
 //  VungCanhLenh — indicator "Vùng Canh Lệnh" cho Quantower / Optimus Flow (lớp dán SDK)
 // ============================================================================
-//  Add vào chart M1 có Volume Analysis. Chỉ xử lý nến ĐÃ ĐÓNG (tới Count−2), đúng 1 lần/nến, theo thứ tự.
+//  Add vào chart M1 (nên bật Volume Analysis). Chỉ xử lý nến ĐÃ ĐÓNG (tới Count−2), đúng 1 lần/nến, theo thứ tự.
+//  Chưa có Volume Analysis vẫn vẽ (swing + số tròn) và ghi chú; khi footprint sẵn sàng thì dựng lại từ đầu (VclFeeder).
 //  Toàn bộ logic ở VclCore.cs (test được trên Linux, khớp research/vcl4.py 100%). File này chỉ: Settings,
 //  đọc nến + footprint từng mức giá, vẽ vùng + nhãn + bảng tra.
 //  Build: build.sh (concat VclCore.cs + file này). MỌI `using` nằm trong namespace.
@@ -39,14 +40,17 @@ namespace VungCanhLenhNs
             public List<VZone> Zones = new();
             public double Close, U;
             public int Phase;
-            public string Warn;
+            public string Warn;      // lỗi (hiện thay bảng)
+            public string Note;      // cảnh báo nhẹ (dòng trong bảng), vd thiếu Volume Analysis
         }
 
         private readonly object _calc = new();
         private readonly object _sync = new();
         private RenderState _render;
-        private VclCore _core;
-        private int _lastN = -1, _coreTz = int.MinValue;
+        private VclFeeder _feeder = new VclFeeder();
+        private int _lastN = -1;
+        private bool _lastVa;
+        private const string NoVaNote = "Chưa có Volume Analysis: thiếu VA/POC hôm qua, VA Âu, POC trần (chỉ còn swing + số tròn)";
         private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
 
         public VungCanhLenh() : base()
@@ -58,18 +62,26 @@ namespace VungCanhLenhNs
         }
 
         public bool IsRequirePriceLevelsCalculation => true;
-        public void VolumeAnalysisData_Loaded() => SafeProcess("VolumeAnalysisData_Loaded");
+        public void VolumeAnalysisData_Loaded()
+        {
+            _vaLoaded = true;                        // footprint đã tính xong ⇒ lần Process này VclFeeder dựng lại lõi CÓ footprint
+            SafeProcess("VolumeAnalysisData_Loaded");
+        }
+        private volatile bool _vaLoaded;
 
         protected override void OnClear()
         {
-            lock (_calc) { _core = null; _lastN = -1; lock (_sync) _render = null; }
+            lock (_calc) { _feeder = new VclFeeder(); _lastN = -1; _lastVa = false; _vaLoaded = false; lock (_sync) _render = null; }
         }
 
-        protected override void OnUpdate(UpdateArgs args)
+        /// <summary>KHÔNG chờ Volume Analysis: chưa có footprint vẫn vẽ (chỉ swing + số tròn) và ghi chú trong bảng;
+        /// khi footprint sẵn sàng thì VclFeeder dựng lại lõi từ đầu để có đủ mốc phiên (C).</summary>
+        protected override void OnUpdate(UpdateArgs args) => SafeProcess("OnUpdate");
+
+        private bool VaReady()
         {
             var p = HistoricalData?.VolumeAnalysisCalculationProgress;
-            if (p == null || p.State != VolumeAnalysisCalculationState.Finished) return;
-            SafeProcess("OnUpdate");
+            return _vaLoaded || (p != null && p.State == VolumeAnalysisCalculationState.Finished);
         }
 
         private void SafeProcess(string where)
@@ -101,28 +113,19 @@ namespace VungCanhLenhNs
                 var hd = HistoricalData;
                 if (hd == null) return;
                 int n = hd.Count;
-                if (n < 3 || n == _lastN) return;
-                if (_core == null || _core.Bars.Count > n - 1 || _coreTz != TzOffset)
-                {
-                    _core = new VclCore { TzOffset = TzOffset };
-                    _coreTz = TzOffset;
-                }
-                int closed = n - 2;                       // nến cuối đang chạy ⇒ chỉ xử lý tới Count−2
-                for (int i = _core.Bars.Count; i <= closed; i++)
-                {
-                    if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b)
-                    {   // không phải nến: lặp lại nến trước (giữ đúng chỉ số)
-                        var last = _core.Bars.Count > 0 ? _core.Bars[_core.Bars.Count - 1] : null;
-                        double c = last?.C ?? 0;
-                        _core.Push(new VBar { Time = (last?.Time ?? DateTime.UtcNow).AddMinutes(1), O = c, H = c, L = c, C = c }, Array.Empty<VLevel>());
-                        continue;
-                    }
-                    _core.Push(new VBar { Time = b.TimeLeft, O = b.Open, H = b.High, L = b.Low, C = b.Close, Vol = b.Volume }, ReadLevels(b));
-                }
-                var rs = new RenderState { Close = _core.Close, U = _core.U, Phase = _core.Phase };
-                foreach (var z in _core.Display) rs.Zones.Add(z.Clone());
+                bool va = VaReady();
+                if (n < 3 || (n == _lastN && va == _lastVa)) return;
+                // nến cuối đang chạy ⇒ số nến ĐÃ ĐÓNG = Count − 1 (chỉ số 0..Count−2)
+                _feeder.Sync(n - 1,
+                    i => hd[i, SeekOriginHistory.Begin] is HistoryItemBar b
+                        ? new VBar { Time = b.TimeLeft, O = b.Open, H = b.High, L = b.Low, C = b.Close, Vol = b.Volume } : null,
+                    i => hd[i, SeekOriginHistory.Begin] is HistoryItemBar b ? ReadLevels(b) : Array.Empty<VLevel>(),
+                    va, TzOffset);
+                var core = _feeder.Core;
+                var rs = new RenderState { Close = core.Close, U = core.U, Phase = core.Phase, Note = _feeder.BuiltWithLevels ? null : NoVaNote };
+                foreach (var z in core.Display) rs.Zones.Add(z.Clone());
                 lock (_sync) _render = rs;
-                _lastN = n;
+                _lastN = n; _lastVa = va;
             }
             CurrentChart?.RedrawBuffer();
         }
@@ -185,6 +188,7 @@ namespace VungCanhLenhNs
                              : $"{Pct(VclTables.Reach[rs.Phase][bin, 0])}/{Pct(VclTables.Reach[rs.Phase][bin, 1])}/{Pct(VclTables.Reach[rs.Phase][bin, 2])}/{Pct(VclTables.Reach[rs.Phase][bin, 3])}";
                 lines.Add($"{RoleName(z),-13}{F(z.Lo)} – {F(z.Hi),-10}{F(du) + "u · " + F(d) + "$",-15}{reach}");
             }
+            if (!string.IsNullOrEmpty(rs.Note)) lines.Add("⚠ " + rs.Note);
             lines.Add("Tần suất lịch sử 20 phiên GCZ26 — không phải tín hiệu.");
             return lines;
         }
@@ -232,10 +236,11 @@ namespace VungCanhLenhNs
                         }
                     }
                 }
-                if (ShowTable || !string.IsNullOrEmpty(rs.Warn))
+                if (ShowTable || !string.IsNullOrEmpty(rs.Warn) || !string.IsNullOrEmpty(rs.Note))
                 {
                     var lines = !string.IsNullOrEmpty(rs.Warn) ? new List<string> { "⚠ " + rs.Warn }
-                              : double.IsNaN(rs.U) ? new List<string> { "Vùng Canh Lệnh: chưa đủ 10 nến để tính u" } : TableLines(rs, ShowFar);
+                              : double.IsNaN(rs.U) ? new List<string> { "Vùng Canh Lệnh: chưa đủ 10 nến để tính u" }
+                              : ShowTable ? TableLines(rs, ShowFar) : new List<string> { "⚠ " + rs.Note };
                     using var fTab = new Font("Consolas", 8, FontStyle.Regular);
                     float lh = fTab.GetHeight(gr) + 1, w = 0;
                     foreach (var l in lines) w = Math.Max(w, gr.MeasureString(l, fTab).Width);
@@ -243,7 +248,8 @@ namespace VungCanhLenhNs
                     using (var bg = new SolidBrush(Color.FromArgb(185, 14, 16, 22))) gr.FillRectangle(bg, x0 - 4, y0 - 2, w + 8, lh * lines.Count + 4);
                     for (int i = 0; i < lines.Count; i++)
                     {
-                        Color c = i == 0 ? Color.White : (i == lines.Count - 1 ? Color.FromArgb(160, 165, 175) : Color.FromArgb(205, 210, 220));
+                        Color c = lines[i].StartsWith("⚠") ? Color.FromArgb(255, 170, 120)
+                                : i == 0 ? Color.White : (i == lines.Count - 1 ? Color.FromArgb(160, 165, 175) : Color.FromArgb(205, 210, 220));
                         using var br = new SolidBrush(c);
                         gr.DrawString(lines[i], fTab, br, x0, y0 + i * lh);
                     }

@@ -173,9 +173,64 @@ static class Tests
         Check(Vcl.RowOf(4430.1) == (long)Math.Round(4430.1 / 0.2, MidpointRounding.ToEven) && Near(Vcl.RowPrice(22150), 4430.0), "hàng 0,2 giá");
     }
 
+
+    static bool SameSet(List<VZone> a, List<VZone> b) =>
+        a.Count == b.Count && a.Zip(b, (x, y) => x.Id == y.Id && x.Lo == y.Lo && x.Hi == y.Hi && x.Slot == y.Slot && x.Side == y.Side).All(v => v);
+
+    static void TestFeederVolumeAnalysis()
+    {
+        Console.WriteLine("[10] Volume Analysis tới muộn ⇒ dựng lại từ đầu có footprint");
+        var data = Synthetic(3200, 5);                         // > 2 phiên (phiên nghỉ 21:00–22:00 UTC)
+        int n1 = 2900;
+        var f = new VclFeeder();
+        f.Sync(n1, i => data[i].bar, i => data[i].lv, false, 7);       // chưa có VA: đẩy KHÔNG footprint
+        Check(!f.BuiltWithLevels && f.Core.Bars.Count == n1, "chưa có VA vẫn chạy (không footprint)");
+        var noLv = f.Core.Display.Select(z => z.Clone()).ToList();
+        f.Sync(n1, i => data[i].bar, i => data[i].lv, true, 7);        // VA vừa xong
+        Check(f.BuiltWithLevels && f.Resets == 1 && f.LastResetReason.Contains("footprint"), "VA xong ⇒ reset 1 lần, dựng lại có footprint", f.LastResetReason);
+        var direct = new VclCore();
+        for (int i = 0; i < n1; i++) direct.Push(data[i].bar, data[i].lv);
+        Check(SameSet(f.Core.Display, direct.Display), "bộ vùng sau dựng lại = chạy thẳng có footprint từ đầu");
+        var noLvCore = new VclCore(); var lvCore = new VclCore(); int diff = 0;
+        for (int i = 0; i < n1; i++)
+        {
+            noLvCore.Push(data[i].bar, Array.Empty<VLevel>()); lvCore.Push(data[i].bar, data[i].lv);
+            if (!SameSet(noLvCore.Display, lvCore.Display)) diff++;
+        }
+        Check(diff > 0, $"không footprint thì bộ vùng khác ở {diff}/{n1} nến (nên phải dựng lại, không đẩy tiếp được)");
+        f.Sync(3100, i => data[i].bar, i => data[i].lv, true, 7);
+        for (int i = n1; i < 3100; i++) direct.Push(data[i].bar, data[i].lv);
+        Check(f.Resets == 1 && SameSet(f.Core.Display, direct.Display), "đẩy tiếp nến mới: không reset thêm, vẫn khớp");
+    }
+
+    static void TestFeederTimeRegression()
+    {
+        Console.WriteLine("[11] Dữ liệu nạp lại khác ⇒ reset");
+        var a = Synthetic(2000, 3);
+        var f = new VclFeeder();
+        f.Sync(1500, i => a[i].bar, i => a[i].lv, true, 7);
+        // nguồn mới (platform nạp lại lịch sử khác): từ nến 1490 mọi nến dời +10 phút (vẫn tăng dần theo giờ)
+        var b = a.Select((x, i) => i < 1490 ? x : (bar: new VBar { Time = x.bar.Time.AddMinutes(10), O = x.bar.O, H = x.bar.H, L = x.bar.L, C = x.bar.C, Vol = x.bar.Vol }, lv: x.lv)).ToList();
+        f.Sync(1700, i => b[i].bar, i => b[i].lv, true, 7);
+        var fresh = new VclCore();
+        for (int i = 0; i < 1700; i++) fresh.Push(b[i].bar, b[i].lv);
+        Check(f.Resets == 1 && SameSet(f.Core.Display, fresh.Display), "giờ nến cuối không khớp nguồn ⇒ reset, kết quả = chạy lại từ đầu", f.LastResetReason);
+        // nến mới có giờ SỚM hơn nến cuối trong lõi
+        var c = a.Take(1700).Select(x => x).ToList();
+        var f2 = new VclFeeder();
+        f2.Sync(1600, i => c[i].bar, i => c[i].lv, true, 7);
+        var early = new VBar { Time = c[1599].bar.Time.AddMinutes(-30), O = 4400, H = 4401, L = 4399, C = 4400, Vol = 1 };
+        var c2 = c.Take(1600).ToList(); c2.Add((bar: early, lv: c[1600].lv));
+        f2.Sync(1601, i => c2[i].bar, i => c2[i].lv, true, 7);
+        Check(f2.Resets == 1 && f2.LastResetReason.Contains("sớm hơn") && f2.Core.Bars.Count == 1601, "nến mới sớm hơn nến cuối ⇒ reset và đẩy lại từ đầu", f2.LastResetReason);
+        // lịch sử ngắn đi
+        f2.Sync(1000, i => c[i].bar, i => c[i].lv, true, 7);
+        Check(f2.Resets == 2 && f2.Core.Bars.Count == 1000, "lịch sử ngắn đi ⇒ reset");
+    }
+
     static int Main()
     {
-        TestBuildZones(); TestBreak(); TestDNeverDies(); TestCorridor(); TestKeepNearAndAge(); TestTables(); TestNoLookahead(); TestValueArea();
+        TestBuildZones(); TestBreak(); TestDNeverDies(); TestCorridor(); TestKeepNearAndAge(); TestTables(); TestNoLookahead(); TestValueArea(); TestFeederVolumeAnalysis(); TestFeederTimeRegression();
         Console.WriteLine($"\n{_ok} OK, {_fail} FAIL");
         return _fail == 0 ? 0 : 1;
     }

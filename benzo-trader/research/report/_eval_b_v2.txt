@@ -1,0 +1,8 @@
+1. Số lệnh: B cũ 11 (0,18/ngày) → B v2 25 (0,41/ngày); lệnh chung 11, lệnh chỉ-v2 14, lệnh cũ bị chặn 0 (thắng 0).
+2. WR (TP 3R, hoà vốn ~27 %): 27,3 % → 32,0 % (sai số ± 9,3 điểm); lệnh chỉ-v2: 35,7 %.
+3. R TB: 0,00 → 0,19 [-0,46 ; 0,99]; TRAIN -0,09 (n=12) / TEST 0,45 (n=13).
+4. Đối chứng dời vùng (100 bản): B v2 WR 32,0 %, R 0,19 — dải WR 14,3 %–42,9 %, R -0,52–0,63 ⇒ ≈ đối chứng (trong dải 5–95%; TRAIN/TEST ngược dấu; |hiệu| ≤ 2 sai số).
+5. Vào ngẫu nhiên tại cùng mức: B v2 ≈ đối chứng (trong dải 5–95%; TRAIN/TEST ngược dấu; |hiệu| ≤ 2 sai số); lệnh chỉ-v2 không áp dụng (n < 10 ở TRAIN hoặc TEST).
+6. Từng loại vùng (vùng thắng): không loại nào đủ 10 lệnh; chưa đủ mẫu: POC_D (3), VAH_D (6), VAL_D (1), HVN_D (1), HVN_W (3), POC_W (0).
+7. Công suất: chênh WR nhỏ nhất thấy được ≈ 45 điểm ⇒ chưa thể nói gì về chênh dưới 45 điểm.
+8. Kết luận 3.5: CHỈ TĂNG SỐ LƯỢNG. Chưa có lợi thế đo được trên 61 phiên.

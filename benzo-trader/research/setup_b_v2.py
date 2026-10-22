@@ -196,6 +196,11 @@ def bands_of(reps, which):
 
 
 # ------------------------------------------------------------------ định dạng
+def esc(x):
+    """Thoát ký tự | trong ô bảng Markdown."""
+    return str(x).replace('|', '\\|')
+
+
 def f(x, p=2):
     return ('%.*f' % (p, x)).replace('.', ',') if x == x else '–'
 
@@ -330,7 +335,7 @@ def main():
     cl_snos = [int(s) for s in D.st.index[D.clean]]
     ov = ZB.overlap_stats(D.lev, D.zc, df, cl_snos)
     okb = P['okbar']
-    A('| mức | số phiên sạch có mức (/%d) | số nến đo được chạm mức (|close−Z| ≤ 1 hoặc râu chạm) | trung vị |close − Z| (giá) |' % len(cl_snos))
+    A('| mức | số phiên sạch có mức (/%d) | số nến đo được chạm mức (\\|close − Z\\| ≤ 1 hoặc râu chạm) | trung vị \\|close − Z\\| (giá) |' % len(cl_snos))
     A('|---|---|---|---|')
     for nm in ZONES_V2:
         z = P['Z'][nm]
@@ -458,7 +463,7 @@ def main():
     A('| bước | B-cũ | B-v2 |')
     A('|---|---|---|')
     for k in sorted(set(FUN['B-cũ']) | set(FUN['B-v2'])):
-        A('| %s | %d | %d |' % (k, FUN['B-cũ'].get(k, 0), FUN['B-v2'].get(k, 0)))
+        A('| %s | %d | %d |' % (esc(k), FUN['B-cũ'].get(k, 0), FUN['B-v2'].get(k, 0)))
     A('')
     # ---------- đối chứng
     A('## 5. Đối chứng (plan 3.4)')
@@ -509,7 +514,7 @@ def main():
         VER[name] = BV.verdict(cc, okc)
         rows.append(('%s vs ĐC1 (dời, cùng cấu hình)' % name, cc, VER[name]))
     for j, (lab, cc, v) in enumerate(rows, 1):
-        A('| %d | %s | %d / %d | %s |' % (j, lab, cc['TRAIN'][2], cc['TEST'][2], v))
+        A('| %d | %s | %d / %d | %s |' % (j, lab, cc['TRAIN'][2], cc['TEST'][2], esc(v)))
     A('')
     n_out = sum(1 for _, _, v in rows if v.startswith('KHÁC'))
     A('Số ô "KHÁC đối chứng": **%d / %d** (ở mức 5 %% kỳ vọng ~0,75 ô do ngẫu nhiên; một ô lẻ không phải bằng chứng).' % (n_out, len(rows)))
@@ -603,6 +608,14 @@ def main():
         A('')
         A('Không đạt 3.5-3(d) ⇒ **chưa có lợi thế đo được trên %d phiên**. Với %d phiên, (d) gần như chỉ đạt khi hiệu ≥ ~0,6R.' % (days, days))
     A('')
+    A('**So với kỳ vọng đăng ký trước:** n = %d (kỳ vọng %d–%d: %s; tăng %s× so với B cũ); WR %s (kỳ vọng 25–35 %%: %s); B-v2 %s dải ĐC1.' % (
+        sv2['n'], EXPECT_N_NEW[0], EXPECT_N_NEW[1], 'trong' if EXPECT_N_NEW[0] <= sv2['n'] <= EXPECT_N_NEW[1] else 'NGOÀI', f(sv2['n'] / max(s_old['n'], 1), 1),
+        pct(sv2['wr']), 'trong' if 0.25 <= sv2['wr'] <= 0.35 else 'NGOÀI', 'nằm trong' if inb(g_v2['GỘP'][2], bR['GỘP']) else 'nằm NGOÀI'))
+    A('')
+    A('**Đọc kết quả cho đúng:** mọi con số theo từng loại vùng ở mục 3–4 (vd "B-mới-thôi", "B-cũ + HVN_W", nhóm chỉ-v2 TEST) dựa trên vài lệnh, '
+      'KTC 95 % của R TB đều chứa 0 và mọi phép so có phán quyết đều "≈ đối chứng" hoặc "không áp dụng" ⇒ **không được đọc thành "vùng X tốt hơn"**. '
+      'R TB dương của B-v2 đến từ TEST (TRAIN âm) — hai nửa ngược dấu, đúng kiểu nhiễu.')
+    A('')
     # ---------- độ nhạy
     A('## 7. Phụ lục — độ nhạy θ × N của B-v2 (CHỈ in, không chọn lại ô)')
     A('')
@@ -616,7 +629,7 @@ def main():
     # ---------- ví dụ
     A('## 8. Ví dụ để soi chart — nhóm chỉ-v2 (5 thắng + 5 thua, chọn cách đều theo thời gian)')
     A('')
-    A('| UTC | VN | chiều | loại vùng | Z | zones_hit | move (giá) | |Δ_CF|/max | entry | SL | TP | kết quả | R | ảnh |')
+    A('| UTC | VN | chiều | loại vùng | Z | zones_hit | move (giá) | \\|Δ_CF\\| / max | entry | SL | TP | kết quả | R | ảnh |')
     A('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
     os.makedirs(IMG, exist_ok=True)
     zt_all = ctrl_zcols(D)

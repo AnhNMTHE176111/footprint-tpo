@@ -4,7 +4,7 @@
 //  Add vào chart M1 (nên bật Volume Analysis). Chỉ xử lý nến ĐÃ ĐÓNG (tới Count−2), đúng 1 lần/nến, theo thứ tự.
 //  Chưa có Volume Analysis vẫn vẽ (swing + số tròn) và ghi chú; khi footprint sẵn sàng thì dựng lại từ đầu (VclFeeder).
 //  Toàn bộ logic ở VclCore.cs (test được trên Linux, khớp research/vcl4.py 100%). File này chỉ: Settings,
-//  đọc nến + footprint từng mức giá, vẽ vùng + nhãn + bảng tra.
+//  đọc nến + footprint từng mức giá, vẽ vùng + nhãn.
 //  Build: build.sh (concat VclCore.cs + file này). MỌI `using` nằm trong namespace.
 // ============================================================================
 namespace VungCanhLenhNs
@@ -21,8 +21,6 @@ namespace VungCanhLenhNs
         // ======= Settings (QĐ-1: không có ngưỡng số) =======
         [InputParameter("Lệch giờ (UTC → VN)", 10, -12, 14, 1, 0)]
         public int TzOffset { get; set; } = 7;
-        [InputParameter("Hiện bảng tra", 20)]
-        public bool ShowTable { get; set; } = true;
         [InputParameter("Hiện nhãn cạnh vùng", 21)]
         public bool ShowLabels { get; set; } = true;
         [InputParameter("Hiện vùng xa", 22)]
@@ -40,8 +38,8 @@ namespace VungCanhLenhNs
             public List<VZone> Zones = new();
             public double Close, U;
             public int Phase;
-            public string Warn;      // lỗi (hiện thay bảng)
-            public string Note;      // cảnh báo nhẹ (dòng trong bảng), vd thiếu Volume Analysis
+            public string Warn;      // lỗi (hiện 1 dòng nhỏ góc dưới-phải)
+            public string Note;      // cảnh báo nhẹ (dòng nhỏ góc dưới-phải), vd thiếu Volume Analysis
         }
 
         private readonly object _calc = new();
@@ -56,7 +54,7 @@ namespace VungCanhLenhNs
         public VungCanhLenh() : base()
         {
             Name = "Vùng Canh Lệnh";
-            Description = "Vùng hỗ trợ/kháng cự ổn định (swing M5/M15, mốc phiên, số tròn) + bảng tra xác suất chạm/bị quét theo khoảng cách. " +
+            Description = "Vùng hỗ trợ/kháng cự ổn định (swing M5/M15, mốc phiên, số tròn) + nhãn xác suất chạm/bị quét theo khoảng cách. " +
                           "MÔ TẢ tần suất lịch sử, KHÔNG phải tín hiệu. Cần Volume Analysis. Add vào chart M1.";
             SeparateWindow = false;
         }
@@ -74,7 +72,7 @@ namespace VungCanhLenhNs
             lock (_calc) { _feeder = new VclFeeder(); _lastN = -1; _lastVa = false; _vaLoaded = false; lock (_sync) _render = null; }
         }
 
-        /// <summary>KHÔNG chờ Volume Analysis: chưa có footprint vẫn vẽ (chỉ swing + số tròn) và ghi chú trong bảng;
+        /// <summary>KHÔNG chờ Volume Analysis: chưa có footprint vẫn vẽ (chỉ swing + số tròn) và ghi chú một dòng nhỏ;
         /// khi footprint sẵn sàng thì VclFeeder dựng lại lõi từ đầu để có đủ mốc phiên (C).</summary>
         protected override void OnUpdate(UpdateArgs args) => SafeProcess("OnUpdate");
 
@@ -155,8 +153,6 @@ namespace VungCanhLenhNs
         /// <summary>Khoảng cách tới cạnh gần (giá, ≥ 0); vùng chứa giá = 0.</summary>
         private static double Dist(VZone z, double c) => z.Slot == 'K' ? 0 : (z.Side > 0 ? Math.Max(0, z.Lo - c) : Math.Max(0, c - z.Hi));
 
-        private static string RoleName(VZone z) => z.Slot == 'K' ? "đang kiểm tra" : (z.Side > 0 ? "kháng cự" : "hỗ trợ") + (z.Slot == 'F' ? " (xa)" : "");
-
         private static string Label(VZone z, RenderState rs)
         {
             string head = z.Types() + " · " + F(z.Score, "0");
@@ -166,31 +162,6 @@ namespace VungCanhLenhNs
             int bin = VclTables.Bin(du);
             if (bin < 0) return head + " · " + F(du) + "u";
             return head + " · " + F(du) + "u · chạm 30′≈" + Pct(VclTables.Reach[rs.Phase][bin, 1]) + " · quay ≥2u≈" + Pct(VclTables.Revert2u[bin]);
-        }
-
-        private static List<string> TableLines(RenderState rs, bool showFar)
-        {
-            var lines = new List<string>
-            {
-                $"Vùng Canh Lệnh · pha {Vcl.PhaseName[rs.Phase]} · u = {F(rs.U, "0.00")} · SL quét ≥0,25/0,5/1,0u: " +
-                $"{Pct(VclTables.Sweep[rs.Phase, 0])}/{Pct(VclTables.Sweep[rs.Phase, 1])}/{Pct(VclTables.Sweep[rs.Phase, 2])}",
-                "vai          lo – hi              d (u · USD)    chạm 15/30/60/120 nến",
-            };
-            var zs = new List<VZone>(rs.Zones);
-            zs.Sort((a, b) => -(a.Lo + a.Hi).CompareTo(b.Lo + b.Hi));   // trên → dưới
-            foreach (var z in zs)
-            {
-                if (z.Slot == 'F' && !showFar) continue;
-                double d = Dist(z, rs.Close), du = d / rs.U;
-                int bin = z.Slot == 'K' ? -1 : VclTables.Bin(du);
-                string reach = z.Slot == 'K' ? "giá đang trong vùng"
-                             : bin < 0 ? "xa > 12u"
-                             : $"{Pct(VclTables.Reach[rs.Phase][bin, 0])}/{Pct(VclTables.Reach[rs.Phase][bin, 1])}/{Pct(VclTables.Reach[rs.Phase][bin, 2])}/{Pct(VclTables.Reach[rs.Phase][bin, 3])}";
-                lines.Add($"{RoleName(z),-13}{F(z.Lo)} – {F(z.Hi),-10}{F(du) + "u · " + F(d) + "$",-15}{reach}");
-            }
-            if (!string.IsNullOrEmpty(rs.Note)) lines.Add("⚠ " + rs.Note);
-            lines.Add("Tần suất lịch sử 20 phiên GCZ26 — không phải tín hiệu.");
-            return lines;
         }
 
         // ---------------------------------------------------------------- vẽ
@@ -236,23 +207,16 @@ namespace VungCanhLenhNs
                         }
                     }
                 }
-                if (ShowTable || !string.IsNullOrEmpty(rs.Warn) || !string.IsNullOrEmpty(rs.Note))
+                string msg = !string.IsNullOrEmpty(rs.Warn) ? "⚠ " + rs.Warn
+                           : double.IsNaN(rs.U) ? "Vùng Canh Lệnh: chưa đủ 10 nến để tính u"
+                           : !string.IsNullOrEmpty(rs.Note) ? "⚠ " + rs.Note : null;
+                if (msg != null)
                 {
-                    var lines = !string.IsNullOrEmpty(rs.Warn) ? new List<string> { "⚠ " + rs.Warn }
-                              : double.IsNaN(rs.U) ? new List<string> { "Vùng Canh Lệnh: chưa đủ 10 nến để tính u" }
-                              : ShowTable ? TableLines(rs, ShowFar) : new List<string> { "⚠ " + rs.Note };
-                    using var fTab = new Font("Consolas", 8, FontStyle.Regular);
-                    float lh = fTab.GetHeight(gr) + 1, w = 0;
-                    foreach (var l in lines) w = Math.Max(w, gr.MeasureString(l, fTab).Width);
-                    float x0 = clip.Right - w - 12, y0 = clip.Top + 6;            // góc trên-phải
-                    using (var bg = new SolidBrush(Color.FromArgb(185, 14, 16, 22))) gr.FillRectangle(bg, x0 - 4, y0 - 2, w + 8, lh * lines.Count + 4);
-                    for (int i = 0; i < lines.Count; i++)
-                    {
-                        Color c = lines[i].StartsWith("⚠") ? Color.FromArgb(255, 170, 120)
-                                : i == 0 ? Color.White : (i == lines.Count - 1 ? Color.FromArgb(160, 165, 175) : Color.FromArgb(205, 210, 220));
-                        using var br = new SolidBrush(c);
-                        gr.DrawString(lines[i], fTab, br, x0, y0 + i * lh);
-                    }
+                    using var fNote = new Font("Consolas", 7, FontStyle.Regular);
+                    var sz = gr.MeasureString(msg, fNote);
+                    float nx = clip.Right - sz.Width - 8, ny = clip.Bottom - sz.Height - 4;   // góc dưới-phải
+                    using var br = new SolidBrush(msg.StartsWith("⚠") ? Color.FromArgb(255, 170, 120) : Color.FromArgb(160, 165, 175));
+                    gr.DrawString(msg, fNote, br, nx, ny);
                 }
             }
             catch (Exception ex) { LogErr(ex, "OnPaintChart"); }

@@ -120,8 +120,6 @@ namespace SessionZonesNs
         //  ProfileEngine.LastSpliceIndex — đo trên 2 năm GC: 8 chỗ nối, nhảy tới
         //  +61,2 giá. Nếu profile TUẦN (hoặc 24h) vắt qua chỗ nối thì cắt bỏ phần
         //  trước chỗ nối, chỉ dựng từ dữ liệu cùng một hợp đồng.
-        [InputParameter("Hiện dòng nhắc mức bằng chứng của HVN", 43)]
-        public bool ShowEvidenceNote { get; set; } = true;
         // Người học hỏi "sao HVN lúc ẩn lúc hiện" — do lọc theo bán kính (tầm với)
         // + trần MaxZones. Thêm cờ này để XEM HẾT mọi vùng đã tính ra, bỏ qua cả
         // hai lớp lọc đó — chỉ để KIỂM TRA/học, không nên bật khi trade thật vì
@@ -164,15 +162,8 @@ namespace SessionZonesNs
             PocClusters = ShowPocClusters, WeekLvn = ShowWeekLvn, VaEdgeEuropeOnly = VaEdgeEuropeOnly,
         };
 
-        [InputParameter("Hiện bảng phiên", 30)]
-        public bool ShowPanel { get; set; } = true;
         [InputParameter("Hiện vùng", 31)]
         public bool ShowZones { get; set; } = true;
-        [InputParameter("Góc bảng (0=TL 1=TR 2=BL 3=BR)", 32, 0, 3, 1, 0)]
-        public int PanelCorner { get; set; } = 1;
-        [InputParameter("Cỡ chữ bảng", 33, 7, 20, 1, 0)]
-        public int PanelFontSize { get; set; } = 10;
-
         [InputParameter("Màu hỗ trợ", 40)]
         public Color SupColor { get; set; } = Color.FromArgb(0x26, 0xA6, 0x9A);
         [InputParameter("Màu kháng cự", 41)]
@@ -208,7 +199,7 @@ namespace SessionZonesNs
         // Bạn add indicator này trên NHIỀU tab/chart cùng symbol (M30 + 2 tab M1) →
         // nếu bật ở cả 3, mỗi tab tự kiểm mốc + có thể bắn Telegram riêng, dễ ra 3 tin
         // cùng lúc (nhất là khi 3 tab lệch "Lệch giờ" nhau). CHỈ bật "true" ở ĐÚNG 1 tab
-        // (khuyên: tab M1 tôi trade) — các tab còn lại để false, chart vẫn hiện panel
+        // (khuyên: tab M1 tôi trade) — các tab còn lại để false, chart vẫn hiện vùng
         // bình thường, chỉ không tự gửi tin.
         [InputParameter("TG · Tab này ĐƯỢC gửi (chỉ bật 1 tab/chart)", 60)]
         public bool TeleIsSender { get; set; } = false;
@@ -220,7 +211,6 @@ namespace SessionZonesNs
         private readonly object _calc = new();
         private ZoneRenderState _render;
         private int _digits = 1;
-        private readonly PanelDrag _drag = new();   // kéo-thả bảng bằng chuột
         private readonly TeleReport _tele = new();  // gửi tổng hợp lên Telegram
 
         // ---- Tự nhận diện timeframe chart: nếu KHÔNG phải M30, tự lấy history
@@ -275,7 +265,6 @@ namespace SessionZonesNs
         public void VolumeAnalysisData_Loaded() { if (!_ownHd30) { lock (_calc) { _vaLoaded = true; } Process(); } }
         protected override void OnClear()
         {
-            _drag.Detach();
             if (_ownHd30 && _hd30 != null) { _hd30.NewHistoryItem -= OnHd30NewBar; _hd30.Dispose(); }
             lock (_calc) { _vaLoaded = false; lock (_sync) _render = null; }
         }
@@ -317,8 +306,7 @@ namespace SessionZonesNs
                 {
                     // Không im lặng: báo thẳng trên chart thay vì để trống (sự cố replay 2026-10-17).
                     lock (_sync) _render = new ZoneRenderState { Zones = new List<Zone>(), NowPrice = 0, Tick = tick,
-                        Panel = new List<(string, Color)> { ("PHIÊN HÔM NAY", Color.White),
-                            ("⚠ Chưa có nến M30 nào cho symbol này (Market Replay chưa có dữ liệu trong khoảng 45 ngày trước nến cuối?).", Color.Orange) } };
+                        Note = "⚠ Chưa có nến M30 nào cho symbol này (Market Replay chưa có dữ liệu trong khoảng 45 ngày trước nến cuối?)." };
                     return;
                 }
                 double rowStep = tick * Math.Max(1, RowTicks);
@@ -364,101 +352,23 @@ namespace SessionZonesNs
                 double vwapDay = ProfileEngine.VwapAt(hd, dayFrV, n - 1);
                 double vwapWeek = ProfileEngine.VwapAt(hd, weekFrV, n - 1);
 
-                var panel = new List<(string, Color)>();
-                panel.Add(("PHIÊN HÔM NAY", Color.White));
-                // B10: báo ngay khi vừa cắt profile vì mã liên tục đổi hợp đồng —
-                // profile ngắn hơn bình thường nên HVN có thể thưa/lệch, người dùng
-                // cần biết lý do thay vì tưởng indicator hỏng.
-                if (_weekSpliced || _daySpliced)
-                    panel.Add(($"⚠ Mã liên tục vừa đổi hợp đồng — đã cắt bỏ phần trước chỗ nối" +
-                               $"{(_weekSpliced ? " (tuần)" : "")}{(_daySpliced ? " (ngày)" : "")}. " +
-                               $"Mốc dựng trên ít dữ liệu hơn thường lệ.", Color.Orange));
-                AddSentence(panel, asia, null, tick);
-                AddSentence(panel, europe, asia, tick);
-                AddSentence(panel, us, europe, tick, devTag: last.Label == "MY");
-                panel.Add(($"VWAP ngày {Fmt(vwapDay)} ({(nowPrice >= vwapDay ? "giá trên" : "giá dưới")}) · VWAP tuần {Fmt(vwapWeek)} ({(nowPrice >= vwapWeek ? "giá trên" : "giá dưới")})",
-                    Color.Gainsboro));
+                // B10: báo khi vừa cắt profile vì mã liên tục đổi hợp đồng (dòng nhỏ góc dưới-phải).
+                string note = (_weekSpliced || _daySpliced)
+                    ? "⚠ Mã liên tục vừa đổi hợp đồng — đã cắt bỏ phần trước chỗ nối" +
+                      (_weekSpliced ? " (tuần)" : "") + (_daySpliced ? " (ngày)" : "") + ". Mốc dựng trên ít dữ liệu hơn thường lệ."
+                    : null;
 
                 // gợi ý bias Mỹ
                 var (decision, lean, conf, reasons) = UsBias(hd, asia, europe, us, last, tick, rowStep);
-                Color lc = lean > 0 ? SupColor : lean < 0 ? ResColor : Color.Gainsboro;
-                panel.Add(($"→ MỸ ưu tiên: {decision} — {(lean > 0 ? "MUA" : lean < 0 ? "BÁN" : "TRUNG TÍNH")} ({conf}/100)", lc));
-                for (int i = 0; i < reasons.Count && i < 3; i++) panel.Add(($"   {i + 1}. {reasons[i]}", Color.Silver));
 
-                // ---- D6: panel phân tầng — "TPO m30 là scalp" (trader pro) ----
-                //  VÙNG CANH = HVN/naked/cụm POC (tầng tuần-ngày, để chờ giá tới).
-                //  BỐI CẢNH PHIÊN = biên VA/đỉnh-đáy phiên hiện tại (chỉ tham khảo,
-                //  KHÔNG canh lệnh — trader pro: "k quan tâm lắm"). LVN riêng vì
-                //  khác loại (chỗ tránh kỳ vọng phản ứng, không phải vùng vào lệnh).
                 var zones = FindZones(hd, blocks, tick, rowStep, nowPrice, vwapDay, vwapWeek);
-                // v3 (2026-10-17): phân nhóm theo VAI TRÒ đo được (ZonePolicy.Role),
-                // không theo nhãn "HVN" nữa — HVN đã đo là không phải mốc phản ứng.
+                // v3 (2026-10-17): phân nhóm theo VAI TRÒ đo được (ZonePolicy.Role), không theo nhãn "HVN".
                 string RoleOf(Zone z) => ZonePolicy.Role(z.Type);
                 var canhLenh = zones.Where(z => !z.IsTarget && RoleOf(z) == "canh").ToList();
                 var canhRange = zones.Where(z => !z.IsTarget && RoleOf(z) == "canh_range").ToList();
-                var boiCanh = zones.Where(z => !z.IsTarget && RoleOf(z) == "khac").ToList();
-                var lvnList = zones.Where(z => RoleOf(z) == "lvn").ToList();
                 var nenList = zones.Where(z => !z.IsTarget && RoleOf(z) == "nen").ToList();
-                var targetList = zones.Where(z => z.IsTarget).OrderBy(z => Math.Abs(z.Center - nowPrice)).ToList();
-                if (canhLenh.Count > 0)
-                {
-                    // B2: sắp theo KHOẢNG CÁCH gần→xa (không theo điểm mạnh) — người
-                    // dừng lỗ 3 giá cần biết mốc GẦN NHẤT trước, mốc mạnh mà xa cả
-                    // trăm giá không giúp được gì hôm nay.
-                    panel.Add(("VÙNG CANH đảo chiều/hấp thụ (đã đo, gần→xa):", Color.Silver));
-                    foreach (var z in canhLenh.OrderBy(z => Math.Abs(z.Center - nowPrice)).Take(MaxZones))
-                    {
-                        string sd = z.Side > 0 ? "S " : z.Side < 0 ? "R " : "· ";
-                        string pr = Math.Abs(z.Hi - z.Lo) < tick ? Fmt(z.Center) : $"{Fmt(z.Lo)}–{Fmt(z.Hi)}";
-                        Color zc = z.Side > 0 ? SupColor : z.Side < 0 ? ResColor : Color.Gainsboro;
-                        double distGia = Math.Abs(z.Center - nowPrice) / (10.0 * tick);
-                        panel.Add(($"  {sd}{pr}  {z.Label} · cách {distGia:0.0} giá [{z.Strength:0}]", zc));
-                    }
-                }
-                if (canhRange.Count > 0)
-                {
-                    panel.Add(("CẠNH RANGE Âu (gọi chế độ · fade phá hụt):", Color.Silver));
-                    foreach (var z in canhRange.OrderBy(z => Math.Abs(z.Center - nowPrice)))
-                    {
-                        Color zc = z.Side > 0 ? SupColor : z.Side < 0 ? ResColor : Color.Gainsboro;
-                        double distGia = Math.Abs(z.Center - nowPrice) / (10.0 * tick);
-                        panel.Add(($"  {Fmt(z.Center)}  {z.Label} · cách {distGia:0.0} giá", zc));
-                    }
-                }
-                // Mục tiêu cho lệnh đang chạy: HVN/cạnh range gần nhất mỗi phía (nơi giá
-                // có lý do chậm lại) — không phải chỗ vào lệnh.
-                var tgtPool = zones.Where(z => !z.IsTarget && RoleOf(z) is "nen" or "canh_range").ToList();
-                var above = tgtPool.Where(z => z.Center > nowPrice).OrderBy(z => z.Center).Take(2).ToList();
-                var below = tgtPool.Where(z => z.Center < nowPrice).OrderByDescending(z => z.Center).Take(2).ToList();
-                if (above.Count > 0) panel.Add(($"  Nếu LONG → T: {string.Join(", ", above.Select(z => Fmt(z.Center - 2 * tick)))}", Color.DimGray));
-                if (below.Count > 0) panel.Add(($"  Nếu SHORT → T: {string.Join(", ", below.Select(z => Fmt(z.Center + 2 * tick)))}", Color.DimGray));
-                if (targetList.Count > 0)
-                {
-                    // B8: mức mạnh nhưng NGOÀI tầm vào lệnh — dùng để đặt chốt lời.
-                    panel.Add(("MỤC TIÊU CHỐT LỜI (ngoài tầm vào lệnh):", Color.Silver));
-                    foreach (var z in targetList.Take(4))
-                    {
-                        double distGia = Math.Abs(z.Center - nowPrice) / (10.0 * tick);
-                        string dir = z.Center > nowPrice ? "trên" : "dưới";
-                        panel.Add(($"  {Fmt(z.Center)}  {dir} · cách {distGia:0.0} giá · ×{z.Ratio:0.0}", TargetColor));
-                    }
-                }
-                if (boiCanh.Count > 0)
-                    panel.Add(($"Loại cũ (tự bật, chưa qua đo): {string.Join(" · ", boiCanh.Select(z => $"{z.Label} {Fmt(z.Center)}"))}", Color.Gray));
-                // B3: lớp NỀN — HVN tuần (Lo/Hi thật, gộp nhiều phiên, trôi ~20 giá/tuần
-                // nên KHÔNG dùng làm điểm vào) + mốc bị B4 hạ cấp vì bẹt hơn dừng lỗ.
-                if (nenList.Count > 0)
-                    panel.Add(($"NỀN HVN (đi tiếp / mục tiêu, KHÔNG fade): {string.Join(" · ", nenList.OrderBy(z => Math.Abs(z.Center - nowPrice)).Select(z => $"{z.Label} {Fmt(z.Center)}"))}", Color.FromArgb(0x90, 0x90, 0x90)));
-                if (lvnList.Count > 0)
-                    panel.Add(($"LVN (xuyên nhanh, đặt SL sau): {string.Join(" · ", lvnList.Select(z => Fmt(z.Center)))}", Color.FromArgb(0x90, 0x90, 0x90)));
-                // B10: dòng cuối nói thẳng mức bằng chứng, để không ai (kể cả tác giả)
-                // đọc nhầm mốc HVN thành tín hiệu vào lệnh. Số liệu: MEASURE-DENSE-RESULTS.md
-                // — 474 phiên dày, 4 cách đo khác nhau, HVN đều KHÔNG hơn mức bốc ngẫu nhiên.
-                if (ShowEvidenceNote)
-                    panel.Add(("Đo 724k nến: chỉ VWAP tuần nghiêng đảo chiều ổn định (~53,5%). HVN sau phá nghiêng đi tiếp. Vùng chỉ là chỗ đáng nhìn, vào lệnh cần bong bóng + nến xác nhận M1.",
-                               Color.FromArgb(0x80, 0x80, 0x80)));
 
-                lock (_sync) _render = new ZoneRenderState { Zones = zones, Panel = panel, NowPrice = nowPrice, Tick = tick };
+                lock (_sync) _render = new ZoneRenderState { Zones = zones, Note = note, NowPrice = nowPrice, Tick = tick };
 
                 // ---- tổng hợp GỌN cho Telegram ----
                 var tele = new List<string>();
@@ -500,34 +410,6 @@ namespace SessionZonesNs
             _tele.AfternoonMin = TeleAfternoonMin;
             _tele.IbBars = 2;                   // M30 không có input IB → coi IB = 2 nến (1h)
             _tele.GapMinutes = GapMinutes;
-        }
-
-        private void AddSentence(List<(string, Color)> panel, SessionProfile s, SessionProfile prior, double tick, bool devTag = false)
-        {
-            if (s == null || !s.Valid) return;
-            string dir = s.Direction > 0 ? "đi lên" : s.Direction < 0 ? "đi xuống" : "đi ngang";
-            string cs = s.CloseState == "MẠNH" ? "đóng nửa trên (mạnh)" : s.CloseState == "YẾU" ? "đóng nửa dưới (yếu)" : "đóng giữa";
-            string bal = s.Balance == "TREND" ? "có xu hướng" : s.Balance == "ROT" ? "xoay vòng" : "trung gian";
-            bool thuan = (s.Delta >= 0) == (s.Direction >= 0);
-            string vs = "";
-            if (prior != null && prior.Valid)
-            {
-                var (tag, mig) = AcceptReject(s, prior, tick);
-                vs = $" — {tag} (POC {mig:+0;-0}t)";
-            }
-            string tag2 = devTag ? " (đang chạy)" : "";
-            string txt = $"{VN(s.Label)}{tag2}: {dir} {s.RangeTicks:0}t, {cs}, VA {Fmt(s.Val)}-{Fmt(s.Vah)} POC {Fmt(s.Poc)}, {bal}, Δ{s.Delta:+0;-0}({(thuan ? "thuận" : "NGHỊCH")}){vs}";
-            panel.Add((txt, thuan ? Color.Gainsboro : Color.Khaki));
-        }
-
-        private (string tag, double migTicks) AcceptReject(SessionProfile b, SessionProfile a, double tick)
-        {
-            double ovl = Math.Max(0, Math.Min(a.Vah, b.Vah) - Math.Max(a.Val, b.Val));
-            double uni = Math.Max(a.Vah, b.Vah) - Math.Min(a.Val, b.Val);
-            double frac = uni > 0 ? ovl / uni : 0;
-            double mig = (b.Poc - a.Poc) / tick;
-            string tag = frac >= 0.5 ? "chấp nhận giá trị cũ" : frac < 0.2 ? "từ chối & dời đi" : "chồng một phần";
-            return (tag, mig);
         }
 
         // quan hệ B vs A: 1=EXTEND_UP, -1=EXTEND_DN, 0=INSIDE/overlap
@@ -858,7 +740,6 @@ namespace SessionZonesNs
         {
             base.OnPaintChart(args);
             if (CurrentChart == null || !_vaLoaded) return;
-            _drag.Attach(CurrentChart);
             var win = CurrentChart.Windows[args.WindowIndex];
             if (!win.IsMainWindow) return;
 
@@ -951,10 +832,12 @@ namespace SessionZonesNs
                     gr.DrawString($"{z.Label} · cách {distGia:0.0} giá", f, br, clip.Right - 190, ym - 12);
                 }
             }
-            if (ShowPanel && rs.Panel != null && rs.Panel.Count > 0)
+            if (!string.IsNullOrEmpty(rs.Note))
             {
-                using var f = new Font("Consolas", PanelFontSize, FontStyle.Regular);
-                _drag.Draw(gr, f, rs.Panel, 215, PanelCorner, clip);
+                using var fNote = new Font("Consolas", 7, FontStyle.Regular);
+                var sz = gr.MeasureString(rs.Note, fNote);
+                using var brNote = new SolidBrush(Color.FromArgb(255, 170, 120));
+                gr.DrawString(rs.Note, fNote, brNote, clip.Right - sz.Width - 8, clip.Bottom - sz.Height - 4);   // góc dưới-phải
             }
         }
     }
@@ -984,7 +867,7 @@ namespace SessionZonesNs
     internal sealed class ZoneRenderState
     {
         public List<Zone> Zones;
-        public List<(string text, Color col)> Panel;
+        public string Note;   // cảnh báo 1 dòng nhỏ góc dưới-phải (thay cho bảng cũ)
         public double NowPrice;
         public double Tick;   // B2: cần để quy đổi khoảng cách ra "giá" khi vẽ nhãn
     }

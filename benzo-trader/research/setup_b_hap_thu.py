@@ -83,16 +83,25 @@ def prepare(df: pd.DataFrame, prof, extra_zones: dict = None) -> dict:
     P['modecode'] = pd.Series(pd.factorize(mdf['mode'])[0], index=df.index)
     P['ztype'] = {'VWAP_W': 'VWAP_W', 'VWAP_D': 'VWAP_D'}
     fixed = set()
-    for name, (arr, zt) in (extra_zones or {}).items():
+    P['mdir'] = {'VWAP_W': (1, -1), 'VWAP_D': (1, -1)}
+    warm_ext = {}
+    for name, spec in (extra_zones or {}).items():
+        # B-v3: tuple 2 phan tu (arr, ztype) = hanh vi cu; 4 phan tu (arr, ztype, warm, mdirs): warm = mang bool theo nen (None => True moi nen),
+        # mdirs = tuple con cua (1, -1) (None => hai chieu). Chieu M = chieu move den Z; khoa 1 chieu cho canh VCL (ho tro/khang cu).
+        arr, zt = spec[0], spec[1]
+        warm_x, mdirs = (spec[2], spec[3]) if len(spec) >= 4 else (None, None)
         P['Z'][name] = np.asarray(arr, float)
         P['ztype'][name] = zt
+        P['mdir'][name] = (1, -1) if mdirs is None else tuple(mdirs)
         if name not in ('VWAP_W', 'VWAP_D'):
             fixed.add(name)
+            if warm_x is not None:
+                warm_ext[name] = np.asarray(warm_x, bool)
     P['touch'], P['warm'] = {}, {}
     for name, zv in P['Z'].items():
         with np.errstate(invalid='ignore'):
             P['touch'][name] = (np.abs(P['cl'] - zv) <= TOUCH_TOL) | ((P['lo'] <= zv) & (zv <= P['hi']))
-        P['warm'][name] = np.ones(n, bool) if name in fixed else (P['posin'] if name == 'VWAP_D' else P['wposin']) >= WARM
+        P['warm'][name] = warm_ext[name] if name in warm_ext else np.ones(n, bool) if name in fixed else (P['posin'] if name == 'VWAP_D' else P['wposin']) >= WARM
     return P
 
 
@@ -135,7 +144,7 @@ def detect(P: dict, theta: float = 0.5, N: int = 3, zones=('VWAP_W', 'VWAP_D'), 
         if name not in zones:
             continue
         zv, touch, warm = P['Z'][name], P['touch'][name], P['warm'][name]
-        for M in (1, -1):
+        for M in P.get('mdir', {}).get(name, (1, -1)):
             s = -M
             ok = np.zeros(n, bool)
             ok[N + 1:] = True
@@ -633,7 +642,7 @@ def detect2(P, Kc, theta, zones=('VWAP_W', 'VWAP_D'), bias=False, rr=3.0, phases
         if name not in zones:
             continue
         zv, touch, warm = P['Z'][name], P['touch'][name], P['warm'][name]
-        for M in (1, -1):
+        for M in P.get('mdir', {}).get(name, (1, -1)):
             s = -M
             ok = np.zeros(n, bool)
             ok[Kc + 1:] = True

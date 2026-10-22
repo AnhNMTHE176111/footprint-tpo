@@ -258,19 +258,29 @@ namespace BenzoTraderNs
             return r < -0.05 ? "−" + t : (r > 0.05 ? "+" + t : t);
         }
 
-        /// <summary>Đúng 5 dòng bảng: dòng tổng + 4 setup (plan 2.2). enabled: công tắc bật của A..D.</summary>
-        public static List<string> TableLines(StatsResult st, bool[] enabled)
+        /// <summary>Bảng: dòng tổng + mỗi setup ĐANG BẬT 1 dòng, dưới mỗi setup liệt kê từng lệnh
+        /// ("17/10  19:20  TP  +2,0R", giờ VN = giờ vào lệnh). Setup tắt thì ẩn hẳn.
+        /// sigs/tzOffset/barMinutes/resetUtc chỉ cần khi muốn có phần chi tiết từng lệnh.</summary>
+        public static List<string> TableLines(StatsResult st, bool[] enabled, IEnumerable<Signal> sigs = null,
+                                              int tzOffset = 0, int barMinutes = 1, DateTime? resetUtc = null)
         {
-            var lines = new List<string>(5);
+            var lines = new List<string>();
             string open = st.Total.Open > 0 ? $" · {st.Total.Open} đang mở" : "";
             lines.Add($"BENZO · Tổng {st.Total.N} lệnh · {st.Total.Wins} thắng · {st.Total.Losses} thua · "
                     + $"{Num(st.Total.WinRate)}% · {SignedR(st.Total.SumR)}{open}");
+            var all = sigs?.Where(x => !resetUtc.HasValue || x.Time >= resetUtc.Value).OrderBy(x => x.Time).ToList();
             for (int i = 0; i < Setups.Length; i++)
             {
+                if (enabled != null && i < enabled.Length && !enabled[i]) continue;
                 var s = st.By[i];
-                string name = (Setups[i] + " " + SetupName(Setups[i])).PadRight(13);
-                string off = enabled != null && i < enabled.Length && !enabled[i] ? "   (tắt)" : "";
-                lines.Add($"{name}{s.N} · {s.Wins}/{s.Losses} · {Num(s.WinRate, "0")}% · {SignedR(s.SumR)}{off}");
+                lines.Add($"{Setups[i]} {SetupName(Setups[i])} · {s.N} · {s.Wins}/{s.Losses} · {Num(s.WinRate, "0")}% · {SignedR(s.SumR)}");
+                if (all == null) continue;
+                foreach (var g in all.Where(x => x.Setup == Setups[i]))
+                {
+                    string t = g.Time.AddMinutes(barMinutes).AddHours(tzOffset).ToString("dd/MM  HH:mm", CultureInfo.InvariantCulture);
+                    string res = g.IsClosed ? $"{g.Outcome}  {SignedR(g.R)}" : "ĐANG MỞ";
+                    lines.Add($"    {t}  {res}");
+                }
             }
             return lines;
         }
@@ -286,6 +296,10 @@ namespace BenzoTraderNs
             }
             catch { }
             return null;
+        }
+        public static void ClearResetMark(string path)
+        {
+            try { if (!string.IsNullOrEmpty(path) && File.Exists(path)) File.Delete(path); } catch { }
         }
         public static void SaveResetMark(string path, DateTime utc)
         {

@@ -182,6 +182,8 @@ namespace BenzoTraderNs
         public bool EnableD { get; set; } = true;
         [InputParameter("Đặt lại thống kê (bật lên để đặt)", 40)]
         public bool ResetStatsNow { get; set; } = false;
+        [InputParameter("Hiện lại toàn bộ thống kê (bật lên để xoá mốc đặt lại)", 41)]
+        public bool ClearResetNow { get; set; } = false;
         [InputParameter("Hiện bảng", 50)]
         public bool ShowTable { get; set; } = true;
 
@@ -208,7 +210,7 @@ namespace BenzoTraderNs
         private readonly TeleClient _tele = new();
         private bool _armed;
         private readonly HashSet<string> _seen = new(), _openSent = new(), _closedSent = new();
-        private bool _lastTest, _lastReset;
+        private bool _lastTest, _lastReset, _lastClear;
         private string _teleStatus;
 
         public BenzoTrader() : base()
@@ -289,7 +291,23 @@ namespace BenzoTraderNs
         {
             bool testEdge = TeleTestNow && !_lastTest; _lastTest = TeleTestNow;
             bool resetEdge = ResetStatsNow && !_lastReset; _lastReset = ResetStatsNow;
+            bool clearEdge = ClearResetNow && !_lastClear; _lastClear = ClearResetNow;
             if (testEdge) SendTest();
+            if (clearEdge)
+            {
+                try
+                {
+                    lock (_calc)
+                    {
+                        EnsurePaths();
+                        _resetUtc = null;
+                        BenzoCore.ClearResetMark(_resetPath);
+                        BuildRender();
+                    }
+                    CurrentChart?.RedrawBuffer();
+                }
+                catch (Exception ex) { LogErr(ex, "clear-reset"); }
+            }
             if (resetEdge)
             {
                 try
@@ -436,11 +454,13 @@ namespace BenzoTraderNs
         private void BuildRender()
         {
             if (_engine == null) return;
-            var st = BenzoCore.ComputeStats(_engine.Signals, _resetUtc);
+            var en = new[] { EnableA, EnableB, EnableC, EnableD };
+            var shown = _engine.Signals.Where(x => Enabled(x.Setup)).ToList();   // setup tắt: không tính, không hiện
+            var st = BenzoCore.ComputeStats(shown, _resetUtc);
             var rs = new RenderState
             {
                 Sigs = _engine.Signals.Select(s => s.Clone()).ToList(),
-                Lines = BenzoCore.TableLines(st, new[] { EnableA, EnableB, EnableC, EnableD }),
+                Lines = BenzoCore.TableLines(st, en, shown, TzOffset, _engine.BarMinutes, _resetUtc),
                 Digits = _digits,
                 Warn = TeleEnabled && !string.IsNullOrEmpty(_tele.LastError) ? "Telegram: " + _tele.LastError : null,
             };
@@ -606,16 +626,31 @@ namespace BenzoTraderNs
                     using var fTab = new Font("Consolas", 8, FontStyle.Regular);
                     var lines = new List<string>(rs.Lines);
                     if (!string.IsNullOrEmpty(rs.Warn)) lines.Add("⚠ " + rs.Warn);
-                    float lh = fTab.GetHeight(gr) + 1, w = 0;
-                    foreach (var l in lines) w = Math.Max(w, gr.MeasureString(l, fTab).Width);
-                    float x0 = clip.Left + 6, y0 = clip.Bottom - lh * lines.Count - 8;   // góc dưới bên trái
-                    using (var bg = new SolidBrush(Color.FromArgb(170, 14, 16, 22)))
-                        gr.FillRectangle(bg, x0 - 3, y0 - 2, w + 8, lh * lines.Count + 4);
-                    for (int i = 0; i < lines.Count; i++)
+                    float lh = fTab.GetHeight(gr) + 1;
+                    int rows = Math.Max(5, (int)((clip.Height - 16) / lh));          // số dòng vừa chiều cao chart
+                    int ncol = (lines.Count + rows - 1) / rows;
+                    int per = ncol > 1 ? rows : lines.Count;
+                    float x0 = clip.Left + 6, y0 = clip.Bottom - lh * per - 8;      // góc dưới bên trái
+                    for (int c = 0; c < ncol; c++)
                     {
-                        Color c = i == 0 ? Color.White : (lines[i].StartsWith("⚠") ? Color.FromArgb(255, 150, 120) : Color.FromArgb(200, 205, 215));
-                        using var br = new SolidBrush(c);
-                        gr.DrawString(lines[i], fTab, br, x0, y0 + i * lh);
+                        int from = c * per, cnt = Math.Min(per, lines.Count - from);
+                        float w = 0;
+                        for (int i = 0; i < cnt; i++) w = Math.Max(w, gr.MeasureString(lines[from + i], fTab).Width);
+                        using (var bg = new SolidBrush(Color.FromArgb(170, 14, 16, 22)))
+                            gr.FillRectangle(bg, x0 - 3, y0 - 2, w + 8, lh * cnt + 4);
+                        for (int i = 0; i < cnt; i++)
+                        {
+                            string ln = lines[from + i];
+                            Color col = ln.StartsWith("BENZO") ? Color.White
+                                      : ln.StartsWith("⚠") ? Color.FromArgb(255, 150, 120)
+                                      : ln.Contains("  TP  ") ? Color.FromArgb(120, 220, 150)
+                                      : ln.Contains("  SL  ") ? Color.FromArgb(255, 125, 125)
+                                      : ln.StartsWith("    ") ? Color.FromArgb(230, 200, 120)
+                                      : Color.FromArgb(200, 205, 215);
+                            using var br = new SolidBrush(col);
+                            gr.DrawString(ln, fTab, br, x0, y0 + i * lh);
+                        }
+                        x0 += w + 14;
                     }
                 }
             }

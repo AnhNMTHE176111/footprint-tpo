@@ -42,7 +42,7 @@ Token/chat id điền tay, không có trong code.
   Nến trong khoảng đã dò **không dò lại** dù reload; kết quả TP/SL luôn tính lại từ nến. Đổi `BenzoCore.LogicVersion` (khi sửa logic detector)
   ⇒ cache cũ bị bỏ. Đổi công tắc A/B/C/D **không** dò lại lịch sử đã niêm phong (xoá file cache nếu muốn dò lại).
 - 1 lệnh mở cùng lúc: khi còn lệnh mở thì không dò. Mô phỏng: chạm cả SL lẫn TP cùng nến ⇒ SL; chi phí 0,2 giá/lệnh.
-- Mặc định thống kê đếm từ đầu lịch sử chart đã nạp; "Đặt lại thống kê" ghi mốc UTC vào `reset_<symbol>.txt`, chỉ đếm lệnh sau mốc.
+- Mặc định thống kê đếm từ đầu lịch sử chart đã nạp; "Đặt lại thống kê" ghi mốc UTC vào `reset_<symbol>.txt`, chỉ đếm lệnh sau mốc; "Hiện lại toàn bộ thống kê" xoá mốc đó (lệnh không mất, nằm trong cache). Bảng chỉ hiện setup đang bật, dưới mỗi setup liệt kê từng lệnh: ngày giờ VN (giờ vào), TP/SL, R.
 
 ## Telegram
 - Tin mở = `sendPhoto` (ảnh + caption), tin đóng = `sendMessage`:

@@ -82,10 +82,18 @@ static class Tests
         Check(st.By[1].N == 1 && st.By[1].Losses == 1, "B: 1 thua");
         Check(st.By[2].N == 0 && st.By[2].Open == 1, "C: chưa đóng lệnh nào, 1 mở");
         var lines = BenzoCore.TableLines(st, new[] { true, true, false, true });
-        Check(lines.Count == 5, "bảng đúng 5 dòng", lines.Count.ToString());
+        Check(lines.Count == 4, "setup C tắt bị ẩn hẳn: tổng + A + B + D", lines.Count.ToString());
         Check(lines[0].StartsWith("BENZO · Tổng 5 lệnh · 3 thắng · 2 thua · 60,0% · +5,3R"), "dòng tổng đúng mẫu", lines[0]);
         Check(lines[1].StartsWith("A Phá hồi") && lines[1].Contains("3 · 2/1 · 67% · +4,5R"), "dòng A", lines[1]);
-        Check(lines[3].Contains("(tắt)"), "setup tắt có nhãn (tắt)", lines[3]);
+        Check(!lines.Any(l => l.Contains("(tắt)") || l.StartsWith("C ")), "không còn nhãn (tắt)");
+        var det = BenzoCore.TableLines(st, new[] { true, true, true, true }, list, 7, 1, null);
+        string tA = T0.AddMinutes(1).AddHours(7).ToString("dd/MM  HH:mm");
+        Check(det.Contains($"    {tA}  TP  +2,8R"), "chi tiết lệnh A đầu: ngày+giờ VN, TP, +R", string.Join(" | ", det));
+        Check(det.Any(l => l.EndsWith("SL  −1,1R")), "chi tiết lệnh thua");
+        Check(det.Any(l => l.EndsWith("ĐANG MỞ")), "lệnh đang mở ghi ĐANG MỞ");
+        Check(det.Count == 1 + 4 + 6, "tổng + 4 setup + 6 lệnh", det.Count.ToString());
+        var det2 = BenzoCore.TableLines(BenzoCore.ComputeStats(list, t(25)), null, list, 7, 1, t(25));
+        Check(det2.Count == 1 + 4 + 3, "sau mốc reset: chi tiết chỉ còn lệnh sau mốc", det2.Count.ToString());
 
         var st2 = BenzoCore.ComputeStats(list, t(25));
         Check(st2.Total.N == 2 && st2.By[0].N == 0, "mốc reset: chỉ đếm lệnh sau mốc", st2.Total.N.ToString());
@@ -103,6 +111,8 @@ static class Tests
         Check(back.HasValue && back.Value.Ticks == now.Ticks, "round-trip đúng tick", back?.ToString());
         File.WriteAllText(p, "rác");
         Check(BenzoCore.LoadResetMark(p) == null, "file rác => null (không chết)");
+        BenzoCore.SaveResetMark(p, now); BenzoCore.ClearResetMark(p);
+        Check(BenzoCore.LoadResetMark(p) == null && !File.Exists(p), "xoá mốc => hiện lại toàn bộ thống kê");
     }
 
     static void TestCaption()

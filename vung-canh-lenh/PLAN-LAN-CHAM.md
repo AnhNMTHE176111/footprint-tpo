@@ -254,13 +254,13 @@ Test C# mới: râu chạm rồi đóng xa 2 giá = 1 lần đảo; phá giả =
 không rõ phía; kẹp [2,5] giá với u = 1,0 và u = 3,1; không nhìn trước.
 
 ### 6.4 Nhãn tiếng Việt
-Định dạng: `lo–hi (rộng giá) · điểm · đảo chiều ≈x% · xuyên phá ≈y% · lịch sử riêng`
+Định dạng: `rộng giá · điểm · đảo chiều ≈x% · xuyên phá ≈y% · lịch sử riêng`
 
 ```
-4447,6–4451,2 (3,6 giá) · 68 điểm · đảo chiều ≈57% · xuyên phá ≈36% · đã chạm 3 (bật 2 · xuyên 1)
-4439,0–4441,0 (2,0 giá) · 2 điểm · đảo chiều ≈52% · xuyên phá ≈42% · chưa chạm
-4428,2–4433,2 (5,0 giá) · 32 điểm · đảo chiều ≈61% · xuyên phá ≈31% · đang chạm (lần 2)
-4408,8–4412,4 (3,6 giá) · 12 điểm · đảo chiều ≈57% · xuyên phá ≈36% (xa)
+3,6 giá · 68 điểm · đảo chiều ≈57% · xuyên phá ≈36% · đã chạm 3 (bật 2 · xuyên 1)
+2,0 giá · 2 điểm · đảo chiều ≈52% · xuyên phá ≈42% · chưa chạm
+5,0 giá · 32 điểm · đảo chiều ≈61% · xuyên phá ≈31% · đang chạm (lần 2)
+3,6 giá · 12 điểm · đảo chiều ≈57% · xuyên phá ≈36% (xa)
 ```
 (Các % trên là ví dụ minh hoạ định dạng, KHÔNG phải số đo.)
 - **≈** báo đây là ước lượng lịch sử chung (cùng số cho mọi vùng cùng pha và cùng cỡ rộng). README một câu: *"% là tần suất ~60 phiên GCZ26 theo pha và độ rộng, giống nhau cho mọi vùng

@@ -152,11 +152,11 @@ namespace VungCanhLenhNs
         // ---------------------------------------------------------------- văn bản
         private static string F(double v, string fmt = "0.0") => v.ToString(fmt, Vi);
 
-        /// <summary>Nhãn theo thứ tự ưu tiên khi chật: biên vùng (rộng) &gt; % đảo/xuyên &gt; điểm &gt; lịch sử riêng.
+        /// <summary>Nhãn theo thứ tự ưu tiên khi chật: độ rộng vùng &gt; % đảo/xuyên &gt; điểm &gt; lịch sử riêng.
         /// mức 0 = đủ; 1 = lịch sử rút gọn; 2 = bỏ lịch sử; 3 = bỏ cả điểm.</summary>
         private string Label(VZone z, RenderState rs, int level)
         {
-            var parts = new List<string> { F(z.Lo) + "–" + F(z.Hi) + " (" + F(z.Hi - z.Lo) + " giá)" };
+            var parts = new List<string> { F(z.Hi - z.Lo) + " giá" };
             if (level < 3) parts.Add(F(z.Score, "0") + " điểm");
             if (VclTables.Lookup(rs.Phase, z.WBin, out int dao, out int xuyen, out int chuaRo))
             {

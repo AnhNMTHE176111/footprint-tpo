@@ -15,12 +15,12 @@ Vẽ trên chart vàng M1 **vài vùng hỗ trợ/kháng cự ổn định** qua
 Nhãn thật (phiên 2026-09-08, 20:35 VN, giá đóng 4442,0):
 
 ```
-4448,8–4453,2 (4,4 giá) · 46 điểm · đảo chiều ≈55% · xuyên phá ≈30% · chưa rõ ≈12% · đang chạm (lần 2)
+4,4 giá · 46 điểm · đảo chiều ≈55% · xuyên phá ≈30% · chưa rõ ≈12% · đang chạm (lần 2)
 ```
 
 | Phần | Nghĩa |
 |---|---|
-| `4448,8–4453,2 (4,4 giá)` | biên dưới – biên trên của vùng, và độ rộng tính bằng giá (USD) |
+| `4,4 giá` | độ rộng của vùng tính bằng giá (USD); biên trên/dưới nhìn trên chart |
 | `46 điểm` | điểm xếp hạng của vùng (dùng để chọn vùng hiển thị) — **không phải độ mạnh** |
 | `đảo chiều ≈55%` | trong lịch sử, bao nhiêu % **lần chạm** kết thúc bằng việc giá quay về phía cũ, cách biên ≥ 2 giá |
 | `xuyên phá ≈30%` | bao nhiêu % lần chạm kết thúc bằng việc giá đi sang phía kia, cách biên xa ≥ 2 giá |

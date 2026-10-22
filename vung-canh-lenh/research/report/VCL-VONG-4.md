@@ -135,3 +135,25 @@ static readonly int[] REVERT2U = { 60, 61, 62, 65, 64, 68, 70 };
 - **Đạt cả hai mục tiêu vệ sinh:** đổi vùng 6,0/5,2 → **3,2/3,0 lần/giờ** (≤ 4), tuổi thọ trung vị 20/30 → **58/63 phút** (≥ 30). Bộ tính lại giảm một nửa (2116 → 1014). % nến trong vùng hiển thị 32/31%, số vùng hiển thị 6,4 — gần như không đổi.
 - **Bảng tra gần như không đổi:** 110 ô (bảng 6, 7, 9) có |Δ| ≤ 3, trừ 2 ô bảng 6 pha Á, d 8–12u: ≤60 nến 23 → 19, ≤120 nến 42 → 36. Đó là ô xa, ít mẫu, và đã nhạy giữa TRAIN/TEST ở v3 (|Δ| 7). Lý do có thể: luật (c) bỏ bớt vùng xa mới sinh nên tập mẫu đổi. **Bảng C# dùng số v4.**
 - Không thêm luật nào ngoài (a), (b), (c).
+
+## Phần 2 — port C# (Optimus Flow)
+- **Code:**
+  - `VclCore.cs`: lõi thuần, port 1-1 `vcl4.py`; bảng tra lấy từ v4.
+  - `VungCanhLenh.cs`: lớp dán Quantower, tên hiển thị "Vùng Canh Lệnh".
+  - `build.sh`: 0 cảnh báo; DLL ở `dist/VungCanhLenh.dll`.
+- **Parity:** `research/report/PARITY-VCL.md` — **28 846/28 846 nến khớp tuyệt đối** (lo/hi lệch 0, mã vùng trùng, 1014 lần tính lại bộ ở cả hai bên).
+- **Test C#:** `tests/` — 32 kiểm tra, 0 lỗi:
+  - gộp / kẹp / tách khe;
+  - chuyển vai & chết;
+  - D không chết;
+  - hành lang +1u;
+  - KEEP khe gần;
+  - tuổi tối thiểu;
+  - bin bảng tra + pha;
+  - không nhìn trước;
+  - Value Area.
+- **Chỗ tự quyết khi port:**
+  - Bảng góc phải ghi tỉ lệ "SL bị quét" MỘT lần ở dòng đầu, vì bảng đó chỉ phụ thuộc pha, không phụ thuộc vùng. Mỗi dòng vùng ghi vai · lo–hi · d (u · USD) · chạm 15/30/60/120.
+  - Vùng chứa giá ghi "giá đang trong vùng" thay cho xác suất chạm.
+  - Chỉ vẽ bộ vùng HIỆN TẠI, từ lúc vùng vào bộ tới mép phải. Vùng đã rời bộ không vẽ lại.
+  - Đổi "Lệch giờ" thì dựng lại lõi từ đầu.

@@ -639,8 +639,9 @@ QS = [
     'Q3 — "Hai đỉnh" = có ít nhất một CẶP đỉnh `find_hvn` (mặc định 1,5×TB, làm mượt ±5 hàng) mà giữa chúng có một đáy `find_lvn` (≤ 0,5×TB).',
     'Q4 — Đang chờ ST mà có pivot H CAO HƠN H1 ⇒ H1 := pivot đó (AR mở rộng), đếm 400 nến lại từ đó. Plan không nói; bỏ qua thì '
     'mọi ca "hồi cạn rồi lên tiếp" bị kẹt ở H1 thấp.',
-    'Q5 — Cụm climax tính từ nến climax ĐẦU TIÊN (mốc): dời climax khi trong 8 nến sau mốc có đáy thấp hơn thoả lại bước 1+2. L1 = pivot L '
-    'zigzag có giá = đáy cụm và nằm trong 8 nến sau mốc; đáy mới thấp hơn cụm SAU cửa sổ (trước khi có L1) ⇒ hỏng, về NGỦ.',
+    'Q5 — Cụm climax tính từ nến climax ĐẦU TIÊN (mốc): dời climax khi trong 8 nến sau mốc có đáy thấp hơn thoả lại bước 1+2. Đổi hành vi #1 '
+    'xác nhận khi có pivot L zigzag nằm trong 8 nến sau mốc; GIÁ L1 = đáy cụm thật (zigzag kernel bỏ đáy của nến vừa tạo đỉnh khi nến dài >= 2 '
+    'giá, nên giá pivot có thể cao hơn đáy). Đáy mới thấp hơn cụm SAU cửa sổ (trước khi có L1) hoặc pivot L ngoài cửa sổ ⇒ hỏng, về NGỦ.',
     'Q6 — Chờ AR: pivot H chưa đủ lớn ⇒ vẫn chờ pivot H tiếp theo (L1 giữ nguyên) tới khi thủng L1 − 1,0·u hoặc quá 300 nến từ climax.',
     'Q7 — Chân move = pivot H zigzag gần nhất đã xác nhận tới nến c (gồm xác nhận ngay tại c), cùng phiên; chưa có ⇒ high lớn nhất 240 '
     'nến trong phiên. Độ dài move GỒM nến climax (đúng câu chữ plan "high(chân) − low(c)"; khác `_find_move` v6 loại nến climax).',
@@ -680,7 +681,7 @@ def main():
       % (os.path.basename(D90), D.days, D.days_split['TRAIN'], D.days_split['TEST'], prereg_hash()))
     w('')
     w('Thuật ngữ: buy / sell / limit / market giữ tiếng Anh. "Đổi hành vi" = CHoCH. "Nến cao trào" = climax. AR = nhịp bật tự động. '
-      'ST = nhịp thử lại. KTC = khoảng tin cậy 95%% lấy mẫu lại theo lệnh (10.000 lần, hạt 0). Ô chính: TP = gần nhất trong {cạnh đối diện, POC} '
+      'ST = nhịp thử lại. KTC = khoảng tin cậy 95% lấy mẫu lại theo lệnh (10.000 lần, hạt 0). Ô chính: TP = gần nhất trong {cạnh đối diện, POC} '
       'và ≥ 2R (L3: chỉ cạnh đối diện).')
     w('')
     # ---------------------------------------------------------------- công suất

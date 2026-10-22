@@ -116,6 +116,11 @@ dời bản đồ vùng 3–15 giá) đều ≈; vùng dời vẫn cho 3,2 lện
 ⇒ **indicator vẫn chạy A V3**, A-v4 **chưa có lợi thế đo được**. Lưu ý đối chiếu chart: "VAH/VAL ngày" của A-v4 là VA của PHIÊN TRƯỚC;
 đường VAH/VAL trên SessionZones là của phiên Âu đã đóng gần nhất (đó là "cạnh VA Âu" của bản A-v4+). Chi tiết: `research/report/RESULTS-A-V4.md`.
 
+**Vòng C-v6 (2026-10-22, `research/PLAN-C-v2.md`, chỉ Python — KHÔNG port):** C + cổng hình dạng profile TPO hôm qua (ngày D: VA hôm qua;
+ngày P/b: cạnh vùng dày) + VA nhỏ từ 3 lần đổi hành vi (climax → AR → ST). Gộp C4 trên 61 phiên: **191 lệnh (3,13/ngày, C cũ 1,69),
+WR 12,6% (= C cũ), R TB −0,31** (C cũ −0,43) nhưng tổng R −58,8 (C cũ −44,7); TEST −0,15 kém C cũ −0,12 ⇒ không đạt T0/T1, mọi đối chứng ≈,
+hoán vị nhãn cổng D p = 0,30 ⇒ **C vẫn tắt, chưa chứng minh**. Chi tiết: `research/report/RESULTS-C-V6.md`.
+
 ## Cách đọc bảng trên chart
 5 dòng: dòng tổng `BENZO · Tổng N lệnh · thắng · thua · WR% · ΣR` rồi 4 dòng A/B/C/D `n · thắng/thua · WR% · ΣR`; setup đang tắt có đuôi `(tắt)`.
 R đã trừ chi phí 0,2 giá/lệnh (TP = (lời − 0,2)/rủi ro, SL ≈ −1,1R). **Hòa vốn**: WR ≈ 27% ở 3R, ≈ 36% ở 2R. Mũi tên = nến vào; đường SL/TP vẽ theo tín hiệu.

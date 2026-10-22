@@ -5,7 +5,7 @@
 Hằng số chốt TRƯỚC khi nhìn TEST: τ = 0.0 · E = 2.0 giá · G = 5 nến; vùng [2, 5] giá. Đối chứng 50 bản mỗi loại.
 **Ngưỡng "khác đối chứng" (chốt trước, plan mục 5):** thật nằm NGOÀI dải 5–95% của đối chứng ở CẢ TRAIN và TEST, cùng dấu, cùng dấu ở ≥ 2/3 tháng, VÀ |hiệu| > 2 sai số nhị thức của thật ở cả TRAIN và TEST. Thiếu một điều kiện ⇒ "≈ đối chứng".
 Đ1 = dời nguyên bộ vùng của phiên 3–15 giá (dấu ngẫu nhiên, cố định trong phiên). Đ2 = vùng giả cùng độ rộng, tâm ngẫu nhiên trong biên phiên trước ±2 giá, cân lại theo ô (khoảng cách giá đóng → cạnh gần lúc vùng hiện × bin rộng); 100% lần chạm giả rơi vào ô có vùng thật.
-Thời gian chạy: engine 0s (đọc cache), máy trạng thái thật + 2×50 đối chứng 28s.
+Thời gian chạy: engine 0s (đọc cache), máy trạng thái thật + 2×50 đối chứng 27s.
 
 ## A. Kết quả chính — % đảo chiều / % xuyên phá: thật vs đối chứng
 

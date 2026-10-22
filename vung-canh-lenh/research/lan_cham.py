@@ -153,6 +153,8 @@ def episodes(B, rec, off=None, tau=TAU, E=EXIT_E, G=GAP_G, ext_w=False, trace=Fa
                 if j > a and newb[j] and op.any():                        # hết phiên (phát hiện ở nến đầu phiên mới)
                     emit(op, vai, s0, srow, dem, phia, t - 1, j - 1, t, LD_HP, e, hist)
                     op[:] = False
+                    dem[:] = 0
+                    phia[:] = 0
                 m = cham[jj] & ~op
                 if m.any():
                     op |= m

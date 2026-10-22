@@ -3,7 +3,7 @@
 // ============================================================================
 //  Add vào chart M1 (nên bật Volume Analysis). Chỉ xử lý nến ĐÃ ĐÓNG (tới Count−2), đúng 1 lần/nến, theo thứ tự.
 //  Chưa có Volume Analysis vẫn vẽ (swing + số tròn) và ghi chú; khi footprint sẵn sàng thì dựng lại từ đầu (VclFeeder).
-//  Toàn bộ logic ở VclCore.cs (test được trên Linux, khớp research/vcl4.py 100%). File này chỉ: Settings,
+//  Toàn bộ logic ở VclCore.cs (test được trên Linux, khớp research/vcl5.py + lan_cham.py). File này chỉ: Settings,
 //  đọc nến + footprint từng mức giá, vẽ vùng + nhãn.
 //  Build: build.sh (concat VclCore.cs + file này). MỌI `using` nằm trong namespace.
 // ============================================================================
@@ -23,6 +23,8 @@ namespace VungCanhLenhNs
         public int TzOffset { get; set; } = 7;
         [InputParameter("Hiện nhãn cạnh vùng", 21)]
         public bool ShowLabels { get; set; } = true;
+        [InputParameter("Hiện lịch sử riêng của vùng", 23)]
+        public bool ShowHistory { get; set; } = true;
         [InputParameter("Hiện vùng xa", 22)]
         public bool ShowFar { get; set; } = true;
         [InputParameter("Màu kháng cự", 30)]
@@ -54,8 +56,9 @@ namespace VungCanhLenhNs
         public VungCanhLenh() : base()
         {
             Name = "Vùng Canh Lệnh";
-            Description = "Vùng hỗ trợ/kháng cự ổn định (swing M5/M15, mốc phiên, số tròn) + nhãn xác suất chạm/bị quét theo khoảng cách. " +
-                          "MÔ TẢ tần suất lịch sử, KHÔNG phải tín hiệu. Cần Volume Analysis. Add vào chart M1.";
+            Description = "Vùng hỗ trợ/kháng cự ổn định, rộng 2–5 giá (swing M5/M15, mốc phiên, số tròn). Nhãn: biên vùng, điểm, % lần chạm " +
+                          "đảo chiều / xuyên phá (tần suất lịch sử chung theo pha và độ rộng, KHÔNG phải độ mạnh của vùng), lịch sử chạm của riêng vùng. " +
+                          "Cần Volume Analysis. Add vào chart M1.";
             SeparateWindow = false;
         }
 
@@ -148,20 +151,28 @@ namespace VungCanhLenhNs
 
         // ---------------------------------------------------------------- văn bản
         private static string F(double v, string fmt = "0.0") => v.ToString(fmt, Vi);
-        private static string Pct(int v) => v < 0 ? "—" : v + "%";
 
-        /// <summary>Khoảng cách tới cạnh gần (giá, ≥ 0); vùng chứa giá = 0.</summary>
-        private static double Dist(VZone z, double c) => z.Slot == 'K' ? 0 : (z.Side > 0 ? Math.Max(0, z.Lo - c) : Math.Max(0, c - z.Hi));
-
-        private static string Label(VZone z, RenderState rs)
+        /// <summary>Nhãn theo thứ tự ưu tiên khi chật: biên vùng (rộng) &gt; % đảo/xuyên &gt; điểm &gt; lịch sử riêng.
+        /// mức 0 = đủ; 1 = lịch sử rút gọn; 2 = bỏ lịch sử; 3 = bỏ cả điểm.</summary>
+        private string Label(VZone z, RenderState rs, int level)
         {
-            string head = z.Types() + " · " + F(z.Score, "0");
-            if (z.Slot == 'K')
-                return head + " · đang kiểm tra · quét ≥0,5u≈" + Pct(VclTables.Sweep[rs.Phase, 1]);
-            double du = Dist(z, rs.Close) / rs.U;
-            int bin = VclTables.Bin(du);
-            if (bin < 0) return head + " · " + F(du) + "u";
-            return head + " · " + F(du) + "u · chạm 30′≈" + Pct(VclTables.Reach[rs.Phase][bin, 1]) + " · quay ≥2u≈" + Pct(VclTables.Revert2u[bin]);
+            var parts = new List<string> { F(z.Lo) + "–" + F(z.Hi) + " (" + F(z.Hi - z.Lo) + " giá)" };
+            if (level < 3) parts.Add(F(z.Score, "0") + " điểm");
+            if (VclTables.Lookup(rs.Phase, z.WBin, out int dao, out int xuyen, out int chuaRo))
+            {
+                parts.Add("đảo chiều ≈" + dao + "%");
+                parts.Add("xuyên phá ≈" + xuyen + "%");
+                if (chuaRo >= 10) parts.Add("chưa rõ ≈" + chuaRo + "%");
+            }
+            else parts.Add("đảo/xuyên: —");
+            if (ShowHistory && level < 2)
+            {
+                if (z.EpOpen) parts.Add(level == 0 ? "đang chạm (lần " + z.EpK + ")" : "đang chạm");
+                else if (z.N == 0) parts.Add("chưa chạm");
+                else parts.Add(level == 0 ? "đã chạm " + z.N + " lần (đảo " + z.Dao + " · xuyên " + z.Xuyen + ")"
+                                          : z.N + " lần (" + z.Dao + " đảo)");
+            }
+            return string.Join(" · ", parts) + (z.Slot == 'F' ? " (xa)" : "");
         }
 
         // ---------------------------------------------------------------- vẽ
@@ -199,8 +210,10 @@ namespace VungCanhLenhNs
                         }
                         if (ShowLabels)
                         {
-                            string s = Label(z, rs);
+                            float maxW = (clip.Right - x0) * 0.9f;
+                            string s = Label(z, rs, 0);
                             var sz = gr.MeasureString(s, fLbl);
+                            for (int lvl = 1; lvl <= 3 && sz.Width > maxW; lvl++) { s = Label(z, rs, lvl); sz = gr.MeasureString(s, fLbl); }
                             float lx = clip.Right - sz.Width - 6, ly = top + h / 2 - sz.Height / 2;
                             using (var bg = new SolidBrush(Color.FromArgb(150, 14, 16, 22))) gr.FillRectangle(bg, lx - 2, ly, sz.Width + 4, sz.Height);
                             using (var br = new SolidBrush(Color.FromArgb(235, Color.White))) gr.DrawString(s, fLbl, br, lx, ly);

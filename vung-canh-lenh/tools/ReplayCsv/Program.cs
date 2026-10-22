@@ -1,7 +1,8 @@
-// VclReplayCsv — chạy VclCore (C#) trên file footprint export, KHÔNG cần Quantower, để đối chiếu với research/vcl4.py.
+// VclReplayCsv — chạy VclCore (C#) trên file footprint export, KHÔNG cần Quantower, để đối chiếu với research/vcl5.py + lan_cham.py.
 //   dotnet run -c Release --project vung-canh-lenh/tools/ReplayCsv -- <base> <out.csv>
 //   <base> = đường dẫn bỏ đuôi (đọc <base>_bars.csv và <base>.csv).
-// Xuất mỗi nến mỗi vùng hiển thị: bar_idx (vị trí 0..n-1), zone_id, lo, hi, role (R/RF/S/SF/K), score.
+// Xuất mỗi nến mỗi vùng hiển thị: bar_idx (vị trí 0..n-1), zone_id, lo, hi, role (R/RF/S/SF/K), score,
+//   + trạng thái lần chạm SAU nến đó: ep_open, ep_vai (0 kháng cự/1 hỗ trợ/2 không rõ/−1), dem_thoat, n, dao, xuyen, chua_ro, khong_ro.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -53,7 +54,8 @@ static class Program
         }
         Console.Error.WriteLine($"nạp {bars.Count} nến M1");
         var core = new VclCore();
-        var sb = new StringBuilder("bar_idx,zone_id,lo,hi,role,score\n");
+        core.Episodes.LogEnabled = true;
+        var sb = new StringBuilder("bar_idx,zone_id,lo,hi,role,score,ep_open,ep_vai,dem_thoat,n,dao,xuyen,chua_ro,khong_ro\n");
         var sw = System.Diagnostics.Stopwatch.StartNew();
         for (int i = 0; i < bars.Count; i++)
         {
@@ -62,10 +64,16 @@ static class Program
             {
                 string role = z.Slot == 'K' ? "K" : (z.Side > 0 ? "R" : "S") + (z.Slot == 'F' ? "F" : "");
                 sb.Append(i).Append(',').Append(z.Id).Append(',').Append(z.Lo.ToString("R", Inv)).Append(',').Append(z.Hi.ToString("R", Inv))
-                  .Append(',').Append(role).Append(',').Append(z.Score.ToString("R", Inv)).Append('\n');
+                  .Append(',').Append(role).Append(',').Append(z.Score.ToString("R", Inv))
+                  .Append(',').Append(z.EpOpen ? 1 : 0).Append(',').Append(z.EpVai).Append(',').Append(z.DemThoat).Append(',').Append(z.N)
+                  .Append(',').Append(z.Dao).Append(',').Append(z.Xuyen).Append(',').Append(z.ChuaRo).Append(',').Append(z.KhongRo).Append('\n');
             }
         }
         File.WriteAllText(outPath, sb.ToString());
+        var se = new StringBuilder("zone_id,bat_dau,chot,vai,ket\n");
+        foreach (var e in core.Episodes.Log)
+            se.Append(e.Id).Append(',').Append(e.BatDau).Append(',').Append(e.Chot).Append(',').Append((int)e.Vai).Append(',').Append((int)e.Ket).Append('\n');
+        File.WriteAllText(Path.ChangeExtension(outPath, null) + "_episodes.csv", se.ToString());
         Console.Error.WriteLine($"xong {sw.Elapsed.TotalSeconds:0.0}s, tính lại bộ {core.NRecalc} lần → {outPath}");
         return 0;
     }

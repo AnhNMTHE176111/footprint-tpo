@@ -1,7 +1,8 @@
 // ============================================================================
 //  VclCore — LÕI THUẦN của indicator "Vùng Canh Lệnh" (không tham chiếu Quantower SDK)
 // ============================================================================
-//  Port 1-1 của research/vcl4.py (engine v4 = đặc tả vòng 3 + 3 luật chống nhấp nháy vòng 4).
+//  Port 1-1 của research/vcl5.py (engine v4 + độ rộng vùng kẹp theo giá [2, 5]) và research/lan_cham.py
+//  (máy trạng thái "một lần chạm" = giá tới vùng, neo vài nến, rồi đi chỗ khác; PLAN-LAN-CHAM.md mục 2.6).
 //  Chạy THEO DÒNG: gọi Push(bar, levels) đúng một lần cho mỗi nến M1 ĐÃ ĐÓNG, theo thứ tự thời gian.
 //  Bộ vùng sau Push(i) chỉ dùng dữ liệu nến <= i (cấm nhìn trước).
 //  Phần lấy từ kernel (giờ VN + bù giờ Mỹ, Value Area 70%, trung vị trượt) copy NGUYÊN logic của
@@ -38,6 +39,10 @@ namespace VungCanhLenhNs
         public bool D10;
         public int FirstBar;
         public DateTime FirstTime;
+        // ---- lần chạm (sau Push): đang chạm?, lần thứ k đang chạm, vai lần đang chạm (−1 nếu không), đếm nến thoát,
+        //      lịch sử riêng đã chốt (n, đảo, xuyên, chưa rõ, không rõ phía), bin độ rộng 0/1/2 = 2–3 / 3–4 / 4–5 giá
+        public bool EpOpen;
+        public int EpK, EpVai = -1, DemThoat, N, Dao, Xuyen, ChuaRo, KhongRo, WBin;
         public VZone Clone() => (VZone)MemberwiseClone();
         public string Types()
         {
@@ -61,8 +66,11 @@ namespace VungCanhLenhNs
         public const int SmEuStart = 450, SmUsStart = 840;
         public const int UN = 50, UMin = 10;
         public const int SessBars = 1380;
-        // gộp
-        public const double LinkU = 1.0, PadU = 0.5, WminU = 1.0, WmaxU = 4.0;
+        // gộp (v5: độ rộng vùng kẹp theo GIÁ tuyệt đối [2, 5], không theo u)
+        public const double LinkU = 1.0, PadU = 0.5, WminGia = 2.0, WmaxGia = 5.0;
+        // lần chạm (PLAN-LAN-CHAM mục 2): dung sai chạm τ, ngưỡng thoát E (giá), số nến yên G để chốt
+        public const double EpTau = 0.0, EpExit = 2.0;
+        public const int EpGapBars = 5;
         // ứng viên
         public const int SwingM5K = 5, SwingM15K = 3;
         public const double WB = 2, WB15 = 3, WC = 2, WNpoc = 3;
@@ -157,13 +165,18 @@ namespace VungCanhLenhNs
             return cnt % 2 == 1 ? a[cnt / 2] : 0.5 * (a[cnt / 2 - 1] + a[cnt / 2]);
         }
 
-        // ---------------------------------------------------------------- gộp vùng (port vcl.build_zones)
-        /// <summary>Gộp đơn liên kết theo khoảng cách ≤ link·u; biên = min/max ± 0,5u; kẹp [1u, 4u] (tách tại khe lớn nhất);
-        /// 2 vùng chồng nhau ⇒ cắt ở điểm giữa. lab[k] = chỉ số vùng (vùng sắp tăng theo giá) của ứng viên k.</summary>
-        public static void BuildZones(double[] p, int n, double u, double link, out int[] lab, out double[] lo, out double[] hi)
+        // ---------------------------------------------------------------- gộp vùng (port vcl5.build_zones)
+        /// <summary>Gộp đơn liên kết theo khoảng cách ≤ link·u; biên = min/max ± 0,5u; độ rộng kẹp theo GIÁ [wmin, wmax] (mặc định [2, 5]):
+        /// rộng (đã đệm) &gt; wmax ⇒ tách tại khe lớn nhất (đệ quy; dừng nếu 1 mức hoặc mọi mức trùng giá); &lt; wmin ⇒ nới đều quanh tâm;
+        /// mảnh không tách được mà vẫn &gt; wmax (chỉ khi u &gt; 5) ⇒ kẹp đều về wmax. Chồng lấn (quét trái → phải): hợp &lt; 2·wmin ⇒ GỘP;
+        /// ngược lại cắt ở giữa nhưng dời điểm cắt vào [lo trái + wmin, hi phải − wmin] ⇒ mọi vùng trong [wmin, wmax].
+        /// lab[k] = chỉ số vùng (vùng sắp tăng theo giá) của ứng viên k.</summary>
+        public static void BuildZones(double[] p, int n, double u, double link, out int[] lab, out double[] lo, out double[] hi,
+                                      double wmin = WminGia, double wmax = WmaxGia)
         {
             lab = new int[n];
             if (n == 0) { lo = Array.Empty<double>(); hi = Array.Empty<double>(); return; }
+            double pad = PadU * u;
             var o = new int[n];
             for (int k = 0; k < n; k++) o[k] = k;
             Array.Sort(o, (a, b) => { int c = p[a].CompareTo(p[b]); return c != 0 ? c : a.CompareTo(b); });   // = argsort stable
@@ -177,41 +190,66 @@ namespace VungCanhLenhNs
             var pst = new List<int>(); var pen = new List<int>();
             for (int g = 0; g < st.Count; g++)
             {
-                if ((ps[en[g] - 1] - ps[st[g]]) + 2 * PadU * u > WmaxU * u) Split(ps, st[g], en[g], u, pst, pen);
+                if ((ps[en[g] - 1] - ps[st[g]]) + 2 * pad > wmax) Split(ps, st[g], en[g], pad, wmax, pst, pen);
                 else { pst.Add(st[g]); pen.Add(en[g]); }
             }
-            int nz = pst.Count;
-            lo = new double[nz]; hi = new double[nz];
-            for (int z = 0; z < nz; z++)
+            int np = pst.Count;
+            var l0 = new double[np]; var h0 = new double[np];
+            for (int z = 0; z < np; z++)
             {
-                lo[z] = ps[pst[z]] - PadU * u;
-                hi[z] = ps[pen[z] - 1] + PadU * u;
-                if ((hi[z] - lo[z]) < WminU * u)
+                l0[z] = ps[pst[z]] - pad;
+                h0[z] = ps[pen[z] - 1] + pad;
+                if ((h0[z] - l0[z]) < wmin)
                 {
-                    double c = (lo[z] + hi[z]) / 2;
-                    lo[z] = c - WminU * u / 2;
-                    hi[z] = c + WminU * u / 2;
+                    double c = (l0[z] + h0[z]) / 2;
+                    l0[z] = c - wmin / 2;
+                    h0[z] = c + wmin / 2;
+                }
+                if ((h0[z] - l0[z]) > wmax)
+                {
+                    double c = (l0[z] + h0[z]) / 2;
+                    l0[z] = c - wmax / 2;
+                    h0[z] = c + wmax / 2;
                 }
             }
-            if (nz > 1)
+            // chồng lấn: quét trái → phải (giữ mọi vùng trong [wmin, wmax])
+            var zid = new int[np];
+            var zl = new List<double> { l0[0] }; var zh = new List<double> { h0[0] };
+            for (int z = 1; z < np; z++)
             {
-                var h2 = (double[])hi.Clone(); var l2 = (double[])lo.Clone();
-                for (int z = 0; z < nz - 1; z++)
-                    if (hi[z] > lo[z + 1]) { double mid = (hi[z] + lo[z + 1]) / 2; h2[z] = mid; l2[z + 1] = mid; }
-                hi = h2; lo = l2;
+                int last = zl.Count - 1;
+                if (zh[last] > l0[z])
+                {
+                    if (Math.Max(zh[last], h0[z]) - zl[last] < 2 * wmin)
+                    {
+                        zh[last] = Math.Max(zh[last], h0[z]);
+                        zid[z] = last;
+                        continue;
+                    }
+                    double m = (zh[last] + l0[z]) / 2;
+                    m = Math.Min(Math.Max(m, zl[last] + wmin), h0[z] - wmin);
+                    zh[last] = m;
+                    zl.Add(m); zh.Add(h0[z]);
+                }
+                else { zl.Add(l0[z]); zh.Add(h0[z]); }
+                zid[z] = zl.Count - 1;
             }
-            for (int z = 0; z < nz; z++)
-                for (int k = pst[z]; k < pen[z]; k++) lab[o[k]] = z;
+            lo = zl.ToArray(); hi = zh.ToArray();
+            for (int z = 0; z < np; z++)
+                for (int k = pst[z]; k < pen[z]; k++) lab[o[k]] = zid[z];
         }
 
-        private static void Split(double[] ps, int a, int b, double u, List<int> st, List<int> en)
+        private static void Split(double[] ps, int a, int b, double pad, double wmax, List<int> st, List<int> en)
         {
-            if (b - a <= 1 || ps[b - 1] - ps[a] + 2 * PadU * u <= WmaxU * u) { st.Add(a); en.Add(b); return; }
+            if (b - a <= 1 || ps[b - 1] - ps[a] + 2 * pad <= wmax || ps[b - 1] == ps[a]) { st.Add(a); en.Add(b); return; }
             int g = a + 1; double best = ps[a + 1] - ps[a];
             for (int k = a + 2; k < b; k++) { double d = ps[k] - ps[k - 1]; if (d > best) { best = d; g = k; } }
-            Split(ps, a, g, u, st, en);
-            Split(ps, g, b, u, st, en);
+            Split(ps, a, g, pad, wmax, st, en);
+            Split(ps, g, b, pad, wmax, st, en);
         }
+
+        /// <summary>Bin độ rộng (giá): &lt; 3 → 0 ("2–3"), &lt; 4 → 1 ("3–4"), còn lại → 2 ("4–5"). Khớp lan_cham.wbin.</summary>
+        public static int WidthBin(double w) => w < 3 ? 0 : (w < 4 ? 1 : 2);
 
         /// <summary>Luật chuyển vai cho MỘT ứng viên (port vcl.break_update). side +1 = giá ở trên (hỗ trợ), −1 = giá ở dưới, 0 = chưa rõ.
         /// Đóng xuyên qua CẢ vùng ≥ 1u ⇒ breaks+1, đổi vai. Trả true nếu vừa bị xuyên.</summary>
@@ -228,70 +266,122 @@ namespace VungCanhLenhNs
         }
     }
 
-    // ---------------------------------------------------------------- bảng tra (vòng 4, gộp TRAIN+TEST, %, −1 = thiếu mẫu)
+    // ---------------------------------------------------------------- bảng lần chạm (research/report/LAN-CHAM.md, GỘP TRAIN+TEST 61 phiên)
+    /// <summary>Tần suất lịch sử của một LẦN CHẠM theo pha phiên × bin độ rộng vùng. % nguyên; −1 = ô có &lt; 100 lần chạm ⇒ dùng EpisodeAll.
+    /// Cùng một số cho mọi vùng cùng ô — là MÔ TẢ (vùng giả cùng cỡ cũng cho ≈ chừng ấy), không phải độ mạnh của vùng.</summary>
     public static class VclTables
     {
-        public static readonly int[] ReachWin = { 15, 30, 60, 120 };
-        public static readonly double[] SweepX = { 0.25, 0.5, 1.0 };
-        public static readonly string[] BinName = { "≤1", "1–2", "2–3", "3–4", "4–6", "6–8", "8–12" };
-        // REACH[pha][bin][cửa sổ]
-        public static readonly int[,] ReachPhase0 = {
-            { 84, 88, 92, 95 },
-            { 60, 72, 81, 86 },
-            { 45, 57, 70, 78 },
-            { 29, 46, 59, 73 },
-            { 16, 30, 46, 59 },
-            { 7, 17, 34, 50 },
-            { 2, 9, 19, 36 }
+        public static readonly string[] WBinName = { "2–3", "3–4", "4–5" };
+        // Episode[pha 0 Á/1 Âu/2 Mỹ, bin rộng, {đảo chiều, xuyên phá, chưa rõ}]
+        public static readonly int[,,] Episode = {
+            { { 49, 29, 19 }, { 51, 26, 16 }, { -1, -1, -1 } },
+            { { 51, 29, 17 }, { 60, 21, 15 }, { -1, -1, -1 } },
+            { { 49, 28, 21 }, { 53, 27, 16 }, { 55, 30, 12 } }
         };
-        public static readonly int[,] ReachPhase1 = {
-            { 88, 92, 93, 96 },
-            { 62, 72, 79, 85 },
-            { 37, 54, 65, 75 },
-            { 21, 37, 52, 64 },
-            { 10, 20, 37, 53 },
-            { 5, 12, 27, 45 },
-            { 1, 4, 14, 33 }
-        };
-        public static readonly int[,] ReachPhase2 = {
-            { 83, 89, 92, 93 },
-            { 58, 69, 76, 80 },
-            { 37, 50, 60, 68 },
-            { 19, 33, 45, 53 },
-            { 10, 20, 33, 44 },
-            { 5, 11, 22, 35 },
-            { 1, 5, 11, 19 }
-        };
-        public static readonly int[,] ReachAll = {
-            { 84, 90, 92, 94 },
-            { 60, 71, 79, 83 },
-            { 39, 53, 65, 73 },
-            { 22, 38, 51, 62 },
-            { 12, 23, 38, 51 },
-            { 6, 13, 27, 42 },
-            { 2, 6, 15, 29 }
-        };
-        public static readonly int[][,] Reach = { ReachPhase0, ReachPhase1, ReachPhase2 };
-        // SWEEP[pha][≥0,25u, ≥0,5u, ≥1,0u]
-        public static readonly int[,] Sweep = {
-            { 64, 57, 46 },
-            { 63, 56, 42 },
-            { 60, 53, 38 }
-        };
-        // REVERT2U[bin] (mọi pha)
-        public static readonly int[] Revert2u = { 60, 61, 62, 65, 64, 68, 70 };
+        // EpisodeAll[bin rộng, {đảo, xuyên, chưa rõ}] — mọi pha
+        public static readonly int[,] EpisodeAll = { { 50, 28, 19 }, { 54, 25, 16 }, { 55, 30, 11 } };
 
-        /// <summary>Bin khoảng cách (u): ≤1→0, (1,2]→1, (2,3]→2, (3,4]→3, (4,6]→4, (6,8]→5, (8,12]→6, &gt;12 hoặc âm → −1.</summary>
-        public static int Bin(double d)
+        /// <summary>% đảo / xuyên / chưa rõ cho (pha, bin rộng); ô thiếu mẫu ⇒ ô "mọi pha" cùng bin; vẫn thiếu ⇒ false.</summary>
+        public static bool Lookup(int phase, int wbin, out int dao, out int xuyen, out int chuaRo)
         {
-            if (double.IsNaN(d) || d < 0 || d > 12) return -1;
-            if (d <= 1) return 0;
-            if (d <= 2) return 1;
-            if (d <= 3) return 2;
-            if (d <= 4) return 3;
-            if (d <= 6) return 4;
-            if (d <= 8) return 5;
-            return 6;
+            dao = xuyen = chuaRo = -1;
+            if (wbin < 0 || wbin > 2) return false;
+            if (phase >= 0 && phase <= 2 && Episode[phase, wbin, 0] >= 0)
+            { dao = Episode[phase, wbin, 0]; xuyen = Episode[phase, wbin, 1]; chuaRo = Episode[phase, wbin, 2]; return true; }
+            if (EpisodeAll[wbin, 0] >= 0)
+            { dao = EpisodeAll[wbin, 0]; xuyen = EpisodeAll[wbin, 1]; chuaRo = EpisodeAll[wbin, 2]; return true; }
+            return false;
+        }
+    }
+
+    // ---------------------------------------------------------------- lần chạm (máy trạng thái PLAN-LAN-CHAM mục 2.6, port lan_cham.episodes)
+    /// <summary>Vai của một lần chạm = phía giá TỚI (chốt ở nến bắt đầu). KHÔNG dùng VZone.Side hay side của ứng viên (hai quy ước đó ngược nhau).</summary>
+    public enum Vai { KhangCu = 0, HoTro = 1, KhongRo = 2 }
+    public enum KetCuc { Dao = 0, Xuyen = 1, ChuaRo = 2, KhongRoPhia = 3 }
+
+    public sealed class EpState { public Vai Vai; public int BatDau, PhiaThoat, DemThoat; }
+
+    /// <summary>Lịch sử riêng của một mã vùng (chỉ sống khi vùng còn hiển thị).</summary>
+    public sealed class ZoneHist
+    {
+        public int N, Dao, Xuyen, ChuaRo, KhongRo;
+        public readonly int[] NTheoVai = new int[3], DaoTheoVai = new int[3], XuyenTheoVai = new int[3];
+    }
+
+    public readonly struct EpEvent
+    {
+        public readonly int Id, BatDau, Chot; public readonly Vai Vai; public readonly KetCuc Ket;
+        public EpEvent(int id, int batDau, int chot, Vai vai, KetCuc ket) { Id = id; BatDau = batDau; Chot = chot; Vai = vai; Ket = ket; }
+    }
+
+    /// <summary>Máy trạng thái "một lần chạm". Gọi Step đúng một lần mỗi nến đóng, SAU khi đã chọn bộ vùng hiển thị của nến đó.
+    /// cham = max(C₋,H) ≥ lo−τ và min(C₋,L) ≤ hi+τ; neo = cham hoặc lo−E ≤ C ≤ hi+E; G nến liên tiếp không neo ⇒ chốt theo phía thoát.
+    /// Thứ tự trong Step: (1) mã vùng không còn hiển thị ⇒ "rời bộ" (chốt) rồi xoá; (2) nến đầu phiên ⇒ "hết phiên" cho mọi lần chạm đang mở;
+    /// (3) máy cho từng vùng đang hiển thị. Chốt khi bị cắt: đã thoát tạm ⇒ theo phía thoát, đang neo ⇒ chưa rõ; vai không rõ ⇒ luôn "không rõ phía".</summary>
+    public sealed class EpisodeTracker
+    {
+        public double Tau = Vcl.EpTau, Exit = Vcl.EpExit;
+        public int Gap = Vcl.EpGapBars;
+        public bool LogEnabled;
+        public readonly List<EpEvent> Log = new();
+        private readonly Dictionary<int, EpState> _ep = new();
+        private readonly Dictionary<int, ZoneHist> _hist = new();
+        private HashSet<int> _live = new();
+
+        public EpState State(int id) => _ep.TryGetValue(id, out var e) ? e : null;
+        public ZoneHist Hist(int id) => _hist.TryGetValue(id, out var h) ? h : null;
+
+        public void Step(int t, VBar bar, double cprev, bool newSess, IReadOnlyList<(int id, double lo, double hi)> zones)
+        {
+            var now = new HashSet<int>();
+            foreach (var z in zones) now.Add(z.id);
+            foreach (var id in _live)
+                if (!now.Contains(id))
+                {
+                    if (_ep.TryGetValue(id, out var e)) Close(id, e, t);
+                    _ep.Remove(id); _hist.Remove(id);
+                }
+            _live = now;
+            if (newSess)
+                foreach (var kv in new List<KeyValuePair<int, EpState>>(_ep)) { Close(kv.Key, kv.Value, t); _ep.Remove(kv.Key); }
+            foreach (var (id, lo, hi) in zones)
+            {
+                bool cham = Math.Max(cprev, bar.H) >= lo - Tau && Math.Min(cprev, bar.L) <= hi + Tau;
+                bool inl = bar.C >= lo - Exit && bar.C <= hi + Exit;
+                if (!_ep.TryGetValue(id, out var e))
+                {
+                    if (!cham) continue;
+                    e = new EpState { Vai = cprev < lo ? Vai.KhangCu : (cprev > hi ? Vai.HoTro : Vai.KhongRo), BatDau = t };
+                    _ep[id] = e;
+                }
+                if (cham || inl) { e.DemThoat = 0; e.PhiaThoat = 0; }
+                else
+                {
+                    e.PhiaThoat = bar.C > hi ? 1 : -1;
+                    e.DemThoat++;
+                    if (e.DemThoat >= Gap) { Close(id, e, t); _ep.Remove(id); }
+                }
+            }
+        }
+
+        public static KetCuc KetOf(EpState e)
+        {
+            if (e.Vai == Vai.KhongRo) return KetCuc.KhongRoPhia;
+            if (e.DemThoat == 0) return KetCuc.ChuaRo;
+            bool dao = (e.Vai == Vai.KhangCu && e.PhiaThoat == -1) || (e.Vai == Vai.HoTro && e.PhiaThoat == 1);
+            return dao ? KetCuc.Dao : KetCuc.Xuyen;
+        }
+
+        private void Close(int id, EpState e, int chot)
+        {
+            var k = KetOf(e);
+            if (!_hist.TryGetValue(id, out var h)) { h = new ZoneHist(); _hist[id] = h; }
+            h.N++; h.NTheoVai[(int)e.Vai]++;
+            if (k == KetCuc.Dao) { h.Dao++; h.DaoTheoVai[(int)e.Vai]++; }
+            else if (k == KetCuc.Xuyen) { h.Xuyen++; h.XuyenTheoVai[(int)e.Vai]++; }
+            else if (k == KetCuc.ChuaRo) h.ChuaRo++;
+            else h.KhongRo++;
+            if (LogEnabled) Log.Add(new EpEvent(id, e.BatDau, chot, e.Vai, k));
         }
     }
 
@@ -375,6 +465,7 @@ namespace VungCanhLenhNs
         public int NRecalc;
         public List<VZone> Display = new();           // bộ vùng đang hiển thị (đã sắp theo thứ tự chọn)
         public readonly List<VBar> Bars = new();
+        public readonly EpisodeTracker Episodes = new();   // máy "lần chạm" (PLAN-LAN-CHAM 2.6)
 
         // ---- ứng viên (mảng song song, chỉ số = thứ tự nạp, giống Python) ----
         private readonly List<double> _price = new(), _w = new();
@@ -550,7 +641,13 @@ namespace VungCanhLenhNs
             // ---- bỏ ứng viên hết tuổi ----
             for (int k = 0; k < _alive.Count; k++) if (_alive[k] && _death[k] <= i) _alive[k] = false;
 
-            if (double.IsNaN(u) || u <= 0) { _prev = new List<Prev>(); Display = new List<VZone>(); return; }
+            double cprev = newSess ? bar.O : Bars[i - 1].C;
+            if (double.IsNaN(u) || u <= 0)
+            {
+                _prev = new List<Prev>(); Display = new List<VZone>();
+                Episodes.Step(i, bar, cprev, newSess, Array.Empty<(int, double, double)>());
+                return;
+            }
 
             // ---- gộp lần 1, đếm chạm, chuyển vai ----
             ActiveList();
@@ -631,6 +728,19 @@ namespace VungCanhLenhNs
             }
             _prev = np;
             Display = disp;
+
+            // ---- lần chạm: chạy SAU khi chốt bộ của nến này, dùng biên hiện tại ----
+            var zl = new List<(int, double, double)>(disp.Count);
+            foreach (var z in disp) zl.Add((z.Id, z.Lo, z.Hi));
+            Episodes.Step(i, bar, cprev, newSess, zl);
+            foreach (var z in disp)
+            {
+                var e = Episodes.State(z.Id); var h = Episodes.Hist(z.Id);
+                z.EpOpen = e != null; z.EpVai = e != null ? (int)e.Vai : -1; z.DemThoat = e?.DemThoat ?? 0;
+                if (h != null) { z.N = h.N; z.Dao = h.Dao; z.Xuyen = h.Xuyen; z.ChuaRo = h.ChuaRo; z.KhongRo = h.KhongRo; }
+                z.EpK = z.EpOpen ? z.N + 1 : 0;
+                z.WBin = Vcl.WidthBin(z.Hi - z.Lo);
+            }
         }
 
         /// <summary>Cho test: số ứng viên còn sống của một loại; có ứng viên sống loại kind ở đúng giá p không.</summary>

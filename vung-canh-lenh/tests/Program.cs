@@ -36,17 +36,122 @@ static class Tests
 
     static void TestBuildZones()
     {
-        Console.WriteLine("[1] Gộp / kẹp / tách khe / cắt chồng");
+        Console.WriteLine("[1] Gộp / kẹp [2, 5] giá / tách khe / chồng lấn");
         Vcl.BuildZones(new[] { 100.0, 100.8, 101.6 }, 3, 1.0, 1.0, out var lab, out var lo, out var hi);
         Check(lo.Length == 1 && Near(lo[0], 99.5) && Near(hi[0], 102.1), "3 mức cách 0,8u, link 1u ⇒ 1 vùng [99,5; 102,1]", $"{lo.Length} {lo[0]} {hi[0]}");
-        Vcl.BuildZones(new[] { 100.0, 100.8, 101.6 }, 3, 1.0, 0.7, out lab, out lo, out hi);
-        Check(lo.Length == 3 && hi[0] <= lo[1] + 1e-12 && hi[1] <= lo[2] + 1e-12, "link 0,7u ⇒ 3 vùng, chồng lấn cắt ở giữa");
         Vcl.BuildZones(new[] { 50.0 }, 1, 1.0, 1.0, out lab, out lo, out hi);
-        Check(Near(hi[0] - lo[0], 1.0), "1 mức ⇒ rộng đúng 1u");
+        Check(Near(hi[0] - lo[0], 2.0), "1 mức, u = 1 ⇒ nới tới đúng 2 giá");
+        Vcl.BuildZones(new[] { 50.0 }, 1, 3.1, 1.0, out lab, out lo, out hi);
+        Check(Near(hi[0] - lo[0], 3.1), "1 mức, u = 3,1 ⇒ rộng 3,1 (đệm 0,5u mỗi phía, trong [2, 5])");
+        Vcl.BuildZones(new[] { 100.0 }, 1, 6.0, 1.0, out lab, out lo, out hi);
+        Check(Near(lo[0], 97.5) && Near(hi[0], 102.5), "u = 6 (> 5) ⇒ kẹp trần đều về 5 giá quanh mức");
+        Vcl.BuildZones(new[] { 100.0, 100.0, 100.0 }, 3, 6.0, 1.0, out lab, out lo, out hi);
+        Check(lo.Length == 1 && Near(hi[0] - lo[0], 5.0) && lab.All(x => x == 0), "mức TRÙNG giá, u = 6 ⇒ không tách, 1 vùng 5 giá");
+        Vcl.BuildZones(new[] { 100.0, 101.2 }, 2, 1.0, 1.0, out lab, out lo, out hi);
+        Check(lo.Length == 1 && Near(lo[0], 99.0) && Near(hi[0], 102.2) && lab[0] == 0 && lab[1] == 0, "2 vùng 2 giá chồng nhau, hợp 3,2 < 4 ⇒ GỘP");
         var p = new List<double>(); for (double x = 0; x < 5; x += 0.5) p.Add(x); for (double x = 5.9; x < 10.01; x += 0.5) p.Add(x);
         Vcl.BuildZones(p.ToArray(), p.Count, 1.0, 1.0, out lab, out lo, out hi);
-        Check(lo.Length >= 3 && Enumerable.Range(0, lo.Length).All(z => hi[z] - lo[z] <= 4.0 + 1e-9), "chuỗi dày 10u ⇒ tách tại khe lớn nhất, mọi vùng ≤ 4u");
-        Check(Enumerable.Range(0, p.Count).All(k => lo[lab[k]] - 1e-9 <= p[k] && p[k] <= hi[lab[k]] + 1e-9), "mọi mức nằm trong vùng của nó");
+        Check(lo.Length >= 2 && Enumerable.Range(0, lo.Length).All(z => hi[z] - lo[z] <= 5.0 + 1e-9 && hi[z] - lo[z] >= 2.0 - 1e-9), "chuỗi dày 10 giá ⇒ tách, mọi vùng trong [2, 5]");
+        var rnd = new Random(1); bool ok = true; string why = "";
+        foreach (var u in new[] { 1.0, 3.1, 0.6, 4.4 })
+            for (int rep = 0; rep < 200; rep++)
+            {
+                int n = rnd.Next(1, 40);
+                var pr = Enumerable.Range(0, n).Select(_ => Math.Round(4400 + (rnd.NextDouble() - 0.5) * 60, 1)).ToArray();
+                Vcl.BuildZones(pr, n, u, 1.0, out lab, out lo, out hi);
+                for (int z = 0; z < lo.Length; z++)
+                {
+                    double w = hi[z] - lo[z];
+                    if (w < 2 - 1e-9 || w > 5 + 1e-9) { ok = false; why = $"u={u} w={w}"; }
+                    if (z > 0 && hi[z - 1] > lo[z] + 1e-9) { ok = false; why = "chồng lấn"; }
+                }
+            }
+        Check(ok, "ngẫu nhiên 800 bộ mức, u = 1 / 3,1 / 0,6 / 4,4 ⇒ mọi vùng trong [2, 5] giá, không chồng", why);
+    }
+
+    // ---- lần chạm: chạy EpisodeTracker trên chuỗi nến (O,H,L,C) và một vùng [100, 102] (lân cận [98, 104])
+    static (EpisodeTracker tr, List<(bool open, int dem, int n)> trace) RunEp(List<double[]> bars, int[] sessStarts = null, int zoneEnd = int.MaxValue,
+                                                                               double lo = 100, double hi = 102, int gap = Vcl.EpGapBars)
+    {
+        var tr = new EpisodeTracker { LogEnabled = true, Gap = gap };
+        var trace = new List<(bool, int, int)>();
+        var ss = new HashSet<int>(sessStarts ?? Array.Empty<int>());
+        for (int t = 0; t < bars.Count; t++)
+        {
+            var b = new VBar { O = bars[t][0], H = bars[t][1], L = bars[t][2], C = bars[t][3] };
+            bool ns = t == 0 || ss.Contains(t);
+            double cp = ns ? b.O : bars[t - 1][3];
+            var zs = t <= zoneEnd ? new List<(int, double, double)> { (7, lo, hi) } : new List<(int, double, double)>();
+            tr.Step(t, b, cp, ns, zs);
+            var e = tr.State(7); var h = tr.Hist(7);
+            trace.Add((e != null, e?.DemThoat ?? 0, h?.N ?? 0));
+        }
+        return (tr, trace);
+    }
+    static double[] Fl(double c) => new[] { c, c + 0.3, c - 0.3, c };
+    static double[] B(double o, double h, double l, double c) => new[] { o, h, l, c };
+    static List<double[]> Seq(params object[] xs)
+    {
+        var l = new List<double[]>();
+        foreach (var x in xs) { if (x is double[] a) l.Add(a); else if (x is List<double[]> m) l.AddRange(m); }
+        return l;
+    }
+    static List<double[]> Rep(double[] b, int k) => Enumerable.Repeat(b, k).ToList();
+
+    static void TestEpisodes()
+    {
+        Console.WriteLine("[7] Lần chạm: máy trạng thái từng ca (khớp test_lan_cham.py)");
+        var (t1, tr1) = RunEp(Seq(Fl(96), Fl(97), B(97, 100.3, 96.8, 99.5), Rep(Fl(100.5), 7), B(100.5, 101, 97, 97.5), Rep(Fl(97), 6)));
+        var e1 = t1.Log;
+        Check(e1.Count == 1 && e1[0].Vai == Vai.KhangCu && e1[0].Ket == KetCuc.Dao && e1[0].BatDau == 2 && e1[0].Chot == 15,
+              "neo 8 nến rồi rơi xuống ⇒ 1 lần, kháng cự, ĐẢO, chốt nến 15 (5 nến yên)", $"{e1.Count}");
+        Check(new[] { 10, 11, 12, 13, 14 }.Select(k => tr1[k].dem).SequenceEqual(new[] { 0, 1, 2, 3, 4 }) && tr1[14].open && !tr1[15].open && tr1[15].n == 1,
+              "đếm thoát 0,1,2,3,4 rồi chốt ở nến thứ 5 (nến đi từ trong vùng ra vẫn là 'chạm' nhờ cầu C₋)");
+        var (t2, _) = RunEp(Seq(Fl(96), B(96, 100.2, 95.8, 96.5), Rep(B(96.5, 97, 96, 96.2), 5)));
+        Check(t2.Log.Count == 1 && t2.Log[0].Ket == KetCuc.Dao && t2.Log[0].Chot == 6, "râu chạm rồi đóng xa 2 giá ⇒ 1 lần ĐẢO");
+        var (t3, _) = RunEp(Seq(Fl(96), B(96, 100.5, 96, 100.5), Rep(Fl(101), 3), Rep(Fl(105), 3), Rep(Fl(101), 2), B(101, 101.5, 97, 97.4), Rep(Fl(97), 6)));
+        Check(t3.Log.Count == 1 && t3.Log[0].Ket == KetCuc.Dao, "phá giả (đóng trên 104 ba nến rồi quay về, rơi xuống) ⇒ 1 lần ĐẢO");
+        var (t4, tr4) = RunEp(Seq(Fl(96), B(96, 100.5, 96, 100.5), Fl(101), B(101, 101, 97, 97.5), Fl(97), Fl(97), B(97, 100.1, 96.9, 97.2), Rep(Fl(97), 6)));
+        Check(t4.Log.Count == 1 && tr4[5].dem == 2 && tr4[6].dem == 0, "thoát 2 nến rồi râu chạm lại nến thứ 3 ⇒ gộp vào lần cũ");
+        var (t5, _) = RunEp(Seq(Fl(96), B(96, 100.2, 95.8, 96.5), Rep(Fl(96.2), 4)));
+        Check(t5.Log.Count == 0 && t5.State(7) != null, "mới 4 nến yên ⇒ chưa chốt (đang chạm)");
+        var (t5b, _) = RunEp(Seq(Fl(96), B(96, 100.2, 95.8, 96.5), Rep(Fl(96.2), 9)), gap: 10);
+        Check(t5b.Log.Count == 0, "G = 10 ⇒ 9 nến yên chưa chốt");
+        var (t6, _) = RunEp(Seq(Fl(96), B(96, 100.5, 96, 100.5), Fl(101), Fl(101), Fl(101.2)), new[] { 4 });
+        Check(t6.Log.Count == 1 && t6.Log[0].Ket == KetCuc.ChuaRo && t6.Log[0].Chot == 4, "hết phiên khi đang neo ⇒ CHƯA RÕ");
+        var (t6b, _) = RunEp(Seq(Fl(96), B(96, 100.5, 96, 100.5), Fl(101), B(101, 105, 101, 105), Fl(105.5), Fl(105.5), Fl(105.0)), new[] { 6 });
+        Check(t6b.Log.Count == 1 && t6b.Log[0].Ket == KetCuc.Xuyen, "hết phiên khi đã thoát 2 nến lên trên ⇒ chốt theo phía thoát = XUYÊN");
+        var (t6c, _) = RunEp(Seq(Fl(96), Fl(96), Fl(96), B(101, 101.5, 100.5, 101)), new[] { 3 });
+        Check(t6c.State(7) != null && t6c.State(7).Vai == Vai.KhongRo, "nến đầu phiên: C₋ = O của chính nó (101 trong vùng ⇒ không rõ phía)");
+        var bars7 = Seq(Fl(96), B(96, 100.5, 96, 100.5), Fl(101), B(101, 101, 97, 97.4), Fl(97), Fl(97), Fl(97), Fl(97));
+        var (t7, _) = RunEp(bars7, zoneEnd: 5);
+        Check(t7.Log.Count == 1 && t7.Log[0].Ket == KetCuc.Dao && t7.Log[0].Chot == 6 && t7.Hist(7) == null, "vùng rời bộ khi đã thoát ⇒ chốt theo phía; lịch sử mã đó bị xoá");
+        var (t7b, _) = RunEp(bars7, zoneEnd: 2);
+        Check(t7b.Log.Count == 1 && t7b.Log[0].Ket == KetCuc.ChuaRo && t7b.Log[0].Chot == 3, "vùng rời bộ khi đang neo ⇒ CHƯA RÕ");
+        var (t8, _) = RunEp(Seq(Fl(101), Fl(101.2), Fl(101.1), Rep(Fl(110), 6)));
+        Check(t8.Log.Count == 1 && t8.Log[0].Vai == Vai.KhongRo && t8.Log[0].Ket == KetCuc.KhongRoPhia, "vùng hiện ra trùm giá ⇒ KHÔNG RÕ PHÍA");
+        var (t8b, _) = RunEp(Seq(Fl(101), Fl(101), Fl(101), Fl(90)), new[] { 3 });
+        Check(t8b.Log.Count == 1 && t8b.Log[0].Ket == KetCuc.KhongRoPhia, "vai không rõ + hết phiên khi neo ⇒ vẫn KHÔNG RÕ PHÍA");
+        var (t9, _) = RunEp(Seq(Fl(106), B(106, 106, 101.5, 101.5), Fl(101), B(101, 101, 97, 97.4), Rep(Fl(97), 6), B(97, 100.4, 97, 99.8), Rep(Fl(99.5), 2), Rep(Fl(95), 6)));
+        Check(t9.Log.Count == 2 && t9.Log[0].Vai == Vai.HoTro && t9.Log[0].Ket == KetCuc.Xuyen && t9.Log[1].Vai == Vai.KhangCu && t9.Log[1].Ket == KetCuc.Dao
+              && t9.Hist(7).N == 2 && t9.Hist(7).Dao == 1 && t9.Hist(7).Xuyen == 1,
+              "hỗ trợ bị XUYÊN ⇒ lần sau tới từ dưới thành kháng cự (đổi vai), lịch sử 2 lần (đảo 1 · xuyên 1)");
+        var (t10, _) = RunEp(Seq(Fl(97), B(97, 106.5, 96.9, 106), Rep(Fl(107), 5)));
+        Check(t10.Log.Count == 1 && t10.Log[0].Vai == Vai.KhangCu && t10.Log[0].Ket == KetCuc.Xuyen && t10.Log[0].Chot == 6, "nến nhảy qua vùng (cầu C₋) ⇒ 1 lần XUYÊN");
+    }
+
+    static void TestTables()
+    {
+        Console.WriteLine("[8] Bảng lần chạm + bin rộng + pha");
+        Check(Vcl.WidthBin(2.0) == 0 && Vcl.WidthBin(2.999) == 0 && Vcl.WidthBin(3.0) == 1 && Vcl.WidthBin(4.0) == 2 && Vcl.WidthBin(5.0) == 2, "bin rộng 2–3 / 3–4 / 4–5");
+        Check(VclTables.Episode.GetLength(0) == 3 && VclTables.Episode.GetLength(1) == 3 && VclTables.Episode.GetLength(2) == 3 && VclTables.EpisodeAll.GetLength(0) == 3, "kích thước 3×3×3 và 3×3");
+        bool sum = true;
+        for (int ph = 0; ph < 3; ph++) for (int b = 0; b < 3; b++) if (VclTables.Episode[ph, b, 0] >= 0) sum &= VclTables.Episode[ph, b, 0] + VclTables.Episode[ph, b, 1] + VclTables.Episode[ph, b, 2] <= 101;
+        Check(sum, "đảo + xuyên + chưa rõ ≤ 100 (phần còn lại = không rõ phía)");
+        Check(VclTables.Lookup(0, 2, out int d0, out _, out _) && d0 == VclTables.EpisodeAll[2, 0], "ô thiếu mẫu (Á, 4–5) ⇒ dùng ô mọi pha");
+        Check(VclTables.Lookup(2, 0, out int d1, out _, out _) && d1 == VclTables.Episode[2, 0, 0], "ô đủ mẫu dùng số của chính ô");
+        Check(Vcl.PhaseOf(Vcl.SmOf(new DateTime(2026, 9, 8, 13, 35, 0, DateTimeKind.Utc), 7)) == 2, "20:35 VN (mùa hè Mỹ) ⇒ pha Mỹ");
+        Check(Vcl.PhaseOf(Vcl.SmOf(new DateTime(2026, 9, 8, 3, 0, 0, DateTimeKind.Utc), 7)) == 0, "10:00 VN ⇒ pha Á");
     }
 
     static void TestBreak()
@@ -129,22 +234,9 @@ static class Tests
         Check(s6.Any(x => x.slot == 'F' && lo6[x.z] == 115.0), "vùng chỉ có D-10$ không chiếm khe xa khi có vùng khác");
     }
 
-    static void TestTables()
-    {
-        Console.WriteLine("[7] Bảng tra: bin + kích thước");
-        Check(VclTables.Bin(0) == 0 && VclTables.Bin(1.0) == 0 && VclTables.Bin(1.0001) == 1 && VclTables.Bin(4.0) == 3 && VclTables.Bin(4.01) == 4, "bin ≤1, (1,2], …, (3,4], (4,6]");
-        Check(VclTables.Bin(12.0) == 6 && VclTables.Bin(12.01) == -1 && VclTables.Bin(-0.1) == -1 && VclTables.Bin(double.NaN) == -1, "bin 8–12 / > 12 / âm / NaN");
-        Check(VclTables.Reach.Length == 3 && VclTables.Reach[2].GetLength(0) == 7 && VclTables.Reach[2].GetLength(1) == 4 && VclTables.Sweep.GetLength(0) == 3, "kích thước bảng 3×7×4, quét 3×3");
-        bool mono = true;
-        for (int ph = 0; ph < 3; ph++) for (int b = 0; b < 7; b++) for (int w = 1; w < 4; w++) mono &= VclTables.Reach[ph][b, w] >= VclTables.Reach[ph][b, w - 1];
-        Check(mono, "P(chạm) không giảm theo cửa sổ 15→120");
-        Check(Vcl.PhaseOf(Vcl.SmOf(new DateTime(2026, 9, 8, 13, 35, 0, DateTimeKind.Utc), 7)) == 2, "20:35 VN (mùa hè Mỹ) ⇒ pha Mỹ");
-        Check(Vcl.PhaseOf(Vcl.SmOf(new DateTime(2026, 9, 8, 3, 0, 0, DateTimeKind.Utc), 7)) == 0, "10:00 VN ⇒ pha Á");
-    }
-
     static void TestNoLookahead()
     {
-        Console.WriteLine("[8] Không nhìn trước: chạy tới i rồi chạy lại từ đầu tới i ⇒ cùng bộ");
+        Console.WriteLine("[9] Không nhìn trước: chạy tới i rồi chạy lại từ đầu tới i ⇒ cùng bộ");
         var data = Synthetic(4200, 11);
         var full = new VclCore();
         var snap = new Dictionary<int, List<VZone>>();
@@ -159,14 +251,15 @@ static class Tests
             var part = new VclCore();
             for (int i = 0; i <= c; i++) part.Push(data[i].bar, data[i].lv);
             var a = snap[c]; var b = part.Display;
-            bool same = a.Count == b.Count && a.Zip(b, (x, y) => x.Id == y.Id && x.Lo == y.Lo && x.Hi == y.Hi && x.Slot == y.Slot && x.Side == y.Side).All(v => v);
-            Check(same && a.Count > 0, $"nến {c}: {a.Count} vùng giống hệt");
+            bool same = a.Count == b.Count && a.Zip(b, (x, y) => x.Id == y.Id && x.Lo == y.Lo && x.Hi == y.Hi && x.Slot == y.Slot && x.Side == y.Side
+                && x.EpOpen == y.EpOpen && x.DemThoat == y.DemThoat && x.N == y.N && x.Dao == y.Dao && x.Xuyen == y.Xuyen && x.ChuaRo == y.ChuaRo).All(v => v);
+            Check(same && a.Count > 0, $"nến {c}: {a.Count} vùng giống hệt (cả trạng thái lần chạm + lịch sử riêng)");
         }
     }
 
     static void TestValueArea()
     {
-        Console.WriteLine("[9] Value Area 70% (copy kernel)");
+        Console.WriteLine("[10] Value Area 70% (copy kernel)");
         var pr = new[] { 1.0, 1.2, 1.4, 1.6, 1.8 }; var w = new[] { 1.0, 2, 10, 2, 1 };
         Vcl.ValueArea(pr, w, out double poc, out double vah, out double val);
         Check(Near(poc, 1.4) && Near(vah, 1.8) && Near(val, 1.4), "POC 1,4; mở 2 hàng lên trên trước khi hòa", $"{poc} {vah} {val}");
@@ -179,7 +272,7 @@ static class Tests
 
     static void TestFeederVolumeAnalysis()
     {
-        Console.WriteLine("[10] Volume Analysis tới muộn ⇒ dựng lại từ đầu có footprint");
+        Console.WriteLine("[11] Volume Analysis tới muộn ⇒ dựng lại từ đầu có footprint");
         var data = Synthetic(3200, 5);                         // > 2 phiên (phiên nghỉ 21:00–22:00 UTC)
         int n1 = 2900;
         var f = new VclFeeder();
@@ -205,7 +298,7 @@ static class Tests
 
     static void TestFeederTimeRegression()
     {
-        Console.WriteLine("[11] Dữ liệu nạp lại khác ⇒ reset");
+        Console.WriteLine("[12] Dữ liệu nạp lại khác ⇒ reset");
         var a = Synthetic(2000, 3);
         var f = new VclFeeder();
         f.Sync(1500, i => a[i].bar, i => a[i].lv, true, 7);
@@ -230,7 +323,7 @@ static class Tests
 
     static int Main()
     {
-        TestBuildZones(); TestBreak(); TestDNeverDies(); TestCorridor(); TestKeepNearAndAge(); TestTables(); TestNoLookahead(); TestValueArea(); TestFeederVolumeAnalysis(); TestFeederTimeRegression();
+        TestBuildZones(); TestBreak(); TestDNeverDies(); TestCorridor(); TestKeepNearAndAge(); TestEpisodes(); TestTables(); TestNoLookahead(); TestValueArea(); TestFeederVolumeAnalysis(); TestFeederTimeRegression();
         Console.WriteLine($"\n{_ok} OK, {_fail} FAIL");
         return _fail == 0 ? 0 : 1;
     }

@@ -7,3 +7,4 @@ vcl5_records.csv.gz
 cache_lc/
 lan_cham_cs_replay.csv
 vcl5_cs_replay.csv
+vcl5_cs_replay_*.csv

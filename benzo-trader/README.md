@@ -108,6 +108,14 @@ Giờ neo theo giờ Mỹ như `kernel.py` (mùa đông Mỹ thì mọi mốc 19
 Cả 4 **chưa có lợi thế đo được** (QĐ-5). Công tắc vẫn BẬT mặc định để thu thống kê forward test; tắt setup nào là việc của người dùng khi nhìn số live.
 Chi tiết: `research/report/RESULTS-{A,B,C,D}.md`. Tần suất thấp (A ~0,3 · B ~0,2 · C ~2 · D ~0,5 lệnh/ngày) — xa mục tiêu 10–20 lệnh/ngày.
 
+**Vòng A-v4 (2026-10-22, `plans/BENZO-A-V4-plan.md`, chỉ Python — CHƯA port):** đổi cạnh sang vùng trader chuyên nghiệp canh
+(VWAP tuần/ngày, HVN tuần dải ≤ 2 giá, HVN ngày, VAH/VAL của phiên trước), cú phá phải có đà (cực trị cách cạnh ≥ 2 giá, hết hạn 30 nến tính
+từ cực trị cuối, chỉ hủy khi M5 đóng lại trong sâu > 1 giá) và bỏ cấm 18:00–19:20. Kết quả trên 61 phiên: **218 lệnh (3,57/ngày), WR 19,7%,
+R TB −0,30** [−0,50; −0,07]; TRAIN −0,11 (119) / **TEST −0,52** (99). Cả 3 đối chứng (vào ngẫu nhiên cùng trạng thái, vào ngẫu nhiên ở vùng,
+dời bản đồ vùng 3–15 giá) đều ≈; vùng dời vẫn cho 3,2 lệnh/ngày, R −0,13. Không đạt tiêu chí port T1 (R TEST thấp hơn −0,08 của bản gốc)
+⇒ **indicator vẫn chạy A V3**, A-v4 **chưa có lợi thế đo được**. Lưu ý đối chiếu chart: "VAH/VAL ngày" của A-v4 là VA của PHIÊN TRƯỚC;
+đường VAH/VAL trên SessionZones là của phiên Âu đã đóng gần nhất (đó là "cạnh VA Âu" của bản A-v4+). Chi tiết: `research/report/RESULTS-A-V4.md`.
+
 ## Cách đọc bảng trên chart
 5 dòng: dòng tổng `BENZO · Tổng N lệnh · thắng · thua · WR% · ΣR` rồi 4 dòng A/B/C/D `n · thắng/thua · WR% · ΣR`; setup đang tắt có đuôi `(tắt)`.
 R đã trừ chi phí 0,2 giá/lệnh (TP = (lời − 0,2)/rủi ro, SL ≈ −1,1R). **Hòa vốn**: WR ≈ 27% ở 3R, ≈ 36% ở 2R. Mũi tên = nến vào; đường SL/TP vẽ theo tín hiệu.

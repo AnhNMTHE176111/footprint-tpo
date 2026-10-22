@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import vcl
 import vcl2
+import vcl3
 
 _DATA = {}
 
@@ -199,9 +200,57 @@ def test_v2_chon_theo_o():
     assert rc5
 
 
+# ------------------------------- VÒNG 3 -------------------------------
+def test_v3_khong_nhin_truoc():
+    bars, lv = _data()
+    fb, fl = _cut(bars, lv, 8999)
+    rec_full = vcl3.run_engine(vcl.prepare(fb, fl))['rec']
+    cols = ['bar', 'lo', 'hi', 'score', 'mask', 'conf', 'ncand', 'eid', 'side', 'slot', 'd10']
+    for c in (2500, 4321, 5519, 5521, 7777):
+        cb, cl = _cut(bars, lv, c)
+        rec_cut = vcl3.run_engine(vcl.prepare(cb, cl))['rec']
+        a = rec_full[rec_full['bar'] <= c][cols].reset_index(drop=True)
+        assert (a['bar'] == c).any(), c
+        pd.testing.assert_frame_equal(a, rec_cut[cols].reset_index(drop=True), check_exact=False, rtol=1e-12, atol=1e-9,
+                                      obj=f'v3 tại nến {c}')
+
+
+def test_v3_hanh_lang():
+    lo = np.array([90.0, 94.0, 99.0, 103.0, 106.0, 112.0])
+    hi = lo + 2
+    sc = np.ones(6)
+    d10 = np.zeros(6, bool)
+    nob = np.zeros(6, bool)
+    # chọn mới tại 100: vùng chứa giá 99-101 vẫn hiển thị (K); gần trên 103, 106; gần dưới 94, 90; xa trên 112 (cách 106-108 đúng 4u)
+    out, anc, rc = vcl3.corridor_update(lo, hi, sc, d10, nob, 100.0, 1.0, 30.0, [], 0.0)
+    assert rc
+    got = {(lo[z], s) for z, s, _, _ in out}
+    assert (99.0, 'K') in got and (103.0, 'N') in got and (106.0, 'N') in got and (94.0, 'N') in got and (90.0, 'N') in got
+    assert (112.0, 'F') in got and len(out) == 6
+    prev = [(lo[z], hi[z], 50 + k, s, sd) for k, (z, s, _, sd) in enumerate(out)]
+    # hành lang = [cạnh dưới vùng gần-1 dưới (94), cạnh trên vùng gần-1 trên (105)]: giá dao động bên trong ⇒ bộ KHÔNG đổi
+    for c in (97.0, 101.9, 104.9, 94.1, 103.5, 95.0):
+        o2, a2, r2 = vcl3.corridor_update(lo, hi, sc, d10, nob, c, 1.0, 30.0, prev, anc)
+        assert not r2 and a2 == anc and [e for _, _, e, _ in o2] == [p[2] for p in prev], c
+    # ra ngoài hành lang (đóng 105,2 > 105) ⇒ tính lại; vùng 103 còn khớp ⇒ giữ mã cũ
+    o3, a3, r3 = vcl3.corridor_update(lo, hi, sc, d10, nob, 105.2, 1.0, 30.0, prev, anc)
+    assert r3 and a3 == 105.2
+    eid103 = [p[2] for p in prev if p[0] == 103.0][0]
+    assert any(lo[z] == 103.0 and e == eid103 for z, _, e, _ in o3)
+    # vùng hiển thị có ứng viên vừa bị xuyên ⇒ tính lại dù giá trong hành lang
+    brk = nob.copy(); brk[2] = True
+    _, _, r4 = vcl3.corridor_update(lo, hi, sc, d10, brk, 100.0, 1.0, 30.0, prev, anc)
+    assert r4
+    # vùng chỉ D-10$ không chiếm khe xa khi có vùng khác
+    lo5 = np.array([90.0, 94.0, 103.0, 106.0, 112.0, 115.0]); d5 = np.array([False, False, False, False, True, False])
+    sc5 = np.array([1, 1, 1, 1, 9, 1.0])
+    o5, _, _ = vcl3.corridor_update(lo5, lo5 + 2, sc5, d5, nob, 100.0, 1.0, 30.0, [], 0.0)
+    assert [lo5[z] for z, s, _, sd in o5 if s == 'F' and sd == 1] == [115.0]
+
+
 if __name__ == '__main__':
     for f in (test_gop_va_kep_do_rong, test_chuyen_vai, test_chon_vung_chong_nhap_nhay, test_ung_vien_khong_nhin_truoc,
               test_khong_nhin_truoc, test_v2_dinh_bang_nhau_F, test_v2_chon_theo_o, test_v2_ung_vien_khong_nhin_truoc,
-              test_v2_khong_nhin_truoc):
+              test_v2_khong_nhin_truoc, test_v3_hanh_lang, test_v3_khong_nhin_truoc):
         f()
         print('OK', f.__name__)

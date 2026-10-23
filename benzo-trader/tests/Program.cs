@@ -625,10 +625,137 @@ static class Tests
         Check(e.Signals.Count == 0, "chỉ bật v2: khe VCL bị bỏ qua");
     }
 
+    // ------------------------------------------------------------ [14] các lớp vùng mới của setup C
+    static ShapeInfo ShapeOf(Func<int, double> cnt, int n, double closeRow)
+    {
+        var rows = new long[n]; var c = new double[n];
+        for (int k = 0; k < n; k++) { rows[k] = 20000 + k; c[k] = cnt(k); }
+        double L = rows[0] * TpoShape.Step, H = rows[n - 1] * TpoShape.Step;
+        return TpoShape.Classify(rows, c, L, H, (20000 + closeRow) * TpoShape.Step);
+    }
+
+    static List<VungCanhLenhNs.VZone> Zs(params (int id, double lo, double hi)[] z) =>
+        z.Select(x => new VungCanhLenhNs.VZone { Id = x.id, Lo = x.lo, Hi = x.hi }).ToList();
+
+    static BenzoZones SrZones(Func<int, IReadOnlyList<VungCanhLenhNs.VZone>> disp, int bars, double price = 105)
+    {
+        var z = new BenzoZones();
+        z.Layers.Configure(new CLayerOptions { Sr = true, TpToEdge = true }, true);
+        z.Layers.DisplayOverride = disp;
+        for (int i = 0; i < bars; i++)
+            z.Push(i, new BarData { Idx = i, Time = T0.AddMinutes(i), O = price, H = price + 0.2, L = price - 0.2, C = price, Vol = 10, Delta = 0 }, null);
+        return z;
+    }
+
+    static void TestLayers()
+    {
+        Console.WriteLine("[14] Lớp vùng mới của setup C: hình dạng TPO, hành lang S/R, tuỳ chọn, hồi quy 90d");
+        // --- hình dạng profile TPO (zones_c_v6.classify_shape)
+        var d = ShapeOf(k => 1 + Math.Min(k, 40 - k), 41, 20);
+        Check(d.Label == "D" && Math.Abs(d.Asym) <= 0.25 && d.CloseIn, "profile đối xứng, đóng trong VA ⇒ D", d.Label + " " + d.Asym);
+        var p = ShapeOf(k => k < 25 ? 1 : 10 - (k - 25) * 0.4, 41, 32);
+        Check(p.Label == "P" && p.Asym > 0.25, "đuôi mỏng ở dưới, phần dày nằm trên ⇒ P", p.Label + " " + p.Asym);
+        var b = ShapeOf(k => k > 15 ? 1 : 10 - (15 - k) * 0.4, 41, 8);
+        Check(b.Label == "b" && b.Asym < -0.25, "gương: phần dày nằm dưới ⇒ b", b.Label + " " + b.Asym);
+        var th = ShapeOf(k => k == 20 ? 30 : 1, 41, 20);
+        Check(th.Label == "KHÁC-thin", "một đỉnh nhọn (bulge < 0,20) ⇒ KHÁC-thin", th.Label + " " + th.Bulge);
+        var tw = ShapeOf(k => (k >= 5 && k <= 10) || (k >= 30 && k <= 35) ? 10 : 1, 41, 20);
+        Check(tw.Label == "KHÁC-B" && tw.TwoPeaks, "hai vòm có đáy ở giữa ⇒ KHÁC-B", tw.Label);
+        var cl = ShapeOf(k => 1 + Math.Min(k, 40 - k), 41, 2);
+        Check(cl.Label == "KHÁC-close" && !cl.CloseIn, "giá đóng ngoài VA ⇒ KHÁC-close", cl.Label);
+        var acc = new TpoAcc();
+        for (int m = 0; m < 90; m++) acc.Add(new BarData { Time = T0.AddMinutes(m), O = 100, H = 100.4 + (m / 30) * 0.2, L = 99.8 + (m / 30) * 0.2, C = 100, Vol = 1 });
+        var sh = acc.Build();
+        Check(sh != null && Near(sh.L, 99.8) && Near(sh.H, 100.8) && Near(sh.Close, 100), "TpoAcc: L/H/đóng của phiên, 3 bracket 30′");
+
+        // --- hành lang S/R (zones_c_v7.sr_corridors)
+        var z1 = SrZones(i => Zs((1, 100, 102), (2, 110, 112)), 2);
+        Check(Near(z1.Layers.Sr.CurLo, 102) && Near(z1.Layers.Sr.CurHi, 110), "S [100,102] · R [110,112], giá 105 ⇒ hành lang [102,110] (cạnh gần)", z1.Layers.Sr.CurLo + " " + z1.Layers.Sr.CurHi);
+        var z2 = SrZones(i => Zs((1, 100, 106), (2, 110, 112)), 4);
+        Check(double.IsNaN(z2.Layers.Sr.CurLo), "giá nằm trong một vùng ⇒ không sinh hành lang");
+        var z3 = SrZones(i => Zs((2, 110, 112)), 4);
+        Check(double.IsNaN(z3.Layers.Sr.CurLo), "thiếu vùng hỗ trợ bên dưới ⇒ không sinh");
+        var z4 = SrZones(i => Zs((1, 100, 102), (2, 107.5, 109)), 4);
+        Check(double.IsNaN(z4.Layers.Sr.CurLo), "rộng 5,5 < 6 ⇒ không sinh");
+        var z5 = SrZones(i => i < 5 ? Zs((1, 100, 102), (2, 110, 112)) : Zs((1, 100, 102), (3, 110, 112)), 9);
+        Check(double.IsNaN(z5.Layers.Sr.CurLo) || z5.Layers.Sr.Born >= 2, "mã vùng kháng cự mất ⇒ hành lang chết (rồi có thể sinh lại với mã mới)", z5.Layers.Sr.CurLo.ToString());
+        Check(z5.Layers.Sr.DiedGone == 1, "đúng 1 lần chết vì mất vùng", z5.Layers.Sr.DiedGone.ToString());
+
+        // --- không nhìn trước: cắt dữ liệu cho cùng band
+        var bars = new List<BarData>();
+        for (int i = 0; i < 80; i++) bars.Add(new BarData { Idx = i, Time = T0.AddMinutes(i), O = 105, H = 105.3 + (i % 3) * 0.1, L = 104.7, C = 105, Vol = 10, Delta = 0 });
+        Func<int, BenzoZones> run = k =>
+        {
+            var z = new BenzoZones();
+            z.Layers.Configure(new CLayerOptions { Sr = true, Choch = true, GateD = true, ThickPb = true, TpToEdge = true }, true);
+            z.Layers.DisplayOverride = _ => Zs((1, 100, 102), (2, 110, 112));
+            for (int i = 0; i < k; i++) z.Push(i, bars[i], null);
+            return z;
+        };
+        var full = run(80); var cut = run(50);
+        Check(Near(full.Layers.Sr.CurLo, 102) && cut.Layers.Choch.Id.Count == 50 && full.Layers.Choch.Id.Take(50).SequenceEqual(cut.Layers.Choch.Id), "cắt dữ liệu ở nến 50: khung CHoCH tới nến 49 y hệt bản đầy đủ");
+
+        // --- tuỳ chọn: C0 cũ (Legacy) không đổi; lớp mới tắt thì không tốn gì
+        var zl = new BenzoZones();
+        zl.Layers.Configure(CLayerOptions.Legacy, true);
+        Check(!zl.Layers.Active && zl.Layers.Choch == null && zl.Layers.Sr == null && zl.Layers.TrkL == null, "Legacy: không lớp nào chạy");
+        Check(CLayerOptions.Legacy.Key == "0000f" && new CLayerOptions { GateD = true, ThickPb = true, Choch = true, Sr = true, TpToEdge = true }.Key == "1111e", "khoá cấu hình (cache niêm phong) đổi theo lựa chọn");
+
+        // --- hồi quy trên file 90d: số tín hiệu của C0 / C4 / C6 (TP chính và TP 2R) khớp Python từng lệnh (research/parity_check.py --c-layers)
+        string root = null;
+        for (var dd = new DirectoryInfo(AppContext.BaseDirectory); dd != null; dd = dd.Parent)
+            if (Directory.Exists(Path.Combine(dd.FullName, "data-export", "data-footprint"))) { root = dd.FullName; break; }
+        string bs = root == null ? null : Path.Combine(root, "data-export", "data-footprint", "fp_GCZ26_XCEC_Time_20260723-20261021_90d");
+        if (bs == null || !File.Exists(bs + "_bars.csv") || !File.Exists(bs + ".csv")) { Console.WriteLine("  (không có file 90d — bỏ qua hồi quy)"); return; }
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var all = new List<BarData>(); var pos = new Dictionary<int, int>();
+        foreach (var line in File.ReadLines(bs + "_bars.csv").Skip(1))
+        {
+            var f = line.Split(',');
+            pos[int.Parse(f[0], inv)] = all.Count;
+            all.Add(new BarData { Idx = all.Count, Time = DateTime.ParseExact(f[1], "yyyy-MM-dd HH:mm:ss", inv), O = double.Parse(f[2], inv), H = double.Parse(f[3], inv), L = double.Parse(f[4], inv), C = double.Parse(f[5], inv), Vol = double.Parse(f[10], inv), Delta = double.Parse(f[11], inv) });
+        }
+        var lv = new List<LevelVol>[all.Count];
+        foreach (var line in File.ReadLines(bs + ".csv").Skip(1))
+        {
+            var f = line.Split(',');
+            if (!pos.TryGetValue(int.Parse(f[0], inv), out int pp)) continue;
+            (lv[pp] ??= new List<LevelVol>()).Add(new LevelVol(double.Parse(f[2], inv), double.Parse(f[3], inv), double.Parse(f[4], inv), double.Parse(f[5], inv)));
+        }
+        var cfgs = new (string name, CLayerOptions o, int n)[]
+        {
+            ("C0 cũ (2R cố định)", CLayerOptions.Legacy, 101),
+            ("C0 TP chính", new CLayerOptions { TpToEdge = true }, 91),
+            ("C4 TP chính (cổng D + P/b + CHoCH)", new CLayerOptions { GateD = true, ThickPb = true, Choch = true, TpToEdge = true }, 181),
+            ("C6 TP chính (C4 + S/R)", new CLayerOptions { GateD = true, ThickPb = true, Choch = true, Sr = true, TpToEdge = true }, 548),
+            ("C4 2R cố định", new CLayerOptions { GateD = true, ThickPb = true, Choch = true }, 202),
+            ("C6 2R cố định", new CLayerOptions { GateD = true, ThickPb = true, Choch = true, Sr = true }, 673),
+        };
+        foreach (var (name, o, n) in cfgs)
+        {
+            var e = new BenzoEngine("GCZ26", 0.1, null, new[] { new DetectorC(o) }) { GetLevels = i => (IReadOnlyList<LevelVol>)lv[i] ?? Array.Empty<LevelVol>() };
+            foreach (var bb in all) e.Bars.Add(bb);
+            e.Advance(all.Count - 1);
+            Check(e.Signals.Count == n, $"{name}: {n} tín hiệu (= Python từng lệnh, trừ 19:20-20:30)", e.Signals.Count.ToString());
+        }
+        {   // thống kê máy vùng so với Python (zones_c_v6.choch_va / zones_c_v7.sr_corridors trên cùng file)
+            var e = new BenzoEngine("GCZ26", 0.1, null, new[] { new DetectorC(new CLayerOptions { GateD = true, ThickPb = true, Choch = true, Sr = true, TpToEdge = true }) }) { GetLevels = i => (IReadOnlyList<LevelVol>)lv[i] ?? Array.Empty<LevelVol>() };
+            foreach (var bb in all) e.Bars.Add(bb);
+            e.Advance(all.Count - 1);
+            var Ly = e.Zones.Layers;
+            Check(Ly.Choch.Born == 240 && Ly.Choch.Id.Count(x => x >= 0) == 33686, "VA nhỏ CHoCH: 240 VA sinh, 33686 nến có VA (= Python)", Ly.Choch.Born + " " + Ly.Choch.Id.Count(x => x >= 0));
+            Check(Ly.Sr.Born == 1426 && Ly.Sr.DiedTrend == 981 && Ly.Sr.DiedGone == 401, "hành lang S/R: 1426 sinh, 981 chết vì TREND, 401 vì mất vùng (= Python khi không loại phiên mỏng; Python thật loại 4 phiên đầu file nên báo 1379/951/386)", $"{Ly.Sr.Born} {Ly.Sr.DiedTrend} {Ly.Sr.DiedGone}");
+        }
+        var eoff = new BenzoEngine("GCZ26", 0.1, null, new[] { new DetectorC(new CLayerOptions { GateD = true, ThickPb = true, Choch = true, Sr = true, TpToEdge = true }) }) { GetLevels = i => (IReadOnlyList<LevelVol>)lv[i] ?? Array.Empty<LevelVol>(), IsEnabled = _ => false };
+        foreach (var bb in all) eoff.Bars.Add(bb);
+        eoff.Advance(all.Count - 1);
+        Check(eoff.Signals.Count == 0 && !eoff.Zones.Layers.Active, "setup C tắt ⇒ các lớp không chạy (không tốn CPU), không có tín hiệu");
+    }
+
     static int Main()
     {
         TestSimulate(); TestStats(); TestResetMark(); TestCaption(); TestCache(); TestEngine();
-        TestKernel(); TestZonesAndC(); TestObserve(); TestVirtualOpen(); TestChartPick(); TestBZones(); TestRealData();
+        TestKernel(); TestZonesAndC(); TestObserve(); TestVirtualOpen(); TestChartPick(); TestBZones(); TestRealData(); TestLayers();
 #if DEBUG
         TestDemo();
 #endif

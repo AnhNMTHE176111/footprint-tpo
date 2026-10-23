@@ -184,6 +184,17 @@ namespace BenzoTraderNs
         public bool BZonesV2 { get; set; } = true;       // POC/VAH/VAL ngày, HVN ngày, POC tuần, HVN tuần (backtest 90 ngày: 25 lệnh, WR 32,0%)
         [InputParameter("B · thêm vùng S/R (VCL, PDH/PDL)", 35)]
         public bool BZonesSr { get; set; } = true;       // vùng Canh Lệnh + đỉnh/đáy phiên trước (backtest 90 ngày: 58 lệnh, WR 24,1% < hoà vốn ~27%)
+        // ---- setup C: các lớp vùng mới (backtest 90 ngày: C0 103 lệnh WR 12,6% R TB −0,43 → C4 191 lệnh −0,31 → C6 555 lệnh −0,09; CHƯA có lợi thế đo được)
+        [InputParameter("C · cổng hình D (Á/Âu: chỉ fade VA hôm qua khi profile TPO hôm qua hình D)", 36)]
+        public bool CGateD { get; set; } = true;
+        [InputParameter("C · vùng dày P/b (ngày hình P hoặc b: fade cạnh vùng dày TPO hôm qua)", 37)]
+        public bool CThickPb { get; set; } = true;
+        [InputParameter("C · VA nhỏ từ 3 lần đổi hành vi (CHoCH)", 38)]
+        public bool CChoch { get; set; } = true;
+        [InputParameter("C · hành lang hỗ trợ/kháng cự (vùng Canh Lệnh)", 39)]
+        public bool CSr { get; set; } = true;
+        [InputParameter("C · TP về cạnh đối diện / POC (≥ 2R); tắt = 2R cố định", 39)]
+        public bool CTpEdge { get; set; } = true;
         [InputParameter("Đặt lại thống kê (bật lên để đặt)", 40)]
         public bool ResetStatsNow { get; set; } = false;
         [InputParameter("Hiện lại toàn bộ thống kê (bật lên để xoá mốc đặt lại)", 41)]
@@ -217,6 +228,7 @@ namespace BenzoTraderNs
         private bool _lastTest, _lastReset, _lastClear;
         private string _teleStatus;
         private string _builtBKey;
+        private string _builtCKey;
 
         public BenzoTrader() : base()
         {
@@ -228,11 +240,16 @@ namespace BenzoTraderNs
         /// <summary>Danh sách detector THEO THỨ TỰ ƯU TIÊN A > B > D > C. Agent port setup cắm vào đây.</summary>
         private List<ISetupDetector> CreateDetectors()
         {
-            return new List<ISetupDetector> { new DetectorA(), new DetectorB(BZonesV2, BZonesSr), new DetectorD(), new DetectorC() };
+            return new List<ISetupDetector> { new DetectorA(), new DetectorB(BZonesV2, BZonesSr), new DetectorD(), new DetectorC(COptions()) };
         }
 
         /// <summary>Khoá cấu hình vùng của B: đổi công tắc ⇒ cache niêm phong cũ bị bỏ (tín hiệu B cũ sinh từ bộ vùng khác) và engine dựng lại.</summary>
         private string BModeKey => "b" + (BZonesV2 ? "1" : "0") + (BZonesSr ? "1" : "0");
+
+        private CLayerOptions COptions() => new CLayerOptions { GateD = CGateD, ThickPb = CThickPb, Choch = CChoch, Sr = CSr, TpToEdge = CTpEdge };
+
+        /// <summary>Khoá cấu hình các lớp của C: đổi lựa chọn (hoặc bật/tắt C) ⇒ cache niêm phong cũ bị bỏ và engine dựng lại (lớp vùng chỉ được bật trước nến đầu tiên).</summary>
+        private string CModeKey => EnableC ? "c" + COptions().Key : "c-off";
 
         /// <summary>Tin USD mức cao trong ±15 phút (expose cho detector; cần lịch tin đã tải — chỉ phủ tuần hiện tại).</summary>
         public bool IsNewsBlocked(DateTime utc) => NewsCalendar.IsBlocked(utc, TzOffset, BenzoCore.NewsBlockMinutes);
@@ -367,10 +384,10 @@ namespace BenzoTraderNs
                 ConfigTele();
                 NewsCalendar.Refresh(_dir, TzOffset, t => BenzoLog.Write(_logPath, t));   // tải nền, cache 1h
 
-                if (_engine == null || _engine.Bars.Count > n - 1 || _builtBKey != BModeKey)   // lần đầu, lịch sử bị cắt ngắn, hoặc đổi công tắc vùng B → dựng lại
+                if (_engine == null || _engine.Bars.Count > n - 1 || _builtBKey != BModeKey || _builtCKey != CModeKey)   // lần đầu, lịch sử bị cắt ngắn, hoặc đổi công tắc vùng B / lớp vùng C → dựng lại
                 {
-                    _builtBKey = BModeKey;
-                    _cache = new SignalCache(Path.Combine(_dir, $"cache_{BenzoCore.Sanitize(_symbol)}_{_tf}.jsonl"), BenzoCore.LogicVersion + "-" + BModeKey);
+                    _builtBKey = BModeKey; _builtCKey = CModeKey;
+                    _cache = new SignalCache(Path.Combine(_dir, $"cache_{BenzoCore.Sanitize(_symbol)}_{_tf}.jsonl"), BenzoCore.LogicVersion + "-" + BModeKey + "-" + CModeKey);
                     _cache.Load();
                     _resetUtc = BenzoCore.LoadResetMark(_resetPath);
                     _engine = new BenzoEngine(_symbol, tick, _cache, CreateDetectors())

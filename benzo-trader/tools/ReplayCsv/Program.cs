@@ -1,7 +1,8 @@
 // ReplayCsv — chạy detector C# (BenzoCore + BenzoZones + BenzoDetectors) trên file footprint export, KHÔNG cần Quantower.
-//   dotnet run -c Release --project benzo-trader/tools/ReplayCsv -- <base> [A|B|B2|B3|BSR|C|D|ALL|LEVELS] [out.csv]
+//   dotnet run -c Release --project benzo-trader/tools/ReplayCsv -- <base> [A|B|B2|B3|BSR|C|D|ALL|LEVELS|C:<cờ>,...] [out.csv]
 //   B = chỉ 2 VWAP (B cũ) · B2 = + vùng v2 (HVN/VA/POC) · B3 = + vùng S/R (VCL, PDH/PDL) · BSR = 2 VWAP + S/R (không v2)
 //   LEVELS = xuất các mức cố định + 7 khe VCL của từng nến (đối chiếu mảng với Python zones_b_v3)
+//   C:<cờ> = setup C với các lớp mới: g cổng D · t vùng dày P/b · h VA nhỏ CHoCH · s hành lang S/R · e TP về cạnh/POC (vd C:e = C0, C:gthe = C4, C:gthse = C6)
 //   Biến môi trường BENZO_NO_VOPEN=1: tắt luật "mở ảo" 19:20-20:30 (để so thô với Python).
 //   <base> = đường dẫn bỏ đuôi (đọc <base>_bars.csv và <base>.csv).
 // Mỗi setup chạy ĐỘC LẬP (1 lệnh mở/setup, giống K.simulate của Python); ALL = engine ưu tiên A > B > D > C.
@@ -71,7 +72,7 @@ static class Program
         foreach (var s in sets)
         {
             var list = new List<ISetupDetector>();
-            list.Add(Make(s));
+            if (s.StartsWith("C:")) list.Add(new DetectorC(COpt(s.Substring(2)))); else list.Add(Make(s));
             var eng = new BenzoEngine("GCZ26", 0.1, null, list) { GetLevels = i => (IReadOnlyList<LevelVol>)levels[i] ?? Array.Empty<LevelVol>(), VirtualOpenRule = !noVopen };
             foreach (var b in bars) eng.Bars.Add(b);
             var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -86,6 +87,10 @@ static class Program
         if (outPath != null) File.WriteAllText(outPath, sb.ToString(), new UTF8Encoding(false)); else Console.Write(sb.ToString());
         return 0;
     }
+
+    /// <summary>Chữ cái: g = cổng hình D · t = vùng dày P/b · h = VA nhỏ CHoCH · s = hành lang S/R · e = TP về cạnh đối diện/POC. Vd "C:gthe" = C4, "C:gthse" = C6.</summary>
+    static CLayerOptions COpt(string f0) => COpt2(f0.ToLowerInvariant());
+    static CLayerOptions COpt2(string f) => new CLayerOptions { GateD = f.Contains('g'), ThickPb = f.Contains('t'), Choch = f.Contains('h'), Sr = f.Contains('s'), TpToEdge = f.Contains('e') };
 
     static ISetupDetector Make(string c) => c switch
     {

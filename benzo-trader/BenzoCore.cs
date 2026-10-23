@@ -127,7 +127,7 @@ namespace BenzoTraderNs
     public static class BenzoCore
     {
         /// <summary>Đổi số này mỗi khi logic detector đổi → cache niêm phong cũ bị bỏ (không giữ kết quả của logic cũ).</summary>
-        public const string LogicVersion = "port-3";
+        public const string LogicVersion = "port-4";
         /// <summary>Chi phí mỗi lệnh (giá): spread + trượt, GC tick 0,1.</summary>
         public const double CostPrice = 0.2;
         public const int NewsBlockMinutes = 15;
@@ -491,6 +491,8 @@ namespace BenzoTraderNs
             _ctx.GetLevels = GetLevels; _ctx.IsNewsBlocked = IsNewsBlocked;
             if (Processed == 0 && !Zones.Sr.ManualSlots)   // lõi VCL (tốn CPU) chỉ chạy khi setup B đang bật nhóm vùng S/R; phải quyết định trước nến đầu tiên
                 Zones.Sr.UseVcl = IsEnabled('B') && Detectors.OfType<DetectorB>().Any(d => d.UseSr);
+            if (Processed == 0)   // các lớp vùng của setup C phải được bật TRƯỚC nến đầu tiên (không bật = không tốn CPU)
+                foreach (var d in Detectors) if (d is IZoneConsumer zc) zc.ConfigureZones(Zones, IsEnabled(d.Setup));
             long firstTicks = Bars[Processed].Time.Ticks;
             for (int i = Processed; i <= closedIdx; i++)
             {

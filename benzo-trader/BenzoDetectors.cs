@@ -321,20 +321,78 @@ namespace BenzoTraderNs
     }
 
     // ===================================================================== C · Fade cạnh
-    public sealed class DetectorC : DetectorBase
+    /// <summary>
+    /// C Fade cạnh: râu chọc qua cạnh band cân bằng ≥ 2 tick rồi đóng lại trong, Δ cùng chiều vào lệnh.
+    /// C0 (mặc định, Opt = Legacy): band = VA hôm qua (Á/Âu) · VA Âu/IB (Mỹ), TP 2R cố định.
+    /// Lớp mới (CLayerOptions): cổng hình D / vùng dày P-b (hình dạng profile TPO hôm qua), VA nhỏ CHoCH, hành lang S/R (VCL).
+    /// Mỗi lớp có bộ đếm "≤ 2 lệnh / (phiên, cạnh)" riêng; cùng nến nhiều lớp cùng bắn: L(D, P/b) vs CHoCH ⇒ cạnh gần giá đóng hơn
+    /// (hoà ⇒ CHoCH); S/R chỉ thêm khi các lớp kia không bắn (merge_add của Python). TpToEdge: TP về cạnh đối diện / POC (≥ 2R), không đủ ⇒ bỏ.
+    /// </summary>
+    public sealed class DetectorC : DetectorBase, IZoneConsumer
     {
         public override char Setup => 'C';
         private const int PenTicks = 2;
         private const double MinWidth = 6.0, Rr = 2.0;
         private const int SmNoFrom = 780, SmNoTo = 860;     // 18:00–19:20 VN
-        private readonly Dictionary<string, int> _count = new();
+        private readonly Dictionary<string, int> _cBase = new(), _cChoch = new(), _cSr = new();
+        public readonly CLayerOptions Opt;
+
+        public DetectorC() : this(CLayerOptions.Legacy) { }
+        public DetectorC(CLayerOptions opt) { Opt = opt ?? CLayerOptions.Legacy; }
+
+        public void ConfigureZones(BenzoZones z, bool enabled)
+        {
+            z.Layers.Configure(Opt, enabled);
+            if (z.Layers.UseSr)
+            {   // dùng chung MỘT lõi VCL với setup B (BenzoSr.Core) — không chạy hai bản
+                z.Sr.UseVcl = true;
+                z.Layers.SharedCore = () => z.Sr.Core;
+            }
+        }
+
+        private sealed class Cand { public Signal Sig; public double Edge; }
 
         protected override Signal Evaluate(SetupContext ctx, int i)
         {
             var z = ctx.Zones;
             if (z == null || z.Idx != i) return null;
-            if (z.NewSession) _count.Clear();
-            var md = z.ModeC;
+            if (z.NewSession) { _cBase.Clear(); _cChoch.Clear(); _cSr.Clear(); }
+            var L = z.Layers;
+            // ---- lớp nền: C0 hoặc lớp D / P-b
+            Cand c0;
+            if (L.UseShape)
+            {
+                L.LabelsL(out string hn, out string ln, out string sl);
+                c0 = Layer(ctx, z, i, L.TrkL.Cur, L.PocL(), hn, ln, sl, _cBase);
+            }
+            else c0 = Layer(ctx, z, i, z.ModeC, z.Sm < BenzoKernel.SmUsStart ? z.YdPoc : z.EuPoc, "", "", "", _cBase);
+            Cand res = c0;
+            // ---- VA nhỏ CHoCH
+            if (L.UseChoch)
+            {
+                string src = L.Choch.Src[i];
+                string hn = src != "" ? src + "_HI" : "", ln = src != "" ? src + "_LO" : "";
+                var c3 = Layer(ctx, z, i, L.Choch.Mode, double.NaN, hn, ln, "VA nhỏ " + (src == "CHOCH_UP" ? "CHoCH-UP" : "CHoCH-DN") + " (3 lần đổi hành vi)", _cChoch);
+                if (c0 != null && c3 != null)
+                {
+                    double cl = ctx.Bars[i].C;
+                    res = Math.Abs(cl - c0.Edge) < Math.Abs(cl - c3.Edge) - 1e-12 ? c0 : c3;
+                }
+                else res = c0 ?? c3;
+            }
+            // ---- hành lang S/R: chỉ thêm khi lớp trên không bắn (counter vẫn tăng như Python)
+            if (L.UseSr)
+            {
+                var m4 = L.Sr.Mode;
+                var c4 = Layer(ctx, z, i, m4, double.NaN, m4.BandSrc != "" ? "SR_HI" : "", m4.BandSrc != "" ? "SR_LO" : "", "hành lang S/R giữa hai vùng Canh Lệnh (VCL)", _cSr);
+                if (res == null) res = c4;
+            }
+            return res?.Sig;
+        }
+
+        /// <summary>Một lớp: dò râu chọc qua cạnh band `md` (band + chế độ của lớp). poc: POC cho TP (NaN = không có).</summary>
+        private Cand Layer(SetupContext ctx, BenzoZones z, int i, ModeState md, double poc, string hiName, string loName, string srcLabel, Dictionary<string, int> cnt)
+        {
             if (md.Mode != "BALANCE" || z.Phase == "OFF") return null;
             if (z.Sm >= SmNoFrom && z.Sm < SmNoTo) return null;
             double bh = md.BandHi, bl = md.BandLo;
@@ -350,22 +408,43 @@ namespace BenzoTraderNs
             int side = sell ? -1 : 1;
             double E = side < 0 ? bh : bl;
             string key = z.SessionNo + "|" + Math.Round(E, 1).ToString("0.0", CultureInfo.InvariantCulture);
-            _count.TryGetValue(key, out int cnt);
-            if (cnt >= 2) return null;
+            cnt.TryGetValue(key, out int c);
+            if (c >= 2) return null;
             double structP = side < 0 ? b.H : b.L;
             var r = BenzoRisk.Calc(ctx.Bars, i, side, structP, Rr, ctx.Tick);
             if (r == null) return null;
+            double tp = r.Tp; string tpTxt = "";
+            if (Opt.TpToEdge)
+            {
+                double opp = side < 0 ? bl : bh;
+                double best = double.NaN;
+                bool okOpp = (opp - r.Entry) * side > 0;
+                bool okPoc = !double.IsNaN(poc) && (poc - r.Entry) * side > 0;
+                if (!okOpp && !okPoc) return null;
+                if (okOpp && okPoc) best = side < 0 ? Math.Max(opp, poc) : Math.Min(opp, poc);
+                else best = okOpp ? opp : poc;
+                if (Math.Abs(best - r.Entry) < 2.0 * r.Risk - 1e-9) return null;
+                tp = Math.Round(best, 6);
+                tpTxt = $" · TP về {N(tp)}";
+            }
             if (ctx.IsNewsBlocked(CloseTime(ctx, b))) return null;
-            _count[key] = cnt + 1;
+            cnt[key] = c + 1;
             string edge;
-            if (z.Phase == "US") edge = md.BandSrc == "ib" ? (side < 0 ? "cạnh trên IB" : "cạnh dưới IB") : (side < 0 ? "VAH Âu" : "VAL Âu");
+            if (srcLabel != "") edge = (side < 0 ? "cạnh trên " : "cạnh dưới ") + srcLabel;
+            else if (z.Phase == "US") edge = md.BandSrc == "ib" ? (side < 0 ? "cạnh trên IB" : "cạnh dưới IB") : (side < 0 ? "VAH Âu" : "VAL Âu");
             else edge = side < 0 ? "VAH hôm qua" : "VAL hôm qua";
             string zone = z.Phase == "US" ? (md.BandSrc == "ib" ? (side < 0 ? "IB_H" : "IB_L") : (side < 0 ? "VAH_EU" : "VAL_EU")) : (side < 0 ? "VAH_Y" : "VAL_Y");
+            string zn = side < 0 ? hiName : loName;
+            if (zn != "") zone = zn;
             double pokeTicks = side < 0 ? (b.H - E) / BenzoKernel.Tick : (E - b.L) / BenzoKernel.Tick;
-            return new Signal
+            return new Cand
             {
-                Side = side, Entry = r.Entry, Sl = r.Sl, Tp = r.Tp, Zone = zone,
-                Reason = $"phá hụt {edge} {BenzoCore.Num(E)}: râu xuyên {BenzoCore.Num(pokeTicks, "0")} tick, đóng lại trong range (rộng {BenzoCore.Num(bh - bl)} giá), Δ{Dl(b.Delta)}"
+                Edge = E,
+                Sig = new Signal
+                {
+                    Side = side, Entry = r.Entry, Sl = r.Sl, Tp = tp, Zone = zone,
+                    Reason = $"phá hụt {edge} {BenzoCore.Num(E)}: râu xuyên {BenzoCore.Num(pokeTicks, "0")} tick, đóng lại trong range (rộng {BenzoCore.Num(bh - bl)} giá), Δ{Dl(b.Delta)}{tpTxt}"
+                }
             };
         }
     }

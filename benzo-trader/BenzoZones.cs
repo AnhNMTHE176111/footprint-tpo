@@ -27,6 +27,8 @@ namespace BenzoTraderNs
     public struct ZoneSnap
     {
         public double EuVah, EuVal, IbHi, IbLo, YdVah, YdVal;
+        public int ShKind;                  // hình dạng profile TPO hôm qua: 0 khác/không có · 1 D · 2 P · 3 b (lớp C-v6, BenzoLayers)
+        public double TLo, THi;             // vùng dày T của profile TPO hôm qua
         public int Sm;
         public string Phase;
     }
@@ -67,6 +69,12 @@ namespace BenzoTraderNs
         public void OnM5(M5Bar m)
         {
             bool has = _sel(m.Snap, out double bh, out double bl, out string src);
+            OnM5Raw(m.C, has, bh, bl, src);
+        }
+
+        /// <summary>Như OnM5 nhưng band do người gọi đưa vào (các lớp C-v6/v7: band của lớp tại nến M5 vừa đóng).</summary>
+        public void OnM5Raw(double close, bool has, double bh, double bl, string src)
+        {
             var s = new ModeState();
             if (!has)
             {
@@ -76,8 +84,8 @@ namespace BenzoTraderNs
             else
             {
                 s.BandHi = bh; s.BandLo = bl; s.BandSrc = src;
-                int outv = m.C > bh ? 1 : (m.C < bl ? -1 : 0);
-                double dist = outv > 0 ? m.C - bh : (outv < 0 ? bl - m.C : 0.0);
+                int outv = close > bh ? 1 : (close < bl ? -1 : 0);
+                double dist = outv > 0 ? close - bh : (outv < 0 ? bl - close : 0.0);
                 if (outv == 0) { s.Mode = "BALANCE"; _run = 0; _prevSide = 0; }
                 else
                 {
@@ -280,6 +288,8 @@ namespace BenzoTraderNs
         public readonly BenzoSr Sr = new BenzoSr();
         private int _weekNo = -1, _sessWeek = -1;
         private double _sessVol, _sessH = double.NegativeInfinity, _sessL = double.PositiveInfinity;
+        /// <summary>Các lớp vùng mới của setup C (v6: hình dạng D/P/b + VA nhỏ CHoCH; v7: hành lang S/R). Chỉ chạy khi được bật (BenzoLayers.Configure).</summary>
+        public readonly BenzoLayers Layers;
 
         private readonly ModeTracker _trkDef, _trkC;
         private readonly Queue<M5Bar> _pending = new();
@@ -302,6 +312,7 @@ namespace BenzoTraderNs
         {
             _trkDef = new ModeTracker(SelDefault);
             _trkC = new ModeTracker(SelC);
+            Layers = new BenzoLayers(this);
         }
 
         // ---- chọn band ----
@@ -329,7 +340,8 @@ namespace BenzoTraderNs
 
         private ZoneSnap Snap() => new ZoneSnap
         {
-            EuVah = EuVah, EuVal = EuVal, IbHi = IbHi, IbLo = IbLo, YdVah = YdVah, YdVal = YdVal, Sm = Sm, Phase = Phase
+            EuVah = EuVah, EuVal = EuVal, IbHi = IbHi, IbLo = IbLo, YdVah = YdVah, YdVal = YdVal, Sm = Sm, Phase = Phase,
+            ShKind = Layers.ShKind, TLo = Layers.TLo, THi = Layers.THi
         };
 
         // ---------------------------------------------------------------- Push
@@ -344,6 +356,7 @@ namespace BenzoTraderNs
             NewSession = first || gap > BenzoKernel.GapMinutes;
             bool newWeek = first || gap > BenzoKernel.WeekGapMinutes;
             if (newWeek) _weekNo++;
+            Layers.BeginBar(idx, bar, NewSession);
             if (NewSession) StartSession(idx, first);
             if (newWeek) { WeekStartIdx = idx; _wPV = 0; _wV = 0; }
 
@@ -362,6 +375,7 @@ namespace BenzoTraderNs
             {
                 var m = _pending.Dequeue();
                 _trkDef.OnM5(m); _trkC.OnM5(m);
+                Layers.FeedM5(m);
             }
 
             // ---- VWAP ----
@@ -386,6 +400,7 @@ namespace BenzoTraderNs
 
             // ---- profile volume của phiên ----
             AddProfile(bar, levels, isEu);
+            Layers.AddBar(bar);
             _sessBars++;
             _sessVol += bar.Vol; _sessH = Math.Max(_sessH, bar.H); _sessL = Math.Min(_sessL, bar.L);
             if (isEu) _nEu++;
@@ -437,6 +452,8 @@ namespace BenzoTraderNs
 
             // ---- lõi VCL (chỉ khi setup B bật nhóm vùng S/R) ----
             Sr.PushVcl(idx, bar, levels, TzOffset, UsShift);
+            // ---- các lớp vùng mới của setup C (chỉ chạy khi được bật) ----
+            Layers.EndBar(idx, bar, levels);
         }
 
         private void CloseCur(int lastIdx, ZoneSnap snap)
@@ -457,7 +474,9 @@ namespace BenzoTraderNs
                 BenzoKernel.ValueAreaOf(_full, out double p, out double vh, out double vl))
             {
                 HasYd = true; YdPoc = p; YdVah = vh; YdVal = vl;
+                Layers.OnSessionStart(true);
             }
+            else Layers.OnSessionStart(false);
             SessionNo++;
             SessionStartIdx = idx;
             _sPV = 0; _sV = 0; _sessBars = 0; _nEu = 0; _nIb = 0;

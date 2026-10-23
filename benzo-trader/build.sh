@@ -7,7 +7,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ENGINE="$HERE/../quantower-tpo-suite/ProfileEngine.cs"
 QW="$HOME/quantower-libs/qw-build.sh"
 TMP="$(mktemp -d)"
-cat "$ENGINE" "$HERE/../vung-canh-lenh/VclCore.cs" "$HERE/BenzoCore.cs" "$HERE/BenzoSr.cs" "$HERE/BenzoZones.cs" "$HERE/BenzoDetectors.cs" "$HERE/BenzoTrader.cs" > "$TMP/BenzoTrader.cs"
+cat "$ENGINE" "$HERE/../vung-canh-lenh/VclCore.cs" "$HERE/BenzoCore.cs" "$HERE/BenzoSr.cs" "$HERE/BenzoLayers.cs" "$HERE/BenzoZones.cs" "$HERE/BenzoDetectors.cs" "$HERE/BenzoTrader.cs" > "$TMP/BenzoTrader.cs"
 bash "$QW" "$TMP/BenzoTrader.cs" BenzoTrader
 mkdir -p "$HERE/dist"
 cp "$TMP/dist/BenzoTrader.dll" "$HERE/dist/BenzoTrader.dll"

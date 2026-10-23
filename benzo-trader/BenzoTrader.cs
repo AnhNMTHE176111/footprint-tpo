@@ -180,6 +180,10 @@ namespace BenzoTraderNs
         public bool EnableC { get; set; } = true;
         [InputParameter("Bật setup D · Trap", 33)]
         public bool EnableD { get; set; } = true;
+        [InputParameter("B · thêm vùng v2 (HVN/VA/POC)", 34)]
+        public bool BZonesV2 { get; set; } = true;       // POC/VAH/VAL ngày, HVN ngày, POC tuần, HVN tuần (backtest 90 ngày: 25 lệnh, WR 32,0%)
+        [InputParameter("B · thêm vùng S/R (VCL, PDH/PDL)", 35)]
+        public bool BZonesSr { get; set; } = true;       // vùng Canh Lệnh + đỉnh/đáy phiên trước (backtest 90 ngày: 58 lệnh, WR 24,1% < hoà vốn ~27%)
         [InputParameter("Đặt lại thống kê (bật lên để đặt)", 40)]
         public bool ResetStatsNow { get; set; } = false;
         [InputParameter("Hiện lại toàn bộ thống kê (bật lên để xoá mốc đặt lại)", 41)]
@@ -212,6 +216,7 @@ namespace BenzoTraderNs
         private readonly HashSet<string> _seen = new(), _openSent = new(), _closedSent = new();
         private bool _lastTest, _lastReset, _lastClear;
         private string _teleStatus;
+        private string _builtBKey;
 
         public BenzoTrader() : base()
         {
@@ -221,10 +226,13 @@ namespace BenzoTraderNs
         }
 
         /// <summary>Danh sách detector THEO THỨ TỰ ƯU TIÊN A > B > D > C. Agent port setup cắm vào đây.</summary>
-        private static List<ISetupDetector> CreateDetectors()
+        private List<ISetupDetector> CreateDetectors()
         {
-            return new List<ISetupDetector> { new DetectorA(), new DetectorB(), new DetectorD(), new DetectorC() };
+            return new List<ISetupDetector> { new DetectorA(), new DetectorB(BZonesV2, BZonesSr), new DetectorD(), new DetectorC() };
         }
+
+        /// <summary>Khoá cấu hình vùng của B: đổi công tắc ⇒ cache niêm phong cũ bị bỏ (tín hiệu B cũ sinh từ bộ vùng khác) và engine dựng lại.</summary>
+        private string BModeKey => "b" + (BZonesV2 ? "1" : "0") + (BZonesSr ? "1" : "0");
 
         /// <summary>Tin USD mức cao trong ±15 phút (expose cho detector; cần lịch tin đã tải — chỉ phủ tuần hiện tại).</summary>
         public bool IsNewsBlocked(DateTime utc) => NewsCalendar.IsBlocked(utc, TzOffset, BenzoCore.NewsBlockMinutes);
@@ -359,9 +367,10 @@ namespace BenzoTraderNs
                 ConfigTele();
                 NewsCalendar.Refresh(_dir, TzOffset, t => BenzoLog.Write(_logPath, t));   // tải nền, cache 1h
 
-                if (_engine == null || _engine.Bars.Count > n - 1)   // lần đầu, hoặc lịch sử bị cắt ngắn → dựng lại
+                if (_engine == null || _engine.Bars.Count > n - 1 || _builtBKey != BModeKey)   // lần đầu, lịch sử bị cắt ngắn, hoặc đổi công tắc vùng B → dựng lại
                 {
-                    _cache = new SignalCache(Path.Combine(_dir, $"cache_{BenzoCore.Sanitize(_symbol)}_{_tf}.jsonl"));
+                    _builtBKey = BModeKey;
+                    _cache = new SignalCache(Path.Combine(_dir, $"cache_{BenzoCore.Sanitize(_symbol)}_{_tf}.jsonl"), BenzoCore.LogicVersion + "-" + BModeKey);
                     _cache.Load();
                     _resetUtc = BenzoCore.LoadResetMark(_resetPath);
                     _engine = new BenzoEngine(_symbol, tick, _cache, CreateDetectors())
@@ -613,7 +622,8 @@ namespace BenzoTraderNs
                         ? new[] { new PointF(xE, yE + sz + 4), new PointF(xE - sz, yE + sz * 2 + 4), new PointF(xE + sz, yE + sz * 2 + 4) }
                         : new[] { new PointF(xE, yE - sz - 4), new PointF(xE - sz, yE - sz * 2 - 4), new PointF(xE + sz, yE - sz * 2 - 4) };
                     using (var br = new SolidBrush(Color.FromArgb(a, dir))) gr.FillPolygon(br, tri);
-                    string lbl = s.Setup + " " + BenzoCore.SetupName(s.Setup) + (s.IsClosed ? (s.Outcome == "TP" ? " ✓" : " ✗") : "");
+                    string lbl = s.Setup + " " + BenzoCore.SetupName(s.Setup) + (s.Setup == 'B' && !string.IsNullOrEmpty(s.Zone) ? " · " + BenzoZoneNames.Label(s.Zone) : "")
+                               + (s.IsClosed ? (s.Outcome == "TP" ? " ✓" : " ✗") : "");
                     float ly = s.Side > 0 ? yE + sz * 2 + 8 : yE - sz * 2 - 22;
                     var szLbl = gr.MeasureString(lbl, fLbl);
                     using (var bgLbl = new SolidBrush(Color.FromArgb(open ? 215 : 150, dir)))

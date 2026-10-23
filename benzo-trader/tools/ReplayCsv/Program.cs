@@ -1,5 +1,8 @@
 // ReplayCsv — chạy detector C# (BenzoCore + BenzoZones + BenzoDetectors) trên file footprint export, KHÔNG cần Quantower.
-//   dotnet run -c Release --project benzo-trader/tools/ReplayCsv -- <base> [A|B|C|D|ALL] [out.csv]
+//   dotnet run -c Release --project benzo-trader/tools/ReplayCsv -- <base> [A|B|B2|B3|BSR|C|D|ALL|LEVELS] [out.csv]
+//   B = chỉ 2 VWAP (B cũ) · B2 = + vùng v2 (HVN/VA/POC) · B3 = + vùng S/R (VCL, PDH/PDL) · BSR = 2 VWAP + S/R (không v2)
+//   LEVELS = xuất các mức cố định + 7 khe VCL của từng nến (đối chiếu mảng với Python zones_b_v3)
+//   Biến môi trường BENZO_NO_VOPEN=1: tắt luật "mở ảo" 19:20-20:30 (để so thô với Python).
 //   <base> = đường dẫn bỏ đuôi (đọc <base>_bars.csv và <base>.csv).
 // Mỗi setup chạy ĐỘC LẬP (1 lệnh mở/setup, giống K.simulate của Python); ALL = engine ưu tiên A > B > D > C.
 using System;
@@ -62,12 +65,14 @@ static class Program
         Console.Error.WriteLine($"nạp {bars.Count} nến M1, {levels.Count(l => l != null)} nến có per-level");
 
         var sb = new StringBuilder("setup,time_utc,side,entry,sl,tp,outcome,exit_utc,r,zone,reason\n");
-        var sets = which == "ALL" ? new[] { "A", "B", "C", "D" } : new[] { which };
+        bool noVopen = Environment.GetEnvironmentVariable("BENZO_NO_VOPEN") == "1";
+        if (which == "LEVELS") return DumpLevels(bars, levels, outPath);
+        var sets = which == "ALL" ? new[] { "A", "B", "C", "D" } : which.Split(',');
         foreach (var s in sets)
         {
             var list = new List<ISetupDetector>();
-            foreach (var c in (s == "ALL" ? "ABDC" : s)) list.Add(Make(c));
-            var eng = new BenzoEngine("GCZ26", 0.1, null, list) { GetLevels = i => (IReadOnlyList<LevelVol>)levels[i] ?? Array.Empty<LevelVol>() };
+            list.Add(Make(s));
+            var eng = new BenzoEngine("GCZ26", 0.1, null, list) { GetLevels = i => (IReadOnlyList<LevelVol>)levels[i] ?? Array.Empty<LevelVol>(), VirtualOpenRule = !noVopen };
             foreach (var b in bars) eng.Bars.Add(b);
             var sw = System.Diagnostics.Stopwatch.StartNew();
             eng.Advance(bars.Count - 1);
@@ -82,10 +87,38 @@ static class Program
         return 0;
     }
 
-    static ISetupDetector Make(char c) => c switch
+    static ISetupDetector Make(string c) => c switch
     {
-        'A' => new DetectorA(), 'B' => new DetectorB(), 'C' => new DetectorC(), 'D' => new DetectorD(),
+        "A" => new DetectorA(), "B" => new DetectorB(), "B2" => new DetectorB(true, false), "B3" => new DetectorB(true, true),
+        "BSR" => new DetectorB(false, true), "C" => new DetectorC(), "D" => new DetectorD(),
         _ => throw new ArgumentException("setup?")
     };
+
+    /// <summary>Mỗi nến một dòng: giờ, phiên, 12 mức cố định, rồi 7 khe VCL × (lo, hi, runlen). Đối chiếu mảng với Python (parity_b_v3.py).</summary>
+    static int DumpLevels(List<BarData> bars, List<LevelVol>[] levels, string outPath)
+    {
+        var eng = new BenzoEngine("GCZ26", 0.1, null, new ISetupDetector[] { new DetectorB(true, true) })
+        { GetLevels = i => (IReadOnlyList<LevelVol>)levels[i] ?? Array.Empty<LevelVol>(), VirtualOpenRule = false };
+        foreach (var b in bars) eng.Bars.Add(b);
+        var sb = new StringBuilder("pos,datetime,session_no," + string.Join(",", BenzoSr.FixedNames));
+        for (int k = 1; k <= BenzoSr.VclSlots; k++) sb.Append($",lo{k},hi{k},run{k}");
+        sb.Append('\n');
+        for (int i = 0; i < bars.Count; i++)
+        {
+            eng.Advance(i);
+            var z = eng.Zones; var sr = z.Sr;
+            sb.Append(i).Append(',').Append(bars[i].Time.ToString("yyyy-MM-dd HH:mm:ss", Inv)).Append(',').Append(z.SessionNo);
+            foreach (var v in sr.Fx) sb.Append(',').Append(double.IsNaN(v) ? "" : v.ToString("R", Inv));
+            for (int k = 0; k < BenzoSr.VclSlots; k++)
+            {
+                double lo = sr.SlotLoAt(k, i), hi = sr.SlotHiAt(k, i);
+                sb.Append(',').Append(double.IsNaN(lo) ? "" : lo.ToString("R", Inv)).Append(',').Append(double.IsNaN(hi) ? "" : hi.ToString("R", Inv)).Append(',').Append(sr.SlotRunAt(k, i));
+            }
+            sb.Append('\n');
+        }
+        File.WriteAllText(outPath, sb.ToString(), new UTF8Encoding(false));
+        Console.Error.WriteLine($"LEVELS: {bars.Count} nến -> {outPath}");
+        return 0;
+    }
     static double D(string s) => double.Parse(s, Inv);
 }

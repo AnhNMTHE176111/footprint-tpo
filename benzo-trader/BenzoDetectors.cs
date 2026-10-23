@@ -154,6 +154,15 @@ namespace BenzoTraderNs
     }
 
     // ===================================================================== B · Hấp thụ
+    /// <summary>Một vùng B canh: tên, loại (để đếm trần 2 lệnh/(loại, phiên)), cách lấy giá, chiều move được phép (0 = cả hai).</summary>
+    public sealed class BZone
+    {
+        public string Name, ZType;
+        public int Kind;       // 0 VWAP tuần · 1 VWAP ngày · 2 mức cố định (BenzoSr.Fx) · 3 VCL cạnh dưới (R) · 4 VCL cạnh trên (S)
+        public int Slot, Fi;   // khe VCL / chỉ số trong Fx
+        public int Mdir;       // +1 chỉ giá đi LÊN tới vùng (sell) · −1 chỉ giá đi XUỐNG (buy) · 0 cả hai
+    }
+
     public sealed class DetectorB : DetectorBase
     {
         public override char Setup => 'B';
@@ -161,6 +170,59 @@ namespace BenzoTraderNs
         private const double Theta = 0.5, MoveMin = 3.0, TouchTol = 1.0, ExtTol = 0.5, Rr = 3.0;
         private const int Lookback = 20, Warm = 30, BigExcl = 3, MaxPerZoneSession = 2;
         private readonly Dictionary<string, int> _cnt = new();
+        private readonly List<BZone> _zones;
+
+        /// <summary>Nhóm v2 (HVN/VA/POC ngày-tuần).</summary>
+        public readonly bool UseV2;
+        /// <summary>Nhóm S/R (đỉnh/đáy phiên trước + vùng Canh Lệnh VCL).</summary>
+        public readonly bool UseSr;
+        public IReadOnlyList<BZone> Zones => _zones;
+
+        /// <summary>Mặc định chỉ 2 VWAP (B cũ: 11 lệnh/90 ngày). v2 = thêm 10 mức ngày/tuần (25 lệnh); sr = thêm PDH/PDL + 14 cạnh VCL (58 lệnh khi bật cả hai).</summary>
+        public DetectorB(bool v2 = false, bool sr = false)
+        {
+            UseV2 = v2; UseSr = sr;
+            _zones = BuildZones(v2, sr);
+        }
+
+        public static List<BZone> BuildZones(bool v2, bool sr)
+        {
+            var l = new List<BZone>
+            {
+                new BZone { Name = "VWAP_W", ZType = "VWAP_W", Kind = 0 },
+                new BZone { Name = "VWAP_D", ZType = "VWAP_D", Kind = 1 },
+            };
+            void Fixed(string nm)
+            {
+                string zt = nm.StartsWith("HVN_D") ? "HVN_D" : nm.StartsWith("HVN_W") ? "HVN_W" : nm.StartsWith("PD") ? "PDHL" : nm;
+                l.Add(new BZone { Name = nm, ZType = zt, Kind = 2, Fi = BenzoSr.FixedIndex(nm) });
+            }
+            if (v2) foreach (var nm in new[] { "POC_D", "VAH_D", "VAL_D", "HVN_D1", "HVN_D2", "HVN_D3", "POC_W", "HVN_W1", "HVN_W2", "HVN_W3" }) Fixed(nm);
+            if (sr)
+            {
+                Fixed("PDH"); Fixed("PDL");
+                for (int k = 0; k < BenzoSr.VclSlots; k++) l.Add(new BZone { Name = "VCL_R" + (k + 1), ZType = "VCL", Kind = 3, Slot = k, Mdir = 1 });
+                for (int k = 0; k < BenzoSr.VclSlots; k++) l.Add(new BZone { Name = "VCL_S" + (k + 1), ZType = "VCL", Kind = 4, Slot = k, Mdir = -1 });
+            }
+            return l;
+        }
+
+        private static double ZAt(BZone zn, BenzoZones z, int k) => zn.Kind switch
+        {
+            0 => z.VwapWAt(k),
+            1 => z.VwapDAt(k),
+            2 => z.Sr.Fx[zn.Fi],                       // mức cố định của phiên (các nến k đã được kiểm cùng phiên với nến i)
+            3 => z.Sr.SlotLoAt(zn.Slot, k),
+            _ => z.Sr.SlotHiAt(zn.Slot, k),
+        };
+
+        private static bool WarmAt(BZone zn, BenzoZones z, int k) => zn.Kind switch
+        {
+            0 => z.PosInWeekAt(k) >= Warm,
+            1 => z.PosInSessionAt(k) >= Warm,
+            2 => true,
+            _ => z.Sr.SlotRunAt(zn.Slot, k) >= BenzoSr.VclWarm,   // khe giữ CÙNG một vùng ≥ 4 nến liên tiếp
+        };
 
         protected override Signal Evaluate(SetupContext ctx, int i)
         {
@@ -170,19 +232,18 @@ namespace BenzoTraderNs
             if (i < NCluster + 1 || z.Phase == "OFF") return null;
             var b = ctx.Bars[i];
             double rng = b.H - b.L;
-            for (int zi = 0; zi < 2; zi++)
+            for (int M = 1; M >= -1; M -= 2)
             {
-                bool isW = zi == 0;                      // VWAP tuần trước, VWAP ngày sau (ưu tiên khi trùng nến)
-                for (int M = 1; M >= -1; M -= 2)
+                int s = -M;
+                double cs = (b.C - b.O) * s;
+                if (!(cs > 0 && cs >= BenzoKernel.CfBodyFrac * rng && b.Delta * s > 0)) continue;
+                foreach (var zn in _zones)         // thứ tự ưu tiên: vùng đứng trước thắng khi trùng nến
                 {
-                    int s = -M;
-                    double cs = (b.C - b.O) * s;
-                    if (!(cs > 0 && cs >= BenzoKernel.CfBodyFrac * rng && b.Delta * s > 0)) continue;
-                    var sig = Try(ctx, z, i, b, isW, M, s);
+                    if (zn.Mdir != 0 && zn.Mdir != M) continue;
+                    var sig = Try(ctx, z, i, b, zn, M, s);
                     if (sig == null) continue;
-                    // trần 2 lệnh / (vùng, phiên) — tính sau khi đã chọn vùng ưu tiên của nến này
-                    string zn = isW ? "VWAP_W" : "VWAP_D";
-                    string key = zn + "|" + z.SessionNo;
+                    // trần 2 lệnh / (loại vùng, phiên) — tính sau khi đã chọn vùng ưu tiên của nến này
+                    string key = zn.ZType + "|" + z.SessionNo;
                     _cnt.TryGetValue(key, out int c);
                     if (c >= MaxPerZoneSession) return null;
                     if (ctx.IsNewsBlocked(CloseTime(ctx, b))) return null;
@@ -193,20 +254,18 @@ namespace BenzoTraderNs
             return null;
         }
 
-        private static double ZAt(BenzoZones z, bool isW, int k) => isW ? z.VwapWAt(k) : z.VwapDAt(k);
-
-        private Signal Try(SetupContext ctx, BenzoZones z, int i, BarData b, bool isW, int M, int s)
+        private Signal Try(SetupContext ctx, BenzoZones z, int i, BarData b, BZone zn, int M, int s)
         {
             int nc = NCluster;
-            // cụm N nến trước CF: mỗi nến chạm Z, cùng phiên, VWAP đủ 30 nến, không phase OFF
+            // cụm N nến trước CF: mỗi nến chạm Z, cùng phiên, vùng "ấm", không phase OFF
             for (int j = 1; j <= nc; j++)
             {
                 int k = i - j;
                 if (z.SessionAt(k) != z.SessionNo || z.PhaseAt(k) == "OFF") return null;
-                if ((isW ? z.PosInWeekAt(k) : z.PosInSessionAt(k)) < Warm) return null;
-                var bk = ctx.Bars[k]; double zk = ZAt(z, isW, k);
+                if (!WarmAt(zn, z, k)) return null;
+                var bk = ctx.Bars[k]; double zk = ZAt(zn, z, k);
                 bool touch = Math.Abs(bk.C - zk) <= TouchTol || (bk.L <= zk && zk <= bk.H);
-                if (!touch) return null;
+                if (!touch) return null;           // z NaN ⇒ mọi so sánh false ⇒ loại
             }
             // thân và |Δ| giảm: nến cuối cụm < nến đầu cụm
             var first = ctx.Bars[i - nc]; var last = ctx.Bars[i - 1];
@@ -214,7 +273,7 @@ namespace BenzoTraderNs
             // cực trị cụm không vượt Z + 0,5
             double ext = M > 0 ? double.NegativeInfinity : double.PositiveInfinity;
             for (int k = i - nc; k <= i - 1; k++) ext = M > 0 ? Math.Max(ext, ctx.Bars[k].H) : Math.Min(ext, ctx.Bars[k].L);
-            double zlast = ZAt(z, isW, i - 1);
+            double zlast = ZAt(zn, z, i - 1);
             if (M > 0 ? !(ext <= zlast + ExtTol) : !(ext >= zlast - ExtTol)) return null;
             // loại: TREND cùng chiều M · đang phá VA Âu/IB theo chiều M · nến lớn nhất phiên trong 3 nến cuối
             var md = z.ModeDef;
@@ -250,10 +309,10 @@ namespace BenzoTraderNs
             for (int k = a; k < i; k++) structP = M > 0 ? Math.Max(structP, ctx.Bars[k].H) : Math.Min(structP, ctx.Bars[k].L);
             var r = BenzoRisk.Calc(ctx.Bars, i, s, structP, Rr, ctx.Tick);
             if (r == null) return null;
-            string nm = isW ? "VWAP tuần" : "VWAP ngày";
+            string nm = BenzoZoneNames.Label(zn.Name);
             return new Signal
             {
-                Side = s, Entry = r.Entry, Sl = r.Sl, Tp = r.Tp, Zone = isW ? "VWAP_W" : "VWAP_D",
+                Side = s, Entry = r.Entry, Sl = r.Sl, Tp = r.Tp, Zone = zn.Name,
                 Reason = $"hấp thụ tại {nm} {N0(zz)}: move {N0(move)} giá {(M > 0 ? "lên" : "xuống")}, {nc} nến chạm có thân/Δ giảm, "
                        + $"CF Δ{Dl(b.Delta)} (≥50% Δ lớn nhất {N0(mad, "0")})"
             };

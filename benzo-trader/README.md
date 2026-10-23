@@ -10,10 +10,11 @@ Logic 4 setup là bản port C# của `research/setup_*.py` ở "ô chính", đ�
 ## Build / deploy / test
 ```bash
 cd benzo-trader
-./build.sh            # concat ProfileEngine.cs + BenzoCore.cs + BenzoZones.cs + BenzoDetectors.cs + BenzoTrader.cs → dist/BenzoTrader.dll
+bash build.sh         # concat ProfileEngine.cs + VclCore.cs (vung-canh-lenh) + BenzoCore.cs + BenzoSr.cs + BenzoZones.cs + BenzoDetectors.cs + BenzoTrader.cs → dist/BenzoTrader.dll
 dotnet run --project tests            # unit test (Debug, gồm test DemoDetector)
 dotnet run -c Release --project tests # bản ship: không có DemoDetector (mục [11] chạy hồi quy trên file 90d nếu có trong repo)
 python research/parity_check.py       # parity C# ↔ Python (chạy tools/ReplayCsv rồi so tín hiệu), ghi research/report/PARITY.md
+python research/parity_b_v3.py        # parity riêng setup B cũ / v2 / v3 (mảng vùng từng nến + lệnh), ghi research/report/PARITY-B-v3.md
 ```
 - `build.sh` copy thẳng vào `C:\OptimusFLOW\Settings\Scripts\Indicators\BenzoTrader\` (TẠO thư mục nếu chưa có).
 - Cần `~/quantower-libs/{TradingPlatform.BusinessLayer,System.Drawing.Common,System.Private.Windows.Core}.dll`.
@@ -25,6 +26,7 @@ python research/parity_check.py       # parity C# ↔ Python (chạy tools/Repla
 | File | Vai trò |
 |---|---|
 | `BenzoCore.cs` | Logic thuần, KHÔNG phụ thuộc SDK: `Signal`, `BarData`, `ISetupDetector`/`IObservingDetector`, `SetupContext`, `BenzoCore` (Simulate, thống kê, caption, mốc reset), `SignalCache`, `BenzoEngine`, `SignalCsv`, `TeleClient`, `DemoDetector` (chỉ DEBUG) |
+| `BenzoSr.cs` | Vùng thêm cho B: `BenzoSr` (HVN/POC/VAH/VAL ngày-tuần, PDH/PDL tính ở nến đầu phiên từ phiên/tuần đã đóng; gán 7 khe VCL theo mã vùng), `BenzoZoneNames` (nhãn tiếng Việt). Dùng lõi `vung-canh-lenh/VclCore.cs` nguyên văn (không viết lại) |
 | `BenzoZones.cs` | Port `kernel.py`: tách phiên (khoảng trống > 30′), VA 70% hôm qua / VA Âu chốt 19:00 VN / IB 19:20–20:20 VN, VWAP ngày + tuần, chế độ M5, trung vị 50 nến, nến dài nhất phiên, zigzag 2 giá, `IsConfirmBar`; `BenzoRisk` (SL lai) |
 | `BenzoDetectors.cs` | `DetectorA/B/C/D` (chạy theo dòng: `Observe` mỗi nến đóng, `TryDetect` trả kết quả của nến đó) |
 | `BenzoTrader.cs` | Lớp dán Quantower: Settings, vòng đời, vẽ, chụp ảnh Win32, điều phối Telegram |
@@ -32,7 +34,8 @@ python research/parity_check.py       # parity C# ↔ Python (chạy tools/Repla
 | `tools/ReplayCsv/` | Console chạy detector trên file footprint export (không cần Quantower) — dùng cho parity |
 
 ## Settings (plan 2.3 — không có ngưỡng số nào)
-Lệch giờ (7) · Telegram bật · bot token · chat id · **gửi thử** · bật setup A/B/C/D · **đặt lại thống kê** · Hiện bảng.
+Lệch giờ (7) · Telegram bật · bot token · chat id · **gửi thử** · bật setup A/B/C/D · **B · thêm vùng v2 (HVN/VA/POC)** · **B · thêm vùng S/R (VCL, PDH/PDL)** · **đặt lại thống kê** · Hiện bảng.
+Hai công tắc vùng của B mặc định **BẬT** (theo yêu cầu người học) — xem mục "B · thêm vùng" bên dưới; đổi công tắc ⇒ cache niêm phong bị bỏ và dò lại từ đầu lịch sử (cả 4 setup).
 Hai "nút" là ô tick: **bật lên = bấm** (bắt cạnh lên; muốn bấm lần nữa thì tắt rồi bật lại).
 Token/chat id điền tay, không có trong code.
 
@@ -78,7 +81,7 @@ Giới hạn: feed chỉ phủ **tuần hiện tại** ⇒ với nến lịch s�
 Chung: chỉ nến M1 đã đóng, vào ở **giá đóng nến xác nhận (CF)**; CF theo chiều S = đóng theo chiều S, thân ≥ 50% biên độ, Δ cùng dấu,
 |Δ| ≥ trung vị |Δ| 50 nến. **SL lai** = cấu trúc ∓ 0,3 giá, sàn = biên độ nến cao nhất 5 nến, **trần 4 giá ⇒ bỏ lệnh**.
 Không phát tín hiệu trong ±15′ tin USD mức cao (`IsNewsBlocked`). Mỗi lần chỉ 1 lệnh mở; ưu tiên A > B > D > C.
-**Luật chung "mở ảo" (Hệ thống 3.2, đo trên C: R TB −0,26 → −0,06, 85% SL trong khung này):** KHÔNG phát tín hiệu khi giờ VN theo mốc neo Mỹ nằm trong **19:20–20:30** (sm 860..929; sau 1/11 là 20:20–21:30 VN). Đặt MỘT chỗ trong `BenzoEngine.Advance` trước `TryDetect` (`BenzoCore.InVirtualOpen`); `Observe` vẫn chạy nên trạng thái detector liên tục. `LogicVersion = port-2`.
+**Luật chung "mở ảo" (Hệ thống 3.2, đo trên C: R TB −0,26 → −0,06, 85% SL trong khung này):** KHÔNG phát tín hiệu khi giờ VN theo mốc neo Mỹ nằm trong **19:20–20:30** (sm 860..929; sau 1/11 là 20:20–21:30 VN). Đặt MỘT chỗ trong `BenzoEngine.Advance` trước `TryDetect` (`BenzoCore.InVirtualOpen`); `Observe` vẫn chạy nên trạng thái detector liên tục. `LogicVersion = port-3` (B có thêm bộ vùng v2/v3).
 Giờ neo theo giờ Mỹ như `kernel.py` (mùa đông Mỹ thì mọi mốc 19:00/19:20/20:20 VN lùi +1 giờ).
 
 - **A · Phá hồi (TP 3R).** 1 nến M5 đóng ngoài cạnh VA Âu (chưa có thì IB; trước 19:00 VN dùng VA hôm qua) theo chiều S, không nằm trong
@@ -88,7 +91,9 @@ Giờ neo theo giờ Mỹ như `kernel.py` (mùa đông Mỹ thì mọi mốc 19
 - **B · Hấp thụ (TP 3R).** Giá tới VWAP tuần hoặc VWAP ngày (VWAP đủ 30 nến) bằng move ≥ 3 giá (tìm cực trị trong 20 nến trước cụm);
   cụm 3 nến cuối đều chạm Z với thân và |Δ| của nến cuối cụm nhỏ hơn nến đầu cụm, cực trị cụm không vượt Z + 0,5; nến CF ngược chiều move với
   |Δ_CF| ≥ 50% |Δ| lớn nhất của move. SL = cực trị cụm 3 nến ∓ 0,3.
-  Loại: chế độ TREND cùng chiều move · đang phá VA Âu/IB theo chiều move · nến dài nhất phiên nằm trong 3 nến cuối · tối đa 2 lệnh/(vùng, phiên).
+  Loại: chế độ TREND cùng chiều move · đang phá VA Âu/IB theo chiều move · nến dài nhất phiên nằm trong 3 nến cuối · tối đa 2 lệnh/(loại vùng, phiên).
+  **Vùng B canh (thứ tự ƯU TIÊN khi trùng nến; một nến xác nhận = tối đa một lệnh, lệnh gắn vùng đứng trước):**
+  VWAP tuần, VWAP ngày → *nhóm v2* → *nhóm S/R*. Chi tiết ở mục "B · thêm vùng" dưới đây.
 - **C · Fade cạnh (TP 2R cố định).** Chế độ CÂN BẰNG (chưa có nến M5 đóng ngoài band; band = VA hôm qua trước 19:00 VN, sau đó VA Âu / IB, rộng ≥ 6 giá).
   Nến M1 có râu xuyên cạnh `E` ≥ 2 tick rồi đóng lại **trong** range, Δ nến ủng hộ chiều vào, râu ngược không dài hơn thân ⇒ vào. SL = râu xuyên ∓ 0,3.
   Loại: 18:00–19:20 VN · nến xuyên là nến dài nhất phiên · đã 2 lệnh ở cùng `E` trong phiên.
@@ -121,6 +126,26 @@ ngày P/b: cạnh vùng dày) + VA nhỏ từ 3 lần đổi hành vi (climax �
 WR 12,6% (= C cũ), R TB −0,31** (C cũ −0,43) nhưng tổng R −58,8 (C cũ −44,7); TEST −0,15 kém C cũ −0,12 ⇒ không đạt T0/T1, mọi đối chứng ≈,
 hoán vị nhãn cổng D p = 0,30 ⇒ **C vẫn tắt, chưa chứng minh**. Chi tiết: `research/report/RESULTS-C-V6.md`.
 
+### B · thêm vùng (B v2 + B v3, port 2026-10-23)
+Mọi vùng có cùng một cơ chế hấp thụ ở trên (move ≥ 3 giá tới vùng, cụm 3 nến chạm, thân/Δ giảm, CF ngược chiều…); chỉ khác danh sách vùng.
+Nhãn vùng hiện trên chart, trong lý do và tin Telegram bằng tiếng Việt ngắn; cột `zone` của CSV giữ tên mã (VWAP_W, POC_D, VCL_S2…).
+
+| Nhóm (công tắc, mặc định BẬT) | Vùng (nhãn → mã) | Chiều |
+|---|---|---|
+| (luôn có) | VWAP tuần → `VWAP_W` · VWAP ngày → `VWAP_D` | cả hai |
+| **B · thêm vùng v2 (HVN/VA/POC)** | POC ngày `POC_D` · VAH ngày `VAH_D` · VAL ngày `VAL_D` (VA 70% phiên đầy đủ gần nhất đã đóng) · HVN ngày 1-3 `HVN_D1..3` · POC tuần `POC_W` · HVN tuần 1-3 `HVN_W1..3` | cả hai |
+| **B · thêm vùng S/R (VCL, PDH/PDL)** | đỉnh phiên trước `PDH` · đáy phiên trước `PDL` · "VCL kháng cự (cạnh dưới)" `VCL_R1..7` · "VCL hỗ trợ (cạnh trên)" `VCL_S1..7` | PDH/PDL cả hai · R chỉ giá đi LÊN tới (sell) · S chỉ giá đi XUỐNG tới (buy) |
+
+- **VCL = Vùng Canh Lệnh** (indicator riêng, `vung-canh-lenh/`): vùng S/R rộng 2-5 giá, tối đa 7 vùng hiển thị mỗi nến. B dùng **cạnh gần** của vùng: cạnh dưới của vùng phía trên (sell limit chờ giá lên) và cạnh trên của vùng phía dưới (buy limit chờ giá xuống). Khe VCL phải giữ cùng một vùng ≥ 4 nến liên tiếp mới tính (cạnh trôi theo vùng, giống VWAP trôi). Lõi VCL chạy trong cùng DLL (`VclCore.cs`); chỉ bật khi setup B bật nhóm S/R.
+- **Trần 2 lệnh/(loại vùng, phiên):** loại = `VWAP_W`, `VWAP_D`, `POC_D`, `VAH_D`, `VAL_D`, `HVN_D`, `POC_W`, `HVN_W`, `PDHL` (PDH+PDL), `VCL` (14 cạnh chung một trần).
+- Mức ngày/tuần chỉ lấy từ phiên/tuần **đã đóng** (không nhìn trước): HVN tuần = gộp tuần CME W−3..W−1; POC tuần = tuần W−1, cần ≥ 3 phiên đủ nến, không "mỏng" (volume < 20% trung vị).
+- Công tắc B v2 tắt + S/R tắt ⇒ B cũ (chỉ 2 VWAP). Mỗi nhóm bật/tắt độc lập; thứ tự ưu tiên giữ nguyên (VWAP → v2 → PDH/PDL → VCL R → VCL S).
+
+> ⚠ **Số đo 90 ngày GCZ26 (61 phiên sạch, ô θ 0,5 · N 3 · TP 3R, hòa vốn ≈ 27%):** B cũ 11 lệnh / WR 27,3% / R TB 0,00 · **B v2 25 lệnh / WR 32,0% / R TB +0,19** · **B v3 (v2 + S/R) 58 lệnh / WR 24,1% / R TB −0,12**
+> — dưới hòa vốn; 33 lệnh chỉ có ở v3 thắng 18,2%; PDH/PDL gần như không sinh lệnh; **0/9 phép so khác đối chứng** (vị trí vùng S/R không mang thông tin, xác suất chạm chỉ phụ thuộc khoảng cách).
+> Nhóm v2 cũng chỉ "tăng số lượng" (TRAIN −0,09 / TEST +0,45 ngược dấu, nằm trong dải đối chứng). **Cả hai nhóm đang BẬT theo yêu cầu người học để chạy forward test — không phải khuyến nghị vào lệnh.**
+> Muốn B bớt lệnh nhiễu: **tắt "B · thêm vùng S/R" trước** (S/R là nhóm làm WR tụt dưới hòa vốn). Chi tiết: `research/report/RESULTS-B-v2.md`, `RESULTS-B-v3.md`, `plans/BENZO-B-v3-plan.md`.
+
 ## Cách đọc bảng trên chart
 5 dòng: dòng tổng `BENZO · Tổng N lệnh · thắng · thua · WR% · ΣR` rồi 4 dòng A/B/C/D `n · thắng/thua · WR% · ΣR`; setup đang tắt có đuôi `(tắt)`.
 R đã trừ chi phí 0,2 giá/lệnh (TP = (lời − 0,2)/rủi ro, SL ≈ −1,1R). **Hòa vốn**: WR ≈ 27% ở 3R, ≈ 36% ở 2R. Mũi tên = nến vào; đường SL/TP vẽ theo tín hiệu.
@@ -130,6 +155,7 @@ Nhớ: n nhỏ (< 30 lệnh/setup) thì WR và ΣR chỉ là nhiễu.
 `research/parity_check.py` chạy `tools/ReplayCsv` (C#) và Python `setup_*.py` (ô chính) trên file 90d, mỗi setup độc lập (1 lệnh mở/setup), từ phiên 29/7
 (4 phiên đầu file là "thin": Python loại, C# không biết). Kết quả (`research/report/PARITY.md`): **A 18/18 · B 10/10 · C 99/99 · D 31/31 khớp hoàn toàn** sau khi loại ở phía Python các lệnh rơi vào khung mở ảo (A −2, B −1, C −22, D −0 so với 20/11/121/31 trước luật)
 (giờ, chiều, entry, SL, TP, kết quả TP/SL), không có lệch. **Parity nay lệch CÓ CHỦ ĐÍCH đúng số lệnh trong 19:20–20:30** (luật mở ảo chỉ có ở C#). Số tín hiệu trên toàn file 90d (gồm 4 phiên thin), trước → sau luật: A 20→18, B 13→12, C 123→101, D 33→32; hồi quy trong `tests/` (mục [11]) giữ số sau.
+**Setup B cũ / v2 / v3** (`research/parity_b_v3.py` → `research/report/PARITY-B-v3.md`): mảng vùng từng nến (12 mức cố định + 7 khe VCL × lo/hi/runlen, 86.333 nến) **lệch 0 ô**; lệnh C# chạy thô (tắt luật mở ảo) = Python **11/11, 25/25, 58/58 khớp hoàn toàn** (giờ, chiều, entry, SL, TP, tên vùng); bản chạy thật (có luật mở ảo) = Python bỏ lệnh trong 19:20-20:30: **10/10, 24/24, 57/57**. Hồi quy trong `tests/` mục [11] giữ các số này.
 Sai khác đã biết (không xảy ra trên dữ liệu thử): (1) nến M5 thiếu nến phút cuối được đóng muộn một nến; (2) D chọn nhịp hồi sớm nhất theo thời gian thực,
 Python nhìn trước cả cửa sổ nên có thể chọn khác ở ca hiếm; (3) bộ lọc "splice/thin" của Python không có trong live; (4) bộ lọc tin USD là mới, không có trong Python.
 
@@ -137,9 +163,9 @@ Python nhìn trước cả cửa sổ nên có thể chọn khác ở ca hiếm;
 1. Kế thừa `DetectorBase` (hoặc `IObservingDetector`): `Evaluate(ctx, i)` nhìn `ctx.Bars[0..i]` + `ctx.Zones` (đã cập nhật tới nến i), trả `Signal{Side,Entry,Sl,Tp,Reason,Zone}` hoặc `null`.
    `Observe` được gọi cho MỌI nến (kể cả khi đang có lệnh mở / setup tắt) nên trạng thái nội bộ luôn liên tục; `TryDetect` chỉ gọi khi rảnh lệnh và setup bật.
 2. Thêm vào `BenzoTrader.CreateDetectors()` theo thứ tự ưu tiên (hiện A, B, D, C); thêm file vào `build.sh`, `tests.csproj`, `tools/ReplayCsv`.
-3. Sửa logic ⇒ tăng `BenzoCore.LogicVersion` (hiện `port-2`) để cache niêm phong cũ bị bỏ.
+3. Sửa logic ⇒ tăng `BenzoCore.LogicVersion` (hiện `port-3`) để cache niêm phong cũ bị bỏ.
 
 `SetupContext`: `Symbol, Tick, TzOffset, BarMinutes, Bars (ClosedBars), Signals, Zones, GetLevels(idx) → LevelVol{Price,Bid,Ask,Vol}`, `IsNewsBlocked(utc)`, `ToVn(utc)`.
 `BarData`: `Idx, Time (giờ MỞ, UTC), O,H,L,C, Vol, BuyVol, SellVol, Delta`.
-Chưa port: HVN ngày/tuần, LVN, naked POC (không detector nào trong ô chính dùng tới). VA/IB/VWAP tự tính trong `BenzoZones` (không gọi `ProfileEngine`)
+Chưa port: LVN, naked POC, HVN dải của A-v4 (không detector nào trong ô chính dùng tới). HVN ngày/tuần, POC/VAH/VAL ngày, POC tuần, PDH/PDL đã port ở `BenzoSr.cs` cho setup B. VA/IB/VWAP tự tính trong `BenzoZones` (không gọi `ProfileEngine`)
 để test được không cần SDK.

@@ -31,3 +31,4 @@ data-export/data-footprint/fp_GC_XCEC_Time_20240801-20260819_748d9h_bars.csv
 # Trạm Đêm Vàng — rác build/test
 tram-dem-vang/node_modules/
 tram-dem-vang/test-results/
+benzo-trader/research/report/_replay_cs_levels.csv

@@ -276,6 +276,11 @@ namespace BenzoTraderNs
         public ModeState ModeDef => _trkDef.Cur;                 // band = VA Âu, chưa có thì IB (B, D)
         public ModeState ModeC => _trkC.Cur;                     // band = VA hôm qua trước 19:00, sau đó VA Âu / IB (C)
 
+        /// <summary>Vùng thêm cho setup B (HVN/POC/VA ngày-tuần, PDH/PDL, VCL). Mức cố định tính ở nến đầu phiên; VCL chỉ chạy khi Sr.UseVcl.</summary>
+        public readonly BenzoSr Sr = new BenzoSr();
+        private int _weekNo = -1, _sessWeek = -1;
+        private double _sessVol, _sessH = double.NegativeInfinity, _sessL = double.PositiveInfinity;
+
         private readonly ModeTracker _trkDef, _trkC;
         private readonly Queue<M5Bar> _pending = new();
         private M5Bar _cur;
@@ -338,6 +343,7 @@ namespace BenzoTraderNs
             double gap = first ? 0 : (bar.Time - Bars[idx - 1].Time).TotalMinutes;
             NewSession = first || gap > BenzoKernel.GapMinutes;
             bool newWeek = first || gap > BenzoKernel.WeekGapMinutes;
+            if (newWeek) _weekNo++;
             if (NewSession) StartSession(idx, first);
             if (newWeek) { WeekStartIdx = idx; _wPV = 0; _wV = 0; }
 
@@ -381,6 +387,7 @@ namespace BenzoTraderNs
             // ---- profile volume của phiên ----
             AddProfile(bar, levels, isEu);
             _sessBars++;
+            _sessVol += bar.Vol; _sessH = Math.Max(_sessH, bar.H); _sessL = Math.Min(_sessL, bar.L);
             if (isEu) _nEu++;
             if (isIb) { _nIb++; _ibHiAcc = Math.Max(_ibHiAcc, bar.H); _ibLoAcc = Math.Min(_ibLoAcc, bar.L); }
 
@@ -427,6 +434,9 @@ namespace BenzoTraderNs
             _cur.Delta += bar.Delta; _cur.LastIdx = idx;
             _lastSnap = Snap();
             if (bar.Time.Minute % 5 == 4) CloseCur(idx, _lastSnap);
+
+            // ---- lõi VCL (chỉ khi setup B bật nhóm vùng S/R) ----
+            Sr.PushVcl(idx, bar, levels, TzOffset, UsShift);
         }
 
         private void CloseCur(int lastIdx, ZoneSnap snap)
@@ -439,6 +449,9 @@ namespace BenzoTraderNs
 
         private void StartSession(int idx, bool first)
         {
+            // lưu phiên vừa đóng cho nhóm vùng thêm của B (HVN/POC ngày-tuần, PDH/PDL)
+            if (!first && _sessBars > 0)
+                Sr.CloseSession(new SessRec { No = SessionNo, Week = _sessWeek, Start = SessionStartIdx, N = _sessBars, Vol = _sessVol, High = _sessH, Low = _sessL, Prof = new Dictionary<long, double>(_full) });
             // chốt phiên trước thành "phiên hôm qua" nếu đủ nến
             if (!first && _sessBars >= BenzoKernel.MinBarsProf && _full.Count > 0 &&
                 BenzoKernel.ValueAreaOf(_full, out double p, out double vh, out double vl))
@@ -453,6 +466,9 @@ namespace BenzoTraderNs
             EuPoc = EuVah = EuVal = double.NaN; IbHi = IbLo = double.NaN;
             _ibHiAcc = double.NegativeInfinity; _ibLoAcc = double.PositiveInfinity;
             _groupKey = null;
+            _sessVol = 0; _sessH = double.NegativeInfinity; _sessL = double.PositiveInfinity;
+            _sessWeek = _weekNo;
+            Sr.BeginSession(_weekNo);
         }
 
         private void AddProfile(BarData bar, IReadOnlyList<LevelVol> levels, bool isEu)

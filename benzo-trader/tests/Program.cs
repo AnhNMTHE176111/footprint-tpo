@@ -406,6 +406,20 @@ static class Tests
             e.Advance(bars.Count - 1);
             Check(e.Signals.Count == kv.Value, $"setup {kv.Key}: {kv.Value} tín hiệu (= Python trừ các lệnh trong 19:20-20:30)", e.Signals.Count.ToString());
         }
+        // B v2 / v3 (parity thô với Python: 11 / 25 / 58 lệnh từ phiên 29/7; engine tắt luật mở ảo; file còn thêm vài lệnh ở 4 phiên 'thin' đầu file)
+        var from729 = new DateTime(2026, 7, 28, 22, 0, 0, DateTimeKind.Utc);      // nến đầu phiên '2026-07-29' (tên phiên = ngày của nến CUỐI)
+        foreach (var (v2, srz, expRaw, expLive, name) in new[] { (false, false, 11, 10, "B cũ"), (true, false, 25, 24, "B v2"), (true, true, 58, 57, "B v3") })
+        {
+            foreach (bool vopen in new[] { false, true })
+            {
+                var e = new BenzoEngine("GCZ26", 0.1, null, new ISetupDetector[] { new DetectorB(v2, srz) }) { GetLevels = i => (IReadOnlyList<LevelVol>)levels[i] ?? Array.Empty<LevelVol>(), VirtualOpenRule = vopen };
+                foreach (var b in bars) e.Bars.Add(b);
+                e.Advance(bars.Count - 1);
+                int cnt = e.Signals.Count(x => x.Time >= from729);
+                int want = vopen ? expLive : expRaw;
+                Check(cnt == want, $"{name} {(vopen ? "(có luật mở ảo)" : "(thô, khớp Python)")}: {want} lệnh từ 29/7", cnt.ToString());
+            }
+        }
     }
 
     static void TestVirtualOpen()
@@ -442,10 +456,179 @@ static class Tests
         Check(BenzoCore.PickChartRect(null, 1000, 600) == -1, "danh sách null ⇒ −1");
     }
 
+
+    // ---------------------------------------------------------------- B: vùng thêm (v2 HVN/VA/POC · v3 PDH/PDL/VCL)
+    // mẫu BUY của Python test_b_v2._pattern: bar đầu to, 40 nến phẳng, rơi từ Z+6 xuống Z+1 (move 6 giá), cụm 3 nến chạm Z, CF BUY.
+    static List<BarData> BPattern(double[] zs, DateTime t0)
+    {
+        var rows = new List<(double o, double h, double l, double c, double d)> { (115, 125, 115, 120, 0) };
+        for (int k = 0; k < 40; k++) rows.Add((120, 120.1, 119.9, 120, 0));
+        foreach (double Z in zs)
+        {
+            for (int k = 0; k < 3; k++) rows.Add((Z + 6, Z + 6.1, Z + 5.9, Z + 6, 0));
+            for (int k = 0; k < 5; k++) { double o = Z + 6 - k; rows.Add((o, o + 0.1, o - 1.1, o - 1, -20)); }
+            rows.Add((Z + 1.0, Z + 1.1, Z + 0.0, Z + 0.2, -10));
+            rows.Add((Z + 0.2, Z + 0.4, Z - 0.1, Z + 0.7, -6));
+            rows.Add((Z + 0.5, Z + 0.6, Z - 0.2, Z + 0.3, -3));
+            rows.Add((Z + 0.0, Z + 1.1, Z - 0.1, Z + 1.0, 15));        // nến xác nhận BUY
+            for (int k = 0; k < 10; k++) rows.Add((Z + 1, Z + 1.1, Z + 0.9, Z + 1, 0));
+        }
+        var l = new List<BarData>();
+        for (int i = 0; i < rows.Count; i++)
+            l.Add(new BarData { Idx = i, Time = t0.AddMinutes(i), O = rows[i].o, H = rows[i].h, L = rows[i].l, C = rows[i].c, Vol = 10, Delta = rows[i].d });
+        return l;
+    }
+
+    /// <summary>Chạy DetectorB(v2, sr) trên mẫu; fx = (tên mức cố định, giá) đặt SAU nến 0 (BeginSession xoá mức ở nến đầu phiên).
+    /// vcl = (khe 0, mã vùng, lo, hi, nến bắt đầu) để nạp tay khe VCL.</summary>
+    static BenzoEngine RunB(bool v2, bool sr, double[] zs, (string name, double price)[] fx, (int slot, int id, double lo, double hi, int from)[] vcl = null)
+    {
+        var eng = new BenzoEngine("X", 0.1, null, new ISetupDetector[] { new DetectorB(v2, sr) });
+        eng.Zones.Sr.ManualSlots = vcl != null;
+        var bars = BPattern(zs, new DateTime(2026, 9, 1, 14, 0, 0, DateTimeKind.Utc));       // 21:00 VN, pha Mỹ, ngoài khung mở ảo
+        foreach (var b in bars) eng.Bars.Add(b);
+        for (int i = 0; i < bars.Count; i++)
+        {
+            eng.Advance(i);
+            if (i == 0) foreach (var (nm, pr) in fx) eng.Zones.Sr.Fx[BenzoSr.FixedIndex(nm)] = pr;
+            if (vcl != null)
+            {
+                var disp = new List<VungCanhLenhNs.VZone>();
+                foreach (var v in vcl) if (i >= v.from) disp.Add(new VungCanhLenhNs.VZone { Id = v.id, Lo = v.lo, Hi = v.hi });
+                eng.Zones.Sr.AssignSlots(disp);
+            }
+        }
+        return eng;
+    }
+
+    static BarData SessBar(int s, int j, DateTime t, double volScale = 1.0)
+    {
+        double c = 1000 + 5 * s + 3 * Math.Sin(j / 20.0);
+        return new BarData { Time = t, O = c, H = c + 1 + (j % 5) * 0.1, L = c - 1 - (j % 3) * 0.1, C = c + 0.2 * Math.Sin(j), Vol = (10 + j % 7) * volScale, Delta = (j % 2 == 0 ? 3 : -3) };
+    }
+
+    static void TestBZones()
+    {
+        Console.WriteLine("[14] B: vùng thêm — HVN, phiên/tuần, PDH/PDL, khe VCL, ưu tiên, trần, khoá chiều");
+        // --- FindHvn khớp Python kernel.find_hvn (đối chiếu số từ Python: [(4012.0, 6.6895), (4030.0, 5.0046), (4040.0, 1.8449)])
+        int n = 251; var w = new double[n]; var pr = new double[n];
+        for (int i = 0; i < n; i++)
+        {
+            w[i] = 10 + (int)(300 * Math.Exp(-Math.Pow((i - 60) / 6.0, 2))) + (int)(200 * Math.Exp(-Math.Pow((i - 150) / 8.0, 2))) + (int)(120 * Math.Exp(-Math.Pow((i - 200) / 3.0, 2)));
+            pr[i] = BenzoKernel.RowPrice(20000 + i);
+        }
+        var hv = BenzoSr.FindHvn(pr, w);
+        Check(hv.Count == 3 && Near(hv[0].p, 4012.0) && Near(hv[1].p, 4030.0) && Near(hv[2].p, 4040.0) && Near(hv[0].r, 6.689466974743048, 1e-9) && Near(hv[1].r, 5.004601226993865, 1e-9) && Near(hv[2].r, 1.844852999760975, 1e-9),
+              "FindHvn khớp Python (3 đỉnh, mạnh trước, tỉ lệ đúng)", string.Join(" ", hv.Select(x => $"{x.p}:{x.r:0.###}")));
+        Check(BenzoSr.FindHvn(new double[2], new double[2]).Count == 0 && BenzoSr.FindHvn(pr, new double[n]).Count == 0, "FindHvn: < 3 hàng hoặc volume 0 ⇒ rỗng");
+
+        // --- mức theo phiên/tuần: 3 phiên cùng tuần (khoảng nghỉ 60′) rồi phiên thứ 4 sau nghỉ 31 giờ (tuần mới)
+        DateTime t = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc);
+        var starts = new List<int>(); var sessBars = new List<List<BarData>>();
+        var all = new List<BarData>();
+        for (int s = 0; s < 4; s++)
+        {
+            starts.Add(all.Count); var one = new List<BarData>();
+            for (int j = 0; j < 320; j++) { var b = SessBar(s, j, t); b.Idx = all.Count; all.Add(b); one.Add(b); t = t.AddMinutes(1); }
+            sessBars.Add(one);
+            t = t.AddMinutes(s == 2 ? 31 * 60 : 60);
+        }
+        var eng = new BenzoEngine("X", 0.1, null, new ISetupDetector[] { new DetectorB(true, true) });
+        eng.Zones.Sr.ManualSlots = true;
+        foreach (var b in all) eng.Bars.Add(b);
+        var fx = new Dictionary<int, double[]>();
+        for (int i = 0; i < all.Count; i++) { eng.Advance(i); if (starts.Contains(i)) fx[i] = (double[])eng.Zones.Sr.Fx.Clone(); }
+        double H1 = sessBars[1].Max(b => b.H), L1 = sessBars[1].Min(b => b.L);
+        var f2 = fx[starts[2]];
+        Check(Near(f2[BenzoSr.FixedIndex("PDH")], H1) && Near(f2[BenzoSr.FixedIndex("PDL")], L1), "PDH/PDL = đỉnh/đáy của phiên đầy đủ gần nhất đã đóng", $"{f2[10]} {f2[11]} vs {H1} {L1}");
+        Check(double.IsNaN(fx[starts[0]][10]) && double.IsNaN(fx[starts[0]][0]), "phiên đầu: chưa có phiên hôm qua ⇒ mọi mức NaN");
+        double H0 = sessBars[0].Max(b => b.H);
+        Check(Near(fx[starts[1]][10], H0), "phiên 2 lấy PDH của phiên 1", fx[starts[1]][10].ToString());
+        // POC/VAH/VAL ngày = VA phiên hôm qua của lõi Zones (đã parity với Python)
+        var e2 = new BenzoEngine("X", 0.1, null, new ISetupDetector[] { new DetectorB(true, true) });
+        e2.Zones.Sr.ManualSlots = true;
+        foreach (var b in all) e2.Bars.Add(b);
+        e2.Advance(starts[2]);
+        Check(Near(e2.Zones.Sr.Fx[0], e2.Zones.YdPoc) && Near(e2.Zones.Sr.Fx[1], e2.Zones.YdVah) && Near(e2.Zones.Sr.Fx[2], e2.Zones.YdVal), "POC/VAH/VAL ngày = VA hôm qua", $"{e2.Zones.Sr.Fx[0]} {e2.Zones.YdPoc}");
+        Check(double.IsNaN(f2[6]) && double.IsNaN(f2[7]), "chưa có tuần W−1 ⇒ POC tuần và HVN tuần NaN");
+        // tuần mới: POC tuần = POC của profile gộp 3 phiên tuần cũ; tính độc lập (rải đều volume nến lên các hàng low..high)
+        var agg = new Dictionary<long, double>();
+        foreach (var b in sessBars.Take(3).SelectMany(x => x))
+        {
+            long lo = (long)Math.Round(b.L / BenzoKernel.RowStep), hi = (long)Math.Round(b.H / BenzoKernel.RowStep);
+            double v = b.Vol / (hi - lo + 1);
+            for (long r = lo; r <= hi; r++) agg[r] = (agg.TryGetValue(r, out var a) ? a : 0) + v;
+        }
+        BenzoKernel.ValueAreaOf(agg, out double pocW, out _, out _);
+        var f3 = fx[starts[3]];
+        Check(Near(f3[6], pocW, 1e-9), "tuần mới: POC tuần = POC profile gộp 3 phiên tuần cũ", $"{f3[6]} vs {pocW}");
+        Check(Near(f3[10], sessBars[2].Max(b => b.H)), "phiên 4: PDH của phiên 3");
+        // phiên mỏng bị loại khỏi POC tuần: phiên 2 volume ×0,05 ⇒ chỉ còn 2 phiên không mỏng (< 3) ⇒ POC tuần NaN
+        var e3 = new BenzoEngine("X", 0.1, null, new ISetupDetector[] { new DetectorB(true, true) });
+        e3.Zones.Sr.ManualSlots = true;
+        foreach (var b in all) { var c = new BarData { Idx = b.Idx, Time = b.Time, O = b.O, H = b.H, L = b.L, C = b.C, Vol = b.Vol, Delta = b.Delta }; if (b.Idx >= starts[1] && b.Idx < starts[2]) c.Vol *= 0.05; e3.Bars.Add(c); }
+        e3.Advance(starts[3]);
+        Check(double.IsNaN(e3.Zones.Sr.Fx[6]), "phiên mỏng (<20% trung vị) bị loại, còn 2 phiên (< 3) ⇒ POC tuần NaN (cùng dữ liệu, phiên không mỏng ⇒ có POC tuần)", e3.Zones.Sr.Fx[6].ToString());
+
+        // --- gán khe VCL theo mã vùng (đúng ví dụ plan test 4)
+        var sr = new BenzoSr();
+        var spec = new Dictionary<int, (int a, int b, double lo)> { [0] = (0, 9, 10.0), [1] = (2, 12, 5.0), [2] = (4, 7, 20.0), [3] = (8, 15, 1.0), [4] = (10, 14, 30.0) };
+        var slotOf = new Dictionary<int, HashSet<int>>();
+        var run = new int[20][];
+        for (int bar = 0; bar < 20; bar++)
+        {
+            var disp = new List<VungCanhLenhNs.VZone>();
+            foreach (var kv in spec) if (bar >= kv.Value.a && bar <= kv.Value.b) disp.Add(new VungCanhLenhNs.VZone { Id = kv.Key, Lo = kv.Value.lo + 0.01 * bar, Hi = kv.Value.lo + 2 });
+            sr.AssignSlots(disp);
+            run[bar] = Enumerable.Range(0, BenzoSr.VclSlots).Select(k => sr.SlotRunAt(k, bar)).ToArray();
+            foreach (var z in disp)
+            {
+                int k = Enumerable.Range(0, BenzoSr.VclSlots).First(q => Near(sr.SlotLoAt(q, bar), z.Lo));
+                if (!slotOf.TryGetValue(z.Id, out var set)) slotOf[z.Id] = set = new HashSet<int>();
+                set.Add(k);
+            }
+        }
+        Check(slotOf.Values.All(x => x.Count == 1), "mỗi mã vùng giữ ĐÚNG một khe suốt đời");
+        Check(slotOf.Values.SelectMany(x => x).Max() == 2, "tối đa 3 vùng đồng thời ⇒ chỉ dùng khe 0..2", string.Join(",", slotOf.Select(kv => kv.Key + ":" + string.Join("", kv.Value))));
+        Check(run[3][slotOf[1].First()] == 2 && run[5][slotOf[1].First()] == 4, "runlen đếm nến liên tiếp cùng mã (mã 1 sinh ở nến 2)");
+        Check(slotOf[3].First() == slotOf[2].First() || slotOf[3].First() == slotOf[0].First(), "khe giải phóng được mã mới dùng lại (mã 3 sinh ở nến 8 nhận khe trống nhỏ nhất)");
+        Check(double.IsNaN(sr.SlotLoAt(5, 5)) && sr.SlotRunAt(5, 5) == 0 && double.IsNaN(sr.SlotHiAt(6, 3)), "khe trống: NaN, runlen 0");
+
+        // --- B với vùng thêm trên mẫu BUY tại Z = 100
+        var e = RunB(false, false, new[] { 100.0 }, new[] { ("POC_D", 100.0) });
+        Check(e.Signals.Count == 0, "B cũ (2 VWAP): mức POC_D = 100 bị bỏ qua ⇒ 0 lệnh");
+        e = RunB(true, false, new[] { 100.0 }, new[] { ("POC_D", 100.0) });
+        Check(e.Signals.Count == 1 && e.Signals[0].Side == 1 && e.Signals[0].Zone == "POC_D" && e.Signals[0].Reason.Contains("POC ngày"), "B v2: hấp thụ tại POC ngày ⇒ 1 BUY, nhãn tiếng Việt", e.Signals.Count > 0 ? e.Signals[0].Zone + " | " + e.Signals[0].Reason : "0 lệnh");
+        e = RunB(true, false, new[] { 100.0 }, new[] { ("PDL", 100.0) });
+        Check(e.Signals.Count == 0, "PDL không thuộc nhóm v2 ⇒ 0 lệnh khi chỉ bật v2");
+        e = RunB(false, true, new[] { 100.0 }, new[] { ("PDL", 100.0) });
+        Check(e.Signals.Count == 1 && e.Signals[0].Zone == "PDL" && e.Signals[0].Reason.Contains("đáy phiên trước"), "nhóm S/R: PDL ⇒ 1 BUY, nhãn 'đáy phiên trước'");
+        e = RunB(true, true, new[] { 100.0 }, new[] { ("PDH", 100.0), ("POC_D", 100.0) });
+        Check(e.Signals.Count == 1 && e.Signals[0].Zone == "POC_D", "trùng giá: v2 (POC_D) đứng trước S/R (PDH) ⇒ lệnh gắn POC_D (1 nến = 1 lệnh)");
+        e = RunB(false, true, new[] { 100.0 }, new[] { ("PDH", 100.0), ("PDL", 100.0) });
+        Check(e.Signals.Count == 1 && e.Signals[0].Zone == "PDH", "PDH đứng trước PDL");
+        e = RunB(true, false, new[] { 100.0, 90.0, 80.0 }, new[] { ("HVN_D1", 100.0), ("HVN_D2", 90.0), ("HVN_D3", 80.0) });
+        Check(e.Signals.Count == 2 && e.Signals[0].Zone == "HVN_D1" && e.Signals[1].Zone == "HVN_D2", "trần 2 lệnh/(loại, phiên): 3 ca cùng loại HVN_D ⇒ giữ 2 đầu", string.Join(",", e.Signals.Select(x => x.Zone)));
+        e = RunB(true, false, new[] { 100.0, 90.0, 80.0 }, new[] { ("HVN_D1", 100.0), ("HVN_D2", 90.0), ("POC_D", 80.0) });
+        Check(e.Signals.Count == 3, "khác loại thì không bị trần chung ⇒ 3 lệnh");
+
+        // --- khe VCL: cạnh TRÊN (hi) của vùng hỗ trợ chỉ cho giá đi XUỐNG (BUY); cạnh DƯỚI (lo) của kháng cự chỉ cho giá đi LÊN (SELL)
+        e = RunB(false, true, new[] { 100.0 }, new (string, double)[0], new[] { (0, 7, 97.0, 100.0, 0) });
+        Check(e.Signals.Count == 1 && e.Signals[0].Zone == "VCL_S1" && e.Signals[0].Side == 1 && e.Signals[0].Reason.Contains("VCL hỗ trợ"), "VCL: cạnh trên 100 + giá rơi xuống ⇒ BUY tại VCL_S1", e.Signals.Count > 0 ? e.Signals[0].Zone : "0 lệnh");
+        e = RunB(false, true, new[] { 100.0 }, new (string, double)[0], new[] { (0, 7, 100.0, 103.0, 0) });
+        Check(e.Signals.Count == 0, "VCL: cạnh dưới 100 nhưng giá đi XUỐNG tới nó ⇒ khoá chiều (R chỉ nhận giá đi lên) ⇒ 0 lệnh");
+        e = RunB(false, true, new[] { 100.0 }, new (string, double)[0], new[] { (0, 7, 97.0, 100.0, 49) });
+        Check(e.Signals.Count == 0, "VCL: vùng mới sinh 2 nến trước CF (chưa giữ ≥ 4 nến) ⇒ chưa 'ấm' ⇒ 0 lệnh");
+        e = RunB(false, true, new[] { 100.0 }, new (string, double)[0], new[] { (0, 7, 97.0, 100.0, 46) });
+        Check(e.Signals.Count == 1, "VCL: vùng sống từ trước cụm ≥ 4 nến ⇒ ấm ⇒ 1 lệnh");
+        e = RunB(true, false, new[] { 100.0 }, new (string, double)[0], new[] { (0, 7, 97.0, 100.0, 0) });
+        Check(e.Signals.Count == 0, "chỉ bật v2: khe VCL bị bỏ qua");
+    }
+
     static int Main()
     {
         TestSimulate(); TestStats(); TestResetMark(); TestCaption(); TestCache(); TestEngine();
-        TestKernel(); TestZonesAndC(); TestObserve(); TestVirtualOpen(); TestChartPick(); TestRealData();
+        TestKernel(); TestZonesAndC(); TestObserve(); TestVirtualOpen(); TestChartPick(); TestBZones(); TestRealData();
 #if DEBUG
         TestDemo();
 #endif

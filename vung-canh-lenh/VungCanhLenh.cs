@@ -259,9 +259,42 @@ namespace VungCanhLenhNs
             using (var br = new SolidBrush(Color.FromArgb(235, Color.White))) gr.DrawString(s, fLbl, br, lx, ly);
         }
 
-        /// <summary>Chế độ "tất cả vùng" (PLAN-LICH-SU 2.5–2.7): mỗi vùng lịch sử một hình chữ nhật từ StartTime tới EndTime (vùng còn sống ⇒ mép phải),
-        /// màu theo vai (đỏ kháng cự / xanh hỗ trợ / xám chưa rõ). Vùng sống tại tF (nến dưới chuột, hoặc mép phải) vẽ đậm + nhãn lo–hi; còn lại mờ, không nhãn.
-        /// Không vẽ Display từ FirstTime nữa: vùng live = vùng lịch sử còn sống (nhãn live của vùng Display nó đang khớp); vùng Display bị chặn ⇒ viền đứt.</summary>
+        /// <summary>Một đoạn khối: tô alpha fillA (0 = không tô), viền trên/dưới alpha edgeA; cạnh trái/phải nếu yêu cầu và trong khung.</summary>
+        private static void DrawBox(Graphics gr, Color c, int fillA, int edgeA, float xa, float xb, float top, float h, Rectangle clip, bool leftEdge, bool rightEdge)
+        {
+            float ca = Math.Max(clip.Left, xa), cb = Math.Min(clip.Right, Math.Max(xb, xa + 2));
+            if (cb < clip.Left || ca > clip.Right || cb <= ca) return;
+            if (fillA > 0) using (var br = new SolidBrush(Color.FromArgb(fillA, c))) gr.FillRectangle(br, ca, top, cb - ca, h);
+            using (var pen = new Pen(Color.FromArgb(edgeA, c), 1f))
+            {
+                gr.DrawLine(pen, ca, top, cb, top);
+                gr.DrawLine(pen, ca, top + h, cb, top + h);
+                if (leftEdge && xa >= clip.Left) gr.DrawLine(pen, xa, top, xa, top + h);
+                if (rightEdge && xb <= clip.Right) gr.DrawLine(pen, xb, top, xb, top + h);
+            }
+        }
+
+        /// <summary>Nhãn lo–hi ở mép trái đoạn [xa, xb] nếu vừa; atF ⇒ thêm một nhãn ở x của tiêu điểm (nếu nhãn mép trái không thấy hoặc ở xa tF).</summary>
+        private void DrawRangeLabel(Graphics gr, VLichSu g, Font fLbl, float xa, float xb, float top, float h, Rectangle clip, float xF, bool atF)
+        {
+            string s = F(g.Lo) + "–" + F(g.Hi);
+            var sz = gr.MeasureString(s, fLbl);
+            if (sz.Height > h + 2) return;
+            float ca = Math.Max(clip.Left, xa), cb = Math.Min(clip.Right, xb);
+            float ly = top + h / 2 - sz.Height / 2;
+            using var br = new SolidBrush(Color.FromArgb(220, Color.White));
+            bool left = xa >= clip.Left && sz.Width + 4 <= cb - xa;
+            if (left) gr.DrawString(s, fLbl, br, xa + 2, ly);
+            if (atF && !float.IsNaN(xF) && xF + 4 + sz.Width <= cb && xF >= ca && (!left || xF - xa > 3 * sz.Width))
+                gr.DrawString(s, fLbl, br, xF + 4, ly);
+        }
+
+        /// <summary>Chế độ "tất cả vùng" (PLAN-LICH-SU 2.5–2.7 + PLAN-LOC-VUNG 3.2), màu theo vai (đỏ kháng cự / xanh hỗ trợ / xám chưa rõ).
+        /// Hai hạng: HẠNG 1 (khối đã có ≥ 1 lần chạm lại VÀ đã hiện ≥ 60 phút; lên hạng tại TQTime, không hồi tố) vẽ suốt lịch sử TỪ TQTime
+        /// (tô 35 / viền 110; đậm 55 / 150 khi TQTime ≤ tF ≤ End), phần [StartTime, TQTime) chỉ là đuôi viền mờ (trang trí hồi tố, không phải
+        /// "đã lên hạng" lúc đó). HẠNG 2 (còn lại) KHÔNG vẽ, trừ khi sống tại tF (nến dưới chuột, hoặc mép phải): viền mảnh, không tô.
+        /// Khối hạng 1 mà tF &lt; TQTime vẽ như hạng 2 ở đoạn trước TQTime. Lọc để chart GỌN — không phải lọc vùng mạnh.
+        /// Vùng live: nhãn live mép phải của vùng Display nó đang khớp; khối hạng 2 sống ngoài tiêu điểm và vùng Display bị chặn ⇒ viền đứt.</summary>
         private void PaintLichSu(Graphics gr, Func<DateTime, double> chartX, Func<double, double> chartY, Func<double, DateTime> timeAt,
                                  Rectangle clip, RenderState rs, Font fLbl)
         {
@@ -271,50 +304,47 @@ namespace VungCanhLenhNs
             foreach (var z in rs.Zones) zoneOf[z.Id] = z;
             float xF = float.NaN;
             try { xF = (float)chartX(tF); } catch { }
+            var dut = new List<VZone>(rs.BiChan);      // vẽ viền đứt từ nến hiện tại: Display bị chặn + khối hạng 2 sống ngoài tiêu điểm
             foreach (var g in rs.LichSu)
             {
                 if (!g.TungGan && !ShowFar) continue;
                 bool live = g.End < 0;
-                float x0, x1;
-                try { x0 = (float)chartX(g.StartTime); x1 = live ? clip.Right : (float)chartX(g.EndTime.AddMinutes(1)); } catch { continue; }
+                int ve = LichSuTracker.VeTai(g, tF);   // 0 ngoài tiêu điểm · 1 đậm · 2 viền mảnh
+                VZone zl = null;
+                bool hasLive = live && g.MatchedId >= 0 && zoneOf.TryGetValue(g.MatchedId, out zl) && (zl.Slot != 'F' || ShowFar);
+                if (!g.Hang1 && ve == 0)
+                {
+                    if (hasLive) dut.Add(zl);
+                    continue;
+                }
+                float x0, x1, xq;
+                try
+                {
+                    x0 = (float)chartX(g.StartTime); x1 = live ? clip.Right : (float)chartX(g.EndTime.AddMinutes(1));
+                    xq = g.Hang1 ? (float)chartX(g.TQTime) : x1;
+                }
+                catch { continue; }
                 if (x1 < clip.Left || x0 > clip.Right) continue;
                 float yHi = (float)chartY(g.Hi), yLo = (float)chartY(g.Lo);
                 float top = Math.Min(yHi, yLo), h = Math.Max(1f, Math.Abs(yLo - yHi));
                 if (top > clip.Bottom || top + h < clip.Top) continue;
-                float cx0 = Math.Max(clip.Left, x0), cx1 = Math.Min(clip.Right, Math.Max(x1, x0 + 2));
-                bool focus = g.StartTime <= tF && (live || tF <= g.EndTime);
                 Color baseC = g.Vai > 0 ? ResColor : (g.Vai < 0 ? SupColor : Color.FromArgb(140, 140, 140));
-                using (var br = new SolidBrush(Color.FromArgb(focus ? 55 : 18, baseC))) gr.FillRectangle(br, cx0, top, cx1 - cx0, h);
-                using (var pen = new Pen(Color.FromArgb(focus ? 150 : 60, baseC), 1f))
-                {
-                    gr.DrawLine(pen, cx0, top, cx1, top);
-                    gr.DrawLine(pen, cx0, top + h, cx1, top + h);
-                    if (x0 >= clip.Left) gr.DrawLine(pen, x0, top, x0, top + h);
-                    if (!live && x1 <= clip.Right) gr.DrawLine(pen, x1, top, x1, top + h);
-                }
+                // đoạn [StartTime, TQTime) — hạng 2: cả khối; hạng 1: đuôi mờ (viền 40) hoặc viền mảnh 90 khi tF còn trước TQTime
+                if (xq > x0) DrawBox(gr, baseC, 0, ve == 2 ? 90 : 40, x0, Math.Min(xq, x1), top, h, clip, true, !g.Hang1 && !live);
+                // đoạn [TQTime, End] — chỉ hạng 1
+                if (g.Hang1) DrawBox(gr, baseC, ve == 1 ? 55 : 35, ve == 1 ? 150 : 110, xq, x1, top, h, clip, true, !live);
                 double life = ((live ? rs.LastTime : g.EndTime) - g.StartTime).TotalMinutes;
-                if (focus && ShowLabels && life >= Vcl.LsLabelMin)
+                if (ShowLabels && life >= Vcl.LsLabelMin)
                 {
-                    string s = F(g.Lo) + "–" + F(g.Hi);
-                    var sz = gr.MeasureString(s, fLbl);
-                    if (sz.Height <= h + 2)
-                        using (var br = new SolidBrush(Color.FromArgb(220, Color.White)))
-                        {
-                            float ly = top + h / 2 - sz.Height / 2;
-                            bool left = x0 >= clip.Left && sz.Width + 4 <= cx1 - cx0;
-                            if (left) gr.DrawString(s, fLbl, br, x0 + 2, ly);
-                            // khối dài: thêm một nhãn ở x của tF (nếu nhãn mép trái không thấy hoặc ở xa tF)
-                            if (!float.IsNaN(xF) && xF + 4 + sz.Width <= cx1 && xF >= cx0 && (!left || xF - x0 > 3 * sz.Width))
-                                gr.DrawString(s, fLbl, br, xF + 4, ly);
-                        }
+                    if (ve == 2) DrawRangeLabel(gr, g, fLbl, x0, x1, top, h, clip, xF, true);
+                    else if (g.Hang1) DrawRangeLabel(gr, g, fLbl, xq, x1, top, h, clip, xF, ve == 1);
                 }
-                if (live && g.MatchedId >= 0 && zoneOf.TryGetValue(g.MatchedId, out var zl) && (zl.Slot != 'F' || ShowFar))
-                    DrawLiveLabel(gr, zl, rs, fLbl, cx0, top, h, clip);
+                if (hasLive) DrawLiveLabel(gr, zl, rs, fLbl, Math.Max(clip.Left, g.Hang1 && ve != 2 ? xq : x0), top, h, clip);
             }
-            // vùng Display bị chặn (chồng một phần với vùng lịch sử đang sống): viền đứt, không tô, từ nến hiện tại tới mép phải + nhãn live
+            // viền đứt, không tô, từ nến hiện tại tới mép phải + nhãn live
             float xNow = clip.Left;
             try { xNow = Math.Max(clip.Left, (float)chartX(rs.LastTime)); } catch { }
-            foreach (var z in rs.BiChan)
+            foreach (var z in dut)
             {
                 if (z.Slot == 'F' && !ShowFar) continue;
                 if (xNow > clip.Right) break;

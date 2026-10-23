@@ -58,7 +58,8 @@ và đếm bằng mắt vài lần chạm để đối chiếu với máy (đế
 - `VungCanhLenh.cs`: lớp dán Quantower (đọc nến + footprint, vẽ vùng + nhãn).
 - `build.sh`: build, 0 cảnh báo. `tests/`: `dotnet run --project vung-canh-lenh/tests`.
 - `research/vcl5.py` + `lan_cham.py` (backtest), `test_lan_cham.py`, `parity_vcl.py` (tự build + chạy `tools/ReplayCsv`).
-- `research/lich_su.py`: port Python của vùng lịch sử (`LichSuTracker`) + parity từng dòng với `_lichsu.csv` của C# + đo tiêu chí; `ve_lich_su.py`: vẽ 2 phiên mẫu.
+- `research/lich_su.py`: port Python của vùng lịch sử (`LichSuTracker`) + parity từng dòng với `_lichsu.csv` của C# (kể cả `tq_utc` = nến lên hạng 1) + đo tiêu chí LICH-SU và LOC-VUNG; `ve_lich_su.py`: vẽ 2 phiên mẫu
+  (`lich_su_*.png` và bản 2 hạng `loc_vung_*.png`); `loc_vung_bench.py`: benchmark 19 bộ lọc + đối chứng khớp khoảng cách (PLAN-LOC-VUNG).
 
 ## Chế độ "Hiện TẤT CẢ vùng trong lịch sử"
 Bật tuỳ chọn này để xem lại các vùng từng hiện trên chart (dùng khi review signal Benzo Trader: tại nến signal có những kháng cự/hỗ trợ nào).
@@ -71,12 +72,23 @@ Bật tuỳ chọn này để xem lại các vùng từng hiện trên chart (d�
 - **Khối kết thúc khi:** (a) **xuyên phá** — một lần chạm kết thúc bằng 5 nến liền đóng xa hơn 2 giá ở phía sau lưng vai (kháng cự bị vượt lên,
   hỗ trợ bị thủng xuống); khối dừng ở nến cuối còn neo, nên khi chốt **khối co lại 5 nến** (giống nhãn trễ 5 nến); dải đó với vai mới là một khối mới;
   (b) **hết hạn** — vùng không còn hiện trên chart quá 60 phút; khối dừng ở lần hiện cuối. Khối còn hiện ở nến mới nhất kéo tới mép phải.
-- **Tiêu điểm theo chuột:** rê chuột tới một nến (vd nến signal) ⇒ các khối còn hiệu lực tại nến đó vẽ **đậm + nhãn thấp–cao**, các khối khác mờ, không nhãn;
-  một đường dọc mảnh đánh dấu nến đang soi. Chuột ra ngoài chart ⇒ tiêu điểm là nến ở mép phải. Trên dữ liệu 90 ngày, tại 163 nến signal Benzo có
-  trung bình **6,7 khối đậm** (p90: 8).
+- **Hai hạng (lọc cho gọn):** Khối **hạng 1** = khối đã có ít nhất một lần giá quay lại chạm và đã hiện ≥ 60 phút; vẽ suốt lịch sử (≈ 23 khối/24 giờ).
+  Khối còn lại chỉ hiện khi rê chuột tới nến đang soi. **Đây là lọc để chart gọn, không phải lọc vùng mạnh**: đã đo
+  ([LOC-VUNG-BENCH.md](research/report/LOC-VUNG-BENCH.md)) — sau khi lên hạng, khối hạng 1 không bật giá nhiều hơn khối giả cùng cỡ, cùng khoảng cách;
+  vùng được chạm nhiều lần là vùng giá đang đi ngang quanh đó, lần sau còn hay bị xuyên hơn.
+  - Khối **lên hạng ở nến đầu tiên** thoả cả hai điều kiện, chỉ dùng dữ liệu tới nến đó (không hồi tố, không xuống hạng). Phần tô bắt đầu **từ nến lên hạng**;
+    đoạn trước đó (từ lúc khối hiện ra tới lúc lên hạng) chỉ là **đuôi viền mờ** — trang trí cho thấy lần chạm đã đưa khối lên hạng, lúc đó khối CHƯA là hạng 1.
+  - Lần chạm ngay ở nến khối hiện ra không tính là "chạm lại". Khối kết thúc trước khi đủ điều kiện thì mãi là hạng 2.
+- **Tiêu điểm theo chuột:** rê chuột tới một nến (vd nến signal) ⇒ khối hạng 1 đã lên hạng tại nến đó vẽ **đậm + nhãn thấp–cao**; mọi khối khác còn hiệu lực
+  tại nến đó (hạng 2, hoặc hạng 1 chưa tới nến lên hạng) vẽ **viền mảnh, không tô** + nhãn; một đường dọc mảnh đánh dấu nến đang soi. Chuột ra ngoài
+  chart ⇒ tiêu điểm là nến ở mép phải. Trên dữ liệu 90 ngày, tại 163 nến signal Benzo: trung bình **2,2 khối đậm + 4,5 khối viền mảnh = 6,7 khối**
+  còn hiệu lực (p90 đậm 4); 74% signal có khối hạng 1 cách giá ≤ 5 giá. Muốn gọn hơn nữa: đổi hằng `LsRankTouch = 2` (≈ 13 khối/24 giờ, nhưng chỉ
+  ≈ 1,1 khối đậm tại signal) rồi chạy lại bench — không có cài đặt riêng.
 - Khối sống < 15 phút không có nhãn. Nhãn đầy đủ của vùng hiện tại (độ rộng, điểm, % lần chạm…) vẫn ở mép phải như chế độ gọn.
 - Vùng hiện tại chồng một phần lên một khối đang sống (≈1% thời gian) vẽ bằng **viền đứt**, không tô, từ nến hiện tại tới mép phải, kèm nhãn của nó.
-- **Giới hạn nói trước:** khoảng **60 khối/24 giờ là bình thường** (đo 90 ngày: TB 63 khối/phiên, p90 81). Giá vàng đi qua 30–50 giá mỗi ngày, mỗi dải có thể
-  là kháng cự rồi hỗ trợ, nên không thể chỉ còn "vài khối" mà không bỏ bớt vùng thật — vì vậy mới có tiêu điểm theo chuột.
+  Vùng hiện tại thuộc khối **hạng 2** khi tiêu điểm đang ở nến cũ (khối ẩn) cũng vẽ viền đứt + nhãn như vậy — vùng live không bao giờ biến mất.
+- **Giới hạn nói trước:** ≈ **23 khối hạng 1/24 giờ** (p90 32); khối khác hiện khi rê chuột. Tổng số khối (cả hạng 2) vẫn ≈ 60/24 giờ: giá vàng đi qua
+  30–50 giá mỗi ngày, mỗi dải có thể là kháng cự rồi hỗ trợ. Tại nến signal hơn nửa số khối còn hiệu lực chưa từng được chạm lại, nên bộ lọc nào theo
+  bằng chứng quá khứ cũng ẩn hơn nửa — vì vậy hạng 2 vẫn hiện ở tiêu điểm chuột.
   Dải khối cố định: khi vùng hiện tại rộng hơn/hẹp hơn khối > 1 giá (≈19% lần khớp), nhãn mép phải nói độ rộng của vùng hiện tại, không phải của khối.
-- Tắt tuỳ chọn ⇒ về chế độ gọn y như cũ. Số đo đầy đủ: [LICH-SU.md](research/report/LICH-SU.md).
+- Tắt tuỳ chọn ⇒ về chế độ gọn y như cũ. Số đo đầy đủ: [LICH-SU.md](research/report/LICH-SU.md), hai hạng: [LOC-VUNG.md](research/report/LOC-VUNG.md).

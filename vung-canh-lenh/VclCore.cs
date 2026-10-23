@@ -75,6 +75,10 @@ namespace VungCanhLenhNs
         // vùng lịch sử (PLAN-LICH-SU 2.7): chồng ≥ 50% dải hẹp hơn = cùng vùng; không khớp Display quá 60 phút ⇒ hết hạn;
         // khối sống < 15 phút không nhãn. E / G của luật xuyên phá dùng lại EpExit / EpGapBars.
         public const double LsOverlap = 0.5, LsGapMin = 60.0, LsLabelMin = 15.0;
+        // hạng khối lịch sử (PLAN-LOC-VUNG 3.1): hạng 1 = đã có ≥ LsRankTouch lần chạm lại VÀ đã hiện ≥ LsRankAgeMin phút (lên hạng tại nến đầu
+        // thoả cả hai, không hồi tố, không xuống hạng). Lọc để chart GỌN — KHÔNG phải lọc vùng mạnh (đã đo: không hơn đối chứng khớp khoảng cách).
+        public const int LsRankTouch = 1;
+        public const double LsRankAgeMin = 60.0;        // = LsGapMin
         // ứng viên
         public const int SwingM5K = 5, SwingM15K = 3;
         public const double WB = 2, WB15 = 3, WC = 2, WNpoc = 3;
@@ -404,6 +408,9 @@ namespace VungCanhLenhNs
         public int NChamLai;                // số lần chạm bắt đầu SAU nến tạo (chỉ để nhãn/thống kê, không lọc)
         public bool TungGan;                // từng khớp vùng Slot K/N
         public int MatchedId = -1;          // mã vùng Display đang khớp ở nến mới nhất (−1 nếu không)
+        public int TQ = -1;                 // nến lên hạng 1 (PLAN-LOC-VUNG 3.1); −1 = hạng 2 (chưa / không bao giờ đủ điều kiện lúc còn hiệu lực)
+        public DateTime TQTime;             // giờ nến TQ (chỉ có nghĩa khi TQ ≥ 0)
+        public bool Hang1 => TQ >= 0;
         public EpState Ep;                  // lần chạm đang mở trên dải này (chỉ dùng DemThoat, PhiaThoat, BatDau)
         public bool Song => End < 0;
         public VLichSu Clone() { var c = (VLichSu)MemberwiseClone(); c.Ep = null; return c; }
@@ -413,7 +420,8 @@ namespace VungCanhLenhNs
     /// Thứ tự trong Step: (1) khớp/tạo (chồng ≥ 50% dải hẹp hơn ⇒ khớp; chồng một phần ⇒ không tạo; không chồng ⇒ tạo);
     /// (2) hết phiên ⇒ đóng lần chạm đang mở; vai 0 chốt theo giá đóng; máy lần chạm trên dải cố định (τ, E, G như EpisodeTracker),
     ///     lần chạm chốt với phía thoát "sau lưng" vai ⇒ XUYÊN PHÁ, End = max(Start, i − G);
-    /// (3) không khớp Display quá 60 phút ⇒ HẾT HẠN, End = Last.</summary>
+    /// (3) không khớp Display quá 60 phút ⇒ HẾT HẠN, End = Last.
+    /// Lên hạng (PLAN-LOC-VUNG 3.1) đặt giữa (2) và phần kết thúc: máy → đặt TQ → xuyên phá / hết hạn → TQ &gt; End ⇒ TQ = −1.</summary>
     public sealed class LichSuTracker
     {
         public double Tau = Vcl.EpTau, Exit = Vcl.EpExit;
@@ -431,6 +439,14 @@ namespace VungCanhLenhNs
 
         public DateTime TimeOf(int i) => _t[i];
         public int Count => _t.Count;
+
+        /// <summary>Cách vẽ khối tại nến tiêu điểm tF (PLAN-LOC-VUNG 3.2): 0 = không sống tại tF; 1 = ĐẬM (hạng 1 và TQTime ≤ tF);
+        /// 2 = VIỀN MẢNH (sống tại tF nhưng chưa lên hạng tại tF — gồm khối hạng 1 khi StartTime ≤ tF &lt; TQTime). 1 + 2 = mọi khối sống tại tF.</summary>
+        public static int VeTai(VLichSu g, DateTime tF)
+        {
+            if (g.StartTime > tF || (!g.Song && tF > g.EndTime)) return 0;
+            return g.Hang1 && g.TQTime <= tF ? 1 : 2;
+        }
 
         public void Step(int i, VBar bar, double cprev, bool newSess, IReadOnlyList<(int id, double lo, double hi, char slot)> display)
         {
@@ -469,6 +485,8 @@ namespace VungCanhLenhNs
                 bool cham = Math.Max(cprev, bar.H) >= h.Lo - Tau && Math.Min(cprev, bar.L) <= h.Hi + Tau;
                 bool neo = cham || (bar.C >= h.Lo - Exit && bar.C <= h.Hi + Exit);
                 if (h.Ep == null && cham) { h.Ep = new EpState { BatDau = i }; if (i > h.Start) h.NChamLai++; }
+                // lên hạng (PLAN-LOC-VUNG 3.1): NChamLai tăng ở nến BẮT ĐẦU lần chạm ⇒ chỉ dùng dữ liệu ≤ i; đặt TRƯỚC khi xét kết thúc
+                if (h.TQ < 0 && h.NChamLai >= Vcl.LsRankTouch && (bar.Time - h.StartTime).TotalMinutes >= Vcl.LsRankAgeMin) { h.TQ = i; h.TQTime = bar.Time; }
                 bool ket = false;
                 if (h.Ep != null)
                 {
@@ -490,6 +508,7 @@ namespace VungCanhLenhNs
                 if (ket)
                 {
                     h.EndTime = _t[h.End]; h.Ep = null;
+                    if (h.TQ > h.End) { h.TQ = -1; h.TQTime = default; }   // đủ điều kiện sau End (xuyên phá kẹp i − G / hết hạn End = Last) ⇒ chưa từng hạng 1
                     if (h.MatchedId >= 0) { BiChan.Add(h.MatchedId); NChetCungNen++; }
                     h.MatchedId = -1;
                     _song.RemoveAt(k); k--;

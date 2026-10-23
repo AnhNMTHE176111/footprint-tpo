@@ -447,9 +447,138 @@ static class Tests
               "VclFeeder reset ⇒ danh sách vùng lịch sử dựng lại = chạy thẳng từ đầu (không giữ danh sách cũ)");
     }
 
+    static void TestLenHang()
+    {
+        Console.WriteLine("[16] Lên hạng khối lịch sử (PLAN-LOC-VUNG 3.1: ≥ 1 chạm lại VÀ sống ≥ 60 phút, không hồi tố)");
+        var t0 = new DateTime(2026, 10, 21, 8, 0, 0, DateTimeKind.Utc);
+        var all = new Func<int, List<(int, double, double, char)>>(i => Z(7, 100, 102));
+        // 1. chạm lại nến 10, đủ 60 phút ở nến 60 ⇒ TQ = 60 (tuổi quyết định)
+        var tq1 = new List<int>();
+        var b1 = Seq(Rep(Fl(97), 10), B(97, 100.5, 96.8, 97), Rep(Fl(97), 60));
+        var r1 = RunLs(b1, all, after: (i, tr) => tq1.Add(tr.LichSu[0].TQ));
+        var h1 = r1.LichSu[0];
+        Check(r1.LichSu.Count == 1 && h1.NChamLai == 1 && h1.TQ == 60 && tq1[59] == -1 && tq1[60] == 60 && h1.TQTime == t0.AddMinutes(60) && h1.Song,
+              "chạm lại nến 10, 60 phút ở nến 60 ⇒ TQ = 60 (tuổi quyết định), nến 59 còn −1", $"{h1.TQ} {tq1[59]}");
+        // 2. không chạm lại tới nến 99, chạm lại lần đầu nến 100 ⇒ TQ = 100 (chạm lại quyết định)
+        var tq2 = new List<int>();
+        var r2 = RunLs(Seq(Rep(Fl(97), 100), B(97, 100.5, 96.8, 97), Rep(Fl(97), 10)), all, after: (i, tr) => tq2.Add(tr.LichSu[0].TQ));
+        Check(r2.LichSu[0].TQ == 100 && tq2[99] == -1 && tq2[90] == -1 && r2.LichSu[0].TQTime == t0.AddMinutes(100),
+              "chạm lại lần đầu nến 100 ⇒ TQ = 100 (chạm lại quyết định); nến 99 TQ = −1", $"{r2.LichSu[0].TQ} {tq2[99]}");
+        // 3. chạm lại đúng nến 60 (tuổi vừa đủ 60 phút, dùng >=)
+        var r3 = RunLs(Seq(Rep(Fl(97), 60), B(97, 100.5, 96.8, 97), Rep(Fl(97), 5)), all);
+        Check(r3.LichSu[0].TQ == 60, "chạm lại đúng nến 60 (tuổi = 60 phút, >=) ⇒ TQ = 60", r3.LichSu[0].TQ.ToString());
+        // 4. hết hạn: Display tới nến 50 (End = Last = 50), chạm lại nến 10; tuổi đủ ở nến 60 khi khối CÒN SỐNG (chưa quá 60 phút không khớp)
+        //    ⇒ TQ = 60 tạm thời, tới nến 111 hết hạn End = 50 < TQ ⇒ reset −1 (chưa từng đủ điều kiện lúc còn hiệu lực)
+        var tq4 = new List<int>();
+        var r4 = RunLs(Seq(Rep(Fl(97), 10), B(97, 100.5, 96.8, 97), Rep(Fl(97), 109)), i => i <= 50 ? Z(7, 100, 102) : null,
+                       after: (i, tr) => tq4.Add(tr.LichSu[0].TQ));
+        var h4 = r4.LichSu[0];
+        Check(h4.LyDo == "hết hạn" && h4.End == 50 && h4.TQ == -1 && tq4[60] == 60 && tq4[110] == 60 && tq4[111] == -1 && h4.TQTime == default,
+              "hết hạn End = 50, tuổi đủ sau End ⇒ TQ đặt 60 lúc còn sống rồi reset −1 ở nến hết hạn (111)", $"{h4.End} {h4.TQ} {tq4[60]} {tq4[111]}");
+        // 4b. hết hạn, chạm lại SAU End (khối chưa hết hạn nhưng Display đã vắng) ⇒ reset
+        var r4b = RunLs(Seq(Rep(Fl(97), 70), B(97, 100.5, 96.8, 97), Rep(Fl(97), 60)), i => i <= 65 ? Z(7, 100, 102) : null);
+        Check(r4b.LichSu[0].End == 65 && r4b.LichSu[0].TQ == -1, "chạm lại lần đầu nến 70 > End = 65 (hết hạn) ⇒ TQ = −1", $"{r4b.LichSu[0].End} {r4b.LichSu[0].TQ}");
+        // 5. xuyên phá: chạm lại lần đầu nến 57 (vượt lên), 5 nến đóng > Hi + 2 ⇒ chốt nến 62, End = 57; tuổi đủ ở nến 60 (còn sống) ⇒ TQ = 60 > End ⇒ reset
+        //    (lên hạng do CHẠM LẠI không thể > End khi xuyên phá: lần chạm bắt đầu ≤ i − G; chỉ tuổi mới vượt được End)
+        var tq5 = new List<int>();
+        var r5 = RunLs(Seq(Rep(Fl(97), 57), B(97, 105.5, 96.9, 105), Rep(Fl(105), 5)), all, after: (i, tr) => tq5.Add(tr.LichSu[0].TQ));
+        var h5 = r5.LichSu[0];
+        Check(h5.LyDo == "xuyên phá" && h5.End == 57 && tq5[60] == 60 && tq5[61] == 60 && h5.TQ == -1,
+              "xuyên phá chốt nến 62, End = 57; TQ = 60 lúc còn sống ⇒ reset −1 khi kết thúc", $"{h5.LyDo} {h5.End} {tq5[60]} {h5.TQ}");
+        var r5b = RunLs(Seq(Rep(Fl(97), 65), B(97, 105.5, 96.9, 105), Rep(Fl(105), 5)), all);
+        Check(r5b.LichSu[0].LyDo == "xuyên phá" && r5b.LichSu[0].End == 65 && r5b.LichSu[0].TQ == 65,
+              "chạm lại lần đầu nến 65 rồi xuyên phá (End = 65) ⇒ TQ = 65 = End được GIỮ", $"{r5b.LichSu[0].End} {r5b.LichSu[0].TQ}");
+        // 6. lần chạm ở nến tạo không tính; quay lại nến 30 ⇒ NChamLai = 1, TQ = 60
+        var n6 = new List<int>();
+        var r6 = RunLs(Seq(B(97, 100.5, 96.8, 97), Rep(Fl(97), 29), B(97, 100.5, 96.8, 97), Rep(Fl(97), 40)), all, after: (i, tr) => n6.Add(tr.LichSu[0].NChamLai));
+        var r6b = RunLs(Seq(B(97, 100.5, 96.8, 97), Rep(Fl(97), 90)), all);
+        Check(n6[29] == 0 && n6[30] == 1 && r6.LichSu[0].TQ == 60 && r6b.LichSu[0].NChamLai == 0 && r6b.LichSu[0].TQ == -1,
+              "chạm ở nến tạo không tính (không quay lại ⇒ TQ = −1 dù sống 90 phút); quay lại nến 30 ⇒ NChamLai = 1, TQ = 60",
+              $"{n6[29]} {n6[30]} {r6.LichSu[0].TQ} {r6b.LichSu[0].TQ}");
+        // 7. lần chạm mở từ nến tạo (giá trong vùng) kéo tới hết phiên; phiên mới (nến 70) mở lần mới = chạm lại ⇒ TQ = 70
+        var tq7 = new List<int>();
+        var r7 = RunLs(Rep(Fl(101), 80), all, new[] { 70 }, (i, tr) => tq7.Add(tr.LichSu[0].TQ));
+        Check(r7.LichSu[0].NChamLai == 1 && tq7[69] == -1 && r7.LichSu[0].TQ == 70, "hết phiên đóng lần chạm mở; lần mới ở phiên sau tính là chạm lại ⇒ TQ = 70",
+              $"{r7.LichSu[0].NChamLai} {r7.LichSu[0].TQ}");
+
+        // 8–10 trên lõi thật (dữ liệu giả lập)
+        var data = Synthetic(3000, 5);
+        var core = new VclCore();
+        var first = new Dictionary<int, int>();       // nến đầu tiên khối thoả điều kiện lúc đang sống (đo độc lập)
+        var nAtTq = new Dictionary<int, int>();
+        for (int i = 0; i < data.Count; i++)
+        {
+            core.Push(data[i].bar, data[i].lv);
+            foreach (var h in core.Ls.Song)
+                if (!first.ContainsKey(h.Id) && h.NChamLai >= 1 && (data[i].bar.Time - h.StartTime).TotalMinutes >= 60) first[h.Id] = i;
+            foreach (var h in core.LichSu) if (h.TQ == i) nAtTq[h.Id] = h.NChamLai;
+        }
+        var L = core.LichSu; int n = core.Bars.Count;
+        int nh1 = L.Count(h => h.Hang1);
+        Check(nh1 > 5 && nh1 < L.Count, $"Synthetic(3000): {nh1}/{L.Count} khối hạng 1 (không rỗng, không tất cả)");
+        // 9. bất biến tiêu chí 8
+        bool inv = true; string why = "";
+        foreach (var h in L.Where(h => h.Hang1))
+        {
+            if (h.TQTime < h.StartTime.AddMinutes(Vcl.LsRankAgeMin)) { inv = false; why = $"tuổi {h.Id}"; }
+            if (!nAtTq.TryGetValue(h.Id, out int nc) || nc < Vcl.LsRankTouch) { inv = false; why = $"chạm {h.Id}"; }
+            if (!h.Song && h.TQ > h.End) { inv = false; why = $"TQ > End {h.Id}"; }
+            if (h.TQ < h.Start || core.Bars[h.TQ].Time != h.TQTime) { inv = false; why = $"TQTime {h.Id}"; }
+            if (!first.TryGetValue(h.Id, out int fi) || fi != h.TQ) { inv = false; why = $"không phải nến đầu thoả {h.Id}"; }
+        }
+        foreach (var h in L.Where(h => !h.Hang1))
+            if (first.TryGetValue(h.Id, out int fi) && (h.Song || fi <= h.End)) { inv = false; why = $"bỏ sót {h.Id}"; }
+        // tiêu chí 5 (lõi): tại mọi nến, khối đậm + viền mảnh (VeTai) = khối sống; đậm chỉ khi TQTime ≤ tF
+        bool part5 = true; double sumD = 0, sumS = 0;
+        for (int i = 0; i < n; i += 7)
+        {
+            var tF = core.Bars[i].Time;
+            int d = 0, m = 0, alive = 0;
+            foreach (var h in L)
+            {
+                int ve = LichSuTracker.VeTai(h, tF);
+                if (ve == 1) { d++; if (!(h.Hang1 && h.TQTime <= tF)) part5 = false; } else if (ve == 2) m++;
+                if (h.Start <= i && (h.Song || h.End >= i)) alive++;
+            }
+            if (d + m != alive) part5 = false;
+            sumD += d; sumS += alive;
+        }
+        Check(part5 && sumD > 0 && sumD < sumS, $"VeTai: đậm + viền mảnh = khối sống tại mọi nến (TB đậm {sumD / ((n + 6) / 7):0.0} / sống {sumS / ((n + 6) / 7):0.0})");
+        Check(inv, "mọi khối hạng 1: TQTime ≥ Start + 60 phút, NChamLai ≥ 1 tại nến TQ, TQ ≤ End, TQ = nến đầu tiên thoả; khối hạng 2 không bỏ sót", why);
+        // 8. không nhìn trước: cắt ở nến 2000
+        int cut = 2000;
+        var part = new VclCore();
+        for (int i = 0; i < cut; i++) part.Push(data[i].bar, data[i].lv);
+        var byId = L.ToDictionary(h => h.Id);
+        bool la = true; int nSame = 0, nNeg = 0, nTemp = 0; why = "";
+        foreach (var p in part.LichSu)
+        {
+            var f = byId[p.Id];
+            if (f.TQ >= 0 && f.TQ < cut) { if (p.TQ != f.TQ || p.TQTime != f.TQTime) { la = false; why = $"lệch {p.Id}"; } else nSame++; }
+            else if (f.TQ >= cut) { if (p.TQ != -1) { la = false; why = $"thấy trước {p.Id}"; } else nNeg++; }
+            else if (p.TQ >= 0)
+            {   // bản đủ TQ = −1 nhưng bản cắt đã lên hạng: chỉ hợp lệ khi khối còn sống lúc cắt và về sau kết thúc với End < TQ (reset)
+                if (!(p.Song && !f.Song && f.End < p.TQ)) { la = false; why = $"lên hạng sai {p.Id}"; } else nTemp++;
+            }
+        }
+        Check(la && nSame > 0, $"cắt ở nến {cut}: TQ < cắt y hệt bản đủ ({nSame} khối); TQ ≥ cắt ⇒ −1 ({nNeg}); tạm lên hạng rồi reset ({nTemp})", why);
+        // 10. Clone giữ TQ/TQTime; VclFeeder reset ⇒ TQ dựng lại từ đầu
+        var hc = L.First(h => h.Hang1).Clone();
+        var orig = L.First(h => h.Hang1);
+        Check(hc.TQ == orig.TQ && hc.TQTime == orig.TQTime && hc.Hang1, "Clone() giữ TQ / TQTime");
+        var f2 = new VclFeeder();
+        f2.Sync(2500, i => data[i].bar, i => data[i].lv, false, 7);
+        f2.Sync(2500, i => data[i].bar, i => data[i].lv, true, 7);
+        var direct = new VclCore();
+        for (int i = 0; i < 2500; i++) direct.Push(data[i].bar, data[i].lv);
+        Check(f2.Resets == 1 && f2.Core.LichSu.Count == direct.LichSu.Count
+              && f2.Core.LichSu.Zip(direct.LichSu, (x, y) => x.TQ == y.TQ && x.TQTime == y.TQTime).All(v => v) && direct.LichSu.Any(h => h.Hang1),
+              "VclFeeder reset ⇒ TQ dựng lại = chạy thẳng từ đầu");
+    }
+
     static int Main()
     {
-        TestBuildZones(); TestBreak(); TestDNeverDies(); TestCorridor(); TestKeepNearAndAge(); TestEpisodes(); TestTables(); TestNoLookahead(); TestValueArea(); TestFeederVolumeAnalysis(); TestFeederTimeRegression(); TestLichSu();
+        TestBuildZones(); TestBreak(); TestDNeverDies(); TestCorridor(); TestKeepNearAndAge(); TestEpisodes(); TestTables(); TestNoLookahead(); TestValueArea(); TestFeederVolumeAnalysis(); TestFeederTimeRegression(); TestLichSu(); TestLenHang();
         Console.WriteLine($"\n{_ok} OK, {_fail} FAIL");
         return _fail == 0 ? 0 : 1;
     }

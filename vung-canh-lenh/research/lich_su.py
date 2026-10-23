@@ -24,6 +24,7 @@ SIGNALS = os.path.join(REPO, 'benzo-trader', 'research', 'report', '_replay_cs.c
 GAP_MINUTES = 30          # khoảng trống > 30 phút ⇒ phiên mới
 EP_TAU, EP_EXIT, EP_GAP = 0.0, 2.0, 5
 LS_OVERLAP, LS_GAP_MIN, LS_LABEL_MIN = 0.5, 60.0, 15.0
+LS_RANK_TOUCH, LS_RANK_AGE_MIN = 1, 60.0     # hạng 1 (PLAN-LOC-VUNG 3.1) — khớp Vcl.LsRankTouch / LsRankAgeMin
 
 
 def run_replay(base, out):
@@ -83,7 +84,7 @@ def track(D):
                 continue
             vai = 1 if C[i] < lo else (-1 if C[i] > hi else 0)
             h = dict(id=len(allz), lo=lo, hi=hi, vai=vai, start=i, last=i, end=-1, ly_do='', n_cham_lai=0, tung_gan=slot != 'F',
-                     matched=zid, ep=None, vai_at=i if vai != 0 else None)
+                     matched=zid, ep=None, vai_at=i if vai != 0 else None, tq=-1, n_at_tq=0)
             allz.append(h); song.append(h)
             st['tạo'] += 1
             if vai == 0:
@@ -106,6 +107,9 @@ def track(D):
                 h['ep'] = [0, 0]                 # [đếm thoát, phía thoát]
                 if i > h['start']:
                     h['n_cham_lai'] += 1
+            # lên hạng (PLAN-LOC-VUNG 3.1): đặt TRƯỚC khi xét kết thúc; kết thúc với tq > end ⇒ reset −1
+            if h['tq'] < 0 and h['n_cham_lai'] >= LS_RANK_TOUCH and mins[i] - mins[h['start']] >= LS_RANK_AGE_MIN:
+                h['tq'] = i; h['n_at_tq'] = h['n_cham_lai']
             ket = False
             e = h['ep']
             if e is not None:
@@ -125,6 +129,8 @@ def track(D):
                 if h['matched'] >= 0:
                     st['chết khi đang khớp'] += 1
                 h['matched'] = -1; h['ep'] = None
+                if h['tq'] > h['end']:
+                    h['tq'] = -1; h['n_at_tq'] = 0
                 continue
             still.append(h)
         song = still
@@ -137,12 +143,12 @@ def fmt_t(t):
 
 
 def parity(allz, D, cs_path):
-    """So TỪNG DÒNG với _lichsu.csv của C#: id, start_utc, end_utc, lo, hi (so số thực chính xác), vai, ly_do, n_cham_lai, tung_gan."""
+    """So TỪNG DÒNG với _lichsu.csv của C#: id, start_utc, end_utc, lo, hi (so số thực chính xác), vai, ly_do, n_cham_lai, tung_gan, tq_utc."""
     t = D['t']
     py = [(h['id'], fmt_t(t[h['start']]), '' if h['end'] < 0 else fmt_t(t[h['end']]), h['lo'], h['hi'], h['vai'], h['ly_do'],
-           h['n_cham_lai'], 1 if h['tung_gan'] else 0) for h in allz]
-    cs = pd.read_csv(cs_path, keep_default_na=False, dtype={'end_utc': str, 'ly_do': str})
-    csr = [(int(r.id), r.start_utc, r.end_utc, float(r.lo), float(r.hi), int(r.vai), r.ly_do, int(r.n_cham_lai), int(r.tung_gan))
+           h['n_cham_lai'], 1 if h['tung_gan'] else 0, '' if h['tq'] < 0 else fmt_t(t[h['tq']])) for h in allz]
+    cs = pd.read_csv(cs_path, keep_default_na=False, dtype={'end_utc': str, 'ly_do': str, 'tq_utc': str})
+    csr = [(int(r.id), r.start_utc, r.end_utc, float(r.lo), float(r.hi), int(r.vai), r.ly_do, int(r.n_cham_lai), int(r.tung_gan), r.tq_utc)
            for r in cs.itertuples(index=False)]
     same = sum(1 for a, b in zip(py, csr) if a == b)
     first_bad = next((k for k, (a, b) in enumerate(zip(py, csr)) if a != b), None)
@@ -232,6 +238,75 @@ def metrics(allz, D, mins, st):
     return R
 
 
+def loc_vung(allz, D, mins, cs_path, cuts=()):
+    """Tiêu chí PLAN-LOC-VUNG mục 4: 1–4, 6 qua loc_vung_bench.screen_metrics (cùng hàm của bench); 5 đếm trên _lichsu.csv của C#;
+    7 không nhìn trước (chạy lại track tới nến cắt); 8 bất biến lên hạng."""
+    import loc_vung_bench as LB
+    n = D['n']
+    dt = np.diff(mins, prepend=mins[0])
+    D2 = dict(D, mins=mins, sess=np.cumsum(np.concatenate([[True], dt[1:] > GAP_MINUTES])) - 1)
+    Z = pd.DataFrame(dict(lo=[h['lo'] for h in allz], hi=[h['hi'] for h in allz], end=[h['end'] if h['end'] >= 0 else n - 1 for h in allz]))
+    tq = np.array([h['tq'] for h in allz], int)
+    sig = LB.load_signals(D2, [SIGNALS])
+    R = LB.screen_metrics(D2, Z, tq, sig)
+    R['nsig'] = len(sig)
+    # 5. tại nến signal (tF = giờ nến đó): đậm = TQTime ≤ tF ≤ End; viền mảnh = sống tại tF mà chưa lên hạng; tổng = khối sống — đếm trên CSV C#
+    cs = pd.read_csv(cs_path, keep_default_na=False, dtype={'end_utc': str, 'tq_utc': str})
+    st_ = pd.to_datetime(cs.start_utc).to_numpy(); en = pd.to_datetime(cs.end_utc.replace('', None)).to_numpy()
+    tqt = pd.to_datetime(cs.tq_utc.replace('', None)).to_numpy()
+    live = pd.isna(en); h1 = ~pd.isna(tqt)
+    dam = []; mong = []; song = []
+    for i in sig:
+        tF = D['t'][i]
+        alive = (st_ <= tF) & (live | (en >= tF))
+        d = alive & h1 & (tqt <= tF)
+        dam.append(int(d.sum())); mong.append(int((alive & ~d).sum())); song.append(int(alive.sum()))
+    dam, mong, song = map(np.array, (dam, mong, song))
+    R['c5'] = (dam.mean(), mong.mean(), song.mean(), bool(((dam + mong) == song).all()), np.percentile(song, 90))
+    # 8. bất biến: tq ≥ start + 60 phút, n_cham_lai ≥ 1 tại tq, tq ≤ end
+    h1z = [h for h in allz if h['tq'] >= 0]
+    ok8 = [mins[h['tq']] - mins[h['start']] >= LS_RANK_AGE_MIN and h['n_at_tq'] >= LS_RANK_TOUCH and (h['end'] < 0 or h['tq'] <= h['end'])
+           and h['tq'] >= h['start'] for h in h1z]
+    R['c8'] = (sum(ok8), len(h1z))
+    # 7. không nhìn trước: chạy track tới nến cắt (bỏ phần sau) ⇒ mọi khối có tq < cắt y hệt; khối có tq ≥ cắt ⇒ −1 lúc cắt
+    res = []
+    for c in cuts:
+        Dc = dict(D, t=D['t'][:c], O=D['O'][:c], H=D['H'][:c], L=D['L'][:c], C=D['C'][:c], n=c,
+                  disp={k: v for k, v in D['disp'].items() if k < c})
+        part, _, _ = track(Dc)
+        same = neg = tmp = bad = 0
+        for p in part:
+            f = allz[p['id']]
+            if 0 <= f['tq'] < c:
+                if p['tq'] == f['tq']: same += 1
+                else: bad += 1
+            elif f['tq'] >= c:
+                if p['tq'] == -1: neg += 1
+                else: bad += 1
+            elif p['tq'] >= 0:      # bản đủ −1, bản cắt đã lên hạng: hợp lệ chỉ khi lúc cắt còn sống và về sau End < tq (reset)
+                if p['end'] < 0 and f['end'] >= 0 and f['end'] < p['tq']: tmp += 1
+                else: bad += 1
+        res.append((c, same, neg, tmp, bad))
+    R['c7'] = res
+    return R
+
+
+def show_loc(name, R):
+    p = lambda x: f'{x:.1f}'.replace('.', ',')
+    s = R['sig']
+    print(f"--- LOC-VUNG ({name}) ---")
+    print(f"1. % khối lên hạng 1: {p(R['pct'])}% ({R['n']})")
+    print(f"2. khối hạng 1 trong cửa sổ 24 h p50 {R['k_24h'][0]:.0f} · p90 {R['k_24h'][1]:.0f}")
+    print(f"3. khối hạng 1 / phiên TB {p(R['k_phien'][0])} · p90 {R['k_phien'][1]:.0f}")
+    print(f"4. {R['nsig']} signal: khối hạng 1 đang hiệu lực TB {p(s[0])} · p10 {s[1]:.0f} · p90 {s[2]:.0f}")
+    c5 = R['c5']
+    print(f"5. tại signal: đậm TB {p(c5[0])} + viền mảnh TB {p(c5[1])} = sống TB {p(c5[2])} (p90 {c5[4]:.0f}); đậm + mảnh = sống ở mọi signal: {c5[3]}")
+    print(f"6. signal có khối hạng 1 ≤ 5 giá {p(s[4])}% · ≤ 10 giá {p(s[5])}%")
+    for c, same, neg, tmp, bad in R['c7']:
+        print(f"7. cắt ở nến {c}: tq < cắt y hệt {same} · tq ≥ cắt ⇒ −1 {neg} · tạm lên hạng rồi reset {tmp} · SAI {bad}")
+    print(f"8. bất biến lên hạng: {R['c8'][0]}/{R['c8'][1]} khối hạng 1 đạt")
+
+
 def show(name, R, P):
     p = lambda x: f'{x:.1f}'.replace('.', ',')
     print(f"\n=== {name}: {R['n']} nến, {R['n_phien']} phiên, {R['n_khoi']} khối ===")
@@ -265,6 +340,8 @@ def main():
         P = parity(allz, D, rp[:-4] + '_lichsu.csv')
         R = metrics(allz, D, mins, st)
         show(name, R, P)
+        n = D['n']
+        show_loc(name, loc_vung(allz, D, mins, rp[:-4] + '_lichsu.csv', cuts=(n // 4, n // 2, 3 * n // 4)))
 
 
 if __name__ == '__main__':

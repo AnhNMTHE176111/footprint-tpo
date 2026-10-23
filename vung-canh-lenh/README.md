@@ -7,7 +7,7 @@ Vẽ trên chart vàng M1 **vài vùng hỗ trợ/kháng cự ổn định** qua
 ## 1. Cài đặt
 1. Copy `dist/VungCanhLenh.dll` vào `C:\OptimusFLOW\Settings\Scripts\Indicators\VungCanhLenh\` (chưa có thì tạo thư mục).
 2. Mở lại Optimus Flow, mở chart **GCZ26, khung M1**, bật **Volume Analysis**.
-3. Add indicator **"Vùng Canh Lệnh"**. Cài đặt chỉ gồm: lệch giờ VN (để 7), hiện nhãn, hiện lịch sử riêng của vùng, hiện vùng xa, 3 màu.
+3. Add indicator **"Vùng Canh Lệnh"**. Cài đặt chỉ gồm: lệch giờ VN (để 7), hiện nhãn, hiện lịch sử riêng của vùng, hiện vùng xa, **hiện TẤT CẢ vùng trong lịch sử** (xem bên dưới), 3 màu.
    Không có ngưỡng số nào để chỉnh.
 4. Nếu góc dưới-phải hiện **"⚠ Chưa có Volume Analysis…"**: vẫn vẽ nhưng thiếu VA/POC hôm qua, VA Âu, POC trần. Bật Volume Analysis; tính xong thì indicator tự dựng lại.
 
@@ -58,3 +58,6 @@ và đếm bằng mắt vài lần chạm để đối chiếu với máy (đế
 - `VungCanhLenh.cs`: lớp dán Quantower (đọc nến + footprint, vẽ vùng + nhãn).
 - `build.sh`: build, 0 cảnh báo. `tests/`: `dotnet run --project vung-canh-lenh/tests`.
 - `research/vcl5.py` + `lan_cham.py` (backtest), `test_lan_cham.py`, `parity_vcl.py` (tự build + chạy `tools/ReplayCsv`).
+
+## Chế độ "Hiện TẤT CẢ vùng trong lịch sử"
+Bật tuỳ chọn này để xem lại mọi vùng từng hiện trên màn hình (dùng khi review signal Benzo Trader). Mỗi vùng chỉ vẽ **trong khoảng thời gian nó còn hiệu lực**: từ lúc vào bộ hiển thị đến lúc rời đi (giá ra khỏi hành lang, vùng bị xuyên phá hoặc bị vùng khác thay), không kéo dài ra mép phải. Nhãn là biên vùng (thấp–cao). Vùng hiện tại vẫn vẽ như cũ. Tắt tuỳ chọn thì về chế độ gọn.

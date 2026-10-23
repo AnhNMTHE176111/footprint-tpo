@@ -55,6 +55,18 @@ namespace VungCanhLenhNs
         }
     }
 
+    /// <summary>Một "đoạn sống" của vùng trên chart: từ lúc vùng vào bộ hiển thị đến lúc rời đi (giá ra khỏi hành lang, vùng bị xuyên
+    /// hoặc bị thay). Dùng để vẽ lại lịch sử: mỗi vùng chỉ dài trong khoảng thời gian nó từng có giá trị.</summary>
+    public sealed class VSeg
+    {
+        public int Id, Side;
+        public char Slot;
+        public double Lo, Hi;
+        public DateTime Start, End;
+        public bool Live;                 // còn trong bộ hiển thị ở nến mới nhất
+        public VSeg Clone() => (VSeg)MemberwiseClone();
+    }
+
     // ---------------------------------------------------------------- hằng số + hàm kernel
     public static class Vcl
     {
@@ -466,6 +478,8 @@ namespace VungCanhLenhNs
         public List<VZone> Display = new();           // bộ vùng đang hiển thị (đã sắp theo thứ tự chọn)
         public readonly List<VBar> Bars = new();
         public readonly EpisodeTracker Episodes = new();   // máy "lần chạm" (PLAN-LAN-CHAM 2.6)
+        public readonly List<VSeg> Segs = new();            // lịch sử các đoạn sống của vùng (cũ → mới)
+        private readonly Dictionary<int, VSeg> _openSeg = new();
 
         // ---- ứng viên (mảng song song, chỉ số = thứ tự nạp, giống Python) ----
         private readonly List<double> _price = new(), _w = new();
@@ -645,6 +659,7 @@ namespace VungCanhLenhNs
             if (double.IsNaN(u) || u <= 0)
             {
                 _prev = new List<Prev>(); Display = new List<VZone>();
+                UpdateSegs(bar.Time, Display);
                 Episodes.Step(i, bar, cprev, newSess, Array.Empty<(int, double, double)>());
                 return;
             }
@@ -728,6 +743,7 @@ namespace VungCanhLenhNs
             }
             _prev = np;
             Display = disp;
+            UpdateSegs(bar.Time, disp);
 
             // ---- lần chạm: chạy SAU khi chốt bộ của nến này, dùng biên hiện tại ----
             var zl = new List<(int, double, double)>(disp.Count);
@@ -741,6 +757,25 @@ namespace VungCanhLenhNs
                 z.EpK = z.EpOpen ? z.N + 1 : 0;
                 z.WBin = Vcl.WidthBin(z.Hi - z.Lo);
             }
+        }
+
+        private void UpdateSegs(DateTime t, List<VZone> disp)
+        {
+            var keep = new HashSet<int>();
+            foreach (var z in disp)
+            {
+                keep.Add(z.Id);
+                if (_openSeg.TryGetValue(z.Id, out var sg) && sg.Lo == z.Lo && sg.Hi == z.Hi && sg.Side == z.Side) { sg.End = t; sg.Slot = z.Slot; }
+                else
+                {
+                    if (sg != null) sg.Live = false;
+                    sg = new VSeg { Id = z.Id, Lo = z.Lo, Hi = z.Hi, Side = z.Side, Slot = z.Slot, Start = t, End = t, Live = true };
+                    Segs.Add(sg); _openSeg[z.Id] = sg;
+                }
+            }
+            List<int> gone = null;
+            foreach (var kv in _openSeg) if (!keep.Contains(kv.Key)) (gone ??= new List<int>()).Add(kv.Key);
+            if (gone != null) foreach (int id in gone) { _openSeg[id].Live = false; _openSeg.Remove(id); }
         }
 
         /// <summary>Cho test: số ứng viên còn sống của một loại; có ứng viên sống loại kind ở đúng giá p không.</summary>

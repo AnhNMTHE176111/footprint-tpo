@@ -321,9 +321,33 @@ static class Tests
         Check(f2.Resets == 2 && f2.Core.Bars.Count == 1000, "lịch sử ngắn đi ⇒ reset");
     }
 
+    static void TestSegments()
+    {
+        Console.WriteLine("[13] Đoạn sống của vùng (chế độ hiện tất cả vùng lịch sử)");
+        var data = Synthetic(3000, 5);
+        var core = new VclCore();
+        foreach (var (b, l) in data) core.Push(b, l);
+        Check(core.Segs.Count > 10, "có nhiều đoạn sống sau 3000 nến", core.Segs.Count.ToString());
+        Check(core.Segs.All(g => g.End >= g.Start && g.Hi > g.Lo), "mỗi đoạn: kết thúc ≥ bắt đầu, Hi > Lo");
+        var live = core.Segs.Where(g => g.Live).Select(g => g.Id).OrderBy(x => x).ToList();
+        var disp = core.Display.Select(z => z.Id).OrderBy(x => x).ToList();
+        Check(live.SequenceEqual(disp), "đoạn Live đúng bằng bộ đang hiển thị", live.Count + " vs " + disp.Count);
+        Check(core.Segs.Where(g => g.Live).All(g => g.End == core.Bars[core.Bars.Count - 1].Time), "đoạn Live kéo tới nến mới nhất");
+        Check(core.Segs.Where(g => !g.Live).All(g => g.End < core.Bars[core.Bars.Count - 1].Time), "đoạn đã rời bộ có hạn dùng (End < nến cuối)");
+        Check(core.Segs.Where(g => !g.Live).Any(g => g.End > g.Start), "có vùng sống > 0 phút rồi hết hạn");
+        var ordered = core.Segs.Zip(core.Segs.Skip(1), (a, b) => a.Start <= b.Start).All(x => x);
+        Check(ordered, "đoạn xếp theo thời gian bắt đầu");
+        // không nhìn trước: cắt dữ liệu ở nến 2000 thì mọi đoạn đã đóng trước đó phải y hệt
+        var part = new VclCore();
+        for (int i = 0; i < 2000; i++) part.Push(data[i].bar, data[i].lv);
+        var closedPart = part.Segs.Where(g => !g.Live).Select(g => (g.Id, g.Lo, g.Hi, g.Start, g.End)).ToList();
+        var fullSame = core.Segs.Where(g => g.End < data[1999].bar.Time).Select(g => (g.Id, g.Lo, g.Hi, g.Start, g.End)).ToList();
+        Check(closedPart.Where(c => c.End < data[1999].bar.Time).SequenceEqual(fullSame), "đoạn đã đóng không đổi khi thêm dữ liệu sau (không nhìn trước)");
+    }
+
     static int Main()
     {
-        TestBuildZones(); TestBreak(); TestDNeverDies(); TestCorridor(); TestKeepNearAndAge(); TestEpisodes(); TestTables(); TestNoLookahead(); TestValueArea(); TestFeederVolumeAnalysis(); TestFeederTimeRegression();
+        TestBuildZones(); TestBreak(); TestDNeverDies(); TestCorridor(); TestKeepNearAndAge(); TestEpisodes(); TestTables(); TestNoLookahead(); TestValueArea(); TestFeederVolumeAnalysis(); TestFeederTimeRegression(); TestSegments();
         Console.WriteLine($"\n{_ok} OK, {_fail} FAIL");
         return _fail == 0 ? 0 : 1;
     }

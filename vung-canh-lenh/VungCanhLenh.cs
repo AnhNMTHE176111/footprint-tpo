@@ -27,6 +27,8 @@ namespace VungCanhLenhNs
         public bool ShowHistory { get; set; } = true;
         [InputParameter("Hiện vùng xa", 22)]
         public bool ShowFar { get; set; } = true;
+        [InputParameter("Hiện TẤT CẢ vùng trong lịch sử (để xem lại signal)", 24)]
+        public bool ShowAllHistory { get; set; } = false;
         [InputParameter("Màu kháng cự", 30)]
         public Color ResColor { get; set; } = Color.FromArgb(220, 70, 60);
         [InputParameter("Màu hỗ trợ", 31)]
@@ -38,6 +40,7 @@ namespace VungCanhLenhNs
         private sealed class RenderState
         {
             public List<VZone> Zones = new();
+            public List<VSeg> Segs = new();     // các đoạn sống ĐÃ KẾT THÚC của vùng (chỉ vẽ khi bật "tất cả vùng")
             public double Close, U;
             public int Phase;
             public string Warn;      // lỗi (hiện 1 dòng nhỏ góc dưới-phải)
@@ -125,6 +128,7 @@ namespace VungCanhLenhNs
                 var core = _feeder.Core;
                 var rs = new RenderState { Close = core.Close, U = core.U, Phase = core.Phase, Note = _feeder.BuiltWithLevels ? null : NoVaNote };
                 foreach (var z in core.Display) rs.Zones.Add(z.Clone());
+                foreach (var g in core.Segs) if (!g.Live) rs.Segs.Add(g.Clone());
                 lock (_sync) _render = rs;
                 _lastN = n; _lastVa = va;
             }
@@ -176,6 +180,37 @@ namespace VungCanhLenhNs
         }
 
         // ---------------------------------------------------------------- vẽ
+        /// <summary>Vùng quá khứ: hình chữ nhật từ lúc vùng xuất hiện đến lúc hết hiệu lực (không kéo ra mép phải). Chỉ vẽ phần nằm trong màn hình.</summary>
+        private void PaintSegs(Graphics gr, ICoordinatesConverter conv, Rectangle clip, RenderState rs, Font fLbl)
+        {
+            foreach (var g in rs.Segs)
+            {
+                if (g.Slot == 'F' && !ShowFar) continue;
+                float x0, x1;
+                try { x0 = (float)conv.GetChartX(g.Start); x1 = (float)conv.GetChartX(g.End); } catch { continue; }
+                if (x1 < clip.Left || x0 > clip.Right) continue;
+                x0 = Math.Max(clip.Left, x0); x1 = Math.Min(clip.Right, Math.Max(x1, x0 + 3));
+                float yHi = (float)conv.GetChartY(g.Hi), yLo = (float)conv.GetChartY(g.Lo);
+                float top = Math.Min(yHi, yLo), h = Math.Max(1f, Math.Abs(yLo - yHi));
+                if (top > clip.Bottom || top + h < clip.Top) continue;
+                Color baseC = g.Side == 0 ? TestColor : (g.Side > 0 ? ResColor : SupColor);
+                using (var br = new SolidBrush(Color.FromArgb(g.Slot == 'F' ? 22 : 40, baseC))) gr.FillRectangle(br, x0, top, x1 - x0, h);
+                using (var pen = new Pen(Color.FromArgb(g.Slot == 'F' ? 80 : 130, baseC), 1f))
+                {
+                    gr.DrawLine(pen, x0, top, x1, top);
+                    gr.DrawLine(pen, x0, top + h, x1, top + h);
+                    gr.DrawLine(pen, x0, top, x0, top + h);
+                }
+                if (ShowLabels)
+                {
+                    string s = F(g.Lo) + "–" + F(g.Hi);
+                    var sz = gr.MeasureString(s, fLbl);
+                    if (sz.Width + 4 <= x1 - x0 && sz.Height <= h + 2)
+                        using (var br = new SolidBrush(Color.FromArgb(220, Color.White))) gr.DrawString(s, fLbl, br, x0 + 2, top + h / 2 - sz.Height / 2);
+                }
+            }
+        }
+
         public override void OnPaintChart(PaintChartEventArgs args)
         {
             base.OnPaintChart(args);
@@ -191,6 +226,7 @@ namespace VungCanhLenhNs
                 using var fLbl = new Font("Consolas", 8, FontStyle.Regular);
                 if (!double.IsNaN(rs.U) && rs.U > 0)
                 {
+                    if (ShowAllHistory) PaintSegs(gr, conv, clip, rs, fLbl);
                     foreach (var z in rs.Zones)
                     {
                         if (z.Slot == 'F' && !ShowFar) continue;

@@ -538,6 +538,36 @@ namespace TpoSuite
         //  Nơi giá XUYÊN QUA NHANH vì không có gì đỡ (ít volume). KHÔNG phải vùng
         //  canh vào lệnh — dùng để (a) biết chỗ không nên kỳ vọng phản ứng,
         //  (b) đặt SL phía sau. Tìm ĐÁY cực bộ, giữ đáy đủ thấp so với trung bình.
+        // Vùng LVN quanh một đáy (HVN đã là vùng, LVN cũng phải là vùng): nới liên tục từ đáy
+        // sang hai bên cho tới khi khối lượng (đã làm mượt) vượt maxRatio × trung bình. Mỗi
+        // bên chặn tối đa nửa khoảng cách tối thiểu giữa hai LVN (8% độ rộng profile, kẹp
+        // [20,120] tick) để dải của hai đáy khác nhau không chồng nhau và không lan hết
+        // đuôi profile (đuôi vốn luôn mỏng). Đáy không có trong rows → (giá, giá).
+        public static (double lo, double hi) TroughBand(
+            SortedDictionary<double, double> rows, double tick, double troughPrice,
+            int smoothTicks = 5, double maxRatio = 0.5)
+        {
+            if (rows == null || rows.Count < 3 || !rows.ContainsKey(troughPrice)) return (troughPrice, troughPrice);
+            var prices = rows.Keys.ToArray();
+            var w = rows.Values.ToArray();
+            int n = w.Length;
+            double avg = w.Average();
+            if (avg <= 0) return (troughPrice, troughPrice);
+            var sm = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                int a = Math.Max(0, i - smoothTicks), z = Math.Min(n - 1, i + smoothTicks);
+                double sum = 0; for (int k = a; k <= z; k++) sum += w[k];
+                sm[i] = sum / (z - a + 1);
+            }
+            double halfCap = Math.Clamp((prices[n - 1] - prices[0]) / tick * 0.08, 20, 120) * tick / 2;
+            int c = Array.IndexOf(prices, troughPrice);
+            int lo = c, hi = c;
+            while (lo > 0 && sm[lo - 1] <= maxRatio * avg && troughPrice - prices[lo - 1] <= halfCap) lo--;
+            while (hi < n - 1 && sm[hi + 1] <= maxRatio * avg && prices[hi + 1] - troughPrice <= halfCap) hi++;
+            return (prices[lo], prices[hi]);
+        }
+
         public static List<(double price, double ratio)> FindLvn(
             SortedDictionary<double, double> rows, double tick,
             int smoothTicks = 5, double maxRatio = 0.5, double minSepTicks = 0)

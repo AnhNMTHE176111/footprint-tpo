@@ -100,6 +100,24 @@ static class Tests
         Check(!ZonePolicy.CanMerge("va_edge", "hvn_day"), "khong gop moc voi nen");
         Check(ZonePolicy.CanMerge("hvn_day", "hvn_week"), "gop duoc hai nen");
 
+        // LVN la VUNG: TroughBand noi tu day sang hai ben trong cho khoi luong con thap
+        {
+            var rows = new SortedDictionary<double, double>();
+            for (int i = 0; i < 200; i++)   // tick 0.1, hang 0.1: day rong ~ hang 90..110
+                rows[Math.Round(4000 + i * 0.1, 1)] = (i >= 90 && i <= 110) ? 1.0 : 10.0;
+            double tp = Math.Round(4000 + 100 * 0.1, 1);
+            var (lo, hi) = ProfileEngine.TroughBand(rows, 0.1, tp, 0, 0.5);
+            Check(lo < tp && hi > tp, "LVN: dai co do rong that (lo < day < hi)");
+            Check(Math.Abs((tp - lo) - (hi - tp)) < 0.31 && hi - lo >= 1.5, "LVN: dai doi xung quanh day, rong ~2 gia");
+            var (lo2, hi2) = ProfileEngine.TroughBand(rows, 0.1, 4005.55, 0, 0.5);
+            Check(lo2 == 4005.55 && hi2 == 4005.55, "LVN: gia khong co trong rows -> diem");
+            var flat = new SortedDictionary<double, double>();
+            for (int i = 0; i < 200; i++) flat[Math.Round(4000 + i * 0.1, 1)] = 1.0;
+            var (lo3, hi3) = ProfileEngine.TroughBand(flat, 0.1, 4010.0, 0, 0.5);
+            Check(hi3 - lo3 <= 0.1 * 120 + 1e-6, "LVN: dai bi chan <= 8% do rong profile (kep 20..120 tick)");
+            Check(ProfileEngine.TroughBand(null, 0.1, 1.0).lo == 1.0, "LVN: rows null -> diem");
+        }
+
         // VAH/VAL = ngay hom nay (tu dau phien A gan nhat)
         Check(ZonePolicy.TodayStartBlock(new List<string> { "A", "AU", "MY", "A" }) == 3, "ngay hom nay: bat dau o khoi A cuoi");
         Check(ZonePolicy.TodayStartBlock(new List<string> { "A", "AU", "MY" }) == 0, "dang phien My: ngay van bat dau tu A truoc do");

@@ -585,12 +585,18 @@ namespace SessionZonesNs
             // cùng cặp dyRows đã dùng cho HVN ngày, chỉ khác hàm tìm đáy thay vì đỉnh.
             if (ShowLvn && wkRows != null && ZonePolicy.KeepType("lvn_week", flt))
                 foreach (var (p, ratio) in ProfileEngine.FindLvn(wkRows, tick).Take(MaxLvn))
-                    lvnZones.Add(new Zone { Center = p, Lo = p, Hi = p, Type = "lvn", IsMarker = false,
+                {
+                    var (lo, hi) = ProfileEngine.TroughBand(wkRows, tick, p);
+                    lvnZones.Add(new Zone { Center = p, Lo = lo, Hi = hi, Type = "lvn", IsMarker = false,
                         Side = SideOf(p), Strength = 30, Label = $"LVN tuần(gộp {WeekLookbackWeeks}) ×{ratio:0.0} (xuyên nhanh)" });
+                }
             if (ShowLvn && dyRows != null)
                 foreach (var (p, ratio) in ProfileEngine.FindLvn(dyRows, tick).Take(MaxLvn))
-                    lvnZones.Add(new Zone { Center = p, Lo = p, Hi = p, Type = "lvn", IsMarker = false,
+                {
+                    var (lo, hi) = ProfileEngine.TroughBand(dyRows, tick, p);
+                    lvnZones.Add(new Zone { Center = p, Lo = lo, Hi = hi, Type = "lvn", IsMarker = false,
                         Side = SideOf(p), Strength = 30, Label = $"LVN ngày ×{ratio:0.0} (xuyên nhanh)" });
+                }
 
             // naked POC
             foreach (var sp in completed)
@@ -771,20 +777,27 @@ namespace SessionZonesNs
                     Color col = isLvn ? Color.FromArgb(0x90, 0x90, 0x90) : HvnColor;
                     float yLo = (float)conv.GetChartY(z.Lo), yHi = (float)conv.GetChartY(z.Hi);
                     float yTop = Math.Min(yLo, yHi), yBot = Math.Max(yLo, yHi);
-                    // nền mờ hơn hẳn mốc — đây chỉ là bối cảnh, không phải điểm bấm nút
-                    if (!isLvn && yBot - yTop >= 1)
-                    {
-                        using var fill = new SolidBrush(Color.FromArgb(28, col));
-                        gr.FillRectangle(fill, clip.Left, yTop, clip.Width, Math.Max(1, yBot - yTop));
-                    }
                     float ym = (yTop + yBot) / 2;
-                    if (ym < clip.Top || ym > clip.Bottom) continue;
-                    using var pen = new Pen(Color.FromArgb(140, col), 1f) { DashStyle = DashStyle.Dash };
-                    gr.DrawLine(pen, clip.Left, ym, clip.Right, ym);
+                    if (yBot < clip.Top || yTop > clip.Bottom) continue;
+                    // HVN/LVN là VÙNG (không phải một mức giá): tô cả dải + hai viền chấm.
+                    // Chỉ khi dải mỏng hơn 3 px (đỉnh một hàng) mới vẽ đường đứt như cũ.
+                    if (yBot - yTop >= 3)
+                    {
+                        using var fill = new SolidBrush(Color.FromArgb(isLvn ? 40 : 45, col));
+                        gr.FillRectangle(fill, clip.Left, yTop, clip.Width, yBot - yTop);
+                        using var edge = new Pen(Color.FromArgb(150, col), 1f) { DashStyle = DashStyle.Dot };
+                        gr.DrawLine(edge, clip.Left, yTop, clip.Right, yTop);
+                        gr.DrawLine(edge, clip.Left, yBot, clip.Right, yBot);
+                    }
+                    else
+                    {
+                        using var pen = new Pen(Color.FromArgb(140, col), 1f) { DashStyle = DashStyle.Dash };
+                        gr.DrawLine(pen, clip.Left, ym, clip.Right, ym);
+                    }
                     // nhãn nhạt, không kèm khoảng cách — đây là bối cảnh, không phải mốc vào lệnh
                     using var f = new Font("Arial", 7, FontStyle.Italic);
                     using var br = new SolidBrush(Color.FromArgb(170, col));
-                    gr.DrawString(z.Label, f, br, clip.Right - 190, ym - 10);
+                    gr.DrawString(z.Label, f, br, clip.Right - 190, Math.Min(yTop, yBot) - 10);
                 }
                 // B8: MỤC TIÊU CHỐT LỜI — nét đứt dài, màu riêng, nhãn ghi rõ vai trò.
                 // Vẽ khác hẳn lớp mốc để mắt không nhầm đây là chỗ vào lệnh.

@@ -16,6 +16,7 @@ namespace VungCanhLenhNs
     using System.IO;
     using System.Linq;
     using TradingPlatform.BusinessLayer;
+    using TradingPlatform.BusinessLayer.Chart;
 
     public class VungCanhLenh : Indicator, IVolumeAnalysisIndicator
     {
@@ -41,7 +42,9 @@ namespace VungCanhLenhNs
         private sealed class RenderState
         {
             public List<VZone> Zones = new();
-            public List<VSeg> Segs = new();     // các đoạn sống ĐÃ KẾT THÚC của vùng (chỉ vẽ khi bật "tất cả vùng")
+            public List<VLichSu> LichSu = new(); // vùng lịch sử (chỉ khi bật "tất cả vùng"), cũ → mới
+            public List<VZone> BiChan = new();   // vùng Display không có vùng lịch sử sống đại diện (vẽ viền đứt)
+            public DateTime LastTime;            // giờ mở nến đã đóng mới nhất
             public double Close, U;
             public int Phase;
             public string Warn;      // lỗi (hiện 1 dòng nhỏ góc dưới-phải)
@@ -56,6 +59,9 @@ namespace VungCanhLenhNs
         private bool _lastVa;
         private const string NoVaNote = "Chưa có Volume Analysis: thiếu VA/POC hôm qua, VA Âu, POC trần (chỉ còn swing + số tròn)";
         private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
+        // tiêu điểm theo chuột (chế độ lịch sử): giờ nến dưới con trỏ; null ⇒ nến ở mép phải màn hình. Đọc/ghi dưới _sync.
+        private DateTime? _focus;
+        private IChart _mouseChart;
 
         public VungCanhLenh() : base()
         {
@@ -76,7 +82,61 @@ namespace VungCanhLenhNs
 
         protected override void OnClear()
         {
-            lock (_calc) { _feeder = new VclFeeder(); _lastN = -1; _lastVa = false; _vaLoaded = false; lock (_sync) _render = null; }
+            DetachMouse();
+            lock (_calc) { _feeder = new VclFeeder(); _lastN = -1; _lastVa = false; _vaLoaded = false; lock (_sync) { _render = null; _focus = null; } }
+        }
+
+        public override void Dispose()
+        {
+            DetachMouse();
+            base.Dispose();
+        }
+
+        // ---------------------------------------------------------------- chuột (chỉ khi bật chế độ lịch sử)
+        /// <summary>Gắn sự kiện chuột khi bật "tất cả vùng", gỡ khi tắt. Gọi từ OnPaintChart (luồng UI).</summary>
+        private void SyncMouse()
+        {
+            var ch = ShowAllHistory ? CurrentChart : null;
+            if (ReferenceEquals(ch, _mouseChart)) return;
+            DetachMouse();
+            if (ch == null) return;
+            ch.MouseMove += OnMouseMove;
+            ch.MouseLeave += OnMouseLeave;
+            _mouseChart = ch;
+        }
+
+        private void DetachMouse()
+        {
+            var ch = _mouseChart;
+            _mouseChart = null;
+            if (ch != null) try { ch.MouseMove -= OnMouseMove; ch.MouseLeave -= OnMouseLeave; } catch { }
+            lock (_sync) _focus = null;
+        }
+
+        private static DateTime FloorMin(DateTime t) => new DateTime(t.Year, t.Month, t.Day, t.Hour, t.Minute, 0, t.Kind);
+
+        /// <summary>Không đặt Handled (không nuốt chuột của chart); chỉ NeedRedraw khi nến tiêu điểm đổi.</summary>
+        private void OnMouseMove(object sender, ChartMouseNativeEventArgs e)
+        {
+            try
+            {
+                var w = e.Window;
+                if (w == null) return;
+                var clip = w.ClientRectangle;
+                DateTime? f = null;
+                if (e.X >= clip.Left && e.X <= clip.Right) f = FloorMin(w.CoordinatesConverter.GetTime(e.X));
+                bool changed;
+                lock (_sync) { changed = _focus != f; _focus = f; }
+                if (changed) e.NeedRedraw = true;
+            }
+            catch (Exception ex) { LogErr(ex, "OnMouseMove"); }
+        }
+
+        private void OnMouseLeave(object sender, ChartMouseNativeEventArgs e)
+        {
+            bool changed;
+            lock (_sync) { changed = _focus != null; _focus = null; }
+            if (changed) e.NeedRedraw = true;
         }
 
         /// <summary>KHÔNG chờ Volume Analysis: chưa có footprint vẫn vẽ (chỉ swing + số tròn) và ghi chú một dòng nhỏ;
@@ -127,9 +187,15 @@ namespace VungCanhLenhNs
                     i => hd[i, SeekOriginHistory.Begin] is HistoryItemBar b ? ReadLevels(b) : Array.Empty<VLevel>(),
                     va, TzOffset);
                 var core = _feeder.Core;
-                var rs = new RenderState { Close = core.Close, U = core.U, Phase = core.Phase, Note = _feeder.BuiltWithLevels ? null : NoVaNote };
+                var rs = new RenderState { Close = core.Close, U = core.U, Phase = core.Phase, Note = _feeder.BuiltWithLevels ? null : NoVaNote,
+                                           LastTime = core.Bars.Count > 0 ? core.Bars[core.Bars.Count - 1].Time : DateTime.MinValue };
                 foreach (var z in core.Display) rs.Zones.Add(z.Clone());
-                if (ShowAllHistory) rs.Segs = VclSegMerge.Merge(core.Segs.Where(g => !g.Live).Select(g => g.Clone()));
+                if (ShowAllHistory)
+                {
+                    rs.LichSu = new List<VLichSu>(core.LichSu.Count);
+                    foreach (var h in core.LichSu) rs.LichSu.Add(h.Clone());
+                    foreach (var z in rs.Zones) if (core.Ls.BiChan.Contains(z.Id)) rs.BiChan.Add(z);
+                }
                 lock (_sync) _render = rs;
                 _lastN = n; _lastVa = va;
             }
@@ -181,35 +247,88 @@ namespace VungCanhLenhNs
         }
 
         // ---------------------------------------------------------------- vẽ
-        /// <summary>Vùng quá khứ: hình chữ nhật từ lúc vùng xuất hiện đến lúc hết hiệu lực (không kéo ra mép phải). Chỉ vẽ phần nằm trong màn hình.</summary>
-        private void PaintSegs(Graphics gr, Func<DateTime, double> chartX, Func<double, double> chartY, Rectangle clip, RenderState rs, Font fLbl)
+        /// <summary>Nhãn live (cùng nội dung chế độ gọn) ở mép phải, rút gọn khi chật.</summary>
+        private void DrawLiveLabel(Graphics gr, VZone z, RenderState rs, Font fLbl, float x0, float top, float h, Rectangle clip)
         {
-            foreach (var g in rs.Segs)
+            float maxW = Math.Max(40f, (clip.Right - x0) * 0.9f);
+            string s = Label(z, rs, 0);
+            var sz = gr.MeasureString(s, fLbl);
+            for (int lvl = 1; lvl <= 3 && sz.Width > maxW; lvl++) { s = Label(z, rs, lvl); sz = gr.MeasureString(s, fLbl); }
+            float lx = clip.Right - sz.Width - 6, ly = top + h / 2 - sz.Height / 2;
+            using (var bg = new SolidBrush(Color.FromArgb(150, 14, 16, 22))) gr.FillRectangle(bg, lx - 2, ly, sz.Width + 4, sz.Height);
+            using (var br = new SolidBrush(Color.FromArgb(235, Color.White))) gr.DrawString(s, fLbl, br, lx, ly);
+        }
+
+        /// <summary>Chế độ "tất cả vùng" (PLAN-LICH-SU 2.5–2.7): mỗi vùng lịch sử một hình chữ nhật từ StartTime tới EndTime (vùng còn sống ⇒ mép phải),
+        /// màu theo vai (đỏ kháng cự / xanh hỗ trợ / xám chưa rõ). Vùng sống tại tF (nến dưới chuột, hoặc mép phải) vẽ đậm + nhãn lo–hi; còn lại mờ, không nhãn.
+        /// Không vẽ Display từ FirstTime nữa: vùng live = vùng lịch sử còn sống (nhãn live của vùng Display nó đang khớp); vùng Display bị chặn ⇒ viền đứt.</summary>
+        private void PaintLichSu(Graphics gr, Func<DateTime, double> chartX, Func<double, double> chartY, Func<double, DateTime> timeAt,
+                                 Rectangle clip, RenderState rs, Font fLbl)
+        {
+            DateTime? mf; lock (_sync) mf = _focus;
+            DateTime tF = mf ?? FloorMin(timeAt(clip.Right));
+            var zoneOf = new Dictionary<int, VZone>();
+            foreach (var z in rs.Zones) zoneOf[z.Id] = z;
+            float xF = float.NaN;
+            try { xF = (float)chartX(tF); } catch { }
+            foreach (var g in rs.LichSu)
             {
-                if (g.Slot == 'F' && !ShowFar) continue;
+                if (!g.TungGan && !ShowFar) continue;
+                bool live = g.End < 0;
                 float x0, x1;
-                try { x0 = (float)chartX(g.Start); x1 = (float)chartX(g.End); } catch { continue; }
+                try { x0 = (float)chartX(g.StartTime); x1 = live ? clip.Right : (float)chartX(g.EndTime.AddMinutes(1)); } catch { continue; }
                 if (x1 < clip.Left || x0 > clip.Right) continue;
-                x0 = Math.Max(clip.Left, x0); x1 = Math.Min(clip.Right, Math.Max(x1, x0 + 3));
                 float yHi = (float)chartY(g.Hi), yLo = (float)chartY(g.Lo);
                 float top = Math.Min(yHi, yLo), h = Math.Max(1f, Math.Abs(yLo - yHi));
                 if (top > clip.Bottom || top + h < clip.Top) continue;
-                Color baseC = g.Side == 0 ? TestColor : (g.Side > 0 ? ResColor : SupColor);
-                using (var br = new SolidBrush(Color.FromArgb(g.Slot == 'F' ? 22 : 40, baseC))) gr.FillRectangle(br, x0, top, x1 - x0, h);
-                using (var pen = new Pen(Color.FromArgb(g.Slot == 'F' ? 80 : 130, baseC), 1f))
+                float cx0 = Math.Max(clip.Left, x0), cx1 = Math.Min(clip.Right, Math.Max(x1, x0 + 2));
+                bool focus = g.StartTime <= tF && (live || tF <= g.EndTime);
+                Color baseC = g.Vai > 0 ? ResColor : (g.Vai < 0 ? SupColor : Color.FromArgb(140, 140, 140));
+                using (var br = new SolidBrush(Color.FromArgb(focus ? 55 : 18, baseC))) gr.FillRectangle(br, cx0, top, cx1 - cx0, h);
+                using (var pen = new Pen(Color.FromArgb(focus ? 150 : 60, baseC), 1f))
                 {
-                    gr.DrawLine(pen, x0, top, x1, top);
-                    gr.DrawLine(pen, x0, top + h, x1, top + h);
-                    gr.DrawLine(pen, x0, top, x0, top + h);
+                    gr.DrawLine(pen, cx0, top, cx1, top);
+                    gr.DrawLine(pen, cx0, top + h, cx1, top + h);
+                    if (x0 >= clip.Left) gr.DrawLine(pen, x0, top, x0, top + h);
+                    if (!live && x1 <= clip.Right) gr.DrawLine(pen, x1, top, x1, top + h);
                 }
-                if (ShowLabels)
+                double life = ((live ? rs.LastTime : g.EndTime) - g.StartTime).TotalMinutes;
+                if (focus && ShowLabels && life >= Vcl.LsLabelMin)
                 {
                     string s = F(g.Lo) + "–" + F(g.Hi);
                     var sz = gr.MeasureString(s, fLbl);
-                    if (sz.Width + 4 <= x1 - x0 && sz.Height <= h + 2)
-                        using (var br = new SolidBrush(Color.FromArgb(220, Color.White))) gr.DrawString(s, fLbl, br, x0 + 2, top + h / 2 - sz.Height / 2);
+                    if (sz.Height <= h + 2)
+                        using (var br = new SolidBrush(Color.FromArgb(220, Color.White)))
+                        {
+                            float ly = top + h / 2 - sz.Height / 2;
+                            bool left = x0 >= clip.Left && sz.Width + 4 <= cx1 - cx0;
+                            if (left) gr.DrawString(s, fLbl, br, x0 + 2, ly);
+                            // khối dài: thêm một nhãn ở x của tF (nếu nhãn mép trái không thấy hoặc ở xa tF)
+                            if (!float.IsNaN(xF) && xF + 4 + sz.Width <= cx1 && xF >= cx0 && (!left || xF - x0 > 3 * sz.Width))
+                                gr.DrawString(s, fLbl, br, xF + 4, ly);
+                        }
                 }
+                if (live && g.MatchedId >= 0 && zoneOf.TryGetValue(g.MatchedId, out var zl) && (zl.Slot != 'F' || ShowFar))
+                    DrawLiveLabel(gr, zl, rs, fLbl, cx0, top, h, clip);
             }
+            // vùng Display bị chặn (chồng một phần với vùng lịch sử đang sống): viền đứt, không tô, từ nến hiện tại tới mép phải + nhãn live
+            float xNow = clip.Left;
+            try { xNow = Math.Max(clip.Left, (float)chartX(rs.LastTime)); } catch { }
+            foreach (var z in rs.BiChan)
+            {
+                if (z.Slot == 'F' && !ShowFar) continue;
+                if (xNow > clip.Right) break;
+                float yHi = (float)chartY(z.Hi), yLo = (float)chartY(z.Lo);
+                float top = Math.Min(yHi, yLo), h = Math.Max(1f, Math.Abs(yLo - yHi));
+                if (top > clip.Bottom || top + h < clip.Top) continue;
+                Color baseC = z.Slot == 'K' ? TestColor : (z.Side > 0 ? ResColor : SupColor);
+                using (var pen = new Pen(Color.FromArgb(150, baseC), 1f) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dash })
+                    gr.DrawRectangle(pen, xNow, top, clip.Right - xNow, h);
+                DrawLiveLabel(gr, z, rs, fLbl, xNow, top, h, clip);
+            }
+            // đường dọc mảnh tại nến tiêu điểm
+            if (!float.IsNaN(xF) && xF >= clip.Left && xF <= clip.Right)
+                using (var pen = new Pen(Color.FromArgb(60, Color.White), 1f)) gr.DrawLine(pen, xF, clip.Top, xF, clip.Bottom);
         }
 
         public override void OnPaintChart(PaintChartEventArgs args)
@@ -225,9 +344,11 @@ namespace VungCanhLenhNs
             try
             {
                 using var fLbl = new Font("Consolas", 8, FontStyle.Regular);
-                if (!double.IsNaN(rs.U) && rs.U > 0)
+                SyncMouse();
+                if (ShowAllHistory && !double.IsNaN(rs.U) && rs.U > 0)
+                    PaintLichSu(gr, t => conv.GetChartX(t), p => conv.GetChartY(p), x => conv.GetTime(x), clip, rs, fLbl);
+                else if (!double.IsNaN(rs.U) && rs.U > 0)
                 {
-                    if (ShowAllHistory) PaintSegs(gr, t => conv.GetChartX(t), p => conv.GetChartY(p), clip, rs, fLbl);
                     foreach (var z in rs.Zones)
                     {
                         if (z.Slot == 'F' && !ShowFar) continue;

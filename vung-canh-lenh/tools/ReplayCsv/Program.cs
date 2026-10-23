@@ -3,6 +3,8 @@
 //   <base> = đường dẫn bỏ đuôi (đọc <base>_bars.csv và <base>.csv).
 // Xuất mỗi nến mỗi vùng hiển thị: bar_idx (vị trí 0..n-1), zone_id, lo, hi, role (R/RF/S/SF/K), score,
 //   + trạng thái lần chạm SAU nến đó: ep_open, ep_vai (0 kháng cự/1 hỗ trợ/2 không rõ/−1), dem_thoat, n, dao, xuyen, chua_ro, khong_ro.
+// Thêm <out>_episodes.csv (lần chạm đã chốt) và <out>_lichsu.csv (vùng lịch sử, PLAN-LICH-SU tiêu chí 11):
+//   id, start_utc, end_utc (trống = còn sống), lo, hi, vai (+1 kháng cự/−1 hỗ trợ/0 chưa rõ), ly_do, n_cham_lai, tung_gan (0/1).
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -57,9 +59,12 @@ static class Program
         core.Episodes.LogEnabled = true;
         var sb = new StringBuilder("bar_idx,zone_id,lo,hi,role,score,ep_open,ep_vai,dem_thoat,n,dao,xuyen,chua_ro,khong_ro\n");
         var sw = System.Diagnostics.Stopwatch.StartNew();
+        var swPush = new System.Diagnostics.Stopwatch();
         for (int i = 0; i < bars.Count; i++)
         {
+            swPush.Start();
             core.Push(bars[i], (IReadOnlyList<VLevel>)levels[i] ?? Array.Empty<VLevel>());
+            swPush.Stop();
             foreach (var z in core.Display)
             {
                 string role = z.Slot == 'K' ? "K" : (z.Side > 0 ? "R" : "S") + (z.Slot == 'F' ? "F" : "");
@@ -74,7 +79,17 @@ static class Program
         foreach (var e in core.Episodes.Log)
             se.Append(e.Id).Append(',').Append(e.BatDau).Append(',').Append(e.Chot).Append(',').Append((int)e.Vai).Append(',').Append((int)e.Ket).Append('\n');
         File.WriteAllText(Path.ChangeExtension(outPath, null) + "_episodes.csv", se.ToString());
-        Console.Error.WriteLine($"xong {sw.Elapsed.TotalSeconds:0.0}s, tính lại bộ {core.NRecalc} lần → {outPath}");
+        var sl = new StringBuilder("id,start_utc,end_utc,lo,hi,vai,ly_do,n_cham_lai,tung_gan\n");
+        foreach (var h in core.LichSu)
+            sl.Append(h.Id).Append(',').Append(h.StartTime.ToString("yyyy-MM-dd HH:mm:ss", Inv)).Append(',')
+              .Append(h.Song ? "" : h.EndTime.ToString("yyyy-MM-dd HH:mm:ss", Inv)).Append(',')
+              .Append(h.Lo.ToString("R", Inv)).Append(',').Append(h.Hi.ToString("R", Inv)).Append(',').Append(h.Vai).Append(',')
+              .Append(h.LyDo).Append(',').Append(h.NChamLai).Append(',').Append(h.TungGan ? 1 : 0).Append('\n');
+        File.WriteAllText(Path.ChangeExtension(outPath, null) + "_lichsu.csv", sl.ToString());
+        int nSong = 0; foreach (var h in core.LichSu) if (h.Song) nSong++;
+        Console.Error.WriteLine($"vùng lịch sử: {core.LichSu.Count} (đang sống {nSong}); Display bị chặn {core.Ls.NBiChan} vùng-nến " +
+                                $"(trong đó vì vùng lịch sử đã khớp vùng Display khác cùng nến: {core.Ls.NKhopDaDung}); vùng chết khi đang khớp: {core.Ls.NChetCungNen}");
+        Console.Error.WriteLine($"xong {sw.Elapsed.TotalSeconds:0.0}s (riêng Push {swPush.Elapsed.TotalSeconds:0.000}s), tính lại bộ {core.NRecalc} lần → {outPath}");
         return 0;
     }
 }

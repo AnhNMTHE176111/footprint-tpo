@@ -321,55 +321,135 @@ static class Tests
         Check(f2.Resets == 2 && f2.Core.Bars.Count == 1000, "lịch sử ngắn đi ⇒ reset");
     }
 
-    static void TestSegments()
+    // ---- vùng lịch sử: chạy LichSuTracker trên chuỗi nến (O,H,L,C) và Display giả theo từng nến (mã, lo, hi, slot)
+    static LichSuTracker RunLs(List<double[]> bars, Func<int, List<(int, double, double, char)>> disp, int[] sessStarts = null,
+                               Action<int, LichSuTracker> after = null)
     {
-        Console.WriteLine("[13] Đoạn sống của vùng (chế độ hiện tất cả vùng lịch sử)");
+        var tr = new LichSuTracker();
+        var ss = new HashSet<int>(sessStarts ?? Array.Empty<int>());
+        var t0 = new DateTime(2026, 10, 21, 8, 0, 0, DateTimeKind.Utc);
+        for (int i = 0; i < bars.Count; i++)
+        {
+            var b = new VBar { Time = t0.AddMinutes(i), O = bars[i][0], H = bars[i][1], L = bars[i][2], C = bars[i][3] };
+            bool ns = i == 0 || ss.Contains(i);
+            tr.Step(i, b, ns ? b.O : bars[i - 1][3], ns, disp(i) ?? new List<(int, double, double, char)>());
+            after?.Invoke(i, tr);
+        }
+        return tr;
+    }
+    static List<(int, double, double, char)> Z(int id, double lo, double hi, char slot = 'N') => new() { (id, lo, hi, slot) };
+
+    static void TestLichSu()
+    {
+        Console.WriteLine("[15] Vùng lịch sử (chế độ hiện tất cả vùng)");
+        // 1. rung biên
+        var t1 = RunLs(Rep(Fl(97), 50), i => Z(7, 100 + (i % 2 == 0 ? 0.05 : -0.05), 102 + (i % 2 == 0 ? -0.05 : 0.05)));
+        Check(t1.LichSu.Count == 1 && t1.LichSu[0].Lo == 100.05 && t1.LichSu[0].Hi == 101.95 && t1.LichSu[0].Last == 49 && t1.LichSu[0].Song,
+              "rung biên ±0,05 giá qua 50 nến ⇒ 1 vùng, dải = dải nến đầu, Last = nến cuối", t1.LichSu.Count.ToString());
+        // 2. mã mới cùng dải
+        var t2 = RunLs(Rep(Fl(97), 41), i => Z(i <= 20 ? 7 : 9, 100, 102));
+        Check(t2.LichSu.Count == 1 && t2.LichSu[0].Last == 40 && t2.LichSu[0].MatchedId == 9, "mã 7 (nến 0–20) rồi mã 9 (21–40) cùng dải ⇒ 1 vùng");
+        // 3. rời bộ rồi về
+        var t3 = RunLs(Rep(Fl(90), 50), i => i < 10 || i >= 40 ? Z(7, 100, 102) : null);
+        Check(t3.LichSu.Count == 1 && t3.LichSu[0].Last == 49, "vắng 30 phút rồi về cùng dải, giá không xuyên ⇒ 1 vùng (bắc cầu)");
+        var t3b = RunLs(Rep(Fl(90), 80), i => i < 10 || i >= 71 ? Z(7, 100, 102) : null);
+        Check(t3b.LichSu.Count == 2 && t3b.LichSu[0].End == 9 && t3b.LichSu[0].End == t3b.LichSu[0].Last && t3b.LichSu[0].LyDo == "hết hạn"
+              && t3b.LichSu[1].Start == 71 && t3b.LichSu[1].Start > t3b.LichSu[0].End,
+              "vắng 61 phút ⇒ 2 vùng, End₁ = Last₁ = 9 (hết hạn) < Start₂ = 71", $"{t3b.LichSu.Count}");
+        var t3c = RunLs(Rep(Fl(90), 80), i => i < 10 || i >= 70 ? Z(7, 100, 102) : null);
+        Check(t3c.LichSu.Count == 1 && t3c.LichSu[0].Song, "khớp lại đúng phút 61 (nến 70) ⇒ không bị cắt oan (khớp chạy TRƯỚC hết hạn)");
+        // 4. xuyên phá
+        var b4 = Seq(Fl(97), B(97, 101.2, 96.9, 101), B(101, 105.5, 101, 105), Rep(Fl(105), 6));
+        var t4 = RunLs(b4, i => Z(7, 100, 102));
+        var a4 = t4.LichSu[0];
+        Check(t4.LichSu.Count == 2 && a4.Vai == 1 && a4.LyDo == "xuyên phá" && a4.End == 2 && a4.EndTime == new DateTime(2026, 10, 21, 8, 2, 0, DateTimeKind.Utc),
+              "kháng cự, 5 nến liền đóng > Hi + 2 ⇒ End = nến thoát đầu (3) − 1 = 2, xuyên phá", $"{t4.LichSu.Count} {a4.End} {a4.LyDo}");
+        Check(t4.LichSu.Count == 2 && t4.LichSu[1].Vai == -1 && t4.LichSu[1].Start == 8 && t4.LichSu[1].Start > a4.End,
+              "Display nến sau cùng dải ⇒ vùng mới vai hỗ trợ, Start₂ = 8 > End₁");
+        var t4b = new List<string>();
+        RunLs(b4, i => Z(7, 100, 102), after: (i, tr) => { if (i == 7) t4b.AddRange(tr.BiChan.Select(x => x.ToString())); });
+        Check(t4b.SequenceEqual(new[] { "7" }), "nến chốt xuyên phá: vùng Display vừa mất vùng lịch sử ⇒ vào BiChan (vẽ viền đứt)");
+        // 5. phá giả
+        var t5 = RunLs(Seq(Fl(97), B(97, 101.2, 96.9, 101), B(101, 105.5, 101, 105), Rep(Fl(105), 3), B(105, 105, 101, 101.5), Rep(Fl(101), 2)), i => Z(7, 100, 102));
+        Check(t5.LichSu.Count == 1 && t5.LichSu[0].Song && t5.LichSu[0].Ep != null && t5.LichSu[0].Ep.DemThoat == 0, "3 nến đóng ngoài rồi quay vào ⇒ không kết thúc, đếm về 0");
+        // 6. thoát về phía cũ
+        var t6 = RunLs(Seq(Fl(97), B(97, 101.2, 96.9, 101), B(101, 101, 95, 95.5), Rep(Fl(95), 5), B(95, 100.3, 95, 99), Rep(Fl(95), 2)), i => Z(7, 100, 102));
+        var a6 = t6.LichSu[0];
+        Check(t6.LichSu.Count == 1 && a6.Song && a6.Vai == 1 && a6.NChamLai == 2, "kháng cự, giá rơi xuống dưới Lo − 2 năm nến ⇒ không kết thúc; chạm lại lần 2 ⇒ NChamLai = 2", $"{a6.NChamLai}");
+        var ep6 = new List<bool>();
+        RunLs(Seq(Fl(97), B(97, 101.2, 96.9, 101), B(101, 101, 95, 95.5), Rep(Fl(95), 5)), i => Z(7, 100, 102), after: (i, tr) => ep6.Add(tr.Song[0].Ep != null));
+        Check(ep6[6] && !ep6[7], "lần chạm đóng ở nến thoát thứ 5 (nến 7)");
+        // 7. vai chưa rõ
+        var vais = new List<int>();
+        RunLs(Seq(Fl(101), Fl(103), Fl(99), Fl(99)), i => Z(7, 100, 102), after: (i, tr) => vais.Add(tr.LichSu[0].Vai));
+        Check(vais.SequenceEqual(new[] { 0, -1, -1, -1 }), "tạo khi giá trong dải ⇒ vai 0; nến sau đóng trên Hi ⇒ hỗ trợ; đổi phía sau đó không đổi vai", string.Join(",", vais));
+        // 8. chống chồng
+        var bc = new List<int>();
+        var t8 = RunLs(Rep(Fl(90), 7), i => i < 5 ? Z(7, 100, 102) : i == 5 ? Z(8, 101.4, 103.4) : Z(9, 100.8, 102.8),
+                       after: (i, tr) => { if (i == 5) bc.AddRange(tr.BiChan); });
+        Check(t8.LichSu.Count == 1 && t8.LichSu[0].Lo == 100 && t8.LichSu[0].Hi == 102 && bc.SequenceEqual(new[] { 8 }), "Display chồng 30% ⇒ không tạo, vào BiChan, vùng sống giữ nguyên");
+        Check(t8.LichSu[0].Last == 6 && t8.LichSu[0].MatchedId == 9, "Display chồng 60% ⇒ khớp (Last, MatchedId cập nhật)");
+        // 9. hết phiên
+        var ep9 = new List<bool>();
+        var t9 = RunLs(Seq(Fl(97), B(97, 101.2, 96.9, 101), Fl(101), Fl(90), Fl(90)), i => Z(7, 100, 102), new[] { 3 }, (i, tr) => ep9.Add(tr.Song.Count > 0 && tr.Song[0].Ep != null));
+        Check(ep9[2] && !ep9[3] && t9.LichSu.Count == 1 && t9.LichSu[0].Song && t9.LichSu[0].Last == 4, "nến đầu phiên đóng lần chạm đang mở; vùng vẫn sống, Last cập nhật");
+        // 13. TungGan
+        var t13 = RunLs(Rep(Fl(90), 6), i => Z(i < 3 ? 7 : 8, 100, 102, i < 3 ? 'F' : 'N'), after: null);
+        var t13b = RunLs(Rep(Fl(90), 3), i => Z(7, 100, 102, 'F'));
+        Check(!t13b.LichSu[0].TungGan && t13.LichSu[0].TungGan, "chỉ từng là xa (F) ⇒ TungGan false; từng là gần ⇒ true");
+
+        // 10 / 11 / 12 trên lõi thật (dữ liệu giả lập)
         var data = Synthetic(3000, 5);
         var core = new VclCore();
         foreach (var (b, l) in data) core.Push(b, l);
-        Check(core.Segs.Count > 10, "có nhiều đoạn sống sau 3000 nến", core.Segs.Count.ToString());
-        Check(core.Segs.All(g => g.End >= g.Start && g.Hi > g.Lo), "mỗi đoạn: kết thúc ≥ bắt đầu, Hi > Lo");
-        var live = core.Segs.Where(g => g.Live).Select(g => g.Id).OrderBy(x => x).ToList();
-        var disp = core.Display.Select(z => z.Id).OrderBy(x => x).ToList();
-        Check(live.SequenceEqual(disp), "đoạn Live đúng bằng bộ đang hiển thị", live.Count + " vs " + disp.Count);
-        Check(core.Segs.Where(g => g.Live).All(g => g.End == core.Bars[core.Bars.Count - 1].Time), "đoạn Live kéo tới nến mới nhất");
-        Check(core.Segs.Where(g => !g.Live).All(g => g.End < core.Bars[core.Bars.Count - 1].Time), "đoạn đã rời bộ có hạn dùng (End < nến cuối)");
-        Check(core.Segs.Where(g => !g.Live).Any(g => g.End > g.Start), "có vùng sống > 0 phút rồi hết hạn");
-        var ordered = core.Segs.Zip(core.Segs.Skip(1), (a, b) => a.Start <= b.Start).All(x => x);
-        Check(ordered, "đoạn xếp theo thời gian bắt đầu");
-        // không nhìn trước: cắt dữ liệu ở nến 2000 thì mọi đoạn đã đóng trước đó phải y hệt
+        var L = core.LichSu; int n = core.Bars.Count;
+        Check(L.Count > 10, "Synthetic(3000): có nhiều vùng lịch sử", L.Count.ToString());
+        Check(L.Zip(L.Skip(1), (x, y) => x.Start <= y.Start).All(v => v) && L.All(h => h.Hi > h.Lo && (h.Song || (h.End >= h.Start && h.LyDo.Length > 0))),
+              "xếp theo Start; Hi > Lo; vùng đã kết thúc có End ≥ Start và lý do");
+        Check(L.Where(h => h.LyDo == "xuyên phá").All(h => h.End >= h.Start), "kẹp End = max(Start, i − G) (luôn End ≥ Start)");
+        int pairs = 0;
+        for (int a = 0; a < L.Count; a++)
+            for (int c = a + 1; c < L.Count; c++)
+            {
+                var x = L[a]; var y = L[c];
+                int xe = x.Song ? n - 1 : x.End, ye = y.Song ? n - 1 : y.End;
+                if (Math.Max(x.Start, y.Start) <= Math.Min(xe, ye) && Math.Min(x.Hi, y.Hi) - Math.Max(x.Lo, y.Lo) > 0) pairs++;
+            }
+        Check(pairs == 0, "không có hai vùng lịch sử giao nhau (thời gian × giá), kể cả vùng đang sống", pairs.ToString());
+        bool okLive = true;
+        foreach (var z in core.Display)
+        {
+            int m = core.Ls.Song.Count(h => h.MatchedId == z.Id);
+            bool inB = core.Ls.BiChan.Contains(z.Id);
+            if (!((m == 1 && !inB) || (m == 0 && inB))) okLive = false;
+        }
+        Check(okLive && core.Ls.BiChan.All(id => core.Display.Any(z => z.Id == id)), "nến cuối: mỗi vùng Display có đúng 1 vùng lịch sử khớp hoặc nằm trong BiChan");
+        // không nhìn trước
         var part = new VclCore();
         for (int i = 0; i < 2000; i++) part.Push(data[i].bar, data[i].lv);
-        var closedPart = part.Segs.Where(g => !g.Live).Select(g => (g.Id, g.Lo, g.Hi, g.Start, g.End)).ToList();
-        var fullSame = core.Segs.Where(g => g.End < data[1999].bar.Time).Select(g => (g.Id, g.Lo, g.Hi, g.Start, g.End)).ToList();
-        Check(closedPart.Where(c => c.End < data[1999].bar.Time).SequenceEqual(fullSame), "đoạn đã đóng không đổi khi thêm dữ liệu sau (không nhìn trước)");
-    }
-
-    static void TestSegMerge()
-    {
-        Console.WriteLine("[14] Gộp đoạn sống vụn thành khối liền");
-        var t0 = new DateTime(2026, 10, 21, 8, 0, 0, DateTimeKind.Utc);
-        VSeg S(int a, int b, double lo, double hi, int side = 1) => new VSeg { Id = a, Side = side, Lo = lo, Hi = hi, Start = t0.AddMinutes(a), End = t0.AddMinutes(b), Slot = 'N' };
-        var m = VclSegMerge.Merge(new[] { S(0, 20, 4139, 4141), S(21, 40, 4139.2, 4141.1), S(42, 60, 4138.8, 4141) });
-        Check(m.Count == 1 && m[0].Start == t0 && m[0].End == t0.AddMinutes(60), "3 mảnh liền kề cùng dải ⇒ 1 khối 0..60 phút", m.Count.ToString());
-        m = VclSegMerge.Merge(new[] { S(0, 20, 4139, 4141), S(21, 40, 4150, 4152) });
-        Check(m.Count == 2, "dải giá khác hẳn ⇒ không gộp");
-        m = VclSegMerge.Merge(new[] { S(0, 20, 4139, 4141), S(60, 80, 4139, 4141) });
-        Check(m.Count == 2, "cách nhau > 10 phút ⇒ không gộp");
-        m = VclSegMerge.Merge(new[] { S(0, 20, 4139, 4141, 1), S(21, 40, 4139, 4141, -1) });
-        Check(m.Count == 1 || m.Count == 2, "kháng cự vs hỗ trợ cùng dải: không gộp (khác phía)");
-        Check(VclSegMerge.Merge(new[] { S(0, 20, 4139, 4141, 1), S(21, 40, 4139, 4141, -1) }).Count == 2, "khác phía rõ ràng ⇒ giữ 2 khối");
-        m = VclSegMerge.Merge(new[] { S(0, 1, 4139, 4141) });
-        Check(m.Count == 0, "khối < 3 phút bị bỏ");
-        var data = Synthetic(3000, 5); var core = new VclCore();
-        foreach (var (b, l) in data) core.Push(b, l);
-        var raw = core.Segs.Where(g => !g.Live).ToList(); var mg = VclSegMerge.Merge(raw);
-        Check(mg.Count < raw.Count, "dữ liệu mẫu: gộp làm số hình chữ nhật giảm", raw.Count + " → " + mg.Count);
+        var byId = L.ToDictionary(h => h.Id);
+        bool same = part.LichSu.Count == L.Count(h => h.Start < 2000);
+        foreach (var p in part.LichSu)
+        {
+            if (!byId.TryGetValue(p.Id, out var f)) { same = false; break; }
+            if (p.Lo != f.Lo || p.Hi != f.Hi || p.Start != f.Start || p.StartTime != f.StartTime) same = false;
+            if (!p.Song && (p.End != f.End || p.EndTime != f.EndTime || p.LyDo != f.LyDo || p.Vai != f.Vai || p.NChamLai != f.NChamLai || p.TungGan != f.TungGan)) same = false;
+            if (p.Song && p.Vai != 0 && p.Vai != f.Vai) same = false;
+        }
+        Check(same && part.LichSu.Any(h => !h.Song), "cắt ở nến 2000: vùng đã kết thúc y hệt, vùng đang sống cùng (Lo, Hi, Start), vai đã chốt không đổi");
+        // reset lõi ⇒ lịch sử dựng lại từ đầu
+        var f2 = new VclFeeder();
+        f2.Sync(2500, i => data[i].bar, i => data[i].lv, false, 7);
+        f2.Sync(2500, i => data[i].bar, i => data[i].lv, true, 7);
+        var direct = new VclCore();
+        for (int i = 0; i < 2500; i++) direct.Push(data[i].bar, data[i].lv);
+        Check(f2.Resets == 1 && f2.Core.LichSu.Count == direct.LichSu.Count && f2.Core.LichSu.Zip(direct.LichSu, (x, y) => x.Lo == y.Lo && x.Hi == y.Hi && x.Start == y.Start && x.End == y.End).All(v => v),
+              "VclFeeder reset ⇒ danh sách vùng lịch sử dựng lại = chạy thẳng từ đầu (không giữ danh sách cũ)");
     }
 
     static int Main()
     {
-        TestBuildZones(); TestBreak(); TestDNeverDies(); TestCorridor(); TestKeepNearAndAge(); TestEpisodes(); TestTables(); TestNoLookahead(); TestValueArea(); TestFeederVolumeAnalysis(); TestFeederTimeRegression(); TestSegments(); TestSegMerge();
+        TestBuildZones(); TestBreak(); TestDNeverDies(); TestCorridor(); TestKeepNearAndAge(); TestEpisodes(); TestTables(); TestNoLookahead(); TestValueArea(); TestFeederVolumeAnalysis(); TestFeederTimeRegression(); TestLichSu();
         Console.WriteLine($"\n{_ok} OK, {_fail} FAIL");
         return _fail == 0 ? 0 : 1;
     }

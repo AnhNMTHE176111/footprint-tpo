@@ -56,50 +56,6 @@ namespace VungCanhLenhNs
         }
     }
 
-    /// <summary>Một "đoạn sống" của vùng trên chart: từ lúc vùng vào bộ hiển thị đến lúc rời đi (giá ra khỏi hành lang, vùng bị xuyên
-    /// hoặc bị thay). Dùng để vẽ lại lịch sử: mỗi vùng chỉ dài trong khoảng thời gian nó từng có giá trị.</summary>
-    public sealed class VSeg
-    {
-        public int Id, Side;
-        public char Slot;
-        public double Lo, Hi;
-        public DateTime Start, End;
-        public bool Live;                 // còn trong bộ hiển thị ở nến mới nhất
-        public VSeg Clone() => (VSeg)MemberwiseClone();
-    }
-
-    public static class VclSegMerge
-    {
-        /// <summary>Gộp các đoạn sống vụn thành khối liền: cùng phía (hoặc phía 0 = chứa giá, tương thích mọi phía), dải giá chồng nhau
-        /// ≥ minOverlap của dải hẹp hơn, và cách nhau ≤ gapMin phút. Khối lấy dải giá + phía của đoạn sống LÂU nhất; thời gian = hợp.
-        /// Khối ngắn hơn minMin phút bị bỏ (nhiễu).</summary>
-        public static List<VSeg> Merge(IEnumerable<VSeg> segs, double minOverlap = 0.5, double gapMin = 10, double minMin = 3)
-        {
-            var groups = new List<VSeg>(); var best = new List<double>();
-            foreach (var sg in segs.OrderBy(x => x.Start))
-            {
-                double dur = (sg.End - sg.Start).TotalMinutes;
-                int pick = -1; double pickOv = 0;
-                for (int g = 0; g < groups.Count; g++)
-                {
-                    var G = groups[g];
-                    if ((sg.Start - G.End).TotalMinutes > gapMin) continue;
-                    if (!(G.Side == sg.Side || G.Side == 0 || sg.Side == 0)) continue;
-                    double ov = Math.Min(G.Hi, sg.Hi) - Math.Max(G.Lo, sg.Lo);
-                    double rel = ov / Math.Max(1e-9, Math.Min(G.Hi - G.Lo, sg.Hi - sg.Lo));
-                    if (rel >= minOverlap && rel > pickOv) { pick = g; pickOv = rel; }
-                }
-                if (pick < 0) { groups.Add(sg.Clone()); best.Add(dur); continue; }
-                var T = groups[pick];
-                if (sg.Start < T.Start) T.Start = sg.Start;
-                if (sg.End > T.End) T.End = sg.End;
-                if (dur > best[pick]) { best[pick] = dur; T.Lo = sg.Lo; T.Hi = sg.Hi; if (sg.Side != 0) T.Side = sg.Side; T.Slot = sg.Slot; }
-                else if (T.Side == 0 && sg.Side != 0) T.Side = sg.Side;
-            }
-            return groups.Where(g => (g.End - g.Start).TotalMinutes >= minMin).ToList();
-        }
-    }
-
     // ---------------------------------------------------------------- hằng số + hàm kernel
     public static class Vcl
     {
@@ -116,6 +72,9 @@ namespace VungCanhLenhNs
         // lần chạm (PLAN-LAN-CHAM mục 2): dung sai chạm τ, ngưỡng thoát E (giá), số nến yên G để chốt
         public const double EpTau = 0.0, EpExit = 2.0;
         public const int EpGapBars = 5;
+        // vùng lịch sử (PLAN-LICH-SU 2.7): chồng ≥ 50% dải hẹp hơn = cùng vùng; không khớp Display quá 60 phút ⇒ hết hạn;
+        // khối sống < 15 phút không nhãn. E / G của luật xuyên phá dùng lại EpExit / EpGapBars.
+        public const double LsOverlap = 0.5, LsGapMin = 60.0, LsLabelMin = 15.0;
         // ứng viên
         public const int SwingM5K = 5, SwingM15K = 3;
         public const double WB = 2, WB15 = 3, WC = 2, WNpoc = 3;
@@ -430,6 +389,114 @@ namespace VungCanhLenhNs
         }
     }
 
+    // ---------------------------------------------------------------- vùng lịch sử (PLAN-LICH-SU mục 2)
+    /// <summary>Một vùng trong chế độ "Hiện TẤT CẢ vùng trong lịch sử". Danh tính theo DẢI GIÁ CỐ ĐỊNH lúc tạo (không theo mã vùng engine).
+    /// Vai: +1 kháng cự (giá đóng dưới vùng lúc tạo), −1 hỗ trợ (trên), 0 chưa rõ (giá đóng trong vùng; chốt ở nến đầu đóng ra ngoài).
+    /// Start/Last/End là chỉ số nến; End = −1 khi còn sống. Công cụ QUAN SÁT — không có khái niệm vùng "mạnh".</summary>
+    public sealed class VLichSu
+    {
+        public int Id;
+        public double Lo, Hi;
+        public int Vai;
+        public int Start, Last, End = -1;
+        public DateTime StartTime, EndTime;
+        public string LyDo = "";            // "xuyên phá" | "hết hạn" | "" (còn sống)
+        public int NChamLai;                // số lần chạm bắt đầu SAU nến tạo (chỉ để nhãn/thống kê, không lọc)
+        public bool TungGan;                // từng khớp vùng Slot K/N
+        public int MatchedId = -1;          // mã vùng Display đang khớp ở nến mới nhất (−1 nếu không)
+        public EpState Ep;                  // lần chạm đang mở trên dải này (chỉ dùng DemThoat, PhiaThoat, BatDau)
+        public bool Song => End < 0;
+        public VLichSu Clone() { var c = (VLichSu)MemberwiseClone(); c.Ep = null; return c; }
+    }
+
+    /// <summary>Dựng vùng lịch sử từ bộ Display từng nến. Gọi Step đúng một lần mỗi nến đóng (theo thứ tự), SAU khi có Display của nến đó.
+    /// Thứ tự trong Step: (1) khớp/tạo (chồng ≥ 50% dải hẹp hơn ⇒ khớp; chồng một phần ⇒ không tạo; không chồng ⇒ tạo);
+    /// (2) hết phiên ⇒ đóng lần chạm đang mở; vai 0 chốt theo giá đóng; máy lần chạm trên dải cố định (τ, E, G như EpisodeTracker),
+    ///     lần chạm chốt với phía thoát "sau lưng" vai ⇒ XUYÊN PHÁ, End = max(Start, i − G);
+    /// (3) không khớp Display quá 60 phút ⇒ HẾT HẠN, End = Last.</summary>
+    public sealed class LichSuTracker
+    {
+        public double Tau = Vcl.EpTau, Exit = Vcl.EpExit;
+        public int Gap = Vcl.EpGapBars;
+        public readonly List<VLichSu> LichSu = new();          // mọi vùng (cũ → mới, theo Start)
+        private readonly List<VLichSu> _song = new();
+        public IReadOnlyList<VLichSu> Song => _song;           // đang sống
+        /// <summary>Mã vùng Display ở nến mới nhất KHÔNG có vùng lịch sử sống đại diện: bị chặn vì chồng một phần (2.2 bước 2),
+        /// hoặc (hiếm) vùng lịch sử nó khớp vừa kết thúc ở chính nến này. Lớp vẽ vẽ chúng bằng viền đứt.</summary>
+        public readonly List<int> BiChan = new();
+        // thống kê (không ảnh hưởng logic)
+        public int NBiChan, NKhopDaDung, NChetCungNen;
+        private readonly List<DateTime> _t = new();
+        private int _next;
+
+        public DateTime TimeOf(int i) => _t[i];
+        public int Count => _t.Count;
+
+        public void Step(int i, VBar bar, double cprev, bool newSess, IReadOnlyList<(int id, double lo, double hi, char slot)> display)
+        {
+            if (i != _t.Count) throw new InvalidOperationException("LichSuTracker.Step: chỉ số nến không liên tục");
+            _t.Add(bar.Time);
+            BiChan.Clear();
+            foreach (var h in _song) h.MatchedId = -1;
+            // (1) khớp / tạo
+            foreach (var z in display)
+            {
+                VLichSu best = null; double bestRel = 0; bool any = false, taken = false;
+                foreach (var h in _song)
+                {
+                    double ov = Math.Min(h.Hi, z.hi) - Math.Max(h.Lo, z.lo);
+                    if (ov <= 0) continue;
+                    any = true;
+                    double rel = ov / Math.Max(1e-9, Math.Min(h.Hi - h.Lo, z.hi - z.lo));
+                    if (h.MatchedId >= 0) { if (rel >= Vcl.LsOverlap) taken = true; continue; }   // mỗi vùng lịch sử khớp ≤ 1 vùng Display/nến
+                    if (rel >= Vcl.LsOverlap && rel > bestRel) { best = h; bestRel = rel; }
+                }
+                if (best != null) { best.Last = i; best.MatchedId = z.id; best.TungGan |= z.slot != 'F'; continue; }
+                if (any) { BiChan.Add(z.id); NBiChan++; if (taken) NKhopDaDung++; continue; }
+                var nh = new VLichSu
+                {
+                    Id = _next++, Lo = z.lo, Hi = z.hi, Start = i, Last = i, StartTime = bar.Time,
+                    Vai = bar.C < z.lo ? 1 : (bar.C > z.hi ? -1 : 0), MatchedId = z.id, TungGan = z.slot != 'F'
+                };
+                LichSu.Add(nh); _song.Add(nh);
+            }
+            // (2) hết phiên + vai + máy xuyên phá, (3) hết hạn
+            if (newSess) foreach (var h in _song) h.Ep = null;
+            for (int k = 0; k < _song.Count; k++)
+            {
+                var h = _song[k];
+                if (h.Vai == 0) { if (bar.C < h.Lo) h.Vai = 1; else if (bar.C > h.Hi) h.Vai = -1; }
+                bool cham = Math.Max(cprev, bar.H) >= h.Lo - Tau && Math.Min(cprev, bar.L) <= h.Hi + Tau;
+                bool neo = cham || (bar.C >= h.Lo - Exit && bar.C <= h.Hi + Exit);
+                if (h.Ep == null && cham) { h.Ep = new EpState { BatDau = i }; if (i > h.Start) h.NChamLai++; }
+                bool ket = false;
+                if (h.Ep != null)
+                {
+                    if (neo) { h.Ep.DemThoat = 0; h.Ep.PhiaThoat = 0; }
+                    else
+                    {
+                        h.Ep.PhiaThoat = bar.C > h.Hi ? 1 : -1;
+                        h.Ep.DemThoat++;
+                        if (h.Ep.DemThoat >= Gap)
+                        {
+                            int phia = h.Ep.PhiaThoat;
+                            h.Ep = null;
+                            if ((h.Vai == 1 && phia == 1) || (h.Vai == -1 && phia == -1))
+                            { h.End = Math.Max(h.Start, i - Gap); h.LyDo = "xuyên phá"; ket = true; }
+                        }
+                    }
+                }
+                if (!ket && (bar.Time - _t[h.Last]).TotalMinutes > Vcl.LsGapMin) { h.End = h.Last; h.LyDo = "hết hạn"; ket = true; }
+                if (ket)
+                {
+                    h.EndTime = _t[h.End]; h.Ep = null;
+                    if (h.MatchedId >= 0) { BiChan.Add(h.MatchedId); NChetCungNen++; }
+                    h.MatchedId = -1;
+                    _song.RemoveAt(k); k--;
+                }
+            }
+        }
+    }
 
     // ---------------------------------------------------------------- vòng đời lõi khi chạy live (thuần, test được)
     /// <summary>Giữ một VclCore đồng bộ với lịch sử nến của platform. Dựng lại TỪ ĐẦU khi:
@@ -511,8 +578,8 @@ namespace VungCanhLenhNs
         public List<VZone> Display = new();           // bộ vùng đang hiển thị (đã sắp theo thứ tự chọn)
         public readonly List<VBar> Bars = new();
         public readonly EpisodeTracker Episodes = new();   // máy "lần chạm" (PLAN-LAN-CHAM 2.6)
-        public readonly List<VSeg> Segs = new();            // lịch sử các đoạn sống của vùng (cũ → mới)
-        private readonly Dictionary<int, VSeg> _openSeg = new();
+        public readonly LichSuTracker Ls = new();           // vùng lịch sử (chế độ "Hiện TẤT CẢ vùng trong lịch sử", PLAN-LICH-SU)
+        public List<VLichSu> LichSu => Ls.LichSu;
 
         // ---- ứng viên (mảng song song, chỉ số = thứ tự nạp, giống Python) ----
         private readonly List<double> _price = new(), _w = new();
@@ -692,7 +759,7 @@ namespace VungCanhLenhNs
             if (double.IsNaN(u) || u <= 0)
             {
                 _prev = new List<Prev>(); Display = new List<VZone>();
-                UpdateSegs(bar.Time, Display);
+                Ls.Step(i, bar, cprev, newSess, Array.Empty<(int, double, double, char)>());
                 Episodes.Step(i, bar, cprev, newSess, Array.Empty<(int, double, double)>());
                 return;
             }
@@ -776,7 +843,9 @@ namespace VungCanhLenhNs
             }
             _prev = np;
             Display = disp;
-            UpdateSegs(bar.Time, disp);
+            var dl = new List<(int, double, double, char)>(disp.Count);
+            foreach (var z in disp) dl.Add((z.Id, z.Lo, z.Hi, z.Slot));
+            Ls.Step(i, bar, cprev, newSess, dl);
 
             // ---- lần chạm: chạy SAU khi chốt bộ của nến này, dùng biên hiện tại ----
             var zl = new List<(int, double, double)>(disp.Count);
@@ -790,25 +859,6 @@ namespace VungCanhLenhNs
                 z.EpK = z.EpOpen ? z.N + 1 : 0;
                 z.WBin = Vcl.WidthBin(z.Hi - z.Lo);
             }
-        }
-
-        private void UpdateSegs(DateTime t, List<VZone> disp)
-        {
-            var keep = new HashSet<int>();
-            foreach (var z in disp)
-            {
-                keep.Add(z.Id);
-                if (_openSeg.TryGetValue(z.Id, out var sg) && sg.Lo == z.Lo && sg.Hi == z.Hi && sg.Side == z.Side) { sg.End = t; sg.Slot = z.Slot; }
-                else
-                {
-                    if (sg != null) sg.Live = false;
-                    sg = new VSeg { Id = z.Id, Lo = z.Lo, Hi = z.Hi, Side = z.Side, Slot = z.Slot, Start = t, End = t, Live = true };
-                    Segs.Add(sg); _openSeg[z.Id] = sg;
-                }
-            }
-            List<int> gone = null;
-            foreach (var kv in _openSeg) if (!keep.Contains(kv.Key)) (gone ??= new List<int>()).Add(kv.Key);
-            if (gone != null) foreach (int id in gone) { _openSeg[id].Live = false; _openSeg.Remove(id); }
         }
 
         /// <summary>Cho test: số ứng viên còn sống của một loại; có ứng viên sống loại kind ở đúng giá p không.</summary>

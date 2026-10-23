@@ -13,6 +13,7 @@ namespace VungCanhLenhNs
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
 
     /// <summary>Nến M1 đã đóng. Time = giờ MỞ nến (UTC).</summary>
     public sealed class VBar
@@ -65,6 +66,38 @@ namespace VungCanhLenhNs
         public DateTime Start, End;
         public bool Live;                 // còn trong bộ hiển thị ở nến mới nhất
         public VSeg Clone() => (VSeg)MemberwiseClone();
+    }
+
+    public static class VclSegMerge
+    {
+        /// <summary>Gộp các đoạn sống vụn thành khối liền: cùng phía (hoặc phía 0 = chứa giá, tương thích mọi phía), dải giá chồng nhau
+        /// ≥ minOverlap của dải hẹp hơn, và cách nhau ≤ gapMin phút. Khối lấy dải giá + phía của đoạn sống LÂU nhất; thời gian = hợp.
+        /// Khối ngắn hơn minMin phút bị bỏ (nhiễu).</summary>
+        public static List<VSeg> Merge(IEnumerable<VSeg> segs, double minOverlap = 0.5, double gapMin = 10, double minMin = 3)
+        {
+            var groups = new List<VSeg>(); var best = new List<double>();
+            foreach (var sg in segs.OrderBy(x => x.Start))
+            {
+                double dur = (sg.End - sg.Start).TotalMinutes;
+                int pick = -1; double pickOv = 0;
+                for (int g = 0; g < groups.Count; g++)
+                {
+                    var G = groups[g];
+                    if ((sg.Start - G.End).TotalMinutes > gapMin) continue;
+                    if (!(G.Side == sg.Side || G.Side == 0 || sg.Side == 0)) continue;
+                    double ov = Math.Min(G.Hi, sg.Hi) - Math.Max(G.Lo, sg.Lo);
+                    double rel = ov / Math.Max(1e-9, Math.Min(G.Hi - G.Lo, sg.Hi - sg.Lo));
+                    if (rel >= minOverlap && rel > pickOv) { pick = g; pickOv = rel; }
+                }
+                if (pick < 0) { groups.Add(sg.Clone()); best.Add(dur); continue; }
+                var T = groups[pick];
+                if (sg.Start < T.Start) T.Start = sg.Start;
+                if (sg.End > T.End) T.End = sg.End;
+                if (dur > best[pick]) { best[pick] = dur; T.Lo = sg.Lo; T.Hi = sg.Hi; if (sg.Side != 0) T.Side = sg.Side; T.Slot = sg.Slot; }
+                else if (T.Side == 0 && sg.Side != 0) T.Side = sg.Side;
+            }
+            return groups.Where(g => (g.End - g.Start).TotalMinutes >= minMin).ToList();
+        }
     }
 
     // ---------------------------------------------------------------- hằng số + hàm kernel

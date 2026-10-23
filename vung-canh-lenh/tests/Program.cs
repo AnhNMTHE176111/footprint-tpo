@@ -345,9 +345,31 @@ static class Tests
         Check(closedPart.Where(c => c.End < data[1999].bar.Time).SequenceEqual(fullSame), "đoạn đã đóng không đổi khi thêm dữ liệu sau (không nhìn trước)");
     }
 
+    static void TestSegMerge()
+    {
+        Console.WriteLine("[14] Gộp đoạn sống vụn thành khối liền");
+        var t0 = new DateTime(2026, 10, 21, 8, 0, 0, DateTimeKind.Utc);
+        VSeg S(int a, int b, double lo, double hi, int side = 1) => new VSeg { Id = a, Side = side, Lo = lo, Hi = hi, Start = t0.AddMinutes(a), End = t0.AddMinutes(b), Slot = 'N' };
+        var m = VclSegMerge.Merge(new[] { S(0, 20, 4139, 4141), S(21, 40, 4139.2, 4141.1), S(42, 60, 4138.8, 4141) });
+        Check(m.Count == 1 && m[0].Start == t0 && m[0].End == t0.AddMinutes(60), "3 mảnh liền kề cùng dải ⇒ 1 khối 0..60 phút", m.Count.ToString());
+        m = VclSegMerge.Merge(new[] { S(0, 20, 4139, 4141), S(21, 40, 4150, 4152) });
+        Check(m.Count == 2, "dải giá khác hẳn ⇒ không gộp");
+        m = VclSegMerge.Merge(new[] { S(0, 20, 4139, 4141), S(60, 80, 4139, 4141) });
+        Check(m.Count == 2, "cách nhau > 10 phút ⇒ không gộp");
+        m = VclSegMerge.Merge(new[] { S(0, 20, 4139, 4141, 1), S(21, 40, 4139, 4141, -1) });
+        Check(m.Count == 1 || m.Count == 2, "kháng cự vs hỗ trợ cùng dải: không gộp (khác phía)");
+        Check(VclSegMerge.Merge(new[] { S(0, 20, 4139, 4141, 1), S(21, 40, 4139, 4141, -1) }).Count == 2, "khác phía rõ ràng ⇒ giữ 2 khối");
+        m = VclSegMerge.Merge(new[] { S(0, 1, 4139, 4141) });
+        Check(m.Count == 0, "khối < 3 phút bị bỏ");
+        var data = Synthetic(3000, 5); var core = new VclCore();
+        foreach (var (b, l) in data) core.Push(b, l);
+        var raw = core.Segs.Where(g => !g.Live).ToList(); var mg = VclSegMerge.Merge(raw);
+        Check(mg.Count < raw.Count, "dữ liệu mẫu: gộp làm số hình chữ nhật giảm", raw.Count + " → " + mg.Count);
+    }
+
     static int Main()
     {
-        TestBuildZones(); TestBreak(); TestDNeverDies(); TestCorridor(); TestKeepNearAndAge(); TestEpisodes(); TestTables(); TestNoLookahead(); TestValueArea(); TestFeederVolumeAnalysis(); TestFeederTimeRegression(); TestSegments();
+        TestBuildZones(); TestBreak(); TestDNeverDies(); TestCorridor(); TestKeepNearAndAge(); TestEpisodes(); TestTables(); TestNoLookahead(); TestValueArea(); TestFeederVolumeAnalysis(); TestFeederTimeRegression(); TestSegments(); TestSegMerge();
         Console.WriteLine($"\n{_ok} OK, {_fail} FAIL");
         return _fail == 0 ? 0 : 1;
     }

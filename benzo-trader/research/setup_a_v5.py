@@ -1155,7 +1155,7 @@ def main(fast=False):
     W('## 6. Đối chứng (6 phép so có phán quyết; ngưỡng NGUYÊN PLAN-LAN-CHAM mục 5)')
     W('')
     W('Mỗi ô: R TB thật · TB đối chứng [5%; 95%]. "khác ▲" = **hơn**, "khác ▼" = **kém hơn**, "≈" = **không hơn**, "không áp dụng" = **n quá nhỏ** (cần ≥ 10 lệnh ở CẢ TRAIN và TEST). '
-      'Tổng 6 phép ⇒ với ~5%% mỗi phép, ~0,3 ô "khác" có thể do ngẫu nhiên.')
+      'Tổng 6 phép ⇒ với ~5% mỗi phép, ~0,3 ô "khác" có thể do ngẫu nhiên.')
     W('')
     W('| nhóm lệnh | đối chứng | GỘP | TRAIN | TEST | T8 | T9 | T10 | phán quyết | chữ |')
     W('|---|---|---|---|---|---|---|---|---|---|')

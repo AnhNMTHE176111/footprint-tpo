@@ -14,6 +14,7 @@ namespace VungCanhLenhNs
     using System.Drawing;
     using System.Globalization;
     using System.IO;
+    using System.Linq;
     using TradingPlatform.BusinessLayer;
 
     public class VungCanhLenh : Indicator, IVolumeAnalysisIndicator
@@ -128,7 +129,7 @@ namespace VungCanhLenhNs
                 var core = _feeder.Core;
                 var rs = new RenderState { Close = core.Close, U = core.U, Phase = core.Phase, Note = _feeder.BuiltWithLevels ? null : NoVaNote };
                 foreach (var z in core.Display) rs.Zones.Add(z.Clone());
-                foreach (var g in core.Segs) if (!g.Live) rs.Segs.Add(g.Clone());
+                if (ShowAllHistory) rs.Segs = VclSegMerge.Merge(core.Segs.Where(g => !g.Live).Select(g => g.Clone()));
                 lock (_sync) _render = rs;
                 _lastN = n; _lastVa = va;
             }

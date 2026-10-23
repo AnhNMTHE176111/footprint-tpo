@@ -29,9 +29,9 @@ R TB [KTC 95%] = bootstrap 10 000 lần hạt 0 (đánh giá THẤP độ bất 
 | **A-v5 (A-v4 + vùng VCL)** | 324 · 5.31 | 22.2% | -0.18 [-0.36; +0.01] |
 
 1. Lệnh VCL thêm: **+106** lệnh (+1.74/ngày) so với A-v4 (+304 so với A cũ); lệnh VCL riêng: 131 lệnh, WR 23.7%, R TB -0.11; lệnh A-v4 bị chen mất: 25.
-2. Đối chứng A-v5 (ĐC1 / ĐC2 / ĐC3): **không hơn / không hơn / chưa chạy**.
-3. Đối chứng riêng lệnh VCL (ĐC1-VCL / ĐC2-VCL / ĐC3-chỉ-dời-VCL): **không hơn / không hơn / chưa chạy**.
-4. T1-v5: **không đạt** (trượt: (2) R TB TEST(A-v5) ≥ -0.08 và n TEST ≥ 15; (4) không đối chứng nào (6 phép) ra "thật kém hơn"); T2: **không đạt**.
+2. Đối chứng A-v5 (ĐC1 / ĐC2 / ĐC3): **không hơn / không hơn / không hơn**.
+3. Đối chứng riêng lệnh VCL (ĐC1-VCL / ĐC2-VCL / ĐC3-chỉ-dời-VCL): **không hơn / không hơn / không hơn**.
+4. T1-v5: **không đạt** (trượt: (2) R TB TEST(A-v5) ≥ -0.08 và n TEST ≥ 15); T2: **không đạt**.
 
 Khung giờ: phiên **131** lệnh VCL tách thành VCL-riêng / trùng ở mục 3.2. Số lệnh/ngày dùng mẫu số 61 phiên sạch.
 
@@ -56,7 +56,7 @@ Khung giờ: phiên **131** lệnh VCL tách thành VCL-riêng / trùng ở mụ
 - (1) A cũ qua máy mới (band cũ, logic V3, cấm 18:00–19:20): **n = 20, WR 10.0%, R TB -0.68** [-1.09; -0.09] — khớp từng lệnh `setup_a_pha_hoi.detect(expire=30)` (test).
 - (2) `detect5` với VCL TẮT khớp từng trường của từng lệnh `setup_a_v4.detect` cấu hình (d): **n = 218, WR 19.7%, R TB -0.30**, TRAIN 119 / -0.11 · TEST 99 / -0.52 (test, cả `None` lẫn bộ VCL rỗng).
 - (3) Phiên 2026-09-08 và 2026-10-02: vòng lặp THƯA == vòng lặp DÀY (cùng lệnh, cùng phễu, cùng danh sách `roi_bo`) — test.
-- Test toàn bộ `test_setup_a_v5.py` chạy lại lúc sinh báo cáo: **15 passed in 32.73s**. Khớp chuỗi nến cache VCL ↔ dữ liệu: độ dài 86333 và datetime từng phần tử (`zones_a_v5.load_rec_checked`).
+- Test toàn bộ `test_setup_a_v5.py` chạy lại lúc sinh báo cáo: **15 passed in 32.80s**. Khớp chuỗi nến cache VCL ↔ dữ liệu: độ dài 86333 và datetime từng phần tử (`zones_a_v5.load_rec_checked`).
 
 ## 5. Chi tiết (plan 3.3)
 
@@ -188,9 +188,13 @@ Mỗi ô: R TB thật · TB đối chứng [5%; 95%]. "khác ▲" = **hơn**, "k
 |---|---|---|---|---|---|---|---|---|---|
 | A-v5 toàn bộ | ĐC1 cùng trạng thái | -0.18 · -0.15 [-0.30; -0.00] | -0.07 · -0.15 [-0.34; +0.04] | -0.32 · -0.15 [-0.38; +0.08] | -0.15 · -0.14 [-0.37; +0.10] | -0.06 · -0.15 [-0.40; +0.14] | -0.38 · -0.15 [-0.43; +0.17] | ≈ đối chứng (trong dải 5–95%; TRAIN/TEST ngược dấu; < 2/3 tháng cùng dấu; |hiệu| ≤ 2 sai số) | **không hơn** |
 | A-v5 toàn bộ | ĐC2 control_sample | -0.18 · -0.09 [-0.27; +0.08] | -0.07 · -0.09 [-0.31; +0.17] | -0.32 · -0.10 [-0.33; +0.17] | -0.15 · -0.09 [-0.36; +0.22] | -0.06 · -0.10 [-0.40; +0.17] | -0.38 · -0.10 [-0.39; +0.26] | ≈ đối chứng (trong dải 5–95%; TRAIN/TEST ngược dấu; < 2/3 tháng cùng dấu; |hiệu| ≤ 2 sai số) | **không hơn** |
+| A-v5 toàn bộ | ĐC3 dời cả bản đồ 3–15 giá | -0.18 · -0.09 [-0.24; +0.05] | -0.07 · -0.09 [-0.31; +0.12] | -0.32 · -0.09 [-0.31; +0.10] | -0.15 · -0.10 [-0.33; +0.16] | -0.06 · -0.06 [-0.36; +0.15] | -0.38 · -0.12 [-0.38; +0.09] | ≈ đối chứng (trong dải 5–95% ở TRAIN; TRAIN/TEST ngược dấu; < 2/3 tháng cùng dấu; |hiệu| ≤ 2 sai số) | **không hơn** |
 | riêng lệnh VCL | ĐC1-VCL | -0.11 · -0.12 [-0.36; +0.10] | -0.16 · -0.13 [-0.44; +0.18] | -0.06 · -0.10 [-0.40; +0.21] | +0.08 · -0.13 [-0.49; +0.25] | -0.28 · -0.11 [-0.45; +0.24] | -0.17 · -0.10 [-0.51; +0.27] | ≈ đối chứng (trong dải 5–95%; TRAIN/TEST ngược dấu; |hiệu| ≤ 2 sai số) | **không hơn** |
 | riêng lệnh VCL | ĐC2-VCL | -0.11 · -0.10 [-0.38; +0.19] | -0.16 · -0.09 [-0.43; +0.30] | -0.06 · -0.10 [-0.52; +0.27] | +0.08 · -0.11 [-0.52; +0.34] | -0.28 · -0.09 [-0.55; +0.35] | -0.17 · -0.09 [-0.53; +0.47] | ≈ đối chứng (trong dải 5–95%; TRAIN/TEST ngược dấu; |hiệu| ≤ 2 sai số) | **không hơn** |
+| riêng lệnh VCL | ĐC3-chỉ-dời-VCL | -0.11 · -0.10 [-0.34; +0.16] | -0.16 · -0.04 [-0.38; +0.30] | -0.06 · -0.16 [-0.45; +0.16] | +0.08 · +0.03 [-0.44; +0.47] | -0.28 · -0.12 [-0.55; +0.28] | -0.17 · -0.25 [-0.71; +0.21] | ≈ đối chứng (trong dải 5–95%; TRAIN/TEST ngược dấu; < 2/3 tháng cùng dấu; |hiệu| ≤ 2 sai số) | **không hơn** |
 
+- ĐC3 (dời cả bản đồ): số lệnh/ngày TB 4.71 [4.34; 5.18] (thật 5.31).
+- ĐC3-chỉ-dời-VCL: số lệnh VCL/ngày TB 1.71 [1.47; 1.97] (thật 2.15).
 - A-v5 toàn bộ — ĐC1 cùng trạng thái: hồ ĐC1 = 17423 nến.
 - riêng lệnh VCL — ĐC1-VCL: hồ ĐC1 = 17668 nến.
 
@@ -213,13 +217,13 @@ Mỗi ô: R TB thật · TB đối chứng [5%; 95%]. "khác ▲" = **hơn**, "k
 | (1) n(A-v5) ≥ 40 | ĐẠT | n = 324 |
 | (2) R TB TEST(A-v5) ≥ -0.08 và n TEST ≥ 15 | **KHÔNG** | R TEST = -0.32, n TEST = 149 (R TEST của A cũ đo lại = -0.08, n = 8) |
 | (3) R TB TRAIN(A-v5) ≥ -0.30 | ĐẠT | R TRAIN = -0.07 |
-| (4) không đối chứng nào (6 phép) ra "thật kém hơn" | **KHÔNG** | ĐC1 cùng trạng thái: không hơn; ĐC2 control_sample: không hơn; ĐC1-VCL: không hơn; ĐC2-VCL: không hơn (thiếu phép, chạy --fast) |
-| (5) test 3.6 xanh, tái tạo 3.0 đúng | ĐẠT | 15 passed in 32.73s |
+| (4) không đối chứng nào (6 phép) ra "thật kém hơn" | ĐẠT | ĐC1 cùng trạng thái: không hơn; ĐC2 control_sample: không hơn; ĐC3 dời cả bản đồ 3–15 giá: không hơn; ĐC1-VCL: không hơn; ĐC2-VCL: không hơn; ĐC3-chỉ-dời-VCL: không hơn |
+| (5) test 3.6 xanh, tái tạo 3.0 đúng | ĐẠT | 15 passed in 32.80s |
 | (6) 18:00–19:20 không tệ hơn phần còn lại > 0.5R (n ≥ 10) | ĐẠT | n = 27, R -0.02 vs phần còn lại -0.20 |
 | (7) VCL thêm ròng ≥ +31 lệnh (≥ +0,5/ngày) | ĐẠT | n(A-v5) − n(A-v4) = +106 (+1.74/ngày); lệnh VCL = 131 |
 | (8) R TB lệnh VCL ≥ R TB lệnh v4 trừ hiệu nhỏ nhất phát hiện được, ở CẢ TRAIN và TEST | ĐẠT | TRAIN: VCL -0.16 vs v4 -0.01 (hiệu nhỏ nhất 0.72); TEST: VCL -0.06 vs v4 -0.50 (hiệu nhỏ nhất 0.78) |
 
-- **T1-v5: KHÔNG ĐẠT.** Điều kiện trượt: (2) R TB TEST(A-v5) ≥ -0.08 và n TEST ≥ 15; (4) không đối chứng nào (6 phép) ra "thật kém hơn".
+- **T1-v5: KHÔNG ĐẠT.** Điều kiện trượt: (2) R TB TEST(A-v5) ≥ -0.08 và n TEST ≥ 15.
 - **T2: KHÔNG ĐẠT** (TRAIN -0.07, TEST -0.32, n TEST 149, vượt đối chứng A-v5: 0/3). **Chưa có lợi thế đo được** trên 61 phiên.
 
 ## 9. So với DỰ ĐOÁN ĐĂNG KÝ TRƯỚC của Opus (plan 3.7)
@@ -230,8 +234,8 @@ Mỗi ô: R TB thật · TB đối chứng [5%; 95%]. "khác ▲" = **hơn**, "k
 | WR không tăng: A-v5 17–22% (A-v4 19,7%) | 22.2% (+2.5 điểm so A-v4) | **SAI** |
 | R TB −0,20 … −0,45 | -0.18 | **SAI** |
 | lệnh VCL và lệnh vùng v4 chênh nhỏ hơn mức phát hiện được | VCL -0.11 · v4 -0.23 · hiệu nhỏ nhất phát hiện được 0.53 | ĐÚNG |
-| cả 6 phép so ≈ (không hơn) | ĐC1 cùng trạng thái: không hơn, ĐC2 control_sample: không hơn, ĐC1-VCL: không hơn, ĐC2-VCL: không hơn | **SAI** |
+| cả 6 phép so ≈ (không hơn) | ĐC1 cùng trạng thái: không hơn, ĐC2 control_sample: không hơn, ĐC3 dời cả bản đồ 3–15 giá: không hơn, ĐC1-VCL: không hơn, ĐC2-VCL: không hơn, ĐC3-chỉ-dời-VCL: không hơn | ĐÚNG |
 | T1 không đạt | T1 KHÔNG ĐẠT | ĐÚNG |
 
 
-_Thời gian chạy toàn bộ: 213 giây._
+_Thời gian chạy toàn bộ: 357 giây._

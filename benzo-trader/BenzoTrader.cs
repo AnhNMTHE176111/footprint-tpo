@@ -194,8 +194,8 @@ namespace BenzoTraderNs
         public bool CChoch { get; set; } = true;
         [InputParameter("C · hành lang hỗ trợ/kháng cự (vùng Canh Lệnh)", 39)]
         public bool CSr { get; set; } = true;
-        [InputParameter("C · TP về cạnh đối diện / POC (≥ 2R); tắt = 2R cố định", 39)]
-        public bool CTpEdge { get; set; } = true;
+        [InputParameter("C · TP về cạnh đối diện / POC (≥ 2R); tắt (mặc định) = 2R cố định", 39)]
+        public bool CTpEdge { get; set; } = false;
         [InputParameter("Đặt lại thống kê (bật lên để đặt)", 40)]
         public bool ResetStatsNow { get; set; } = false;
         [InputParameter("Hiện lại toàn bộ thống kê (bật lên để xoá mốc đặt lại)", 41)]

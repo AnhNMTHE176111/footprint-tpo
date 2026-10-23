@@ -204,7 +204,7 @@ Setup C "Fade cạnh" cũ (C0): râu chọc qua cạnh VA hôm qua (Á/Âu) ho�
 - **Vùng dày P/b** (`C · vùng dày P/b`): ngày hình P hoặc b fade cạnh vùng dày T (hàng kề ≥ 50% TPO của POC). Zone `T_HI_P`/`T_LO_P`/`T_HI_B`/`T_LO_B`.
 - **VA nhỏ CHoCH** (`C · VA nhỏ từ 3 lần đổi hành vi`): climax → AR → ST sinh VA [min(L1,L2), H1], nới tối đa 25% chiều cao, chết khi chế độ M5 trên band đó là TREND. Zone `CHOCH_DN_*`/`CHOCH_UP_*`.
 - **Hành lang S/R** (`C · hành lang hỗ trợ/kháng cự`): khoảng giữa mặt dưới kháng cự gần nhất và mặt trên hỗ trợ gần nhất của bộ vùng VCL, đóng băng từ lúc sinh, rộng ≥ 6. Zone `SR_HI`/`SR_LO`. Bật lớp này sẽ chạy lõi VCL (dùng chung với B).
-- `C · TP về cạnh đối diện / POC (≥ 2R)`: ô chính đã đo (TP không đủ 2R ⇒ bỏ lệnh); tắt = 2R cố định như C0 cũ. **Tắt cả 4 lớp + tắt TP này = đúng C0 cũ** (101 tín hiệu trên 90 ngày).
+- `C · TP về cạnh đối diện / POC (≥ 2R)`: MẶC ĐỊNH TẮT (người học chốt 2026-10-23: fade cạnh chỉ TP 2R cố định); bật = TP về cạnh/POC (không đủ 2R ⇒ bỏ lệnh). **Tắt cả 4 lớp + tắt TP này = đúng C0 cũ** (101 tín hiệu trên 90 ngày).
 Ghép lớp: cùng nến lớp nền và CHoCH cùng bắn ⇒ lấy cạnh gần giá đóng hơn (hoà ⇒ CHoCH); S/R chỉ thêm khi các lớp kia không bắn; 1 lệnh mở cùng lúc. Mỗi lớp có bộ đếm "≤ 2 lệnh/(phiên, cạnh)" riêng. Lý do của mỗi tín hiệu ghi rõ nguồn vùng.
 Backtest 90 ngày (Python, 61 phiên sạch): C0 103 lệnh WR 12,6% R TB −0,43 · C4 (cổng D + P/b + CHoCH) 191 lệnh −0,31 · C6 (C4 + S/R) 555 lệnh (9,1/ngày) WR 21,3% R TB −0,09 — **vẫn âm, chưa có lợi thế đo được; không đạt S1 của PLAN-C-v3**; bật chỉ để thu thống kê live. Chưa kiểm ngoài mẫu.
 Tổ hợp "không cổng D nhưng bật vùng dày P/b" chưa được đo ở Python (C# xử lý: ngày D/khác dùng VA hôm qua như C0, ngày P/b dùng vùng dày).

@@ -30,9 +30,23 @@ Opus viết 2026-10-23 (vai: thiết kế + đặc tả). **Sonnet implement + t
 | 5 | A cũ (V3) | **Thay hẳn trên chart** (`CreateDetectors` dùng `DetectorA5`). **Không thêm công tắc v5/V3.** Giữ nguyên class `DetectorA` trong `BenzoDetectors.cs` (không dùng live; để test hồi quy [11] + parity V3 cũ còn chạy). Lý do ở mục 2.6. |
 | 6 | Settings | Thêm **đúng 1 ô tick** `Hiện vùng A đang canh` (mặc định BẬT). Không ngưỡng số nào (QĐ-1). Đổi nhãn `Bật setup A · Phá hồi v5`. |
 | 7 | Hiển thị live | Ngoài mũi tên + hộp SL/TP sẵn có: vẽ **≤ 3 trạng thái ĐÃ TRANG BỊ gần giá nhất**: đường/dải vùng E từ nến phá tới mép phải, chấm cực trị cú phá, **1 nhãn tiếng Việt** ở mép phải. Tính 1 lần mỗi nến đóng, lúc vẽ chỉ đổi toạ độ. Mục 4. |
-| 8 | Phiên bản logic | `BenzoCore.LogicVersion = "port-3-A-v5"` (cache niêm phong cũ bị bỏ). CSV log tách file theo phiên bản logic. |
+| 8 | Phiên bản logic | `BenzoCore.LogicVersion = "port-4-A-v5"` (B đang đặt `port-3` chưa commit — xem 0b; cache niêm phong cũ bị bỏ). CSV log tách file theo phiên bản logic. |
 | 9 | Parity | 4 tầng, **mục tiêu 100 %** trên toàn file 90d (kể cả 4 phiên mỏng, nhờ đưa danh sách "nến xấu" của Python vào C#): mức vùng mỗi phiên · tín hiệu raw · nhật ký trạng thái · lệnh sau "1 lệnh mở" (**218 / 324** không chặn mở ảo; **208 / 312** có chặn — đúng bản live). Mục 5. |
 | 10 | Trung thực | Bảng: dòng A có đuôi `· chưa có lợi thế đo được (chạy thử)`; README ghi số thật (324 lệnh, WR 22,2 %, R −0,18, TEST −0,32, đối chứng không hơn, T1 trượt). Telegram giữ nguyên mẫu, tên `A Phá hồi v5`. |
+
+### 0b. HIỆN TRẠNG PHIÊN B SONG SONG (Opus đọc `git status`/`git diff` lúc viết plan, sau commit `e65a66a`)
+Phiên B đang port B-v2/v3 sang C# và có **thay đổi CHƯA COMMIT** ở: `BenzoCore.cs`, `BenzoDetectors.cs`, `BenzoTrader.cs`, `BenzoZones.cs`, `build.sh`,
+`tests/tests.csproj`, `tools/ReplayCsv/{Program.cs, ReplayCsv.csproj}` + file mới `BenzoSr.cs`, `research/parity_b_v3.py`. Những gì họ đã làm mà plan này DỰA VÀO / PHẢI TÔN TRỌNG:
+- `build.sh` **đã** nối `../vung-canh-lenh/VclCore.cs` + `BenzoSr.cs` (cùng hướng nối nguồn với plan này) ⇒ Sonnet chỉ chèn `BenzoSetupA5.cs` ngay sau `BenzoDetectors.cs` trong dòng `cat` của họ.
+- `BenzoCore.cs`: `LogicVersion = "port-3"`, cờ `BenzoEngine.VirtualOpenRule` (tắt luật mở ảo; ReplayCsv bật bằng biến môi trường `BENZO_NO_VOPEN=1`) ⇒ **dùng lại cờ này** cho L3 (mục 5), không viết vòng mô phỏng riêng.
+- `BenzoZones.Sr` (`BenzoSr`) có VclCore riêng (chỉ chạy khi B bật nhóm vùng S/R) và HVN ngày/tuần **theo định nghĩa B-v2** (chỉ tuần trước, loại phiên mỏng, ≥ 3 phiên/tuần) —
+  **KHÁC** `zones_a_v4` (gộp 3 tuần, không loại phiên mỏng, dải PeakSharpness) ⇒ A5 **KHÔNG dùng lại** `BenzoSr` (sai định nghĩa + buộc A vào công tắc của B);
+  A5 giữ VclCore và sổ HVN riêng. Chi phí trùng khi B cũng bật S/R: +~45 µs/nến (≈ 4 s cho 90 ngày) — chấp nhận để hai setup độc lập.
+- Tên kiểu đã có của họ: `SessRec`, `BenzoSr`, `BenzoZoneNames`, `BZone` ⇒ A5 KHÔNG dùng các tên đó (tên A5 ở mục 2 đều có tiền tố `A5`/`Hvn…` riêng; `HvnMath`, `HvnBook` không trùng).
+- ReplayCsv của họ đã dùng token `LEVELS`, `B2`, `B3`, `BSR` và `which.Split(',')` ⇒ chế độ A5 của plan này rẽ nhánh **trước** đoạn đó (`if (which is "A5") return RunA5(...)`).
+- **Quy tắc bắt đầu:** Sonnet được viết ngay các file MỚI (`BenzoSetupA5.cs`, `tests/TestsA5.cs`, `research/parity_a5.py`) và build thử bằng một csproj tạm trong scratchpad;
+  **chỉ sửa file dùng chung SAU KHI các thay đổi trên của phiên B đã được commit** (`git status` không còn ` M` ở các file đó). `LogicVersion` khi đó đặt
+  **`"port-4-A-v5"`** (khác giá trị đã commit của B; nếu B đã lên `port-4` thì dùng số kế tiếp, giữ đuôi `-A-v5`).
 
 ---
 
@@ -231,7 +245,7 @@ Giá vùng: điểm ⇒ `4170,4`; dải ⇒ `4168,2–4170,4`. Reason (mẫu c�
 (dùng `Hm`, `Dl` của DetectorBase). Không có chữ tiếng Anh ngoài VWAP/HVN/VAH/VAL/S/R/M5/Δ (đã dạy).
 
 ### 2.8 Sửa tối thiểu file dùng chung
-- `BenzoCore.cs`: `LogicVersion = "port-3-A-v5"`; `SetupName('A') = "Phá hồi v5"`; thêm `public static string SetupNote(char s) => s == 'A' ? "chưa có lợi thế đo được (chạy thử)" : "";`
+- `BenzoCore.cs`: `LogicVersion = "port-4-A-v5"`; `SetupName('A') = "Phá hồi v5"`; thêm `public static string SetupNote(char s) => s == 'A' ? "chưa có lợi thế đo được (chạy thử)" : "";`
   và trong `TableLines` nối `" · " + SetupNote` vào dòng setup khi khác rỗng. Không đổi gì khác.
 - `BenzoTrader.cs`: `CreateDetectors`; nhãn Settings A; ô tick mới (mục 4); `RenderState.Watch`; `BuildRender` lấy `_engine.Detectors.OfType<DetectorA5>().FirstOrDefault()?.Watch(...)`;
   vẽ (mục 4); memo `ReadLevels`; `Description` thêm "A Phá hồi v5 chạy thử — chưa có lợi thế đo được"; `_csvPath = signals_{sym}_{LogicVersion}.csv`
@@ -243,9 +257,9 @@ Giá vùng: điểm ⇒ `4170,4`; dải ⇒ `4168,2–4170,4`. Reason (mẫu c�
 ---
 
 ## 3. BẤT BIẾN (phải giữ, kiểm trước mỗi commit)
-1. `git diff` của `vung-canh-lenh/VclCore.cs`, `BenzoZones.cs`, `BenzoDetectors.cs`, mọi file `research/*.py` có sẵn = **rỗng** (chỉ thêm file mới `parity_a5.py`).
-2. Test hồi quy [11] cũ vẫn ra đúng **A 18 · B 12 · C 101 · D 32** (DetectorA V3 và B/C/D không đổi một tín hiệu).
-3. `parity_check.py` cũ chạy lại vẫn A 18/18 · B 10/10 · C 99/99 · D 31/31 (ReplayCsv `A` vẫn là V3).
+1. Sonnet KHÔNG tạo thay đổi nào trong `vung-canh-lenh/VclCore.cs`, `BenzoZones.cs`, `BenzoDetectors.cs`, `BenzoSr.cs`, mọi file `research/*.py` có sẵn (chỉ thêm file mới `parity_a5.py`).
+2. Test hồi quy [11] cũ vẫn ra đúng **A 18 · C 101 · D 32**, và B đúng số mà phiên B đã chốt trong commit của họ (A5 không được làm đổi tín hiệu của detector nào khác).
+3. `parity_check.py` cũ chạy lại vẫn A 18/18 · C 99/99 · D 31/31 (ReplayCsv `A` vẫn là V3; dòng B theo phiên B).
 4. Không thêm ngưỡng số nào vào Settings; Settings chỉ thêm 1 ô tick.
 
 ## 4. HIỂN THỊ LIVE — "setup đang thế nào" ngay trên chart
@@ -297,7 +311,7 @@ Settings mới: `[InputParameter("Hiện vùng A đang canh", 51)] public bool S
   - `<out>_raw.csv`: chạy tay `Zones.Push` → `det.Observe` → `det.TryDetect` từng nến (KHÔNG engine, `VirtualOpenBlock=false`); mỗi tín hiệu:
     `time_utc,pos,side,entry,sl,tp,zone,E,p0,pk_pos,pk_val,L,pbmax,npb,brk_no,ent_no`.
   - `<out>_states.csv`: nhật ký trạng thái kết thúc `zone,S,p0,pk_pos,pk_val,E,why,armed,n_ent,brk_no` (cuối dữ liệu gọi `FlushEnd`).
-  - `<out>_sim.csv`: mô phỏng "1 lệnh mở" trên tín hiệu raw bằng vòng lặp y hệt `BenzoEngine.Advance` (StepBar trước, rảnh mới nhận) nhưng KHÔNG luật mở ảo.
+  - `<out>_sim.csv`: `BenzoEngine` thật, chỉ `DetectorA5` (`VirtualOpenBlock=false`), **`VirtualOpenRule=false`** (cờ phiên B đã thêm), cache null — = "1 lệnh mở" không chặn mở ảo.
   - `<out>_live.csv`: `BenzoEngine` thật, chỉ `DetectorA5` (`VirtualOpenBlock=true`), cache null, `IsNewsBlocked` như trên.
   Cột sim/live: `time_utc,side,entry,sl,tp,zone,outcome,exit_utc,r`. In thời gian chạy.
 **`benzo-trader/research/parity_a5.py`** (file MỚI; KHÔNG sửa `parity_check.py`): `P, V = setup_a_v5.load5()`; ghi `report/_a5_bad_bars.csv` (giờ mở UTC của nến `P.bad`);
@@ -321,7 +335,7 @@ build + chạy ReplayCsv 2 lần (VCL bật / `--novcl`); phía Python: `P.slev`
 ### 5.3 Chỗ live khác Python (ghi README, không sửa được bằng parity)
 1. **Chỉ nến đã đóng** (`Count−2`): giống Python (Python cũng chỉ dùng nến i đã đóng). Không khác.
 2. **Footprint từ Volume Analysis của platform** có thể lệch file export vài tick/hợp đồng ⇒ VA/HVN/ứng viên C của VCL lệch ⇒ tín hiệu live có thể khác chạy lại trên file.
-   Kiểm sau 1–2 tuần: xuất footprint cùng khoảng bằng Footprint Export, chạy `ReplayCsv A5`, so với `signals_<sym>_port-3-A-v5.csv` (kiểu GD10).
+   Kiểm sau 1–2 tuần: xuất footprint cùng khoảng bằng Footprint Export, chạy `ReplayCsv A5`, so với `signals_<sym>_port-4-A-v5.csv` (kiểu GD10).
 3. **Độ dài lịch sử nạp:** HVN tuần cần 3 tuần đã đóng; VCL cần lịch sử (POC trần 30 phiên) ⇒ vùng của những ngày đầu lịch sử trên chart không giống Python ⇒ mũi tên cũ
    ở đầu chart không đáng tin. Khuyên nạp **≥ 30 ngày** M1.
 4. **Một lệnh mở chung cho cả 4 setup** (engine): lệnh B/C/D đang mở sẽ chặn A (trạng thái A vẫn chạy). Python đo A đứng riêng ⇒ thống kê A trên bảng sẽ khác backtest.
@@ -376,7 +390,7 @@ Tất cả test cũ (`[1]`–`[13]`) vẫn xanh (riêng [4] đã đổi chuỗi 
 - "Cách đọc vùng A đang canh" (mục 4.2, 4 trạng thái, màu).
 - Parity: tóm tắt `PARITY-A5.md`; ghi rõ `PARITY.md` cũ (A 18/18) là của **A V3** (class `DetectorA` vẫn trong mã, không chạy live); ReplayCsv `A` = V3, `A5` = bản live.
 - Khác biệt live (mục 5.3), khuyên nạp ≥ 30 ngày, thời gian nạp đầu đo được.
-- `LogicVersion = port-3-A-v5`; CSV log mới `signals_<symbol>_port-3-A-v5.csv` (file cũ là của logic trước).
+- `LogicVersion = port-4-A-v5`; CSV log mới `signals_<symbol>_port-4-A-v5.csv` (file cũ là của logic trước).
 - Quy tắc bảo trì: **sửa `vung-canh-lenh/VclCore.cs` ⇒ chạy lại `parity_vcl.py` + `parity_a5.py`, build lại Benzo, tăng `LogicVersion`** (vì Benzo đóng băng VCL vào lúc build).
 - Telegram: mẫu giữ nguyên, ví dụ đổi thành `🟢 BUY · A Phá hồi v5 · GCZ26 · 20:24 VN`.
 
@@ -395,7 +409,7 @@ Tất cả test cũ (`[1]`–`[13]`) vẫn xanh (riêng [4] đã đổi chuỗi 
 4. Thiết kế đã né: code A5 ở file mới; **không đụng `BenzoDetectors.cs`, `BenzoZones.cs`, `parity_check.py`**.
 
 ### 8.2 Thứ tự commit (mỗi bước commit + push, message tiếng Việt, dòng cuối `Co-Authored-By: Claude Sonnet ...` theo nhắc của hệ thống)
-- **C1** `BenzoSetupA5.cs` + `tests/TestsA5.cs` + 2 csproj (thêm Compile) + 2 dòng `tests/Program.cs` ⇒ test 1–21, 23 xanh.
+- **C1** (chỉ sau khi phiên B đã commit — mục 0b) `BenzoSetupA5.cs` + `tests/TestsA5.cs` + 2 csproj (thêm Compile) + 2 dòng `tests/Program.cs` ⇒ test 1–21, 23 xanh.
 - **C2** ReplayCsv chế độ A5 + `research/parity_a5.py` + `report/PARITY-A5.md` + `report/_a5_bad_bars.csv` ⇒ L0–L4 đạt; thêm test 22 với số đã chốt.
 - **C3** `BenzoCore.cs` + `BenzoTrader.cs` (nối dây, vẽ, Settings, memo, CSV) + `build.sh` + `README.md` ⇒ `./build.sh` 0 cảnh báo mới ⇒ `dist/BenzoTrader.dll` ⇒ commit + push, báo hash.
 

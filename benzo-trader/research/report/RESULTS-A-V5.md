@@ -33,7 +33,7 @@ R TB [KTC 95%] = bootstrap 10 000 lần hạt 0 (đánh giá THẤP độ bất 
 3. Đối chứng riêng lệnh VCL (ĐC1-VCL / ĐC2-VCL / ĐC3-chỉ-dời-VCL): **không hơn / không hơn / không hơn**.
 4. T1-v5: **không đạt** (trượt: (2) R TB TEST(A-v5) ≥ -0.08 và n TEST ≥ 15); T2: **không đạt**.
 
-Khung giờ: phiên **131** lệnh VCL tách thành VCL-riêng / trùng ở mục 3.2. Số lệnh/ngày dùng mẫu số 61 phiên sạch.
+Lệnh VCL (131 lệnh) tách thành VCL-riêng / trùng vùng v4 ở mục 5.2. Số lệnh/ngày dùng mẫu số 61 phiên sạch.
 
 ## 3. Chỗ tự quyết của Sonnet (plan không nói rõ — chọn hướng hợp lý nhất, ghi lại)
 
@@ -56,7 +56,7 @@ Khung giờ: phiên **131** lệnh VCL tách thành VCL-riêng / trùng ở mụ
 - (1) A cũ qua máy mới (band cũ, logic V3, cấm 18:00–19:20): **n = 20, WR 10.0%, R TB -0.68** [-1.09; -0.09] — khớp từng lệnh `setup_a_pha_hoi.detect(expire=30)` (test).
 - (2) `detect5` với VCL TẮT khớp từng trường của từng lệnh `setup_a_v4.detect` cấu hình (d): **n = 218, WR 19.7%, R TB -0.30**, TRAIN 119 / -0.11 · TEST 99 / -0.52 (test, cả `None` lẫn bộ VCL rỗng).
 - (3) Phiên 2026-09-08 và 2026-10-02: vòng lặp THƯA == vòng lặp DÀY (cùng lệnh, cùng phễu, cùng danh sách `roi_bo`) — test.
-- Test toàn bộ `test_setup_a_v5.py` chạy lại lúc sinh báo cáo: **15 passed in 32.80s**. Khớp chuỗi nến cache VCL ↔ dữ liệu: độ dài 86333 và datetime từng phần tử (`zones_a_v5.load_rec_checked`).
+- Test toàn bộ `test_setup_a_v5.py` chạy lại lúc sinh báo cáo: **15 passed in 32.81s**. Khớp chuỗi nến cache VCL ↔ dữ liệu: độ dài 86333 và datetime từng phần tử (`zones_a_v5.load_rec_checked`).
 
 ## 5. Chi tiết (plan 3.3)
 
@@ -182,7 +182,7 @@ T8 gồm 29–31/7. Khung 18:00–19:20 = nến M5 phá HOẶC nến CF rơi tro
 
 ## 6. Đối chứng (6 phép so có phán quyết; ngưỡng NGUYÊN PLAN-LAN-CHAM mục 5)
 
-Mỗi ô: R TB thật · TB đối chứng [5%; 95%]. "khác ▲" = **hơn**, "khác ▼" = **kém hơn**, "≈" = **không hơn**, "không áp dụng" = **n quá nhỏ** (cần ≥ 10 lệnh ở CẢ TRAIN và TEST). Tổng 6 phép ⇒ với ~5%% mỗi phép, ~0,3 ô "khác" có thể do ngẫu nhiên.
+Mỗi ô: R TB thật · TB đối chứng [5%; 95%]. "khác ▲" = **hơn**, "khác ▼" = **kém hơn**, "≈" = **không hơn**, "không áp dụng" = **n quá nhỏ** (cần ≥ 10 lệnh ở CẢ TRAIN và TEST). Tổng 6 phép ⇒ với ~5% mỗi phép, ~0,3 ô "khác" có thể do ngẫu nhiên.
 
 | nhóm lệnh | đối chứng | GỘP | TRAIN | TEST | T8 | T9 | T10 | phán quyết | chữ |
 |---|---|---|---|---|---|---|---|---|---|
@@ -218,7 +218,7 @@ Mỗi ô: R TB thật · TB đối chứng [5%; 95%]. "khác ▲" = **hơn**, "k
 | (2) R TB TEST(A-v5) ≥ -0.08 và n TEST ≥ 15 | **KHÔNG** | R TEST = -0.32, n TEST = 149 (R TEST của A cũ đo lại = -0.08, n = 8) |
 | (3) R TB TRAIN(A-v5) ≥ -0.30 | ĐẠT | R TRAIN = -0.07 |
 | (4) không đối chứng nào (6 phép) ra "thật kém hơn" | ĐẠT | ĐC1 cùng trạng thái: không hơn; ĐC2 control_sample: không hơn; ĐC3 dời cả bản đồ 3–15 giá: không hơn; ĐC1-VCL: không hơn; ĐC2-VCL: không hơn; ĐC3-chỉ-dời-VCL: không hơn |
-| (5) test 3.6 xanh, tái tạo 3.0 đúng | ĐẠT | 15 passed in 32.80s |
+| (5) test 3.6 xanh, tái tạo 3.0 đúng | ĐẠT | 15 passed in 32.81s |
 | (6) 18:00–19:20 không tệ hơn phần còn lại > 0.5R (n ≥ 10) | ĐẠT | n = 27, R -0.02 vs phần còn lại -0.20 |
 | (7) VCL thêm ròng ≥ +31 lệnh (≥ +0,5/ngày) | ĐẠT | n(A-v5) − n(A-v4) = +106 (+1.74/ngày); lệnh VCL = 131 |
 | (8) R TB lệnh VCL ≥ R TB lệnh v4 trừ hiệu nhỏ nhất phát hiện được, ở CẢ TRAIN và TEST | ĐẠT | TRAIN: VCL -0.16 vs v4 -0.01 (hiệu nhỏ nhất 0.72); TEST: VCL -0.06 vs v4 -0.50 (hiệu nhỏ nhất 0.78) |
@@ -237,5 +237,19 @@ Mỗi ô: R TB thật · TB đối chứng [5%; 95%]. "khác ▲" = **hơn**, "k
 | cả 6 phép so ≈ (không hơn) | ĐC1 cùng trạng thái: không hơn, ĐC2 control_sample: không hơn, ĐC3 dời cả bản đồ 3–15 giá: không hơn, ĐC1-VCL: không hơn, ĐC2-VCL: không hơn, ĐC3-chỉ-dời-VCL: không hơn | ĐÚNG |
 | T1 không đạt | T1 KHÔNG ĐẠT | ĐÚNG |
 
+## 10. Đánh giá (viết tay sau khi đọc số — `report/_eval_a_v5.txt`)
 
-_Thời gian chạy toàn bộ: 357 giây._
+Viết tay sau khi đọc số (không đổi luật/hằng số nào theo số này).
+
+1. **Thêm vùng VCL làm tăng số lệnh, đúng như dự đoán, nhưng không thêm chất lượng.** A-v5 có 324 lệnh (5,31/ngày) so với A-v4 218 (3,57/ngày): +106 lệnh ròng (131 lệnh VCL, 25 lệnh A-v4 bị chen mất). WR 22,2% (A-v4 19,7%), R TB −0,18 (A-v4 −0,30). Cả hai đều âm, hoà vốn cần WR ≈ 27%.
+2. **Phần "R tốt hơn" không phải do lệnh VCL.** Lệnh VCL riêng R TB −0,11 (tổng −14,8R), lệnh vùng v4 trong A-v5 R TB −0,23. Tổng R của A-v5 là −59,7R so với A-v4 −64,3R: chênh +4,6R, và chênh đó đến từ 25 lệnh A-v4 bị VCL chen mất có R TB −0,78 (tổng −19,4R, chỉ 8% thắng). Đó là may rủi của việc lệnh nào bị chen, không phải bằng chứng vùng VCL tốt: nếu 25 lệnh bị chen đó là lệnh thắng thì A-v5 tệ hơn A-v4. Không được viết "vùng hỗ trợ/kháng cự giúp A tốt hơn".
+3. **Câu bắt buộc:** số lệnh tăng nhưng mỗi lệnh vẫn lỗ trung bình (−0,18R), nên lỗ của phần thêm cộng dồn theo số lệnh (lệnh VCL riêng −14,8R trên 131 lệnh).
+4. **Đối chứng:** cả 6 phép "không hơn" (A-v5: ĐC1, ĐC2, ĐC3; riêng lệnh VCL: ĐC1-VCL, ĐC2-VCL, ĐC3-chỉ-dời-VCL). Vùng VCL bị dời 3–15 giá vẫn cho 1,71 lệnh VCL/ngày (thật 2,15) và R tương đương ⇒ vị trí vùng không tạo ra gì, như bằng chứng cũ. Công suất: lệnh VCL so lệnh v4 chỉ phân biệt được chênh ≥ 0,53R (TEST ≥ 0,78R), nên "VCL tốt hơn/tệ hơn v4" không kết luận được. 
+5. **Các nhóm con đẹp/xấu chỉ để mô tả, không kết luận:** ví dụ lệnh VCL trùng VAH_D (n = 10, R +1,34) hay vùng chỉ số tròn (n = 49, R +0,25 [−0,24; +0,82]) có khoảng tin cậy chứa 0 và chọn sau khi thấy số (nhiều nhóm đã cắt); lệnh "trùng loại khác" n = 24 R −0,73 ngược chiều. Không nhóm nào vượt đối chứng.
+6. **Độ nhạy S1–S5 (không chọn lại):** bỏ luật cú phá thật (S1) chỉ thêm 26 lệnh VCL và R gần như không đổi (−0,17); SL qua cạnh gần (S2) cho 356 lệnh VCL, 533 lệnh tổng, R −0,04 (TRAIN +0,07, TEST −0,18) — cho thấy trần SL 4 giá đang loại phần lớn vùng rộng (vùng 2,5–5 giá hầu như không ra lệnh nào: 9 + 1 lệnh), nhưng SL gần hơn không cải thiện TEST. Không đổi bản chính theo S2.
+7. **Rủi ro đổi mã vùng:** 24,5% trạng thái đã trang bị chết vì rời bộ (dưới ngưỡng 30%); chỉ 6% trong số rời bộ có eid mới chồng lên ≤ 5 nến.
+8. **Port:** T1 KHÔNG ĐẠT, chỉ trượt điều kiện (2): R TB TEST −0,32 < −0,08 (n TEST 149); T2 không đạt ("chưa có lợi thế đo được" trên 61 phiên). Các điều kiện (1), (3)–(8) đều đạt (kể cả (7) +106 lệnh và (8) lệnh VCL không kém lệnh v4), nhưng đó chỉ nói thêm VCL không làm tệ hơn mức đo được, không nói A có lợi thế. Port C# chỉ làm khi người học xác nhận.
+9. **Dự đoán của Opus:** đúng ở số lệnh (324 trong 300–450; VCL ròng +106 trong +80…+230), lệnh VCL ≈ lệnh v4, cả 6 phép "không hơn", T1 không đạt. Sai nhẹ ở hai chỗ: WR 22,2% (dự đoán 17–22%) và R TB −0,18 (dự đoán −0,20…−0,45) đều lệch ra ngoài khoảng 0,2–2,5 điểm theo hướng TỐT hơn, và độ lệch đó (nằm trong sai số, mục 2 ở trên) đến từ việc 25 lệnh thua bị chen mất.
+
+
+_Thời gian chạy toàn bộ: 374 giây._

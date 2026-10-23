@@ -253,16 +253,5 @@ namespace AskBidDeltaFeed
                 }
             }
         }
-
-        public void DrawStatus(Graphics gr, RectangleF clip)
-        {
-            using var f = new Font("Arial", 8, FontStyle.Regular);
-            string s = StatusLine();
-            var sz = gr.MeasureString(s, f);
-            using var bg = new SolidBrush(Color.FromArgb(150, 255, 255, 255));
-            gr.FillRectangle(bg, clip.Left + 4, clip.Top + 3, sz.Width + 4, sz.Height + 2);
-            using var br = new SolidBrush(NNone > 0 || NNoVa > 0 ? Color.FromArgb(0xB0, 0x30, 0x00) : Color.FromArgb(0x30, 0x30, 0x30));
-            gr.DrawString(s, f, br, clip.Left + 6, clip.Top + 4);
-        }
     }
 }

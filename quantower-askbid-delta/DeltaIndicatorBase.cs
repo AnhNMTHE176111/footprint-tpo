@@ -32,9 +32,6 @@ namespace AskBidDeltaIndicators
         [InputParameter("Chỉ nạp tick cho N ngày gần nhất", 7, 1, 30, 1, 0)]
         public int MaxTickDays { get; set; } = 5;
 
-        [InputParameter("Hiện dòng trạng thái nguồn dữ liệu", 8)]
-        public bool ShowStatus { get; set; } = true;
-
         [InputParameter("Lệch giờ (UTC → local, giờ)", 9, -12, 14, 1, 0)]
         public int TzOffset { get; set; } = 7;
 
@@ -128,7 +125,6 @@ namespace AskBidDeltaIndicators
                 DeltaFeed.Draw(gr, clip, Feed.Chain, li, ri, barsW,
                                t => conv.GetChartX(t), v => conv.GetChartY(v),
                                UpColor, DownColor, BodyWidthFrac, WickWidth, ShowNumbers);
-                if (ShowStatus) Feed.DrawStatus(gr, clip);
             }
             finally { gr.SetClip(prevClip); }
         }

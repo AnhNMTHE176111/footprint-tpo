@@ -1028,7 +1028,8 @@ namespace TpoSuite
     //   • HVN ngày/tuần: KHÔNG phải mốc phản ứng (5 cách đo, MEASURE-DENSE-RESULTS.md);
     //     sau cú phá thì nghiêng ĐI TIẾP 56% ⇒ chỉ làm NỀN / mục tiêu, không canh fade.
     //   • VAH/VAL: tự thân 50,4% (trung tính) nhưng là CẠNH range để gọi chế độ
-    //     cân bằng / vừa phá ⇒ giữ, chỉ của phiên ÂU (Âu dựng range cho Mỹ).
+    //     cân bằng / vừa phá ⇒ giữ. Từ 2026-10-23 (người học chốt): chỉ của NGÀY HÔM NAY
+    //     đang hình thành (từ đầu phiên Á tới nay), không lấy riêng phiên Á/Âu/Mỹ.
     //   • BỎ mặc định: đỉnh/đáy phiên (backtest v2 −0,68, tệ nhất), naked POC phiên
     //     (hai phép đo trái dấu 46,5% vs 53,9%), cụm POC / băng giá trị (n=10 / n=2,
     //     bản chất là HVN), LVN tuần (chưa đo, trôi theo cửa sổ).
@@ -1038,7 +1039,6 @@ namespace TpoSuite
         public bool NakedPoc = false;
         public bool PocClusters = false;   // gồm cả "cụm POC" và "băng giá trị"
         public bool WeekLvn = false;
-        public bool VaEdgeEuropeOnly = true;
     }
 
     public static class ZonePolicy
@@ -1105,9 +1105,24 @@ namespace TpoSuite
         // range rồi kéo giãn Lo/Hi của mốc đó.
         public static bool CanMerge(string typeA, string typeB) => IsMarkerType(typeA) == IsMarkerType(typeB);
 
-        // Chọn phiên lấy VAH/VAL: phiên ÂU đã đóng gần nhất (nhãn "AU"); nếu tắt
-        // VaEdgeEuropeOnly hoặc chưa có phiên Âu nào thì lấy phiên đóng gần nhất.
-        // Trả -1 nếu danh sách rỗng.
+        // Số nến M30 tối thiểu của "ngày hôm nay" để VAH/VAL có nghĩa (4 nến = 2 giờ);
+        // ít hơn thì profile quá mỏng, không vẽ.
+        public const int TodayVaMinBars = 4;
+
+        // "Ngày hôm nay" = từ đầu phiên Á gần nhất tới nến mới nhất. labels = nhãn các
+        // khối phiên theo thứ tự thời gian (khối cuối là khối đang chạy). Trả chỉ số khối
+        // đầu tiên của cụm khối "A" cuối cùng (Á có thể bị tách đôi bởi khoảng trống dữ liệu);
+        // -1 nếu chưa có khối Á nào.
+        public static int TodayStartBlock(IList<string> labels)
+        {
+            if (labels == null) return -1;
+            int i = labels.Count - 1;
+            while (i >= 0 && labels[i] != "A") i--;
+            if (i < 0) return -1;
+            while (i > 0 && labels[i - 1] == "A") i--;
+            return i;
+        }
+
         // Mốc bắt đầu xin history M30 phụ. Neo vào NẾN MỚI NHẤT CỦA CHART, không neo
         // vào đồng hồ thật: ở Market Replay, chart đang ở quá khứ (vd 5/8) nên
         // "UtcNow − 45 ngày" rơi sau toàn bộ dữ liệu replay ⇒ 0 nến (sự cố 2026-10-17).

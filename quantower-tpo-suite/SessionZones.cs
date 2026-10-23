@@ -8,7 +8,7 @@
 //  (tiếp diễn/phá/đảo/fade), và vẽ VÙNG theo kết quả đo (v3, 2026-10-17):
 //    VÙNG CANH  = VWAP tuần (hạng 1) + VWAP ngày (hạng 2)  — chỉ ghi trên bảng,
 //                 đường VWAP dùng của nền tảng (PLAN-MOC-PHAN-UNG.md §0.3);
-//    CẠNH RANGE = VAH/VAL phiên ÂU (gọi chế độ cân bằng / vừa phá, fade phá hụt);
+//    CẠNH RANGE = VAH/VAL NGÀY HÔM NAY đang hình thành (từ đầu phiên Á tới nay; gọi chế độ cân bằng / vừa phá, fade phá hụt);
 //    NỀN        = HVN ngày + HVN tuần (đi tiếp / mục tiêu, KHÔNG fade) + LVN ngày.
 //  Đã TẮT mặc định (bật lại được trong nhóm "Lọc vùng theo đo"): đỉnh/đáy phiên,
 //  naked POC phiên, cụm POC, băng giá trị, LVN tuần. Luật nằm ở ZonePolicy
@@ -147,8 +147,6 @@ namespace SessionZonesNs
         public bool ShowPocClusters { get; set; } = false;
         [InputParameter("Đo · Hiện LVN tuần (chưa đo)", 73)]
         public bool ShowWeekLvn { get; set; } = false;
-        [InputParameter("Đo · VAH/VAL chỉ lấy phiên Âu", 74)]
-        public bool VaEdgeEuropeOnly { get; set; } = true;
         [InputParameter("Đo · Vẽ đường VWAP tuần/ngày (tắt = dùng VWAP nền tảng)", 75)]
         public bool DrawVwapLines { get; set; } = false;
         [InputParameter("Màu VWAP tuần", 76)]
@@ -159,7 +157,7 @@ namespace SessionZonesNs
         private ZoneFilter Filter() => new ZoneFilter
         {
             SessionHighLow = ShowSessionHighLow, NakedPoc = ShowNakedPoc,
-            PocClusters = ShowPocClusters, WeekLvn = ShowWeekLvn, VaEdgeEuropeOnly = VaEdgeEuropeOnly,
+            PocClusters = ShowPocClusters, WeekLvn = ShowWeekLvn,
         };
 
         [InputParameter("Hiện vùng", 31)]
@@ -223,7 +221,7 @@ namespace SessionZonesNs
         public SessionZones() : base()
         {
             Name = "Session Zones";
-            Description = "Gộp phiên Á/Âu/Mỹ + tường thuật + gợi ý bias Mỹ + vùng theo đo: VWAP tuần/ngày (canh), VAH/VAL Âu (cạnh range), HVN/LVN (nền). Cần Volume Analysis. Add vào chart bất kỳ — tự lấy dữ liệu M30.";
+            Description = "Gộp phiên Á/Âu/Mỹ + tường thuật + gợi ý bias Mỹ + vùng theo đo: VWAP tuần/ngày (canh), VAH/VAL ngày hôm nay (cạnh range), HVN/LVN (nền). Cần Volume Analysis. Add vào chart bất kỳ — tự lấy dữ liệu M30.";
             SeparateWindow = false;
         }
 
@@ -616,15 +614,27 @@ namespace SessionZonesNs
             //  Giảm còn 1 phiên (4 vùng) + hạ điểm; vẫn giữ (không xoá hẳn) để làm
             //  mốc hợp lưu ở D2 — khi trùng HVN thì nâng điểm HVN, bản thân chúng
             //  không đủ điểm để được vẽ riêng khi đã có HVN trong tầm với.
-            //  v3: VAH/VAL lấy của phiên ÂU đã đóng gần nhất (Âu dựng range cho Mỹ);
-            //  đỉnh/đáy phiên chỉ sinh khi người dùng tự bật lại (đo: không chặn giá).
-            int vaIdx = ZonePolicy.VaEdgeSessionIndex(completed.Select(x => x.Label).ToList(), flt.VaEdgeEuropeOnly);
-            if (vaIdx >= 0)
+            //  v4 (2026-10-23, người học chốt): VAH/VAL = của NGÀY HÔM NAY đang hình thành —
+            //  profile từ đầu phiên Á gần nhất tới nến mới nhất (gồm khối đang chạy), KHÔNG
+            //  lấy riêng phiên Á/Âu/Mỹ. Đổi theo giá trong ngày; chưa đủ TodayVaMinBars nến
+            //  M30 thì không vẽ. Cắt ở chỗ nối hợp đồng như HVN ngày.
+            int todayBlk = ZonePolicy.TodayStartBlock(blocks.Select(x => x.lab).ToList());
+            if (todayBlk >= 0)
             {
-                var sp = completed[vaIdx];
-                double vs = ZonePolicy.BaseStrength("va_edge");
-                zones.Add(new Zone { Center = sp.Vah, Lo = sp.Vah, Hi = sp.Vah, Type = "va_edge", Side = SideOf(sp.Vah), Strength = vs, Label = $"VAH {VN(sp.Label)}" });
-                zones.Add(new Zone { Center = sp.Val, Lo = sp.Val, Hi = sp.Val, Type = "va_edge", Side = SideOf(sp.Val), Strength = vs, Label = $"VAL {VN(sp.Label)}" });
+                int tFrom = blocks[todayBlk].from, tTo = blocks[blocks.Count - 1].to;
+                double spJ = SpliceGuard ? MinSpliceJumpPrices * 10.0 * tick : 0;
+                int spT = ProfileEngine.LastSpliceIndex(hd, tFrom, tTo, spJ);
+                if (spT > tFrom) tFrom = spT;
+                if (tTo - tFrom + 1 >= ZonePolicy.TodayVaMinBars)
+                {
+                    var sp = ProfileEngine.BuildProfile(hd, tFrom, tTo, tick, rowStep, UseVolume, 0, "A");
+                    if (sp.Valid)
+                    {
+                        double vs = ZonePolicy.BaseStrength("va_edge");
+                        zones.Add(new Zone { Center = sp.Vah, Lo = sp.Vah, Hi = sp.Vah, Type = "va_edge", Side = SideOf(sp.Vah), Strength = vs, Label = "VAH hôm nay" });
+                        zones.Add(new Zone { Center = sp.Val, Lo = sp.Val, Hi = sp.Val, Type = "va_edge", Side = SideOf(sp.Val), Strength = vs, Label = "VAL hôm nay" });
+                    }
+                }
             }
             if (ZonePolicy.KeepType("priorhl", flt))
                 foreach (var sp in completed.AsEnumerable().Reverse().Take(1))

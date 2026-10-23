@@ -100,11 +100,12 @@ static class Tests
         Check(!ZonePolicy.CanMerge("va_edge", "hvn_day"), "khong gop moc voi nen");
         Check(ZonePolicy.CanMerge("hvn_day", "hvn_week"), "gop duoc hai nen");
 
-        var labs = new List<string> { "A", "AU", "MY", "A" };
-        Check(ZonePolicy.VaEdgeSessionIndex(labs, true) == 1, "VA lay phien AU gan nhat");
-        Check(ZonePolicy.VaEdgeSessionIndex(labs, false) == 3, "tat loc Au -> phien gan nhat");
-        Check(ZonePolicy.VaEdgeSessionIndex(new List<string> { "A", "MY" }, true) == 1, "chua co phien Au -> phien gan nhat");
-        Check(ZonePolicy.VaEdgeSessionIndex(new List<string>(), true) == -1, "rong -> -1");
+        // VAH/VAL = ngay hom nay (tu dau phien A gan nhat)
+        Check(ZonePolicy.TodayStartBlock(new List<string> { "A", "AU", "MY", "A" }) == 3, "ngay hom nay: bat dau o khoi A cuoi");
+        Check(ZonePolicy.TodayStartBlock(new List<string> { "A", "AU", "MY" }) == 0, "dang phien My: ngay van bat dau tu A truoc do");
+        Check(ZonePolicy.TodayStartBlock(new List<string> { "MY", "A", "A", "AU" }) == 1, "A bi tach doi -> lay dau cum A");
+        Check(ZonePolicy.TodayStartBlock(new List<string> { "AU", "MY" }) == -1, "chua co khoi A -> -1");
+        Check(ZonePolicy.TodayStartBlock(new List<string>()) == -1 && ZonePolicy.TodayStartBlock(null) == -1, "rong/null -> -1");
 
         var now = new DateTime(2026, 10, 17, 0, 0, 0, DateTimeKind.Utc);
         var replay = new DateTime(2026, 8, 5, 6, 0, 0, DateTimeKind.Utc);

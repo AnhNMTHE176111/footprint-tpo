@@ -19,6 +19,7 @@
     <Compile Include="../BenzoDetectors.cs" />
     <Compile Include="../BenzoSr.cs" />
     <Compile Include="../BenzoLayers.cs" />
+    <Compile Include="../BenzoSetupA5.cs" />
     <Compile Include="../../vung-canh-lenh/VclCore.cs" />
   </ItemGroup>
 </Project>

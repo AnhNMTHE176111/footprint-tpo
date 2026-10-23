@@ -756,6 +756,7 @@ static class Tests
     {
         TestSimulate(); TestStats(); TestResetMark(); TestCaption(); TestCache(); TestEngine();
         TestKernel(); TestZonesAndC(); TestObserve(); TestVirtualOpen(); TestChartPick(); TestBZones(); TestRealData(); TestLayers();
+        { var (o5, f5) = TestsA5.Run(); _ok += o5; _fail += f5; }   // setup A Phá hồi v5 (tests/TestsA5.cs)
 #if DEBUG
         TestDemo();
 #endif

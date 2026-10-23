@@ -312,7 +312,7 @@ def main():
     w('| phần | Δ n | Δ tổng R | ghi chú |\n|---|---|---|---|')
     w('| Δ(C0+SR − C0) | %+d | %s | |' % (S['C0+SR']['n'] - S['C0']['n'], fs(S['C0+SR']['sum_r'] - S['C0']['sum_r'], 1)))
     w('| Δ(C6 − C4) | %+d | %s | |' % (S['C6']['n'] - S['C4']['n'], fs(S['C6']['sum_r'] - S['C4']['sum_r'], 1)))
-    w('| lệnh C4 bị chặn vì L4 đang mở | −%d | %s | tổng R của các lệnh C4 đó |' % (len(lost), fs(-float(lost['r'].sum()) if len(lost) else 0.0, 1)))
+    w('| lệnh C4 bị chặn vì L4 đang mở | −%d | %s | Δ tổng R do mất chúng (dương = chúng là lệnh thua) |' % (len(lost), fs(-float(lost['r'].sum()) if len(lost) else 0.0, 1)))
     w('| lệnh L4 trong C6 | %d | %s | |' % (n_l4_in6, fs(r_l4_in6, 1)))
     w('')
     print('ô chính xong %.0fs' % (time.time() - t0), flush=True)

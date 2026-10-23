@@ -181,16 +181,16 @@ namespace VungCanhLenhNs
 
         // ---------------------------------------------------------------- vẽ
         /// <summary>Vùng quá khứ: hình chữ nhật từ lúc vùng xuất hiện đến lúc hết hiệu lực (không kéo ra mép phải). Chỉ vẽ phần nằm trong màn hình.</summary>
-        private void PaintSegs(Graphics gr, ICoordinatesConverter conv, Rectangle clip, RenderState rs, Font fLbl)
+        private void PaintSegs(Graphics gr, Func<DateTime, double> chartX, Func<double, double> chartY, Rectangle clip, RenderState rs, Font fLbl)
         {
             foreach (var g in rs.Segs)
             {
                 if (g.Slot == 'F' && !ShowFar) continue;
                 float x0, x1;
-                try { x0 = (float)conv.GetChartX(g.Start); x1 = (float)conv.GetChartX(g.End); } catch { continue; }
+                try { x0 = (float)chartX(g.Start); x1 = (float)chartX(g.End); } catch { continue; }
                 if (x1 < clip.Left || x0 > clip.Right) continue;
                 x0 = Math.Max(clip.Left, x0); x1 = Math.Min(clip.Right, Math.Max(x1, x0 + 3));
-                float yHi = (float)conv.GetChartY(g.Hi), yLo = (float)conv.GetChartY(g.Lo);
+                float yHi = (float)chartY(g.Hi), yLo = (float)chartY(g.Lo);
                 float top = Math.Min(yHi, yLo), h = Math.Max(1f, Math.Abs(yLo - yHi));
                 if (top > clip.Bottom || top + h < clip.Top) continue;
                 Color baseC = g.Side == 0 ? TestColor : (g.Side > 0 ? ResColor : SupColor);
@@ -226,7 +226,7 @@ namespace VungCanhLenhNs
                 using var fLbl = new Font("Consolas", 8, FontStyle.Regular);
                 if (!double.IsNaN(rs.U) && rs.U > 0)
                 {
-                    if (ShowAllHistory) PaintSegs(gr, conv, clip, rs, fLbl);
+                    if (ShowAllHistory) PaintSegs(gr, t => conv.GetChartX(t), p => conv.GetChartY(p), clip, rs, fLbl);
                     foreach (var z in rs.Zones)
                     {
                         if (z.Slot == 'F' && !ShowFar) continue;

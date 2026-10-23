@@ -1,0 +1,25 @@
+| Phiên bản setup | Số lệnh (lệnh/ngày) | Winrate (TP 3R, hoà vốn ~27 %) | R TB |
+|---|---|---|---|
+| B cũ — 2 VWAP | 11 (0,18) | 27,3 % | 0,00 |
+| B v2 — 8 loại vùng | 25 (0,41) | 32,0 % | 0,19 |
+| **B v3 — v2 + đỉnh/đáy phiên trước + Vùng Canh Lệnh** | 58 (0,95) | **24,1 %** | -0,12 |
+| — trong đó lệnh chỉ có ở v3 | 33 (0,54) | 18,2 % | -0,36 |
+| Chỉ S/R (đỉnh/đáy phiên trước + VCL, không vùng v2) | 34 (0,56) | 17,6 % | -0,38 |
+| Chỉ Vùng Canh Lệnh | 34 (0,56) | 17,6 % | -0,38 |
+| Chỉ đỉnh/đáy phiên trước | 0 (0,00) | – | – |
+| B v2 + Vùng Canh Lệnh | 58 (0,95) | 24,1 % | -0,12 |
+| B v2 + đỉnh/đáy phiên trước | 25 (0,41) | 32,0 % | 0,19 |
+| B v3 bỏ VWAP_W | 57 (0,93) | 24,6 % | -0,11 |
+| B v3 bỏ VWAP_D | 51 (0,84) | 25,5 % | -0,07 |
+| B v3 bỏ POC_D | 56 (0,92) | 23,2 % | -0,16 |
+| B v3 bỏ VAH_D | 52 (0,85) | 23,1 % | -0,17 |
+| B v3 bỏ VAL_D | 57 (0,93) | 24,6 % | -0,11 |
+| B v3 bỏ HVN_D | 58 (0,95) | 24,1 % | -0,12 |
+| B v3 bỏ HVN_W | 55 (0,90) | 21,8 % | -0,22 |
+| B v3 bỏ POC_W | 58 (0,95) | 24,1 % | -0,12 |
+| B v3 trên bản đồ vùng DỜI 3–15 giá (100 bản): TB [5 %–95 %] | 47 (chỉ tham khảo) | 26,0 % [17,0 % – 35,9 %] | -0,05 [-0,40 – 0,35] |
+
+1. R TB B v3 = -0,12 [-0,54 ; 0,36]; TRAIN -0,34 (n=32) / TEST 0,14 (n=26).
+2. Đối chứng: B v3 vs ĐC1 = ≈ đối chứng (trong dải 5–95%; TRAIN/TEST ngược dấu; |hiệu| ≤ 2 sai số); vs ĐC2 = ≈ đối chứng (trong dải 5–95%; TRAIN/TEST ngược dấu; < 2/3 tháng cùng dấu; |hiệu| ≤ 2 sai số); nhóm chỉ-v3 vs ĐC1 = ≈ đối chứng (trong dải 5–95%; |hiệu| ≤ 2 sai số); vs ĐC2 = ≈ đối chứng (trong dải 5–95%; |hiệu| ≤ 2 sai số) (0/9 ô "khác đối chứng").
+3. Chênh WR nhỏ nhất thấy được với n này ≈ 30 điểm (v2 n=25 vs v3 n=58); lệnh v2 bị chặn mất: 0 (thắng 0).
+4. Kết luận 3.5: CHỈ TĂNG SỐ LƯỢNG. Chưa có lợi thế đo được trên 61 phiên.

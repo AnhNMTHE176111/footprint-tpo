@@ -241,6 +241,8 @@ namespace BenzoTraderNs
         public int Side, P0, PkPos, Npb, Left, BrkNo, NEnt;
         public double E, Lo, Hi, PkVal, L, Pbmax, Dist;
         public bool Near, OkBar, TradeOpen;
+        public DateTime P0Time, PkTime;   // giờ mở nến phá (P0) và nến cực trị (PkPos) — để vẽ
+        public int Status;                // 1 hồi quá mạnh · 2 đà vừa dừng · 3 chờ giá hồi về vùng · 4 giá đang ở vùng, chờ nến xác nhận
         public string Label = "";
     }
 
@@ -277,17 +279,20 @@ namespace BenzoTraderNs
 
         public static string Dl(double v) => (v >= 0 ? "+" : "−") + BenzoCore.Num(Math.Abs(Math.Round(v)), "0");
 
+        /// <summary>Trạng thái theo thứ tự ưu tiên của plan 4.2: 1 hồi quá mạnh · 2 đà vừa dừng · 3 chờ giá hồi về vùng · 4 giá đang ở vùng.</summary>
+        public static int Status(A5Watch w) => w.Pbmax >= w.L ? 1 : w.Npb < 3 ? 2 : !w.Near ? 3 : 4;
+
         /// <summary>Nhãn 1 dòng của vùng A đang canh (plan mục 4.2).</summary>
         public static string Label(A5Watch w)
         {
             string side = w.Side > 0 ? "MUA" : "BÁN";
             string pk = w.Side > 0 ? "đỉnh" : "đáy";
-            string status;
-            bool strong = false;
-            if (w.Pbmax >= w.L) { status = $"hồi quá mạnh, chờ {pk} mới"; strong = true; }
-            else if (w.Npb < 3) status = $"đà vừa dừng, hồi {w.Npb}/3 nến";
-            else if (!w.Near) status = "chờ giá hồi về vùng";
-            else status = "giá đang ở vùng, chờ nến xác nhận";
+            int st = Status(w);
+            bool strong = st == 1;
+            string status = st == 1 ? $"hồi quá mạnh, chờ {pk} mới"
+                          : st == 2 ? $"đà vừa dừng, hồi {w.Npb}/3 nến"
+                          : st == 3 ? "chờ giá hồi về vùng"
+                          : "giá đang ở vùng, chờ nến xác nhận";
             string s = $"A chờ {side} · {ZoneVn(w.Name)} {Price(w.IsBand, w.Lo, w.Hi, w.E)}{(w.IsDyn && w.Name.StartsWith("VWAP") ? " (động)" : "")}"
                      + $" · {pk} {BenzoCore.Num(w.PkVal)} · {status}";
             if (!strong) s += $" · còn {w.Left}′";
@@ -694,6 +699,8 @@ namespace BenzoTraderNs
                     BrkNo = x.BrkNo, NEnt = x.NEnt, E = E, Lo = lo, Hi = hi, PkVal = x.PkVal, L = x.L, Pbmax = x.Pbmax,
                     Dist = x.S * (x.PkVal - E), Near = near, OkBar = _okLast, TradeOpen = tradeOpen
                 };
+                w.Status = A5Text.Status(w);
+                w.P0Time = z.Bars[x.P0].Time; w.PkTime = z.Bars[x.PkPos].Time;
                 w.Label = A5Text.Label(w);
                 tmp.Add((Math.Abs(lastBar.C - E), w));
             }

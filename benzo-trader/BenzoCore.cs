@@ -127,7 +127,7 @@ namespace BenzoTraderNs
     public static class BenzoCore
     {
         /// <summary>Đổi số này mỗi khi logic detector đổi → cache niêm phong cũ bị bỏ (không giữ kết quả của logic cũ).</summary>
-        public const string LogicVersion = "port-4";
+        public const string LogicVersion = "port-5-A-v5";
         /// <summary>Chi phí mỗi lệnh (giá): spread + trượt, GC tick 0,1.</summary>
         public const double CostPrice = 0.2;
         public const int NewsBlockMinutes = 15;
@@ -156,12 +156,15 @@ namespace BenzoTraderNs
 
         public static string SetupName(char s) => s switch
         {
-            'A' => "Phá hồi",
+            'A' => "Phá hồi v5",
             'B' => "Hấp thụ",
             'C' => "Fade cạnh",
             'D' => "Trap",
             _ => "?"
         };
+
+        /// <summary>Ghi chú trung thực gắn vào dòng thống kê của setup (A v5: backtest 90 ngày R trung bình −0,18/lệnh, chưa đạt tiêu chí).</summary>
+        public static string SetupNote(char s) => s == 'A' ? "chưa có lợi thế đo được (chạy thử)" : "";
 
         public static string MakeId(string symbol, DateTime barOpenUtc, char setup, int side) =>
             $"{symbol}|{barOpenUtc:yyyyMMddHHmm}|{setup}|{(side > 0 ? 'B' : 'S')}";
@@ -273,7 +276,8 @@ namespace BenzoTraderNs
             {
                 if (enabled != null && i < enabled.Length && !enabled[i]) continue;
                 var s = st.By[i];
-                lines.Add($"{Setups[i]} {SetupName(Setups[i])} · {s.N} · {s.Wins}/{s.Losses} · {Num(s.WinRate, "0")}% · {SignedR(s.SumR)}");
+                string note = SetupNote(Setups[i]);
+                lines.Add($"{Setups[i]} {SetupName(Setups[i])} · {s.N} · {s.Wins}/{s.Losses} · {Num(s.WinRate, "0")}% · {SignedR(s.SumR)}" + (note.Length > 0 ? " · " + note : ""));
                 if (all == null) continue;
                 foreach (var g in all.Where(x => x.Setup == Setups[i]))
                 {

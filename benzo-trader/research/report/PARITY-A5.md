@@ -6,7 +6,7 @@ Sự kiện M5 mà C# chỉ biết trễ 1 nến (nến M1 cuối của nến M5
 
 ## A-v5 (có VCL)
 
-ReplayA5: 14s. ```nạp 86333 nến M1, 86333 nến có per-level; nến xấu: 3697; A-v5 (có VCL) | raw: 387 tín hiệu, 57009 trạng thái kết thúc (5.1s) | sim: 324 lệnh (324 đã đóng) (3.7s) | live: 312 lệnh (312 đã đóng) (3.6s)```
+ReplayA5: 15s. ```nạp 86333 nến M1, 86333 nến có per-level; nến xấu: 3697; A-v5 (có VCL) | raw: 387 tín hiệu, 57009 trạng thái kết thúc (5.4s) | sim: 324 lệnh (324 đã đóng) (3.9s) | live: 312 lệnh (312 đã đóng) (3.9s)```
 
 Python: raw 387 · 1 lệnh mở không chặn mở ảo 324 đã đóng (324 tổng) · có chặn mở ảo 312 đã đóng (312 tổng).
 
@@ -54,7 +54,7 @@ Trong ca lệch L2: ngoài phiên mỏng/chỗ nối 0 · có lệnh vào (n_ent
 
 ## A-v4 (`--novcl`)
 
-ReplayA5: 4s. ```nạp 86333 nến M1, 86333 nến có per-level; nến xấu: 3697; A-v4 (không VCL) | raw: 245 tín hiệu, 50971 trạng thái kết thúc (1.3s) | sim: 218 lệnh (218 đã đóng) (0.5s) | live: 208 lệnh (208 đã đóng) (0.4s)```
+ReplayA5: 4s. ```nạp 86333 nến M1, 86333 nến có per-level; nến xấu: 3697; A-v4 (không VCL) | raw: 245 tín hiệu, 50971 trạng thái kết thúc (1.2s) | sim: 218 lệnh (218 đã đóng) (0.5s) | live: 208 lệnh (208 đã đóng) (0.4s)```
 
 Python: raw 245 · 1 lệnh mở không chặn mở ảo 218 đã đóng (218 tổng) · có chặn mở ảo 208 đã đóng (208 tổng).
 
@@ -100,7 +100,7 @@ Ca lệch L2: chỉ Python 1043, chỉ C# 1077.
 - chỉ C#: ('HVN_D1', -1, 607, 570, 'expire', 1, 0, 21)
 Trong ca lệch L2: ngoài phiên mỏng/chỗ nối 0 · có lệnh vào (n_ent>0) 0.
 
-Tổng thời gian 34s.
+Tổng thời gian 36s.
 
 <!-- NGUYEN-NHAN -->
 

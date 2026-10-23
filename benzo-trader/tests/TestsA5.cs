@@ -665,6 +665,20 @@ static class TestsA5
         Check(core.Core.Bars.Count == before && before == 1 && det.TryDetect(hx.Ctx, 0) == null, "Observe lần 2 cùng nến ⇒ VclCore không bị đẩy lại, không tín hiệu");
     }
 
+    // ---------------------------------------------------------------- 24: nhãn trung thực
+    static void T24()
+    {
+        Console.WriteLine("[A5-24] Nhãn trung thực: tên setup, ghi chú 'chưa có lợi thế đo được', phiên bản logic");
+        Check(BenzoCore.SetupName('A') == "Phá hồi v5", "tên setup A = 'Phá hồi v5'", BenzoCore.SetupName('A'));
+        Check(BenzoCore.LogicVersion.EndsWith("-A-v5"), "LogicVersion có đuôi -A-v5 (cache niêm phong của logic cũ bị bỏ)", BenzoCore.LogicVersion);
+        var sigs = new List<Signal> { new Signal { Setup = 'A', Side = 1, Entry = 100, Sl = 98, Tp = 106, Time = T0, Outcome = "TP", R = 2.8 },
+                                      new Signal { Setup = 'B', Side = 1, Entry = 100, Sl = 98, Tp = 106, Time = T0.AddMinutes(60), Outcome = "SL", R = -1.1 } };
+        var st = BenzoCore.ComputeStats(sigs, null);
+        var lines = BenzoCore.TableLines(st, new[] { true, true, true, true });
+        Check(lines.Any(x => x.StartsWith("A Phá hồi v5") && x.EndsWith("chưa có lợi thế đo được (chạy thử)")), "dòng thống kê của A có đuôi 'chưa có lợi thế đo được (chạy thử)'");
+        Check(lines.Where(x => !x.StartsWith("A ")).All(x => !x.Contains("chưa có lợi thế")), "các setup khác không bị gắn ghi chú này");
+    }
+
     // ---------------------------------------------------------------- 22: hồi quy file 90 ngày
     static void T22()
     {
@@ -752,7 +766,7 @@ static class TestsA5
     {
         _ok = 0; _fail = 0;
         Console.WriteLine("\n===== A5: setup A Phá hồi v5 =====");
-        T01_02(); T03(); T04(); T05(); T06(); T07(); T08(); T09(); T10_11(); T12(); T13(); T14(); T15_16(); T17(); T18(); T19_20(); T21(); T23(); T22();
+        T01_02(); T03(); T04(); T05(); T06(); T07(); T08(); T09(); T10_11(); T12(); T13(); T14(); T15_16(); T17(); T18(); T19_20(); T21(); T23(); T24(); T22();
         return (_ok, _fail);
     }
 }

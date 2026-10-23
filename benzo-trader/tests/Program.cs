@@ -126,7 +126,7 @@ static class Tests
         };
         string c = BenzoCore.ComposeOpen(s, "GCZ26", 7, 1, 1);
         var ls = c.Split('\n');
-        Check(ls[0] == "🟢 BUY · A Phá hồi · GCZ26 · 20:24 VN", "dòng 1", ls[0]);
+        Check(ls[0] == "🟢 BUY · A Phá hồi v5 · GCZ26 · 20:24 VN", "dòng 1", ls[0]);
         Check(ls[1].StartsWith("Lý do: phá VAH Âu"), "dòng 2 có lý do", ls[1]);
         Check(ls[2] == "Vào 4193,1 · SL 4190,6 (2,5 giá) · TP 4200,6 (3R)", "dòng 3 đúng mẫu plan", ls[2]);
         var sell = new Signal { Setup = 'C', Side = -1, Entry = 100, Sl = 102, Tp = 96, Reason = "x", Time = s.Time };
@@ -135,9 +135,9 @@ static class Tests
         Check(BenzoCore.ComposeOpen(longReason, "G", 7, 1, 1).Length <= 1024, "caption không vượt 1024 ký tự");
 
         s.Outcome = "TP"; s.R = 2.8; s.ExitTime = new DateTime(2026, 10, 21, 13, 50, 0, DateTimeKind.Utc);
-        Check(BenzoCore.ComposeClose(s, 7, 1) == "✅ A Phá hồi +2,8R · 20:24→20:51", "tin đóng thắng", BenzoCore.ComposeClose(s, 7, 1));
+        Check(BenzoCore.ComposeClose(s, 7, 1) == "✅ A Phá hồi v5 +2,8R · 20:24→20:51", "tin đóng thắng", BenzoCore.ComposeClose(s, 7, 1));
         s.Outcome = "SL"; s.R = -1.1;
-        Check(BenzoCore.ComposeClose(s, 7, 1).StartsWith("🛑 A Phá hồi −1,1R"), "tin đóng thua", BenzoCore.ComposeClose(s, 7, 1));
+        Check(BenzoCore.ComposeClose(s, 7, 1).StartsWith("🛑 A Phá hồi v5 −1,1R"), "tin đóng thua", BenzoCore.ComposeClose(s, 7, 1));
 
         using var mp = TeleClient.BuildPhoto("123", new byte[] { 137, 80, 78, 71 }, "chú thích");
         string body = mp.ReadAsStringAsync().Result;

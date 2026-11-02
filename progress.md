@@ -500,3 +500,4 @@ Người học yêu cầu: research internet + brainstorm (Fable) → Opus imple
   - Chưa đủ: HVN chỉ lấy 11–13 (lõi), vùng phình thật kéo dài khoảng dòng 5–14 (≥33,5k).
   - Chưa rõ: nói "1 HVN, không có LVN ở giữa" nhưng lại chỉ LVN 2.206 → 2.206 chính là thung lũng tách HVN chính với nút phụ ở dưới (đỉnh 16.559).
   - Câu 3 "canh sell ở HVN trên": thiếu điều kiện bias phiên + xác nhận M1, thiếu play phá vùng, và chỗ canh là MÉP DƯỚI HVN.
+- Người học bỏ hiểu nhầm "2 HVN" (4077–4040 + 4040–4000 là một vùng liền). Yêu cầu research lại HVN từ internet → chốt cách xác định 6 bước (làm mượt, độ nổi ≥30% POC, mép 60% quãng) trong `tpo/HVN-CACH-XAC-DINH.md`. Áp vào ảnh 2: HVN chính 4040–4018 (POC 4026), HVN phụ 4076–4070, LVN 4068–4042; giá rơi từ 4060 canh buy ở 4040–4038.

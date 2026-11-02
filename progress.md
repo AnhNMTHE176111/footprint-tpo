@@ -491,3 +491,12 @@ Người học yêu cầu: research internet + brainstorm (Fable) → Opus imple
 - Bẫy phương pháp vòng 1: đối chứng đặt trong biên phiên trước ⇒ luôn xa giá hơn vùng thật ⇒ dấu ▼ giả. Sửa bằng đối chứng khớp khoảng cách (vòng 2).
 - **Indicator chốt:** bản đồ mốc ổn định (B swing M5, B15 swing M15, C mốc phiên + POC trần, D số tròn; gộp 1u, kẹp [1u,4u]; vùng chứa giá + 2 gần + 1 xa mỗi phía; hành lang +1u, giữ top-3, tuổi tối thiểu 10 nến ⇒ đổi vùng 3/giờ, tuổi thọ ~60 phút) + **bảng tra** P(chạm trong 15/30/60/120 nến) theo khoảng cách × pha, P(SL bị quét 0,25/0,5/1u), P(chạm rồi quay ≥2u). Parity C# ↔ Python 100% (28.846 nến), 40 test C# xanh, build 0 warning.
 - ⚠️ Việc người học: copy `vung-canh-lenh/dist/VungCanhLenh.dll` vào `C:\OptimusFLOW\Settings\Scripts\Indicators\VungCanhLenh\`, add vào chart M1 GCZ26 có Volume Analysis, chạy 10 phiên, chụp 3 ảnh gửi lại để hiệu chỉnh vẽ. Chưa chạy trên Optimus Flow thật.
+
+## 2026-11-02 — HVN theo bản tổng hợp CORVEN + thực hành đọc profile
+- Lưu nguyên văn bản tổng hợp của CORVEN: `data-export/messages-with-pro-trader/CORVEN_TONG_HOP.md` (nguồn cốt lõi để follow).
+- Research HVN (ebook p026/p035/p055 + internet): HVN = vùng giá được chấp nhận, giá chậm lại/đi ngang; LVN = bị từ chối, giá chạy nhanh. Internet chỉ coi là xu hướng, không có kiểm định.
+- Bài thực hành ảnh profile (chỉ có cột khối lượng, không trục giá). Người học:
+  - Đúng: đỉnh khối lượng dòng 11 (63.958); LVN ở 2.206.
+  - Chưa đủ: HVN chỉ lấy 11–13 (lõi), vùng phình thật kéo dài khoảng dòng 5–14 (≥33,5k).
+  - Chưa rõ: nói "1 HVN, không có LVN ở giữa" nhưng lại chỉ LVN 2.206 → 2.206 chính là thung lũng tách HVN chính với nút phụ ở dưới (đỉnh 16.559).
+  - Câu 3 "canh sell ở HVN trên": thiếu điều kiện bias phiên + xác nhận M1, thiếu play phá vùng, và chỗ canh là MÉP DƯỚI HVN.

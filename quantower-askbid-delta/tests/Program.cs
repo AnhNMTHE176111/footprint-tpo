@@ -90,6 +90,7 @@ static class T
         Check(ch2[1].Close == 20 && ch2[2].Open == 0 && ch2[2].Close == 10 && ch2[3].Close == 20, "đặt lại về 0 đúng lúc 05:00 giờ VN");
         var ch2n = DeltaCore.BuildChain(raw2, null, false, false, 7, 300);
         Check(ch2n[3].Close == 40, "tắt đặt lại: cộng dồn mãi");
+        Check(ch2n[2].Open == ch2n[1].Close && ch2n[2].Open == 20, "tắt đặt lại: nến đầu ngày mới mở đúng bằng Close nến cuối ngày cũ");
         Check(DeltaCore.DayKey(day + 22 * TimeSpan.TicksPerHour, 7, 300) == DeltaCore.DayKey(day + 22 * TimeSpan.TicksPerHour + 1, 7, 300)
               && DeltaCore.DayKey(day + 22 * TimeSpan.TicksPerHour - 1, 7, 300) != DeltaCore.DayKey(day + 22 * TimeSpan.TicksPerHour, 7, 300), "DayKey đổi đúng tại mốc");
 

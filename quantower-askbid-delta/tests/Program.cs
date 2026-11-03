@@ -107,6 +107,28 @@ static class T
         var chN = DeltaCore.BuildChain(rawF, null, true, false, 7, 300);
         Check(chN[0].Src == RangeSrc.None && chN[0].High == 0 && chN[0].Low == -20, "không có tick -> Src=None (không vẽ như nến thật)");
 
+        Console.WriteLine("[4b] Nạp lại nến dựng từ tick chưa khớp (sự cố viền chấm 2026-11-03)");
+        Check(DeltaCore.TickMatches(-20, new TickBar { End = -20, N = 5 }) && !DeltaCore.TickMatches(-20, new TickBar { End = -12, N = 5 })
+              && !DeltaCore.TickMatches(0, new TickBar { End = 0, N = 0 }), "TickMatches: khớp / lệch / không có tick");
+        var rs = new long[8]; for (int i = 0; i < 8; i++) rs[i] = Tk(i);
+        var rn = new[] { true, true, true, false, true, true, true, true };
+        var rd = new double[] { 10, 20, 30, 0, 40, 50, 60, 70 };
+        var rr = new Dictionary<long, TickBar>
+        {
+            [Tk(0)] = new TickBar { End = 10, N = 3 },     // khớp
+            [Tk(1)] = new TickBar { End = 5, N = 3 },      // lệch → nạp lại
+                                                           // Tk(2) thiếu → nạp lại
+            [Tk(4)] = new TickBar { End = 40, N = 3 },     // khớp
+                                                           // Tk(5..7) thiếu → nạp lại
+        };
+        var gr1 = DeltaCore.RetryGroups(rs, rn, rd, rr, 15);
+        Check(gr1.Count == 2 && gr1[0][0] == 1 && gr1[0][1] == 2 && gr1[1][0] == 5 && gr1[1][1] == 7, "nhóm nến chưa khớp: [1-2] và [5-7]; bỏ nến không cần (3) và nến đã khớp");
+        var gr2 = DeltaCore.RetryGroups(rs, rn, rd, rr, 2);
+        Check(gr2.Count == 3 && gr2[1][0] == 5 && gr2[1][1] == 6 && gr2[2][0] == 7 && gr2[2][1] == 7, "nhóm dài bị cắt theo maxBars");
+        rr[Tk(1)] = new TickBar { End = 20, N = 3 }; rr[Tk(2)] = new TickBar { End = 30, N = 3 };
+        for (int i = 5; i < 8; i++) rr[Tk(i)] = new TickBar { End = rd[i], N = 3 };
+        Check(DeltaCore.RetryGroups(rs, rn, rd, rr, 15).Count == 0, "nạp lại khớp hết → không còn nhóm nào");
+
         Console.WriteLine("[5] HỒI QUY trên số liệu THẬT đã xuất (sự cố vạch ngang)");
         string dir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../data-export/data-footprint"));
         string f1 = Directory.Exists(dir) ? Directory.GetFiles(dir, "fp_GCZ26_XCEC_Time_20260816-20260914_28d18h_bars.csv").FirstOrDefault() : null;

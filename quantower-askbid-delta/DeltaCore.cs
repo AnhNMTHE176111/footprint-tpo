@@ -79,7 +79,7 @@ namespace AskBidDeltaCore
                 lo = Math.Min(qtMin, Math.Min(0.0, delta));
                 return RangeSrc.Quantower;
             }
-            if (hasTick && tick.N > 0 && Math.Abs(tick.End - delta) <= Math.Max(1.0, Math.Abs(delta) * 0.005))
+            if (hasTick && TickMatches(delta, tick))
             {
                 hi = Math.Max(tick.Hi, Math.Max(0.0, delta));
                 lo = Math.Min(tick.Lo, Math.Min(0.0, delta));
@@ -88,6 +88,32 @@ namespace AskBidDeltaCore
             hi = Math.Max(0.0, delta);
             lo = Math.Min(0.0, delta);
             return RangeSrc.None;
+        }
+
+        /// <summary>Delta cuối nến dựng từ tick có KHỚP Total.Delta của Quantower không (kiểm chéo).</summary>
+        public static bool TickMatches(double delta, TickBar tick)
+            => tick.N > 0 && Math.Abs(tick.End - delta) <= Math.Max(1.0, Math.Abs(delta) * 0.005);
+
+        /// <summary>
+        /// Các nhóm nến LIỀN NHAU cần tick mà tick đã nạp chưa khớp (thiếu hoặc lệch delta) → nạp lại.
+        /// Sự cố 2026-11-03 (nến viền chấm ngay trước lúc mở lại Optimus Flow): tick của vài phút
+        /// gần nhất chưa có đủ trên máy chủ lúc nạp, và trước đây không bao giờ nạp lại.
+        /// Mỗi nhóm tối đa maxBars nến để mỗi lần hỏi tick ngắn. Trả [from, to] (gồm cả hai đầu).
+        /// </summary>
+        public static List<int[]> RetryGroups(long[] starts, bool[] need, double[] deltas,
+                                              IDictionary<long, TickBar> res, int maxBars)
+        {
+            var groups = new List<int[]>();
+            int from = -1;
+            for (int i = 0; i <= need.Length; i++)
+            {
+                bool bad = i < need.Length && need[i]
+                           && !(res.TryGetValue(starts[i], out var tb) && TickMatches(deltas[i], tb));
+                if (bad && from >= 0 && i - from >= maxBars) { groups.Add(new[] { from, i - 1 }); from = -1; }
+                if (bad && from < 0) from = i;
+                if (!bad && from >= 0) { groups.Add(new[] { from, i - 1 }); from = -1; }
+            }
+            return groups;
         }
 
         /// <summary>Khoá "ngày giao dịch": đổi giá trị khi qua mốc reset (phút trong ngày, giờ local = UTC + tz).</summary>

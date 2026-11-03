@@ -40,7 +40,8 @@ namespace AskBidDeltaFeed
 
         /// <param name="starts">thời điểm bắt đầu (UTC ticks) từng nến, tăng dần</param>
         /// <param name="need">nến nào cần dựng từ tick</param>
-        public void Start(Symbol sym, long[] starts, bool[] need, int chunkHours, Action onProgress)
+        /// <param name="deltas">Total.Delta của Quantower từng nến — để biết nến nào dựng chưa khớp mà nạp lại</param>
+        public void Start(Symbol sym, long[] starts, bool[] need, double[] deltas, int chunkHours, Action onProgress)
         {
             Cancel();
             var cts = new CancellationTokenSource(); _cts = cts;
@@ -48,7 +49,11 @@ namespace AskBidDeltaFeed
             Running = true; Status = "đang nạp tick…";
             Task.Run(() =>
             {
-                try { Run(sym, starts, need, Math.Max(1, chunkHours), onProgress, tok); }
+                try
+                {
+                    Run(sym, starts, need, Math.Max(1, chunkHours), onProgress, tok);
+                    Retry(sym, starts, need, deltas, onProgress, tok);
+                }
                 catch (Exception ex) { Status = "LỖI nạp tick: " + ex.Message; }
                 finally { if (!tok.IsCancellationRequested) Running = false; }
             });
@@ -107,6 +112,59 @@ namespace AskBidDeltaFeed
                 ? "nhà cung cấp KHÔNG trả tick lịch sử cho khoảng này (nến cũ không có râu)"
                 : $"xong · {totalTicks:N0} tick{tail}" + (emptyWindows > 0 ? $" · {emptyWindows}/{windows} đợt RỖNG" : "");
             try { onProgress?.Invoke(); } catch { }
+        }
+
+        // Nạp lại nến dựng chưa khớp (tick gần thời điểm nạp có thể chưa đủ trên máy chủ, hoặc một đợt
+        // 2 giờ bị cắt cụt). Hỏi từng nhóm ngắn, chờ tăng dần giữa các lượt. Chỉ thay khi bản mới KHỚP.
+        private static readonly int[] RetryDelaysSec = { 20, 60, 180, 600 };
+        private const int RetryMaxBars = 15;
+
+        private void Retry(Symbol sym, long[] starts, bool[] need, double[] deltas, Action onProgress, CancellationToken tok)
+        {
+            if (deltas == null || deltas.Length != starts.Length) return;
+            string baseStatus = Status;
+            foreach (int sec in RetryDelaysSec)
+            {
+                Dictionary<long, TickBar> snap; lock (_lk) snap = new Dictionary<long, TickBar>(_res);
+                var groups = DeltaCore.RetryGroups(starts, need, deltas, snap, RetryMaxBars);
+                if (groups.Count == 0) return;
+                Status = baseStatus + $" · chờ {sec}s nạp lại {groups.Count} nhóm nến chưa khớp";
+                if (tok.WaitHandle.WaitOne(sec * 1000)) return;
+                int fixedBars = 0;
+                foreach (var g in groups)
+                {
+                    if (tok.IsCancellationRequested) return;
+                    long a = starts[g[0]];
+                    long b = g[1] + 1 < starts.Length ? starts[g[1] + 1]
+                           : starts[g[1]] + (g[1] > 0 ? starts[g[1]] - starts[g[1] - 1] : TimeSpan.TicksPerMinute);
+                    var acc = new TickAccumulator(starts);
+                    HistoricalData hd = null;
+                    try
+                    {
+                        hd = sym.GetTickHistory(HistoryType.Last, new DateTime(a, DateTimeKind.Utc), new DateTime(b, DateTimeKind.Utc));
+                        int n = hd?.Count ?? 0;
+                        for (int i = 0; i < n && !tok.IsCancellationRequested; i++)
+                        {
+                            if (hd[i, SeekOriginHistory.Begin] is not HistoryItemLast t) continue;
+                            long tt = t.TimeLeft.Ticks;
+                            if (tt < a || tt >= b) continue;
+                            int sign = t.AggressorFlag == AggressorFlag.Buy ? 1 : t.AggressorFlag == AggressorFlag.Sell ? -1 : 0;
+                            acc.Feed(tt, t.Volume, sign);
+                        }
+                    }
+                    catch { continue; }
+                    finally { try { hd?.Dispose(); } catch { } }
+                    acc.Flush();
+                    lock (_lk)
+                    {
+                        for (int k = g[0]; k <= g[1]; k++)
+                            if (acc.Result.TryGetValue(starts[k], out var tb) && DeltaCore.TickMatches(deltas[k], tb))
+                            { _res[starts[k]] = tb; fixedBars++; }
+                    }
+                }
+                if (fixedBars > 0) { Interlocked.Increment(ref Version); try { onProgress?.Invoke(); } catch { } }
+            }
+            Status = baseStatus + " · còn nến chưa khớp sau khi nạp lại (giữ viền chấm)";
         }
     }
 
@@ -194,12 +252,12 @@ namespace AskBidDeltaFeed
             if (!UseTicks || sym == null || _raw.Length == 0) return;
             long lastT = _raw[_raw.Length - 1].TimeUtcTicks;
             long minT = lastT - MaxTickDays * TimeSpan.TicksPerDay;
-            var starts = new long[_raw.Length]; var need = new bool[_raw.Length];
+            var starts = new long[_raw.Length]; var need = new bool[_raw.Length]; var deltas = new double[_raw.Length];
             int cnt = 0; long firstNeed = 0;
             for (int i = 0; i < _raw.Length; i++)
             {
                 var r = _raw[i];
-                starts[i] = r.TimeUtcTicks;
+                starts[i] = r.TimeUtcTicks; deltas[i] = r.Delta;
                 if (!r.HasVa || r.Volume <= 0 || r.TimeUtcTicks < minT) continue;
                 if (DeltaCore.QtRangeReal(r.Delta, r.QtMax, r.QtMin, r.Trades)) continue;
                 need[i] = true; cnt++; if (cnt == 1) firstNeed = r.TimeUtcTicks;
@@ -208,7 +266,7 @@ namespace AskBidDeltaFeed
             string key = cnt + "|" + firstNeed;
             if (key == _loadKey) return;           // cùng tập nến cần → không nạp lại (tránh lặp mỗi nến mới)
             _loadKey = key;
-            _loader.Start(sym, starts, need, ChunkHours, onProgress);
+            _loader.Start(sym, starts, need, deltas, ChunkHours, onProgress);
         }
 
         // ---------------------------------------------------------------- vẽ

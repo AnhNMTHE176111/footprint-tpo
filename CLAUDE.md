@@ -171,6 +171,11 @@ Các file lớn hiện có (per-level M1, tính đến 2026-08-02): `data-export
 ⚠️ Giá trong các file khác nhau có thể là symbol khác nhau (5086 vs 4041) → **kiểm giá/symbol trước khi
 gộp**, đừng nối 2 file thành một chuỗi liên tục nếu chưa đối chiếu.
 
+## 🎥 Ghi hình buổi Meet với CORVEN = NGUỒN DỮ LIỆU CHÍNH (chốt 2026-11-07)
+Bản chép lời + ảnh chart trong **`corven-meet/YYYY-MM-DD/`** (cấu trúc + cách trích ở `corven-meet/README.md`).
+Mọi tóm tắt / rút luật từ buổi học Meet phải **trích từ kho này, kèm mốc giờ** — không viết theo trí nhớ.
+Video gốc ở `D:\record_video\` (không commit).
+
 ## 📈 Quy ước đọc chart TPO trên Optimus Flow (chốt 2026-08-12)
 - **Màu CHỮ TPO (A,B,C,D…) = BRACKET/thời gian** (tím→đỏ→cam→vàng→xanh lá→xanh biển = bracket sớm→muộn
   trong phiên), **KHÔNG phải khối lượng** — dù nút "VOLUME ANALYSIS" đang bật.

@@ -1,0 +1,125 @@
+[0:40:00] Tạo ra được những cái Stacking Balancer đối ngược lại nha
+[0:40:04] Với lại thứ hai là nó tạo ra Rain và Break Rain
+[0:40:08] Còn ở dưới cái Rain ở dưới nó tạo ra ở dưới này
+[0:40:10] Thì ít nhất là nếu nó không phá
+[0:40:12] Nếu nó phá cái Rain này nó về thì nó sẽ về cái Rain dưới này
+[0:40:16] Về cái Rain dưới này
+[0:40:20] Em
+[0:40:22] Mà chú nói là phá vở cơ trúc của Rain hay là của...
+[0:40:26] Vừa phá vở cơ trúc luôn
+[0:40:28] Vừa phát vỡ công trúc, vừa phát vỡ rèn luôn
+[0:40:33] Công trúc ở đây, gãy rồi
+[0:40:35] Công trúc ở đây là gãy rồi gì nữa
+[0:40:38] Rèn thì...
+[0:40:39] Chỉ đây là rèn, chỉ gãy luôn, rèn rồi
+[0:40:42] Đô, chú xác định công trúc cái đảo phát nhà nó gì, gì không đạt nhỉ
+[0:40:46] Đấy, cái đen này, cái đen này, cái đen này là cái gãy đây
+[0:40:52] Không, cái đen này là gãy rồi, công trúc rồi
+[0:40:55] Công trúc phai lên chép còn nổ bóng xanh trên đỉnh nè
+[0:41:01] Gì lạ thế?
+[0:41:03] Cái gì?
+[0:41:05] Sao gì lạ thế?
+[0:41:07] Sao gì cũng lạ vậy hả?
+[0:41:09] Xây công trúc hả?
+[0:41:11] Tăng lên như này nha, dạng xuống cây đen này nha, không tăng lên tiếp nha
+[0:41:15] À rồi rồi, kết thức nhé
+[0:41:19] Thì đoạn này là gãy rồi, đoạn này là gãy này
+[0:41:21] Các bạn hãy đăng ký kênh để ủng hộ kênh của chúng tôi.
+[0:41:25] Cảm ơn mọi người.
+[0:41:51] Nhỏ thôi, nhỏ đâu vùng giá trị còn gì nữa à
+[0:41:53] Chứ hình dung nha, cái thân đến này nó là vùng giá trị
+[0:41:56] Lúc break lên nha, thì có phải là đây là vùng giá trị đúng không?
+[0:42:00] Khi mà nó break được cái vùng giá trị này, có phải là nó gãy luôn
+[0:42:03] Gãy vùng giá trị đúng không?
+[0:42:05] Đây là vùng giá trị mà, hiểu không?
+[0:42:08] Xem như đây là vùng giá trị nhỏ
+[0:42:12] Nó đẩy lên rồi mà nha, nhưng mà sau nó bị gãy vùng giá trị này thì...
+[0:42:16] Ê, xem gãy
+[0:42:18] Công trúc nhìn đen như thế này
+[0:42:23] Tưởng là vài cái nến cho nó lạnh mạnh hơn
+[0:42:29] Chứ chỉ cần một cái nến thôi rồi
+[0:42:32] Như đoạn này nha, đoạn này
+[0:42:34] Công trúc thì khả năng là ở đây, ở đây
+[0:42:38] Đây, đây là cái đánh công trúc đây
+[0:42:41] Đây là cái đánh công trúc bay với xeo này
+[0:42:45] Chỉ cần nhỏ thôi, thì gần nhất thôi
+[0:42:53] Đâu, move đâu, một move à?
+[0:42:57] Move gì?
+[0:42:59] Move của có chút này, để mà nó break ấy
+[0:43:03] Có thể là đây, hoặc có thể là đây
+[0:43:07] Cái này cũng được
+[0:43:09] Một cái là nó gãy cốt trúc giảm, một cái là nó hình thành cốt trúc giảm h chant
+[0:43:23] một cái là nó tạo 2 đỉnh đáy cao dần, nó cũng là tạo ra cốt trúc căng
+[0:43:35] Còn hai là nó như này, cho nó phá nó như này thì nó cũng là tớ chúng tăng
+[0:43:43] Hiểu hông?
+[0:43:44] Nó phá thì hết vụ mà nó tớ chúng tăng hả?
+[0:43:46] Cái gì? Nó phá nó chúng tăng nó tớ chúng tăng rồi
+[0:43:53] Nó phải giữ được nha, nó phải giữ được ở gây dưới ấy thì nó mới tính
+[0:43:58] Nhưng mà nó phá nó rít cái len mẹ luôn thì chỉ khả năng là nó fail
+[0:45:02] Thực ra đoạn này đi nhé, đoạn này đi thì nó hơi xấu
+[0:45:06] Đi nó hơi xấu
+[0:45:13] Đoạn này đi lên, xem cái này nhé, xem cái này
+[0:45:17] L trên này, xeo lại ở đây hả?
+[0:45:21] Xeo lại ở đây, phát
+[0:45:23] Cái này thì hơi xấu để xem tiếp
+[0:45:25] Trung đoạn này nó khó, đoạn này nó đi, nó reng đồng reng thì nó khó
+[0:45:30] Hiểu không?
+[0:45:30] Nó lại đấu giá ở dưới này, không tiếp.
+[0:45:32] Tòa này quét xuống nữa mới đi được nè.
+[0:45:36] Tòa này nó tạo một bên ở đây nè, hiểu không?
+[0:45:44] Thật ra nếu mà nó chạy như này, loạn nhà này, loạn nhà này vẫn tính là top hơn nha.
+[0:45:48] Xong tìm xem có tin hiệu bay vào không thì lại bay lên.
+[0:45:52] Xong rồi, combo trick của nó đi lên ấy.
+[0:45:54] Cứ nhìn xem cái delta này nó có đi lên không nè.
+[0:45:56] xong rồi cầm ba trình nó đi lên ấy
+[0:45:58] đi nhìn xem cái delta này nó có đi lên không nè
+[0:46:00] hay là
+[0:46:01] buy nó có khỏe không ấy
+[0:46:03] như đoạn này nha, đoạn này stop ăn ấy
+[0:46:05] có bóng đỏ này chắc chắn stop nè
+[0:46:07] nếu mà buy đặt L dưới cái đáy này
+[0:46:09] nhưng mà chỗ này chưa buy được, stop nha
+[0:46:11] xong rồi
+[0:46:13] delta buy
+[0:46:15] delta buy với bóng xanh chắc phải vào nha
+[0:46:17] đoạn này
+[0:46:18] tab xong nha
+[0:46:20] buy nó có vào đâu, buy nó có vào đâu
+[0:46:22] thấy hông, nó là nhỏ mà
+[0:46:24] Cái kia 10, 10 kia cũng không vào được
+[0:46:28] Không vào được, nhỏ mà, có bóng xanh nữa đâu
+[0:46:36] Đoạn này giảm như thế này, mặc dù không có bóng luôn
+[0:46:41] Nhưng mà test lên, tắt kia này vào luôn
+[0:46:48] Thấy cái ring này không?
+[0:46:49] Thấy thấy thấy
+[0:47:21] Cảm ơn các bạn đã theo dõi, hãy đăng ký kênh để ủng hộ kênh nhé, hãy đăng ký kênh để ủng hộ kênh nhé
+[0:47:51] Nhưng mà nếu mà thấy nó rối quá, chắc loại này phải lên 1-5 thật.
+[0:47:54] Tại vì nó rõ ràng trước này.
+[0:47:56] Kinh trách!
+[0:47:57] 1-1, 1-5.
+[0:48:00] Xem nó...
+[0:48:02] Nó ở chỗ nào, cái này chắc là 1-5 thật.
+[0:48:04] Nếu mà xem từ trái có phải, chú hiểu hông?
+[0:48:07] Như đồ này, cái này range nhỏ đây.
+[0:48:09] Range nhỏ chỗ này.
+[0:48:14] Đây, đây là cái range nhỏ, thấy hông?
+[0:48:18] Đến cái này vẫn chứ tính là range thôi nhé.
+[0:48:20] đoạn này đáp xong nhưng mà bai hơi yếu, hơi yếu suy nghĩ thì vẫn không vào được
+[0:48:28] đoạn này, có thể tính là đoạn này quét cũng kiểu chưa dứt khoát ấy, đúng không?
+[0:48:33] nhưng đoạn retest lên trên này này, đoạn retest lên trên này có thể xem cho biết
+[0:48:38] nhưng mà cái đoạn retest lên trên này, chú thấy cầu trúc nó gãy mẹ rồi, đúng không?
+[0:48:42] cầu trúc gãy rồi, đoạn giảm này cầu trúc gãy rồi
+[0:48:46] Nhưng mà công trúc quan trọng thế này vẫn chưa bởi vì đây có một cái mốc quan trọng này, cái chi này là một quan trọng đấy, hiểu hông?
+[0:48:56] Đúng hông?
+[0:48:59] Chú nhìn, chú nhìn bắt đầu nhảm là chú nhìn được chỗ quan trọng, chỗ những cái mà chú thấy ngang hay thế
+[0:49:07] Đây là một cái chỗ công trúc giữa quan trọng luôn, mà phá quá đây là phá quá, cái công trúc quan trọng rồi, hiểu hông?
+[0:49:13] Bắt đầu uống sống đó đúng không?
+[0:49:17] Ừ, bắt đầu uống sống cũng to
+[0:49:20] Còn cái đoạn tăng lên như thế này là cái cốc nhỏ trong cốc trúc to
+[0:49:27] Cốc trúc to này cũng là hình thành một cái xuống tăng nhỏ ở đây
+[0:49:31] Nhưng mà nó là cốc xuống tăng nhỏ trong một cái xuống tạm to
+[0:49:36] Đây là cái điểm quan trọng của cái xuống giảm này
+[0:49:40] Khi nó phá qua đây là cấu trúc giảm nó rễ nè.
+[0:49:46] Khi nó phá qua đây thì cấu trúc giảm nó bị rễ.
+[0:49:53] Xem chút nào quan trọng vào đây.
+[0:49:57] Đây cũng đen, xác định đen vào đây.

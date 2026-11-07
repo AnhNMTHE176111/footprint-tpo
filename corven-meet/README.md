@@ -35,4 +35,4 @@ Mốc giờ `[h:mm:ss]` tính **liên tục từ đầu video đầu tiên** (m�
 | nổ bóng | nổ bóng (bong bóng volume trên chart) — giữ nguyên |
 
 ## Danh sách buổi
-- [2026-11-07](2026-11-07/README.md) — ~82 phút, chart BTCUSD 30m (TradingView), stop hunt / range / breakout
+- [2026-11-07](2026-11-07/README.md) — ~82 phút, Sierra Chart M1 (NQZ26 → GCZ26): stacked imbalance, kiệt sức, range/fail break, stop hunt, 3 hành vi của lệnh chủ động, R:R 2R, HVN/POC

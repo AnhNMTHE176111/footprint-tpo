@@ -71,6 +71,42 @@ Mỗi dòng là **một điều kiện kiểm được bằng mắt**, có thể
 
 Cuối trang: nút lớn **"Chi tiết 2.2 → ví dụ & ảnh"** → `chi-tiet.html`. Thêm nút nhỏ "Xoá tick" (tick không lưu).
 
+### 2b. BẢN RÚT GỌN (chốt sau TEST-1, 2026-11-08) — THAY THẾ danh sách trên ở trang 1 và file md
+Tester đo: bản trên chiếm ~3 màn hình điện thoại, không đọc được trong 30 giây. Rút mỗi dòng còn 1–2 dòng điện thoại;
+phần giải thích dài chuyển hết sang trang chi tiết (trang 2 giữ nguyên chữ dài làm "điều kiện đầy đủ" ở đầu mỗi mục).
+Giữ lại 2 câu gốc của CORVEN ngay dưới tiêu đề 2.2 (tester nhắc đúng: đó là chữ của người học, không được bỏ).
+
+**2.2 Follow theo Orderflow (không cản tàu)**
+> CORVEN: *khi follow phải để ý momentum · giá không được phép test quá sâu.*
+
+**① Bối cảnh**
+- [ ] Đã kẻ range (rối → M15). Trong range hay đã phá? Phá = nến **đóng** ngoài cạnh.
+- [ ] Trong range → chỉ đánh 2 cạnh. Đã phá, giữ 1–2 nến → chỉ follow hướng phá.
+- [ ] Cấu trúc gần nhất chưa gãy ngược hướng đánh.
+
+**② Mốc — không đuổi giá**
+- [ ] Giá ở **mốc gần**: cạnh range / cạnh vừa phá / stacked mới / đỉnh-đáy vừa gãy. Mốc xa → bỏ.
+- [ ] Test **không quá sâu**: chưa xuyên stacked, chưa đóng ngược qua cạnh. Fail break: đã đóng lại trong range (hoặc xác nhận lần 2).
+
+**③ Xác nhận tại mốc — cần ≥ 2**
+- [ ] **Delta** cùng chiều, to và thẳng (nhỏ, lình xình, ngược giá → không).
+- [ ] **Bóng** đúng phe nổ tại mốc (xanh ở đáy hồi → buy; đỏ ở đỉnh hồi → sell).
+- [ ] **Phe ngược kiệt sức** ở râu (đáy Bid ≈ 0 → buy; đỉnh Ask ≈ 0 → sell), chưa bị quét qua.
+- [ ] **Stacked imbalance mới** cùng hướng, nằm giữa thân nến.
+- [ ] **Trap / stop hunt** phe ngược vừa xảy ra rồi đẩy ngược.
+
+**④ Vào lệnh**
+- [ ] **Nến xác nhận đã đóng**: thân đủ, đóng sát cực trị, không rút râu. Sau fail break chờ 1–2 nến.
+- [ ] SL **sau mốc quan trọng gần nhất**, không đặt sát.
+- [ ] Tới mục tiêu **≥ 2R** (1,7R chấp nhận), TP 2R. Không đủ → không chơi.
+- [ ] Trong ngày, không nhồi.
+
+**⛔ Không vào:** delta nhỏ / "buy không vào" · kiệt sức chống hướng đánh · tín hiệu còn ngoài range · nhịp đẩy do quét stop ·
+range chồng range · đấu giá vừa xong → chờ break
+
+Thay bộ đếm "x/14" bằng **phán quyết**: ① đủ 3 + ② đủ 2 + ③ ≥ 2 + ④ đủ 4 ⇒ huy hiệu xanh "ĐỦ ĐIỀU KIỆN"; chưa đủ ⇒ ghi thiếu gì
+(vd "③ thiếu 1 dấu hiệu", "④ chưa có nến xác nhận"). Dòng ⛔ là chữ thường (không gạch chân), chỉ có một link nhỏ "›" cuối dòng.
+
 ## 3. NỘI DUNG CHỐT — trang 2 (`chi-tiet.html`), đọc lại khi quên
 Cấu trúc: mục lục dính; mỗi điều kiện ở trang 1 là một mục cùng id (`#b1-range`, `#b2-moc`, `#b3-delta`…), gồm:
 **Nguyên văn CORVEN** (chép đúng dòng trong `transcript.md`, kèm mốc giờ; không thêm ý) → **Cơ chế** (2–4 câu, ghi "diễn giải" nếu

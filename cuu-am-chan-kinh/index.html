@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cửu Âm Chân Kinh</title>
+<meta name="description" content="3 kịch bản đánh vàng theo CORVEN — danh sách điều kiện 2.2 Follow theo Orderflow để đối chiếu với chart khi trade.">
+<meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15161a" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2387590a'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle' fill='%23fff' font-family='serif'%3E9%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@87.5,500;87.5,700;87.5,800&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Sổ tay khi nhìn chart</div>
+  <h1>Cửu Âm Chân Kinh</h1>
+  <p class="lead">3 kịch bản đánh — theo CORVEN</p>
+</header>
+
+<section class="block" aria-labelledby="h-luuy">
+  <h3 id="h-luuy">Lưu ý:</h3>
+  <ul>
+    <li>Vùng quan trọng của TPO là HVN</li>
+    <li>Khi chạm vào vùng HVN thì giá có thể đảo chiều hoặc Phá vùng</li>
+  </ul>
+</section>
+
+<h2>Có 3 kịch bản đánh:</h2>
+
+<section class="block">
+  <h3><span class="kb-num">1.</span>Chạm vùng lớn có thể hold dài:</h3>
+  <ul>
+    <li>Vùng lớn là:
+      <ul>
+        <li>VWAP tuần</li>
+        <li>TPO tuần</li>
+      </ul>
+    </li>
+  </ul>
+</section>
+
+<section class="block">
+  <h3><span class="kb-num">2.</span>Đánh scalp</h3>
+  <p><span class="kb-num">2.1</span>Theo VWAP ngày/TPO ngày</p>
+</section>
+
+<section class="kb22" id="kb22" aria-labelledby="h-22">
+  <h3 id="h-22"><span class="kb-num">2.2</span>Follow theo Orderflow (không cản tàu)</h3>
+  <p class="corven">CORVEN: <i>khi follow phải để ý momentum · giá không được phép test quá sâu.</i></p>
+  <p class="sub">Chạm ô vuông để tick (không lưu). Chạm chữ để mở giải thích.</p>
+
+  <p class="grp">① Bối cảnh</p>
+  <ul class="ck" data-g="1">
+    <li><label><input type="checkbox" aria-label="Đã kẻ range"></label><a href="chi-tiet.html#b1-range">Đã kẻ range (rối → M15). Trong range hay đã phá? Phá = nến <b>đóng</b> ngoài&nbsp;cạnh.&nbsp;<span class="go">›</span></a></li>
+    <li><label><input type="checkbox" aria-label="Đúng thế đánh"></label><a href="chi-tiet.html#b1-the">Trong range → chỉ đánh 2 cạnh. Đã phá, giữ <span class="nw">1–2 nến</span> → chỉ follow hướng&nbsp;phá.&nbsp;<span class="go">›</span></a></li>
+    <li><label><input type="checkbox" aria-label="Cấu trúc chưa gãy"></label><a href="chi-tiet.html#b1-cautruc">Cấu trúc gần nhất chưa gãy ngược hướng&nbsp;đánh.&nbsp;<span class="go">›</span></a></li>
+  </ul>
+
+  <p class="grp">② Mốc — không đuổi giá</p>
+  <ul class="ck" data-g="2">
+    <li><label><input type="checkbox" aria-label="Giá ở mốc gần"></label><a href="chi-tiet.html#b2-moc">Giá ở <b>mốc gần</b>: cạnh range / cạnh vừa phá / stacked mới / đỉnh-đáy vừa gãy. Mốc xa →&nbsp;bỏ.&nbsp;<span class="go">›</span></a></li>
+    <li><label><input type="checkbox" aria-label="Test không quá sâu"></label><a href="chi-tiet.html#b2-test">Test <b>không quá sâu</b>: chưa xuyên stacked, chưa đóng ngược qua cạnh. Fail break: đã đóng lại trong range (hoặc xác nhận lần&nbsp;2).&nbsp;<span class="go">›</span></a></li>
+  </ul>
+
+  <p class="grp">③ Xác nhận tại mốc — cần ≥ 2</p>
+  <ul class="ck" data-g="3">
+    <li><label><input type="checkbox" aria-label="Delta"></label><a href="chi-tiet.html#b3-delta"><b>Delta</b> cùng chiều, to và thẳng (nhỏ, lình xình, ngược giá →&nbsp;không).&nbsp;<span class="go">›</span></a></li>
+    <li><label><input type="checkbox" aria-label="Bóng"></label><a href="chi-tiet.html#b3-bong"><b>Bóng</b> đúng phe nổ tại mốc (xanh ở đáy hồi → buy; đỏ ở đỉnh hồi →&nbsp;sell).&nbsp;<span class="go">›</span></a></li>
+    <li><label><input type="checkbox" aria-label="Phe ngược kiệt sức"></label><a href="chi-tiet.html#b3-kietsuc"><b>Phe ngược kiệt sức</b> ở râu (đáy Bid ≈ 0 → buy; đỉnh Ask ≈ 0 → sell), chưa bị quét&nbsp;qua.&nbsp;<span class="go">›</span></a></li>
+    <li><label><input type="checkbox" aria-label="Stacked imbalance mới"></label><a href="chi-tiet.html#b3-stacked"><b>Stacked imbalance mới</b> cùng hướng, nằm giữa thân&nbsp;nến.&nbsp;<span class="go">›</span></a></li>
+    <li><label><input type="checkbox" aria-label="Trap / stop hunt"></label><a href="chi-tiet.html#b3-trap"><b>Trap / stop hunt</b> phe ngược vừa xảy ra rồi đẩy&nbsp;ngược.&nbsp;<span class="go">›</span></a></li>
+  </ul>
+
+  <p class="grp">④ Vào lệnh</p>
+  <ul class="ck" data-g="4">
+    <li><label><input type="checkbox" aria-label="Nến xác nhận đã đóng"></label><a href="chi-tiet.html#b4-nen"><b>Nến xác nhận đã đóng</b>: thân đủ, đóng sát cực trị, không rút râu. Sau fail break chờ <span class="nw">1–2&nbsp;nến.&nbsp;</span><span class="go">›</span></a></li>
+    <li><label><input type="checkbox" aria-label="SL sau mốc"></label><a href="chi-tiet.html#b4-sl">SL <b>sau mốc quan trọng gần nhất</b>, không đặt&nbsp;sát.&nbsp;<span class="go">›</span></a></li>
+    <li><label><input type="checkbox" aria-label="Đủ 2R"></label><a href="chi-tiet.html#b4-rr">Tới mục tiêu <b>≥ 2R</b> (1,7R chấp nhận), TP 2R. Không đủ → không&nbsp;chơi.&nbsp;<span class="go">›</span></a></li>
+    <li><label><input type="checkbox" aria-label="Trong ngày"></label><a href="chi-tiet.html#b4-ngay">Trong ngày, không&nbsp;nhồi.&nbsp;<span class="go">›</span></a></li>
+  </ul>
+
+  <p class="stop"><b>⛔ Không vào:</b> delta nhỏ / "buy không vào" · kiệt sức chống hướng đánh · tín hiệu còn ngoài range · nhịp đẩy do quét stop · range chồng range · đấu giá vừa xong → chờ&nbsp;break&nbsp;<a class="go" href="chi-tiet.html#khong-vao" aria-label="Chi tiết: không vào khi">›</a></p>
+
+  <div class="tools">
+    <p class="verdict" id="verdict" aria-live="polite"></p>
+    <button class="btn" type="button" id="clear">Xoá tick</button>
+  </div>
+</section>
+
+<section class="block" aria-label="Ghi chú">
+  <p>Khi đấu giá xong (nhọn, đều 2 cạnh) thì hạn chế trading mà chờ break mới canh vào lệnh</p>
+  <p>Học hiểu khi nào gộp TPO profile 1 hay 3 tuần.</p>
+</section>
+
+<a class="cta" href="chi-tiet.html">Chi tiết 2.2 → ví dụ &amp; ảnh</a>
+
+<p class="src">Nguồn: bản tổng hợp của CORVEN (02/11/2026) + buổi Meet 07/11/2026. Đây là lời giảng, chưa phải luật đã kiểm chứng bằng số.</p>
+</main>
+
+<script>
+(function(){
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('ul.ck input[type=checkbox]'));
+  var verdict = document.getElementById('verdict');
+  function group(g){ return Array.prototype.slice.call(document.querySelectorAll('ul.ck[data-g="' + g + '"] input')); }
+  function n(list){ return list.filter(function(b){ return b.checked; }).length; }
+  function update(){
+    boxes.forEach(function(b){ b.closest('li').classList.toggle('done', b.checked); });
+    var miss = [];
+    var g1 = group(1), g2 = group(2), g3 = group(3), g4 = group(4);
+    if (n(g1) < g1.length) miss.push('① thiếu ' + (g1.length - n(g1)) + ' điều kiện');
+    if (n(g2) < g2.length) miss.push('② thiếu ' + (g2.length - n(g2)) + ' điều kiện');
+    if (n(g3) < 2) miss.push('③ thiếu ' + (2 - n(g3)) + ' dấu hiệu');
+    var rest = g4.length - 1 - n(g4.slice(1)), m4 = [];
+    if (!g4[0].checked) m4.push('chưa có nến xác nhận');
+    if (rest > 0) m4.push('thiếu ' + rest + (g4[0].checked ? ' điều kiện' : ' điều kiện khác'));
+    if (m4.length) miss.push('④ ' + m4.join(', '));
+    if (n(boxes) === 0) {
+      verdict.className = 'verdict idle';
+      verdict.textContent = 'Chưa tick ô nào. Cần: ① đủ 3 · ② đủ 2 · ③ ≥ 2 · ④ đủ 4.';
+    } else if (miss.length === 0) {
+      verdict.className = 'verdict ok';
+      verdict.textContent = 'ĐỦ ĐIỀU KIỆN';
+    } else {
+      verdict.className = 'verdict';
+      verdict.textContent = 'Chưa đủ: ' + miss.join(' · ');
+    }
+  }
+  boxes.forEach(function(b){ b.checked = false; b.addEventListener('change', update); });
+  document.getElementById('clear').addEventListener('click', function(){ boxes.forEach(function(b){ b.checked = false; }); update(); });
+  window.addEventListener('pageshow', update);
+  update();
+})();
+</script>
+</body>
+</html>

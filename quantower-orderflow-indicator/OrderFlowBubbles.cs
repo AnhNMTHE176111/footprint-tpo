@@ -460,11 +460,21 @@ namespace OrderFlowBubbles
         // CHỦ Ý, khác hẳn feed nạp lại dữ liệu. Bắt tính lại từ đầu; dấu vân tay tham số mới sẽ tự
         // KHÔNG khớp các bản niêm phong cũ (tính bằng tham số cũ) nên chúng được tính lại, còn niêm
         // phong của phiên trước (nếu mở lại đúng tham số cũ) vẫn được giữ nguyên, không mất.
+        //  ⚠️ FIX 2026-11-08 (bật/tắt ô trong Settings là MẤT HẾT bubble, phải refresh trang): đã dịch
+        //  ngược TradingPlatform.BusinessLayer — base.OnSettingsUpdated() gọi Refresh() → wrapper chạy
+        //  Clear() (→ OnClear: _vaLoaded=false) → Init() → Update(HistoricalBar)×N, nhưng KHÔNG gọi lại
+        //  VolumeAnalysisData_Loaded() (chỉ gọi khi VA tính xong lần đầu). Bản cũ vì thế kẹt _vaLoaded=false
+        //  vĩnh viễn → OnUpdate return sớm → trắng chart. Giờ OnUpdate tự "mở lại" khi VA đã Finished
+        //  (ShouldArmVa). Bỏ luôn dòng đặt _processedClosedCount=0 ở đây: Clear() đã reset, còn đặt lại
+        //  SONG SONG với lượt tính lại (chạy trên task khác) dễ làm baseline nạp trùng.
         protected override void OnSettingsUpdated()
         {
             base.OnSettingsUpdated();
-            lock (_calcLock) { _processedClosedCount = 0; }
         }
+
+        /// <summary>Có cần "mở" lại cờ VA không: chưa mở, và Volume Analysis đã tính xong.</summary>
+        internal static bool ShouldArmVa(bool vaLoaded, VolumeAnalysisCalculationState? state)
+            => !vaLoaded && state == VolumeAnalysisCalculationState.Finished;
 
         private string ComputeSettingsFingerprint()
         {
@@ -518,9 +528,14 @@ namespace OrderFlowBubbles
         // ================================================================
         protected override void OnUpdate(UpdateArgs args)
         {
-            if (!_vaLoaded) return;
-            var progress = HistoricalData.VolumeAnalysisCalculationProgress;
+            var progress = HistoricalData?.VolumeAnalysisCalculationProgress;
             if (progress == null || progress.State != VolumeAnalysisCalculationState.Finished) return;
+            if (!_vaLoaded)
+            {
+                // Sau Refresh (đổi Settings) Quantower không gọi lại VolumeAnalysisData_Loaded → tự mở lại.
+                lock (_calcLock) { if (ShouldArmVa(_vaLoaded, progress.State)) { ResetState(); _vaLoaded = true; } }
+                if (!_vaLoaded) return;
+            }
             Process();
         }
 

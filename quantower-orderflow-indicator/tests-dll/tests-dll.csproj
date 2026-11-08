@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework><EnableWindowsTargeting>true</EnableWindowsTargeting><Nullable>disable</Nullable><NoWarn>CA1416;NU1701;MSB3277</NoWarn></PropertyGroup>
+  <ItemGroup>
+    <Reference Include="TradingPlatform.BusinessLayer"><HintPath>$(USERPROFILE)\quantower-libs\TradingPlatform.BusinessLayer.dll</HintPath></Reference>
+    <Reference Include="System.Drawing.Common"><HintPath>$(USERPROFILE)\quantower-libs\System.Drawing.Common.dll</HintPath></Reference>
+    <Reference Include="OrderFlowBubbles"><HintPath>..\dist\OrderFlowBubbles.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

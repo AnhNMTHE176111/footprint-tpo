@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../SignalCache.cs" />
+    <Compile Include="../ExhaustionLogic.cs" />
     <!-- BigTradeLog nam trong cung file SignalCache.cs, khong can dong compile rieng -->
 
   </ItemGroup>

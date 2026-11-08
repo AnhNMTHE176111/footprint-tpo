@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Test console cho RangeLogic.cs + RangeRenderer.cs, khong can SDK Quantower.
+       Render PNG cần System.Drawing.Common + System.Private.Windows.Core trong ~/quantower-libs.
+       Chạy: dotnet run (project quantower-range/tests)  (biến RANGE_XCHECK_CSV / RANGE_EVENTS_CSV để đổi file đối chiếu) -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>disable</Nullable>
+    <AssemblyName>RangeBoxTests</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>CA1416;NU1701;MSB3277</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../RangeLogic.cs" />
+    <Compile Include="../RangeRenderer.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="LogicTests.cs" />
+    <Compile Include="UiTests.cs" />
+    <Compile Include="AdversarialTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Drawing.Common"><HintPath>$(USERPROFILE)\quantower-libs\System.Drawing.Common.dll</HintPath></Reference>
+    <Reference Include="System.Private.Windows.Core"><HintPath>$(USERPROFILE)\quantower-libs\System.Private.Windows.Core.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

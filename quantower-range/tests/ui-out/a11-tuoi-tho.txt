@@ -1,0 +1,4 @@
+range: 1533 (chết 1532, còn sống cuối dữ liệu 1)
+tuổi thọ Start→Dead (nến): p50 60 · p90 93 · max 302
+độ dài hộp vẽ Start→nến phá cuối (nến): p50 40 · p90 83 · max 300 · >73 nến: 240 (15.7 %)
+ReEntry: ≥1 lần 979 range (63.9 %) · ≥2 lần 596 range (38.9 %) · nhiều nhất 2 lần

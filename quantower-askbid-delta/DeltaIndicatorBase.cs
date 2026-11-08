@@ -40,6 +40,16 @@ namespace AskBidDeltaIndicators
         protected abstract bool ResetDailyDefault { get; }
         protected virtual int ResetMinutesValue => 300;
 
+        /// <summary>
+        /// Màu từng nến theo lực áp đảo (+1/−1/0) và bảng màu tương ứng. Mặc định null = tô theo
+        /// Close ≥ Open với UpColor/DownColor (CumDeltaCandles giữ nguyên hành vi cũ).
+        /// </summary>
+        protected virtual sbyte[] ComputeTones(CumBar[] chain, out Color up, out Color down, out Color neutral)
+        {
+            up = UpColor; down = DownColor; neutral = Color.Gray;
+            return null;
+        }
+
         private const int SCALE_HI = 0;
         private const int SCALE_LO = 1;
 
@@ -122,9 +132,11 @@ namespace AskBidDeltaIndicators
             gr.SetClip(clip);
             try
             {
-                DeltaFeed.Draw(gr, clip, Feed.Chain, li, ri, barsW,
+                var chain = Feed.Chain;
+                var tones = ComputeTones(chain, out Color up, out Color down, out Color neutral);
+                DeltaFeed.Draw(gr, clip, chain, li, ri, barsW,
                                t => conv.GetChartX(t), v => conv.GetChartY(v),
-                               UpColor, DownColor, BodyWidthFrac, WickWidth, ShowNumbers);
+                               up, down, BodyWidthFrac, WickWidth, ShowNumbers, tones, neutral);
             }
             finally { gr.SetClip(prevClip); }
         }

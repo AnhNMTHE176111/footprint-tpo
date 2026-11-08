@@ -158,7 +158,142 @@ static class T
             Check(real * 100.0 / total < 1.0, $"đúng như đã đo: chỉ {real * 100.0 / total:0.00}% nến có râu thật, còn lại phải dựng từ tick");
         }
 
+        StrengthTests(dir);
+
         Console.WriteLine($"\n=> {ok} OK, {fail} FAIL");
         return fail == 0 ? 0 : 1;
+    }
+
+    // nến từng-nến (Open = 0) có sẵn đỉnh/đáy
+    static CumBar Bar(int min, double close, double hi, double lo, RangeSrc src = RangeSrc.Quantower)
+        => new CumBar { TimeUtcTicks = Tk(min), Open = 0, Close = close, Delta = close,
+                        High = Math.Max(Math.Max(hi, 0), close), Low = Math.Min(Math.Min(lo, 0), close), Src = src };
+    // nến không có râu (lịch sử không dựng được từ tick): High/Low = 0..delta
+    static CumBar Flat(int min, double close) => Bar(min, close, 0, 0, RangeSrc.None);
+    // n nến nền có |delta| = v (xen kẽ dấu, không râu) rồi nối thêm các nến cần xét
+    static CumBar[] Chain(int n, double v, params CumBar[] tail)
+    {
+        var l = new List<CumBar>();
+        for (int i = 0; i < n; i++) l.Add(Flat(i, i % 2 == 0 ? v : -v));
+        for (int j = 0; j < tail.Length; j++) { var c = tail[j]; c.TimeUtcTicks = Tk(n + j); l.Add(c); }
+        return l.ToArray();
+    }
+
+    static void StrengthTests(string dir)
+    {
+        Console.WriteLine("[6] Lực áp đảo trong nến — Push / ToneOf");
+        // ca của người học: đầu nến sell đè xuống −30, sau đó buy vào +50 → đóng +20 (thân ngắn, râu dưới dài)
+        DeltaCore.Push(20, 20, -30, out var b1, out var s1);
+        Check(b1 == 50 && s1 == 0, $"−30 rồi +50 → đóng +20: buy = Close−Low = 50, sell = High−Close = 0 (được {b1}/{s1})");
+        Check(DeltaCore.ToneOf(b1, s1, 25) == 1, "ca −30 → +20 với ngưỡng 25: XANH (delta cuối 20 < 25 nhưng quãng buy đẩy lên 50 ≥ 25)");
+        Check(DeltaCore.ToneOf(Math.Max(20, 0), 0, 25) == 0, "cùng delta cuối +20 mà KHÔNG có râu dưới: xám (chỉ 20 < 25)");
+        DeltaCore.Push(-10, 0, -45, out var b2, out var s2);
+        Check(b2 == 35 && s2 == 10 && DeltaCore.ToneOf(b2, s2, 20) == 1, "delta cuối ÂM −10 nhưng đáy −45: buy 35 > sell 10 → XANH (như cột 06:04 trên chart CORVEN)");
+        DeltaCore.Push(-10, 60, -12, out var b3, out var s3);
+        Check(s3 == 70 && b3 == 2 && DeltaCore.ToneOf(b3, s3, 20) == -1, "lên +60 rồi sập về −10: sell 70 → ĐỎ");
+        DeltaCore.Push(5, 40, -40, out var b4, out var s4);
+        Check(DeltaCore.ToneOf(b4, s4, 20) == 1 && b4 == 45 && s4 == 35, "giằng co hai chiều +40/−40 đóng +5: buy 45 > sell 35 → xanh (bên thắng quãng lớn hơn)");
+        DeltaCore.Push(0, 40, -40, out var b5, out var s5);
+        Check(DeltaCore.ToneOf(b5, s5, 20) == 0, "giằng co đều +40/−40 đóng 0: buy = sell = 40 → XÁM (không bên nào áp đảo)");
+        Check(DeltaCore.ToneOf(25, 0, 25) == 1 && DeltaCore.ToneOf(0, 25, 25) == -1, "ca biên: quãng ĐÚNG BẰNG ngưỡng → có màu (≥)");
+        Check(DeltaCore.ToneOf(24.99, 0, 25) == 0, "ca biên: dưới ngưỡng một chút → xám");
+        DeltaCore.Push(0, 0, 0, out var b6, out var s6);
+        Check(b6 == 0 && s6 == 0 && DeltaCore.ToneOf(b6, s6, 5) == 0, "nến delta 0 phẳng → xám");
+        Check(DeltaCore.ToneOf(10, 0, 0) == 0 && DeltaCore.ToneOf(10, 0, double.NaN) == 0, "ngưỡng 0/NaN (chưa có nền) → xám, không tô bừa");
+        DeltaCore.Push(-20, 7, 3, out var b7, out var s7);
+        Check(b7 == 0 && s7 == 27, "High/Low sai phía (hi < delta? lo > 0) vẫn được kẹp quanh Open=0 và Close");
+
+        Console.WriteLine("[7] StrengthTones — ngưỡng thích nghi theo N nến trước");
+        // nền 15 nến |delta| = 10 → ngưỡng = 1,25 × 10 = 12,5
+        var t1 = DeltaCore.StrengthTones(Chain(15, 10, Flat(0, 11), Flat(0, 13), Flat(0, -40)), 15, 1.25, 5);
+        Check(t1[15] == 0, "delta NHỎ: +11 < 12,5 → xám (CORVEN: 'delta dương nhưng nhỏ thì không đánh được')");
+        Check(t1[16] == 1, "delta TO: +13 ≥ 12,5 → xanh");
+        Check(t1[17] == -1, "−40 → đỏ");
+        // cùng +30 nhưng bối cảnh khác nhau
+        var quiet = DeltaCore.StrengthTones(Chain(15, 10, Flat(0, 30)), 15, 1.25, 5);
+        var busy = DeltaCore.StrengthTones(Chain(15, 50, Flat(0, 30)), 15, 1.25, 5);
+        Check(quiet[15] == 1 && busy[15] == 0, "THÍCH NGHI: +30 sau đoạn vắng (TB 10) → xanh; sau đoạn sôi (TB 50) → xám");
+        // ca người học trong chuỗi: nền TB 20 → ngưỡng 25; đóng +20 có râu dưới −30
+        var uc = DeltaCore.StrengthTones(Chain(15, 20, Bar(0, 20, 20, -30), Flat(0, 20)), 15, 1.25, 5);
+        Check(uc[15] == 1, "chuỗi: −30 → +20 (râu dưới dài) → XANH");
+        Check(uc[16] == 0, "chuỗi: +20 không râu, cùng nền → xám");
+        // nến lịch sử thiếu đỉnh/đáy: rơi về quy tắc theo delta cuối
+        var hist = DeltaCore.StrengthTones(Chain(15, 20, Flat(0, -26), Flat(0, -24)), 15, 1.25, 5);
+        Check(hist[15] == -1 && hist[16] == 0, "nến THIẾU râu (Src None): chỉ xét |delta cuối| — −26 đỏ, −24 xám");
+        // dựng bằng BuildChain thật: cùng nến, có/không có tick → màu khác
+        var raw = new List<RawBar>();
+        for (int i = 0; i < 15; i++) raw.Add(new RawBar { TimeUtcTicks = Tk(i), HasVa = true, Volume = 100, Trades = 40, Delta = i % 2 == 0 ? 20 : -20, QtMax = 20, QtMin = 20 });
+        raw.Add(new RawBar { TimeUtcTicks = Tk(15), HasVa = true, Volume = 120, Trades = 60, Delta = 20, QtMax = 20, QtMin = 20 });   // Quantower: mồi (Max=Min=Delta)
+        var noTick = DeltaCore.BuildChain(raw, null, true, false, 7, 300);
+        var withTick = DeltaCore.BuildChain(raw, new Dictionary<long, TickBar> { [Tk(15)] = new TickBar { End = 20, Hi = 21, Lo = -30, N = 60 } }, true, false, 7, 300);
+        Check(DeltaCore.StrengthTones(noTick, 15, 1.25, 5)[15] == 0, "BuildChain không tick: nến +20 thiếu râu → xám (không bịa râu)");
+        Check(withTick[15].Src == RangeSrc.Ticks && DeltaCore.StrengthTones(withTick, 15, 1.25, 5)[15] == 1, "BuildChain có tick (đáy −30): cùng nến → xanh");
+        // khởi động: chưa đủ 5 nến nền → xám
+        var warm = DeltaCore.StrengthTones(Chain(4, 10, Flat(0, 200)), 15, 1.25, 5);
+        Check(warm[4] == 0, "khởi động: mới 4 nến nền (< 5) → xám dù delta 200");
+        var warm5 = DeltaCore.StrengthTones(Chain(5, 10, Flat(0, 200)), 15, 1.25, 5);
+        Check(warm5[5] == 1, "đủ 5 nến nền → bắt đầu tô (nền = TB các nến đang có)");
+        // nến rỗng không vào nền, không có màu
+        var em = Chain(15, 10, Flat(0, 12)).ToList();   // nền đúng 10 → ngưỡng 12,5; nếu nến rỗng tính là 0 thì ngưỡng 11,7 → 12 sẽ bị tô sai
+        em.Insert(10, new CumBar { TimeUtcTicks = Tk(100), Empty = true });
+        var emT = DeltaCore.StrengthTones(em.ToArray(), 15, 1.25, 5);
+        Check(emT[10] == 0 && emT[16] == 0, "nến rỗng (không VA): màu 0, không làm loãng nền (+12 vẫn xám)");
+        // sàn tối thiểu lúc thị trường vắng
+        var fl = DeltaCore.StrengthTones(Chain(15, 2, Flat(0, 4), Flat(0, 6)), 15, 1.25, 5);
+        Check(fl[15] == 0 && fl[16] == 1, "sàn tối thiểu 5 hợp đồng: TB 2 → ngưỡng 5 (không phải 2,5): 4 xám, 6 xanh");
+        // cửa sổ trượt: nến to cũ ra khỏi cửa sổ
+        var roll = new List<CumBar> { Flat(0, 300) };
+        for (int i = 1; i <= 15; i++) roll.Add(Flat(i, i % 2 == 0 ? 10 : -10));
+        roll.Add(Flat(16, 13));
+        var rT = DeltaCore.StrengthTones(roll.ToArray(), 15, 1.25, 5);
+        Check(rT[16] == 1, "cửa sổ trượt 15 nến: nến 300 đã ra khỏi nền → +13 xanh");
+        var rT2 = DeltaCore.StrengthTones(roll.ToArray(), 16, 1.25, 5);
+        Check(rT2[16] == 0, "cùng chuỗi, nền 16 nến (còn nến 300) → +13 xám");
+        // nến đang xét không tự nâng ngưỡng của mình
+        var self = DeltaCore.StrengthTones(Chain(15, 10, Flat(0, 1000)), 15, 1.25, 5);
+        Check(self[15] == 1, "nến cực to không tự đưa mình vào nền (nền chỉ gồm nến TRƯỚC)");
+        // cộng dồn: High/Low/Close tính tương đối Open → màu giống chế độ từng nến
+        var rawC = new List<RawBar>();
+        double[] dd = { 10, -10, 10, -10, 10, -10, 12, -9, 30, -40, 5, 20 };
+        for (int i = 0; i < dd.Length; i++) rawC.Add(new RawBar { TimeUtcTicks = Tk(i), HasVa = true, Volume = 100, Trades = 50, Delta = dd[i], QtMax = Math.Max(dd[i], 0) + (i == 11 ? 1 : 3), QtMin = Math.Min(dd[i], 0) - (i == 11 ? 30 : 2) });
+        var tp = DeltaCore.StrengthTones(DeltaCore.BuildChain(rawC, null, true, false, 7, 300), 15, 1.25, 5);
+        var tc = DeltaCore.StrengthTones(DeltaCore.BuildChain(rawC, null, false, false, 7, 300), 15, 1.25, 5);
+        Check(tp.SequenceEqual(tc), "chuỗi cộng dồn cho cùng màu với chuỗi từng nến (tính tương đối Open)");
+        Check(DeltaCore.StrengthTones(new CumBar[0], 15, 1.25, 5).Length == 0 && DeltaCore.StrengthTones(null, 15, 1.25, 5).Length == 0, "chuỗi rỗng/null → mảng rỗng, không lỗi");
+
+        Console.WriteLine("[8] Số liệu THẬT: tỷ lệ xanh/đỏ/xám mỗi phiên phải hợp lý (xám là đa số 'yếu')");
+        string f2 = Directory.Exists(dir) ? Directory.GetFiles(dir, "fp_GCZ26_XCEC_Time_20260723-20261021_90d_bars.csv").FirstOrDefault() : null;
+        if (f2 == null) { Console.WriteLine("  (bỏ qua: không thấy file xuất 90 ngày)"); return; }
+        var lines = File.ReadLines(f2); var hdr = lines.First().Split(',');
+        int ix(string n) => Array.IndexOf(hdr, n);
+        int iD = ix("delta"), iV = ix("volume"), iDt = ix("datetime");
+        var rawR = new List<RawBar>();
+        foreach (var ln in lines.Skip(1))
+        {
+            var p = ln.Split(',');
+            var dt = DateTime.Parse(p[iDt], CultureInfo.InvariantCulture);
+            if (dt < new DateTime(2026, 8, 25)) continue;     // GCZ26 đã là hợp đồng chính (dày)
+            double v = double.Parse(p[iV], CultureInfo.InvariantCulture);
+            double d = double.Parse(p[iD], CultureInfo.InvariantCulture);
+            rawR.Add(new RawBar { TimeUtcTicks = DateTime.SpecifyKind(dt, DateTimeKind.Utc).Ticks, HasVa = true, Volume = v, Trades = 2, Delta = d, QtMax = d, QtMin = d });
+        }
+        var chR = DeltaCore.BuildChain(rawR, null, true, false, 7, 300);
+        var tR = DeltaCore.StrengthTones(chR, 15, 1.25, 5);
+        int nR = 0, gR = 0, rR = 0; var perDay = new Dictionary<long, int[]>();
+        for (int i = 0; i < chR.Length; i++)
+        {
+            if (chR[i].Empty) continue;
+            nR++; if (tR[i] > 0) gR++; else if (tR[i] < 0) rR++;
+            long dk = DeltaCore.DayKey(chR[i].TimeUtcTicks, 7, 300);
+            if (!perDay.TryGetValue(dk, out var a)) perDay[dk] = a = new int[2];
+            a[0]++; if (tR[i] == 0) a[1]++;
+        }
+        var shares = perDay.Values.Where(a => a[0] >= 300).Select(a => a[1] * 100.0 / a[0]).ToList();
+        double gray = 100.0 * (nR - gR - rR) / nR;
+        Console.WriteLine($"  {nR:N0} nến · xanh {100.0 * gR / nR:0.0}% · đỏ {100.0 * rR / nR:0.0}% · xám {gray:0.0}% · xám/phiên {shares.Min():0}%–{shares.Max():0}% ({shares.Count} phiên)");
+        Check(nR > 40000, "đọc đủ dữ liệu thật");
+        Check(gray > 55 && gray < 85, "xám là đa số nhưng không áp đảo tuyệt đối (55–85%)");
+        Check(shares.Min() > 50 && shares.Max() < 90, "mọi phiên: xám 50–90% (ngưỡng thích nghi giữ tỷ lệ ổn định qua phiên vắng/sôi)");
+        Check(Math.Abs(gR - rR) < 0.15 * (gR + rR), "xanh ≈ đỏ (không lệch hệ thống về một phía)");
     }
 }

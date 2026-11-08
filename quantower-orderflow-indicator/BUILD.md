@@ -36,18 +36,15 @@ Indicator implement `IVolumeAnalysisIndicator` và đọc `bar.VolumeAnalysisDat
 Xem `OrderFlowBubbles.csproj`. Chỉnh `<QuantowerDir>` = thư mục cài Quantower, rồi `dotnet build -c Release`.
 Reference cần: `TradingPlatform.BusinessLayer.dll` + `System.Drawing.Common.dll` (trong `…\TradingPlatform\v<ver>\bin\`).
 
-⚠️ **Từ 2026-09-15 indicator gồm 2 file: `OrderFlowBubbles.cs` + `SignalCache.cs`** (niêm phong tín
-hiệu — xem comment đầu 2 file). `OrderFlowBubbles.csproj` là SDK-style project nên tự động gộp cả 2
-file (default glob `*.cs` trong thư mục) — không cần sửa gì thêm. Nếu build tay bằng script 1-file
-(`qw-build.sh <file> <asm>`) thì PHẢI build cả 2 file cùng lúc (viết tạm 1 csproj liệt kê cả 2
-`<Compile Include>`), vì `qw-build.sh` chỉ nhận 1 file nguồn.
-
-⚠️ **Từ 2026-11-08 thêm file thứ 3: `ExhaustionLogic.cs`** (logic kiệt sức thuần theo CORVEN, không
-phụ thuộc Quantower). Build tay thì liệt kê CẢ 3 file trong `<Compile Include>`.
+⚠️ **Từ 2026-11-08 indicator gồm 4 file nguồn: `OrderFlowBubbles.cs` + `SignalCache.cs` (niêm phong
+tín hiệu) + `StackedImbalance.cs` (logic Stacked Imbalance thuần) + `ExhaustionLogic.cs` (logic kiệt sức
+thuần theo CORVEN).** Build tay phải liệt kê CẢ 4 file trong `<Compile Include>` (`qw-build.sh` chỉ nhận 1
+file nên không dùng được). ⚠️ `OrderFlowBubbles.csproj` là SDK-style, glob mặc định `*.cs` sẽ kéo cả thư
+mục `tests/` vào — build tay bằng csproj liệt kê đúng 4 file, `EnableDefaultCompileItems=false`.
 
 ## Test
-`tests/` (`OrderFlowBubblesTests`) test riêng `SignalCache.cs` (gồm cả `BigTradeLog`) và `ExhaustionLogic.cs`
-(`tests/ExhaustionTests.cs`; đặt biến `EXH_XCHECK_CSV` để đối chiếu thêm với Python trên dữ liệu thật) — không cần SDK
+`tests/` (`OrderFlowBubblesTests`) test riêng `SignalCache.cs` (gồm cả `BigTradeLog`), `ExhaustionLogic.cs`
+(`tests/ExhaustionTests.cs`; đặt biến `EXH_XCHECK_CSV` để đối chiếu thêm với Python trên dữ liệu thật) và `StackedImbalance.cs` — không cần SDK
 Quantower vì các class này không phụ thuộc `TradingPlatform.BusinessLayer`. Chạy:
 `dotnet run --project quantower-orderflow-indicator/tests`.
 

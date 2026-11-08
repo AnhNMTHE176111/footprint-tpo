@@ -195,6 +195,8 @@ static class Tests
         FingerprintMismatchMeansMiss();
         BigTradeLogDedupSurvivesRestart();
         _fail += ExhaustionTests.Run();
+        StackedImbalanceTests.RunAll();
+        _fail += StackedImbalanceTests.Fail;
         Console.WriteLine(_fail == 0 ? "\n=== TAT CA PASS ===" : $"\n=== {_fail} FAIL ===");
         return _fail == 0 ? 0 : 1;
     }

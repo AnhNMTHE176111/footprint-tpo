@@ -165,46 +165,33 @@ namespace OrderFlowBubbles
         // ================================================================
 
         // ---------- Appearance ----------
-        [InputParameter("Màu MUA (aggressor) – bubble", 1)]
         public Color BuyColor { get; set; } = Color.Cyan;
 
-        [InputParameter("Màu BÁN (aggressor) – bubble", 2)]
         public Color SellColor { get; set; } = Color.OrangeRed;
 
-        [InputParameter("Màu delta + (xanh)", 3)]
         public Color DeltaUpColor { get; set; } = Color.FromArgb(0x26, 0xA6, 0x9A);
 
-        [InputParameter("Màu delta − (đỏ)", 4)]
         public Color DeltaDownColor { get; set; } = Color.FromArgb(0xEF, 0x53, 0x50);
 
-        [InputParameter("Bubble nhỏ nhất (px)", 5, 2, 80, 1, 0)]
         public int MinBubbleSize { get; set; } = 8;
 
-        [InputParameter("Bubble lớn nhất (px)", 6, 2, 120, 1, 0)]
         public int MaxBubbleSize { get; set; } = 26;
 
-        [InputParameter("Độ trong halo Big Trade (0-100)", 7, 0, 100, 1, 0)]
         public int HaloTransparency { get; set; } = 55;
 
-        [InputParameter("Độ trong bubble đặc (0-100)", 8, 0, 100, 1, 0)]
         public int SolidTransparency { get; set; } = 10;
 
         // ---------- Baseline (robust) ----------
-        [InputParameter("Baseline · Số nến (rolling)", 10, 20, 500, 1, 0)]
         public int BaselineBars { get; set; } = 100;
 
-        [InputParameter("Baseline · Số nến tối thiểu (warm-up)", 11, 5, 500, 1, 0)]
         public int MinBars { get; set; } = 40;
 
-        [InputParameter("Baseline · Sàn volume/mức (absolute, chống nhiễu)", 12, 0, 1000000, 1, 0)]
         public double MinLevelVolFloor { get; set; } = 5;
 
-        [InputParameter("Baseline · Sàn volume/nến (absolute, chống nhiễu)", 13, 0, 1000000, 1, 0)]
         public double MinBarVolFloor { get; set; } = 20;
 
         // Nạp baseline per-level bằng K ô ĐẬM NHẤT mỗi nến (0 = mọi ô, như bản cũ).
         // Lý do: gộp cả ô rìa 1-2 lot làm median tụt → z của POC bị thổi phồng, tín hiệu nổ khắp nơi.
-        [InputParameter("Baseline · Số ô đậm nhất/nến nạp vào baseline (0 = tất cả)", 14, 0, 20, 1, 0)]
         public int BaselineTopLevels { get; set; } = 3;
 
         // ---------- Ngưỡng CỐ ĐỊNH (thay cho tương đối) — dùng để soi mắt/thử nghiệm ----------
@@ -212,13 +199,11 @@ namespace OrderFlowBubbles
         // (median chung ~20). Bật mục này để ép EFFORT (Absorption) và Big Trade dùng THẲNG 1 số
         // hợp đồng cố định thay vì z-score — mất tính "portable" theo biến động/mã, chỉ nên dùng để
         // xem trực quan số lượng bóng nổ ra ở 1 mã/khung cụ thể, KHÔNG bật khi giao dịch thật.
-        [InputParameter("Ngưỡng · Dùng số CỐ ĐỊNH cho Ô Bid/Ask (thay vì tương đối)", 15)]
         public bool UseFixedThreshold { get; set; } = false;
 
         // Đo thật trên 508 đỉnh + 500 đáy đảo chiều thật (29 ngày GC, 2026-09-15): trong khoảng
         // 10-15, điểm tách biệt "đảo chiều thật" vs "nến bất kỳ" cao nhất rơi vào 10 (bắt 24,1% đảo
         // chiều thật, nổ trên 12,0% nến bất kỳ) — xem chi tiết trong hội thoại/README nghiên cứu.
-        [InputParameter("Ngưỡng · Số hợp đồng cố định cho Ô Bid/Ask (đã đo: 10 hợp lý nhất)", 16, 1, 1000000, 1, 0)]
         public double FixedThresholdContracts { get; set; } = 10;
 
         // ---------- 1.5) Ô BID/ASK LỚN — BÓNG ĐẠI DIỆN CHÍNH (2026-09-15) ----------
@@ -230,45 +215,34 @@ namespace OrderFlowBubbles
         [InputParameter("Ô Bid/Ask lớn (đại diện chính) · Bật", 25)]
         public bool CellBigEnabled { get; set; } = true;
 
-        [InputParameter("Ô Bid/Ask lớn · z-score ≥ (khi KHÔNG dùng ngưỡng cố định)", 26, 0.0, 12.0, 0.1, 1)]
         public double CellBigZ { get; set; } = 2.5;
 
-        [InputParameter("Ô Bid/Ask lớn · số bubble mạnh nhất / nến", 27, 1, 20, 1, 0)]
         public int CellBigTopN { get; set; } = 2;
 
-        [InputParameter("Ô Bid/Ask lớn · Bỏ nếu trùng mức với Absorption", 28)]
         public bool CellBigSkipOnAbsorption { get; set; } = true;
 
         // ---------- Nến delta lớn (dominant-delta candle) ----------
         [InputParameter("Nến delta · Bật (tô thân nến)", 20)]
         public bool DeltaBarEnabled { get; set; } = true;
 
-        [InputParameter("Nến delta · deltaPct tối thiểu (|Δ|/Vol)", 21, 0.0, 1.0, 0.01, 2)]
         public double DeltaPctFloor { get; set; } = 0.30;
 
-        [InputParameter("Nến delta · |Δ| z-score ≥", 22, 0.0, 10.0, 0.1, 1)]
         public double DeltaBarSigZ { get; set; } = 3.0;
 
-        [InputParameter("Nến delta · cổng volume (× median nến)", 23, 0.0, 5.0, 0.05, 2)]
         public double DeltaBarVolGate { get; set; } = 0.8;
 
-        [InputParameter("Nến delta · độ đậm tô (0-100)", 24, 0, 100, 1, 0)]
         public int DeltaBarTintPct { get; set; } = 85;
 
         // ---------- Số Delta ----------
         [InputParameter("Số Delta · Hiện dưới nến", 30)]
         public bool ShowDeltaNumbers { get; set; } = true;
 
-        [InputParameter("Số Delta · Cỡ chữ", 31, 6, 40, 1, 0)]
-        public int DeltaFontSize { get; set; } = 11;
+        public int DeltaFontSize { get; set; } = 7;
 
-        [InputParameter("Số Delta · cách đáy nến (px)", 32, 0, 60, 1, 0)]
-        public int DeltaYOffsetPx { get; set; } = 6;
+        public int DeltaYOffsetPx { get; set; } = 8;
 
-        [InputParameter("Số Delta · chỉ vẽ khi bề rộng nến ≥ (px)", 33, 1, 100, 1, 0)]
         public int DeltaMinBarWidthPx { get; set; } = 6;
 
-        [InputParameter("Số Delta · nền mờ sau chữ", 34)]
         public bool DeltaBackground { get; set; } = false;
 
         // ---------- 1) Absorption v3 (chấm điểm, xem research/) ----------
@@ -279,10 +253,8 @@ namespace OrderFlowBubbles
         [InputParameter("Absorption · Bật", 40)]
         public bool AbsorptionEnabled { get; set; } = true;
 
-        [InputParameter("Absorption · EFFORT: volume/ô z-score ≥", 41, 0.0, 12.0, 0.1, 1)]
         public double AbsEffortZ { get; set; } = 2.5;
 
-        [InputParameter("Absorption · Điểm tối thiểu để vẽ", 42, 3, 12, 1, 0)]
         public int AbsScoreMin { get; set; } = 4;
 
         // ---- TRỌNG SỐ từng thành phần (0 = tắt) ----
@@ -290,58 +262,41 @@ namespace OrderFlowBubbles
         // sau khi chuẩn hoá target theo biến động và bỏ dữ liệu rác, các thành phần noResult /
         // prominent / twoSided / divergence / multi đo được là VÔ GIÁ TRỊ hoặc GÂY HẠI → trọng số 0.
         // Để >0 nếu bạn muốn tự thử lại trên feed/khung khác — nhưng hãy calibrate trước.
-        [InputParameter("Absorption · trọng số NO-RESULT (đo: gây hại)", 55, 0, 3, 1, 0)]
         public int WNoResult { get; set; } = 0;
 
-        [InputParameter("Absorption · trọng số POC nổi bật (đo: gây hại)", 56, 0, 3, 1, 0)]
         public int WProminent { get; set; } = 0;
 
-        [InputParameter("Absorption · trọng số delta divergence (đo: ~0)", 57, 0, 3, 1, 0)]
         public int WDivergence { get; set; } = 0;
 
-        [InputParameter("Absorption · trọng số hai phe cùng lớn (đo: gây hại)", 58, 0, 3, 1, 0)]
         public int WTwoSided { get; set; } = 0;
 
-        [InputParameter("Absorption · trọng số đa nến (đo: ~0)", 59, 0, 3, 1, 0)]
         public int WMulti { get; set; } = 0;
 
-        [InputParameter("Absorption · trọng số sau swing (đo: +2.3pp)", 66, 0, 3, 1, 0)]
         public int WSwing { get; set; } = 1;
 
         // Tổ hợp NGƯỢC DẤU: "ô đậm tại cực trị + range hẹp + POC nổi bật ngay đó" đo được là mức
         // DỄ VỠ hơn đối chứng (−6,6pp, 3,7σ, đơn điệu, nhất quán 3 tháng) → đổi nhãn thành cảnh báo
         // xuyên mức, KHÔNG gọi là hấp thụ nữa.
-        [InputParameter("Absorption · Cách cực trị tối đa (ticks)", 43, 0, 20, 1, 0)]
         public int AbsMaxDisplaceTicks { get; set; } = 2;
 
-        [InputParameter("Absorption · số bubble mạnh nhất / nến", 44, 1, 10, 1, 0)]
         public int AbsorptionTopN { get; set; } = 1;
 
-        [InputParameter("Absorption · NO-RESULT: range nến ≤ × median", 45, 0.2, 2.0, 0.05, 2)]
         public double AbsRangeRatio { get; set; } = 0.9;
 
-        [InputParameter("Absorption · NO-RESULT: price-impact z ≤ −", 46, 0.0, 5.0, 0.1, 1)]
         public double AbsImpactZ { get; set; } = 1.0;
 
-        [InputParameter("Absorption · Sau swing: lookback (đo: 20 tốt hơn 9)", 47, 0, 50, 1, 0)]
         public int AbsSwingPeriod { get; set; } = 20;
 
-        [InputParameter("Absorption · POC nổi bật: POC ≥ × ô nhì", 48, 1.0, 5.0, 0.1, 1)]
         public double AbsPocProminence { get; set; } = 1.5;
 
-        [InputParameter("Absorption · Delta divergence: |Δ ô|/vol ≥", 49, 0.0, 1.0, 0.05, 2)]
         public double AbsDivergencePct { get; set; } = 0.10;
 
-        [InputParameter("Absorption · Hai phe cùng lớn: min(bid,ask) ≥ × vol", 50, 0.0, 0.5, 0.05, 2)]
         public double AbsTwoSidedPct { get; set; } = 0.35;
 
-        [InputParameter("Absorption · Đa nến: lookback cùng mức (±2 tick)", 51, 0, 20, 1, 0)]
         public int AbsMultiBarLookback { get; set; } = 5;
 
-        [InputParameter("Absorption · Xác nhận: số nến theo dõi mức", 52, 0, 20, 1, 0)]
         public int AbsConfirmBars { get; set; } = 3;
 
-        [InputParameter("Absorption · Xác nhận: coi là VỠ khi vượt (ticks)", 53, 1, 20, 1, 0)]
         public int AbsBreakTicks { get; set; } = 1;
 
 
@@ -360,46 +315,36 @@ namespace OrderFlowBubbles
         [InputParameter("Big Trade (lệnh đơn) · Bật", 60)]
         public bool BigTradeEnabled { get; set; } = true;
 
-        [InputParameter("Big Trade · z-score ≥ (lệnh đơn)", 61, 0.0, 12.0, 0.1, 1)]
         public double BigZ { get; set; } = 3.0;
 
         // AND (không phải OR như bản cũ): cửa OR '≥3×median' từng chiếm 51-71% số lần nổ.
-        [InputParameter("Big Trade · VÀ ≥ × median (0 = tắt điều kiện này)", 62, 0.0, 20.0, 0.5, 1)]
         public double BigVolMult { get; set; } = 4.0;
 
-        [InputParameter("Big Trade · số bubble mạnh nhất / nến", 63, 1, 10, 1, 0)]
         public int BigTradeTopN { get; set; } = 1;
 
-        [InputParameter("Big Trade · Chỉ vẽ khi feed CÓ lệnh đơn thật (mặc định BẬT — xem ghi chú trên)", 64)]
         public bool BigTradeRequireRealTrades { get; set; } = true;
 
-        [InputParameter("Big Trade · Bỏ nếu trùng mức với Absorption", 65)]
         public bool BigTradeSkipOnAbsorption { get; set; } = true;
 
         // Chỉ dùng khi "Ngưỡng · Dùng số CỐ ĐỊNH" bật — TÁCH RIÊNG khỏi FixedThresholdContracts (của ô
         // Bid/Ask) vì hai đại lượng khác hẳn quy mô: 1 lệnh đơn 40 hợp đồng mới đáng gọi là "to",
         // trong khi 1 ô Bid/Ask (cộng dồn nhiều lệnh) chỉ cần 10 đã là bất thường (xem đo lường 2026-09-15).
-        [InputParameter("Big Trade · Số hợp đồng cố định cho LỆNH ĐƠN (khởi điểm, CHƯA đo — xem ghi chú)", 17, 1, 1000000, 1, 0)]
         public double BigTradeFixedContracts { get; set; } = 50;
 
         // Sàn tuyệt đối (người học chốt 2026-09-16): z-score tương đối một mình KHÔNG đủ — trong nến
         // yên tĩnh, trung vị/độ lệch nhỏ khiến lệnh đơn chỉ 8-12 hợp đồng cũng đạt z≥3, nổ bóng "Big
         // Trade" liên tục mà con số quá bé để coi là "to" theo nghĩa thông thường. Sàn này áp DÙ ĐANG
         // Ở MODE NÀO (tương đối hay cố định) — dưới sàn thì không bao giờ được gọi là Big Trade.
-        [InputParameter("Big Trade · Sàn tuyệt đối tối thiểu (hợp đồng, áp mọi mode)", 18, 1, 1000000, 1, 0)]
         public double BigTradeAbsFloor { get; set; } = 50;
 
         // ---------- 3) Big Delta profile (gạch ngang) ----------
         [InputParameter("Big Delta line · Bật", 70)]
-        public bool DLineEnabled { get; set; } = true;
+        public bool DLineEnabled { get; set; } = false;
 
-        [InputParameter("Big Delta line · deltaPct tối thiểu", 71, 0.0, 1.0, 0.01, 2)]
         public double DLineFloor { get; set; } = 0.35;
 
-        [InputParameter("Big Delta line · |Δ mức| z-score ≥", 72, 0.0, 12.0, 0.1, 1)]
         public double DLineZ { get; set; } = 4.0;
 
-        [InputParameter("Big Delta line · số mức mạnh nhất / nến", 73, 1, 10, 1, 0)]
         public int DLineTopN { get; set; } = 1;
 
         // ---------- 4) Exhaustion — KIỆT SỨC thuần theo CORVEN (Meet 2026-11-07, xem ExhaustionLogic.cs) ----------
@@ -412,25 +357,18 @@ namespace OrderFlowBubbles
         [InputParameter("Kiệt sức · Bật", 80)]
         public bool ExhaustionEnabled { get; set; } = true;
 
-        [InputParameter("Kiệt sức · Nhỏ: Ask đỉnh / Bid đáy ≤ × TB volume mỗi mức của nến (0 = phải bằng 0)", 81, 0.0, 1.0, 0.01, 2)]
         public double ExhSmallRel { get; set; } = 0.10;
 
-        [InputParameter("Kiệt sức · Giảm dần về 0: số mức trên râu xét (0-1 = tắt)", 82, 0, 10, 1, 0)]
         public int ExhFadeLevels { get; set; } = 3;
 
-        [InputParameter("Kiệt sức · Giảm dần: mức cuối ≤ × TB volume mỗi mức", 83, 0.0, 1.0, 0.01, 2)]
         public double ExhFadeEndRel { get; set; } = 0.25;
 
-        [InputParameter("Kiệt sức · Vô hiệu khi râu nến sau vượt qua (ticks, 0 = chạm lại cũng tính)", 84, 0, 20, 1, 0)]
         public int ExhSweepTicks { get; set; } = 1;
 
-        [InputParameter("Kiệt sức · Ẩn hẳn khi đã bị vô hiệu (tắt = vẽ rỗng, mờ)", 85)]
         public bool ExhHideInvalidated { get; set; } = false;
 
-        [InputParameter("Kiệt sức · Màu kiệt sức buy (đỉnh, tam giác chỉ xuống)", 86)]
         public Color ExhTopColor { get; set; } = Color.FromArgb(0xFF, 0xC8, 0x00);
 
-        [InputParameter("Kiệt sức · Màu kiệt sức sell (đáy, tam giác chỉ lên)", 87)]
         public Color ExhBottomColor { get; set; } = Color.FromArgb(0x3D, 0xB8, 0xFF);
 
         // ---------- 5) Stacked Imbalance — THUẦN, vẽ VÙNG như chart CORVEN (2026-11-08) ----------
@@ -443,56 +381,43 @@ namespace OrderFlowBubbles
         [InputParameter("Stacked Imbalance · Bật", 90)]
         public bool ImbalanceEnabled { get; set; } = true;
 
-        [InputParameter("Stacked Imbalance · Tỷ lệ chéo % (CORVEN dùng 250; hay gặp 300)", 91, 100, 2000, 10, 0)]
         public int ImbalanceRatioPct { get; set; } = 250;
 
-        [InputParameter("Stacked Imbalance · Số mức liên tiếp", 92, 2, 20, 1, 0)]
         public int ImbalanceRun { get; set; } = 3;
 
-        [InputParameter("Stacked Imbalance · Volume tối thiểu bên áp đảo (hợp đồng, chặn ca 1-vs-0)", 93, 1, 1000000, 1, 0)]
         public double ImbMinVolume { get; set; } = 5;
 
         // Bật (mặc định) = như Sierra của CORVEN: vùng dừng ở nến ĐẦU TIÊN chạm lại vùng (đo: 64% vùng bị chạm
         // ngay nến kế tiếp, trung vị 1 nến, 95% trong 42 nến). Tắt = giữ vùng qua các lần test, chỉ dừng khi
         // một nến ĐÓNG CỬA xuyên qua mép xa ("không giữ được giá, đâm thủng").
-        [InputParameter("Stacked Imbalance · Kết thúc khi giá chạm lại (tắt = khi nến đóng xuyên qua)", 94)]
         public bool ImbEndOnTouch { get; set; } = true;
 
-        [InputParameter("Stacked Imbalance · Kéo dài tối đa (nến, 0 = tới khi kết thúc)", 95, 0, 100000, 1, 0)]
         public int ImbMaxBars { get; set; } = 0;
 
         // CORVEN: "dùng gần thôi, đừng dùng xa" → vùng còn hiệu lực nhưng đã quá N nến thì vẽ mờ đi.
         // 60 nến (~1 giờ M1) > 95% thời gian chờ bị chạm đo được (42 nến).
-        [InputParameter("Stacked Imbalance · Quá N nến chưa kết thúc thì vẽ mờ (xa)", 96, 0, 100000, 1, 0)]
         public int ImbFarBars { get; set; } = 60;
 
-        [InputParameter("Stacked Imbalance · Màu vùng buy", 97)]
         public Color ImbBuyZoneColor { get; set; } = Color.FromArgb(0x5F, 0xD3, 0xE0);
 
-        [InputParameter("Stacked Imbalance · Màu vùng sell", 98)]
         public Color ImbSellZoneColor { get; set; } = Color.FromArgb(0xF2, 0x8F, 0xA6);
 
-        [InputParameter("Stacked Imbalance · Độ đậm vùng (0-100)", 99, 5, 100, 1, 0)]
         public int ImbZoneOpacity { get; set; } = 45;
 
         // ---------- 6) Delta Divergence ----------
         [InputParameter("Divergence · Bật", 100)]
         public bool DivergenceEnabled { get; set; } = false;
 
-        [InputParameter("Divergence · Lookback swing", 101, 2, 50, 1, 0)]
         public int DivSwingLookback { get; set; } = 3;
 
-        [InputParameter("Divergence · Volume pivot ≥ × median", 102, 0.5, 5.0, 0.1, 1)]
         public double DivVolPartic { get; set; } = 1.5;
 
-        [InputParameter("Divergence · Cooldown (nến)", 103, 0, 50, 1, 0)]
         public int DivCooldown { get; set; } = 3;
 
         // ---------- 7) Liquidity Sweep ----------
         [InputParameter("Sweep · Bật", 110)]
         public bool SweepEnabled { get; set; } = false;
 
-        [InputParameter("Sweep · Lookback swing", 111, 2, 50, 1, 0)]
         public int SweepLookback { get; set; } = 8;
 
         // ---------- 8) Unfinished Business ----------
@@ -503,7 +428,6 @@ namespace OrderFlowBubbles
         [InputParameter("Stop-hunt · Bật", 130)]
         public bool StopHuntEnabled { get; set; } = false;
 
-        [InputParameter("Stop-hunt · Lookback swing", 131, 2, 50, 1, 0)]
         public int StopHuntLookback { get; set; } = 8;
 
         // ================================================================

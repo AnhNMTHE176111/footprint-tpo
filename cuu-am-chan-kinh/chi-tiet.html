@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chi tiết 2.2</title>
-<meta name="description" content="Giải thích từng điều kiện của 2.2 Follow theo Orderflow: nguyên văn CORVEN kèm mốc giờ, cơ chế, ảnh chart, lỗi hay gặp, 3 ví dụ trọn vẹn.">
+<meta name="description" content="Giải thích ngắn từng điều kiện của 2.2 Follow theo Orderflow: hiểu thế nào, nhìn trên chart ra sao, 3 ví dụ.">
 <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#15161a" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2387590a'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle' fill='%23fff' font-family='serif'%3E9%3C/text%3E%3C/svg%3E">
@@ -19,7 +19,7 @@
 <header class="hero">
   <div class="eyebrow">Cửu Âm Chân Kinh · đọc lại khi quên</div>
   <h1>Chi tiết 2.2</h1>
-  <p class="lead">Follow theo Orderflow (không cản tàu): mỗi điều kiện ở trang chính được giải thích bằng lời CORVEN, cơ chế, ảnh chart và lỗi hay gặp.</p>
+  <p class="lead">Follow theo Orderflow (không cản tàu). Mỗi điều kiện ở trang chính: hiểu thế nào và nhìn trên chart ra sao.</p>
 </header>
 
 <nav class="toc" aria-label="Mục lục">
@@ -31,296 +31,164 @@
     <li><a href="#g4"><span>4</span>Vào lệnh</a></li>
     <li><a href="#khong-vao"><span>⛔</span>Không vào</a></li>
     <li><a href="#vi-du"><span>VD</span>Ví dụ</a></li>
-    <li><a href="#mau-thuan"><span>±</span>Mâu thuẫn</a></li>
   </ol>
 </nav>
 
-<h2 id="tong">Tổng: thế nào là đủ để vào lệnh</h2>
-<p><b>Chữ gốc của 2.2</b> trong bản tổng hợp CORVEN gửi (02/11/2026):</p>
-<blockquote class="q"><p>2.2 Follow theo Orderflow (không cản tàu)<br>- khi follow phải để ý momentum<br>- giá không được phép test quá sâu</p></blockquote>
-<p>CORVEN không có một setup đóng khung; ông đánh theo <b>bối cảnh → mốc → xác nhận → lệnh</b>. Ông nhấn nhiều lần rằng không bao giờ vào vì một dấu hiệu đơn lẻ:</p>
-<blockquote class="q">
-  <p><span class="ts">0:07:01</span>Phải kết hợp thêm cả bóng (bong bóng lệnh lớn) nữa, chứ không dùng mỗi stacked imbalance.</p>
-  <p><span class="ts">0:07:38</span>Phải kết hợp với trap: ví dụ trap buy, xong đẩy xuống, tạo ra stacked imbalance sell → dấu hiệu đảo chiều.</p>
-  <p><span class="ts">0:07:47</span>Nhưng đánh thì kết hợp thêm range mà đánh, đừng đánh mỗi cái đấy. Kết hợp thêm bối cảnh, vẽ range mà đánh.</p>
-  <p><span class="ts">0:36:21</span>Ví dụ ở đây có cây kiệt sức buy, nhưng lúc sau buy mạnh lên → đảo chiều thì [cần] kiệt sức buy, với lại quan trọng phải phá được cấu trúc — đừng nhìn mỗi cái đấy.</p>
-  <p><span class="ts">1:05:57</span>Chơi chỗ này hơi khó. Nếu chơi thì chơi những đoạn có nhiều tín hiệu cùng lúc [?] như thế này.</p>
-</blockquote>
-<p class="cond"><span class="dg">diễn giải</span>Luật chốt: <b>bối cảnh đúng + giá ở mốc + ≥ 2 dấu hiệu order flow cùng phe + nến đóng xác nhận + đủ 2R</b>. Hai “thế” cùng nằm trong 2.2: <b>thế A</b> trong range thì đánh 2 cạnh; <b>thế B</b> sau khi phá range / phá cấu trúc thì follow theo hướng phá.</p>
-<p class="note">Mốc giờ <span class="mono">h:mm:ss</span> tính từ đầu buổi Meet 07/11/2026 (0:00:00 = 14:31:28). Lời CORVEN được chép đúng bản chép lời đã soát; <span class="mono">[…]</span> và <span class="mono">[?]</span> giữ nguyên như bản chép. Nhãn <span class="dg">diễn giải</span> = phần giải thích của Claude, không phải lời CORVEN. Đây là lời giảng, chưa phải luật đã kiểm chứng bằng số.</p>
+<!-- ============================ TỔNG ============================ -->
+<h2 id="tong">Tổng: khi nào được vào lệnh</h2>
+<p class="formula"><b>Bối cảnh đúng</b> + <b>giá ở mốc gần</b> + <b>ít nhất 2 dấu hiệu order flow cùng phe</b> + <b>nến xác nhận đã đóng</b> + <b>đủ 2R</b>.</p>
+<p>Không bao giờ vào lệnh chỉ vì một dấu hiệu đơn lẻ. Có hai thế:</p>
+<ul class="the">
+  <li><b>Thế A — giá đang trong range:</b> chỉ vào ở hai cạnh, nhắm cạnh đối diện.</li>
+  <li><b>Thế B — giá đã phá range và giữ được:</b> chỉ đánh theo hướng phá, vào ở nhịp hồi về mốc. Không đánh ngược một cú đẩy đang có lực: đó là “không cản tàu”.</li>
+</ul>
+<p>Hai câu gốc của CORVEN cho 2.2: <b>để ý momentum</b> (lực của nhịp đẩy: nến dài, delta to, đi một mạch) và <b>giá không được test quá sâu</b> (nhịp hồi không được xuyên qua mốc, xem <a class="xref" href="#b2-test">“Nhịp test không quá sâu”</a>).</p>
+
+<h3 class="gloss-h">Từ cần biết</h3>
+<dl class="gloss">
+  <dt>M1, M15</dt><dd>Chart nến 1 phút, 15 phút.</dd>
+  <dt>SL, TP</dt><dd>Mức dừng lỗ, mức chốt lời.</dd>
+  <dt>R</dt><dd>Khoảng từ điểm vào tới SL. 2R = mục tiêu xa gấp đôi khoảng đó.</dd>
+  <dt>Limit</dt><dd>Lệnh đứng chờ sẵn ở một giá. Market = lệnh khớp ngay.</dd>
+  <dt>Range</dt><dd>Đoạn giá đi ngang, chạy qua lại giữa hai cạnh.</dd>
+  <dt>Phá range</dt><dd>Nến <b>đóng</b> ngoài cạnh. Râu chọc ra rồi đóng lại bên trong thì chưa phá.</dd>
+  <dt>Phá thật</dt><dd>Đã phá, và 1–2 nến sau vẫn đóng ngoài cạnh, không quay vào.</dd>
+  <dt>Fail break</dt><dd>Nến đóng ngoài cạnh, rồi nến sau đóng lại vào trong: cú phá thất bại.</dd>
+  <dt>Cấu trúc</dt><dd>Đỉnh và đáy gần nhất. Nến đóng qua chúng là gãy cấu trúc.</dd>
+  <dt>Mốc</dt><dd>Chỗ giá có lý do phản ứng: cạnh range, stacked imbalance mới, đỉnh/đáy vừa gãy.</dd>
+  <dt>Delta</dt><dd>Lượng buy market trừ lượng sell market trong một nến. Số in dưới mỗi nến.</dd>
+  <dt>Hấp thụ</dt><dd>Lệnh market đập vào nhiều mà giá không đi, vì limit phía kia đỡ hết.</dd>
+  <dt>Bóng</dt><dd>Lệnh market lớn bất thường, indicator vẽ thành bong bóng: xanh là buy, đỏ là sell.</dd>
+  <dt>Kiệt sức</dt><dd>Ở râu đỉnh nến, cột Ask gần 0: hết người buy. Ở râu đáy nến, cột Bid gần 0: hết người sell.</dd>
+  <dt>Stacked imbalance</dt><dd>Từ 3 mức giá liên tiếp trở lên mà một phe market áp đảo phe kia. Là một vùng, không phải một điểm.</dd>
+  <dt>Trap / stop hunt</dt><dd>Râu quét qua chỗ có nhiều SL, nổ bóng, rồi giá quay ngược lại.</dd>
+</dl>
 
 <!-- ============================ ① ============================ -->
-<h2 id="g1">① Bối cảnh — biết mình đang ở thế nào</h2>
+<h2 id="g1">① Bối cảnh</h2>
 
 <section class="item" id="b1-range">
   <h3><span class="k">1.1</span>Kẻ range, biết trong hay đã phá</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span>Đã kẻ range của khung đang xem (rối thì lên M15). Biết giá đang <b>trong range</b> hay <b>đã phá</b> (phá = nến <b>đóng</b> ngoài cạnh, râu không tính).</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">0:12:56</span>Một vùng tích lũy đi ngang thôi là nó là range rồi.</p>
-    <p><span class="ts">0:13:58</span>Range thì chắc phải khung 15 [?máy ghi "1 năm"; ngữ cảnh là khung lớn hơn M1] … Range dùng khung [15] thôi. M1 thì không dùng đâu, M1 dùng range nhỏ hơn.</p>
-    <p><span class="ts">0:14:42</span>2 vùng chồng nhau thì gộp lại 1 vùng.</p>
-    <p><span class="ts">0:14:50</span>Cái cạnh range: chỗ nào nó phản ứng nhiều thì lấy làm cạnh.</p>
-    <p><span class="ts">0:47:51</span>Nếu thấy rối quá thì phải lên khung 15 [?máy ghi "1-5"] — vì nó rõ ràng hơn.</p>
-    <p><span class="ts">1:04:00</span>Thân nến chứ — phải nến đóng cửa chứ. Dùng nến đóng cửa hết. Sáng nay [?] cũng dùng nến đóng cửa. Không dùng râu nến đâu, râu nến không quan trọng [cho việc phá cấu trúc].</p>
-    <p><span class="ts">1:04:25</span>Đây cho đây range, range cho đây stop hunt — thấy mấy cái râu nhú nhú xuống không?</p>
-  </blockquote>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>Range là vùng hai phe cùng chấp nhận giá nên giá đi qua đi lại. Cạnh range là nơi một phe đã nhiều lần chặn và đẩy ngược lại, nên lấy chỗ “phản ứng nhiều” chứ không lấy râu nhọn nhất. Râu chọc ra ngoài thường chỉ là quét SL; chỉ khi nến <b>đóng</b> ngoài cạnh mới cho thấy giá được chấp nhận ở bên ngoài.</p>
-  <h4>Nhìn trên chart</h4>
+  <p class="cond">Đã kẻ range (rối → M15). Trong range hay đã phá? Phá = nến <b>đóng</b> ngoài cạnh.</p>
+  <p>Range là đoạn giá đi ngang. <b>Cạnh range đặt ở chỗ giá chạm rồi quay đầu nhiều lần</b>, không đặt ở râu nhọn nhất. Hai range chồng lên nhau thì gộp làm một. M1 rối quá thì mở M15 để thấy range rõ hơn.</p>
+  <p>Phá range phải là <b>nến đóng ngoài cạnh</b>. Râu chọc ra ngoài rồi đóng lại bên trong chỉ là quét SL (stop hunt), chuyện bình thường của range.</p>
   <figure>
-    <a href="img/0-13-58.jpg"><img src="img/0-13-58.jpg" alt="Optimus Flow GCZ26 M1 ngày 06/11 với hai dải range" width="1128" height="540" loading="lazy"></a>
-    <figcaption><b>0:13:58 — Optimus Flow của người học, GCZ26 M1, 06/11.</b> Hai dải xanh lá là 2 cạnh range: trên ≈ 4080–4082,5, dưới ≈ 4071–4073 (đường vàng ≈ 4073 chạy qua cạnh dưới). Giá chạm mỗi cạnh nhiều lần rồi quay lại; đó là “chỗ phản ứng nhiều” <span class="dg">diễn giải</span>.</figcaption>
+    <a href="img/1-04-00.jpg"><img src="img/1-04-00.jpg" alt="Range 4143 đến 4146, GCZ26 M1 ngày 05/11" width="1128" height="559" loading="lazy"></a>
+    <figcaption><b>Vàng (GCZ26) M1, 05/11.</b> Hộp hồng là range ≈ 4143–4146. Nến ≈ 18:50 đóng dưới cạnh nhưng vài nến sau quay lại trong hộp: chưa phá thật. Nến ≈ 19:00 đóng hẳn dưới cạnh, giá đi tiếp về ≈ 4134: phá thật. Các râu nhỏ nhú dưới cạnh trước đó là stop hunt.</figcaption>
   </figure>
-  <figure>
-    <a href="img/1-04-00.jpg"><img src="img/1-04-00.jpg" alt="Sierra Chart GCZ26 M1 ngày 05/11, range 4143 đến 4146" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>1:04:00 — GCZ26 M1, 05/11, 18:03–19:33.</b> Hộp hồng là range ≈ 4143–4146 (18:25–19:03). Nến ≈ 18:50 (delta −87) đóng dưới cạnh dưới nhưng các nến sau đóng lại trong hộp, tức là phá không giữ được. Đến ≈ 19:00 nến đóng hẳn dưới cạnh (delta −109) và giá đi tiếp về ≈ 4134. Các râu nhỏ nhú dưới cạnh dưới lúc ≈ 18:27 và ≈ 18:39 là kiểu “râu nhú nhú” CORVEN gọi là stop hunt (1:04:25).</figcaption>
-  </figure>
-  <figure>
-    <a href="img/0-40-40.jpg"><img src="img/0-40-40.jpg" alt="Sierra Chart GCZ26 M1 ngày 06/11, range 4123 đến 4127,5 bị phá xuống" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:40:40 — GCZ26 M1, 06/11, 02:26–03:22.</b> Range ≈ 4123–4127,5 (02:44–03:00). Lúc ≈ 03:00 nến đóng dưới cạnh dưới; hai nến kế tiếp có delta −9 và −71, giá về ≈ 4117. Đây là đoạn CORVEN nói “vừa phá vỡ cấu trúc, vừa phá vỡ range” (0:40:22).</figcaption>
-  </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Kẻ cạnh theo râu nhọn nhất thay vì chỗ giá phản ứng nhiều lần.</li>
-    <li>Thấy râu chọc ra ngoài là coi như đã phá; phải chờ nến <b>đóng</b>.</li></ul></div>
 </section>
 
 <section class="item" id="b1-the">
   <h3><span class="k">1.2</span>Trong range đánh 2 cạnh, đã phá thì follow</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span>Trong range → chỉ đánh <b>2 cạnh</b>. Đã phá và giữ được 1–2 nến → chỉ <b>follow theo hướng phá</b>. Không follow giữa lòng range.</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">Messenger 07/08</span>Trong balance thì chop / Trong balance thì xác định range rồi 2 cạnh mà vả thôi</p>
-    <p><span class="ts">Messenger 07/08 20:04</span>Giờ break ra là follow theo <span class="dg">chú thích ảnh TPO gộp 3 tuần</span></p>
-    <p><span class="ts">0:16:29</span>Khi nó đi range, khi có dấu hiệu range → phải chờ đánh theo range; còn khi nó trend thì mới đánh theo trend.</p>
-    <p><span class="ts">0:39:16</span>Mấy cái này không có trong [range] nữa thì bỏ — vì break range rồi, chứ không phải như lúc nãy bắt buy lên.</p>
-    <p><span class="ts">0:40:00</span>Tạo ra được những stacked imbalance đối ngược lại. Thứ hai là nó tạo ra range và break range. Range ở dưới: nếu phá range này thì nó sẽ về range dưới này.</p>
-  </blockquote>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>Trong range, lệnh limit treo ở hai cạnh chặn giá, nên vào ở cạnh và nhắm cạnh đối diện. Khi giá đã phá và giữ được, thị trường đi tìm vùng giá mới; đánh ngược lúc đó là “cản tàu”. Giữa lòng range không có mốc để đặt SL và không đủ khoảng tới cạnh để có 2R.</p>
-  <h4>Nhìn trên chart</h4>
+  <p class="cond">Trong range → chỉ đánh 2 cạnh. Đã phá, giữ 1–2 nến → chỉ follow hướng phá.</p>
+  <p>Trong range, limit đứng chờ ở hai cạnh chặn giá, nên chỉ vào ở cạnh và nhắm cạnh đối diện. <b>Giữa lòng range không có chỗ đặt SL hợp lý và không đủ khoảng để có 2R</b>, nên không vào, dù tín hiệu đẹp.</p>
+  <p>Khi đã <b>phá thật</b> (1–2 nến sau vẫn đóng ngoài cạnh), thị trường đang đi tìm vùng giá mới: chỉ đánh theo hướng phá, không bắt đảo chiều. Cạnh vừa bị phá trở thành mốc để giá hồi về thử lại.</p>
   <figure>
-    <a href="img/0-46-05.jpg"><img src="img/0-46-05.jpg" alt="Sierra Chart GCZ26 M1 ngày 06/11, range 4108,5 đến 4114" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:46:05 — GCZ26 M1, 06/11, 03:16–04:12.</b> Range hồng ≈ 4108,5–4114 (03:28–03:59); bên trái còn một range cũ ≈ 4108–4112. Trong hộp, giá chạy qua lại giữa hai cạnh; lúc ≈ 04:00 giá phá xuống dưới ≈ 4108 và về ≈ 4105.</figcaption>
+    <a href="img/0-46-05.jpg"><img src="img/0-46-05.jpg" alt="Range 4108,5 đến 4114, GCZ26 M1 ngày 06/11" width="1128" height="559" loading="lazy"></a>
+    <figcaption><b>Vàng M1, 06/11.</b> Range ≈ 4108,5–4114. Giá chạy qua lại giữa hai cạnh suốt nửa giờ; lúc ≈ 04:00 giá đóng dưới cạnh dưới và đi tiếp về ≈ 4105.</figcaption>
   </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Thấy delta hoặc bóng đẹp ngay giữa lòng range rồi follow.</li>
-    <li>Range vừa bị phá và giữ được mà vẫn bắt đảo chiều về lại trong range.</li></ul></div>
 </section>
 
 <section class="item" id="b1-cautruc">
   <h3><span class="k">1.3</span>Cấu trúc gần nhất còn giữ</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span>Cấu trúc gần nhất còn giữ đúng hướng mình đánh (chưa có nến đóng qua đỉnh/đáy cấu trúc ngược lại).</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">0:18:39</span>Với điều kiện lúc đấy cấu trúc vẫn phải giữ được. Ví dụ cấu trúc buy thì cấu trúc tăng vẫn phải giữ. Nhịp test về mà gãy cấu trúc rồi thì thôi.</p>
-    <p><span class="ts">0:21:59</span>Vì ở đây nó trap đúng vùng zone này. Với lại cấu trúc đang còn giảm — ít nhất phải phá qua cái đỉnh này thì cấu trúc mới gãy.</p>
-    <p><span class="ts">0:40:46</span>Cái nến đen này là cái gãy cấu trúc. Cấu trúc [buy] lên trap, còn nổ bóng xanh trên đỉnh. Tăng lên như này, đóng xuống cây đen này, không tăng lên tiếp → gãy.</p>
-    <p><span class="ts">0:42:23</span>HV: Tưởng phải vài cây nến cho nó mạnh hơn? — Chỉ cần một cái nến thôi.</p>
-    <p><span class="ts">0:42:34</span>Cấu trúc khả năng là ở đây, ở đây — đây là cái đỉnh/đáy cấu trúc buy với sell. Chỉ cần nhỏ thôi, gần nhất thôi.</p>
-    <p><span class="ts">0:43:09</span>Một cái là gãy cấu trúc giảm, một cái là hình thành cấu trúc tăng: tạo 2 đỉnh đáy cao dần cũng là cấu trúc tăng.</p>
-    <p><span class="ts">0:43:53</span>Nó phá thì phải giữ được ở [vùng] dưới thì mới tính. Phá mà rút râu luôn thì khả năng là fail.</p>
-  </blockquote>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>Đỉnh/đáy cấu trúc gần nhất là nơi phe đang thắng phải giữ. Một nến đóng qua mốc đó nghĩa là phe kia đã giành được giá, nên lệnh theo hướng cũ mất cơ sở. Nến phá mà rút râu về lại thì chưa tính là gãy.</p>
-  <h4>Nhìn trên chart</h4>
+  <p class="cond">Cấu trúc gần nhất chưa gãy ngược hướng đánh.</p>
+  <p>Xu hướng tăng còn giữ khi chưa có nến đóng dưới đáy gần nhất; xu hướng giảm thì ngược lại. <b>Chỉ cần một nến đóng qua là gãy</b>, không cần chờ nhiều nến. Nến chọc qua mà rút râu về lại thì chưa tính.</p>
+  <p>Cấu trúc gãy ngược hướng mình định đánh thì bỏ lệnh. Một nhịp hồi nhỏ ngược chiều chỉ gãy cấu trúc nhỏ; cấu trúc lớn chỉ đổi khi giá đóng qua đỉnh/đáy của cả sóng lớn.</p>
+  <p><b>Ngoại lệ fail break:</b> nến đóng ra ngoài rồi 1–2 nến sau quay lại vào trong thì không tính là gãy. Đó là cú phá thất bại, chính là chỗ tìm lệnh ngược lại (ví dụ 1 và 3).</p>
   <figure>
-    <a href="img/0-41-55.jpg"><img src="img/0-41-55.jpg" alt="Sierra Chart GCZ26 M1 ngày 06/11, nến đen gãy cấu trúc lúc 03:00" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:41:55 — GCZ26 M1, 06/11, 02:21–03:19.</b> Cùng range ≈ 4123–4127,5 như ảnh 0:40:40, phóng gần hơn. Nến đen ≈ 03:00 đóng dưới cạnh dưới ≈ 4123: chỉ một nến là đủ gãy (0:42:23). Các nến sau (delta −9, −71) không quay lại được trong hộp.</figcaption>
+    <a href="img/0-41-55.jpg"><img src="img/0-41-55.jpg" alt="Nến đen gãy cấu trúc, GCZ26 M1 ngày 06/11" width="1128" height="559" loading="lazy"></a>
+    <figcaption><b>Vàng M1, 06/11.</b> Đáy gần nhất ở đây trùng cạnh dưới range ≈ 4123. Nến đen ≈ 03:00 đóng dưới mức đó: một nến là đủ gãy cấu trúc tăng. Các nến sau không quay lại được trong hộp.</figcaption>
   </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Chờ nhiều nến mới công nhận gãy, vào lệnh khi cấu trúc thật ra đã gãy.</li>
-    <li>Nhầm cấu trúc nhỏ trong cấu trúc lớn (0:49:20: “một sóng tăng nhỏ trong một sóng giảm to”).</li></ul></div>
 </section>
 
 <!-- ============================ ② ============================ -->
-<h2 id="g2">② Mốc — không đuổi giá, chờ giá về mốc gần</h2>
+<h2 id="g2">② Mốc — không đuổi giá</h2>
+<p><b>Mốc là chỗ mình chờ giá đi tới.</b> Chưa tới mốc thì chưa xét gì cả.</p>
 
 <section class="item" id="b2-moc">
-  <h3><span class="k">2.1</span>Giá đang ở mốc gần</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span>Giá đang ở <b>mốc gần</b>: cạnh range (hoặc cạnh vừa phá, retest), stacked imbalance <b>mới tạo</b> cùng hướng, đỉnh/đáy cấu trúc vừa gãy. Mốc xa / stacked đã bị chạm nhiều lần → bỏ.</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">0:06:54</span>Dùng gần thôi, đừng dùng xa.</p>
-    <p><span class="ts">0:17:58</span>Ví dụ khi nó tạo stacked imbalance được, thì dùng ở đấy để follow, dùng làm mốc tham chiếu — để giá về đấy xem phản ứng trước rồi mới buy lên.</p>
-    <p><span class="ts">0:18:21</span>Ví dụ buy, có stacked [imbalance] gần này, nó lên, xong quay lại test stacked gần → chơi.</p>
-    <p><span class="ts">0:19:38</span>Cái stacked imbalance này xấu hơn cái ở trên vì: nhìn vị trí stacked imbalance trong cây nến — nó nằm gần đỉnh nến, gần râu; còn cái này nằm giữa nến. Với lại cấu trúc bị gãy.</p>
-    <p><span class="ts">0:20:12</span>Ở đây nó tạo ra 1 stacked imbalance 3 lần sell, mà bên trên nó chạm một mớ ở đây, tạo stacked 3 lần → cái stacked này vứt luôn, không dùng nữa. Cấu trúc thì gãy.</p>
-    <p><span class="ts">1:05:32</span>[Stacked imbalance] xa tít thì không dùng, mấy cái ở gần thì dùng được.</p>
-  </blockquote>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>Mốc là chỗ phe vừa đẩy đã để lại dấu vết (vùng chênh lệch lệnh, cạnh range). Mốc càng mới, càng gần thì lệnh của phe đó càng có khả năng còn nằm ở đấy để bảo vệ. Mốc đã bị chạm nhiều lần thì lệnh ở đó đã khớp hết, không còn giá trị.</p>
-  <h4>Nhìn trên chart</h4>
+  <h3><span class="k">2.1</span>Giá ở mốc gần</h3>
+  <p class="cond">Giá ở mốc gần: cạnh range / cạnh vừa phá / stacked mới / đỉnh-đáy vừa gãy. Mốc xa → bỏ.</p>
+  <p>Không đuổi theo nến đang chạy. <b>Chờ giá hồi về mốc</b> rồi mới xét vào lệnh. Mốc càng mới, càng gần thì lệnh của phe vừa đẩy càng có khả năng còn nằm ở đó để giữ giá.</p>
+  <p>Mốc ở xa, hoặc đã bị giá chạm nhiều lần, thì bỏ: lệnh ở đó đã khớp hết.</p>
   <figure>
-    <a href="img/0-18-00.jpg"><img src="img/0-18-00.jpg" alt="Optimus Flow GCZ26 M1 ngày 06/11 lúc người học hỏi về mốc tham chiếu" width="1128" height="540" loading="lazy"></a>
-    <figcaption><b>0:18:00 — Optimus Flow của người học, GCZ26 M1, 06/11.</b> Đây là chart người học đang chia sẻ khi hỏi “thêm một điều kiện nữa để ủng hộ cho lệnh” (0:17:46). Các hộp xanh lá là những range nhỏ người học tự tô (≈ 4077–4080, ≈ 4072,5–4076, ≈ 4071–4073); đường ngang ≈ 4079,5 cắt qua. Ảnh không có số để đọc stacked imbalance, nên chỉ dùng để thấy cách “range nối range” <span class="dg">diễn giải</span>.</figcaption>
+    <a href="img/0-19-30.jpg"><img src="img/0-19-30.jpg" alt="Vùng stacked imbalance sell làm mốc, GCZ26 M1 ngày 06/11" width="1128" height="559" loading="lazy"></a>
+    <figcaption><b>Vàng M1, 06/11.</b> Vùng đỏ ≈ 4080 là stacked imbalance sell vừa tạo trong nến đen delta −40 (≈ 19:22). Các nến sau hồi lên sát vùng này nhưng không vượt qua, rồi giá rơi về ≈ 4073: mốc gần giữ được.</figcaption>
   </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Dùng stacked imbalance từ đầu phiên, ở rất xa giá hiện tại.</li>
-    <li>Đuổi theo nến đang chạy thay vì chờ giá hồi về mốc.</li></ul></div>
 </section>
 
 <section class="item" id="b2-test">
   <h3><span class="k">2.2</span>Nhịp test không quá sâu</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span>Nhịp test <b>không quá sâu</b>: không xuyên qua vùng stacked, không đóng ngược lại qua cạnh vừa phá. Đánh fail break thì giá phải <b>đã đóng lại trong lòng range</b>.</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">Tổng hợp 02/11</span>giá không được phép test quá sâu</p>
-    <p><span class="ts">0:06:29</span>Ví dụ chỗ này tạo ra nhiều stacked imbalance sell, mà lên nó không giữ được giá, đâm thủng ngược lên → thì đảo chiều thôi.</p>
-    <p><span class="ts">0:08:05</span>Đoạn này nó tạo ra range, xong break xuống. Nó không có dấu hiệu gì, đâm ngược lại vào → vẫn ở trong range.</p>
-    <p><span class="ts">0:08:16</span>Đoạn này nó lên, break ngược lên trên. Chưa vội buy luôn, vì chỗ này chưa có dấu hiệu gì.</p>
-    <p><span class="ts">0:08:29</span>Trap đỉnh ở đây, xong đẩy ngược vào lòng range, mà đẩy ngược vào range lại tạo ra stacked imbalance sell → lúc đó tìm tín hiệu sell xuống. Khi nó fail break thì tìm tín hiệu sell.</p>
-    <p><span class="ts">1:00:02</span>HV: Nó có tín hiệu mà chưa vào lòng range đúng không? Điều kiện là phải vào lòng range à? — Ừ, phải vào lòng range nữa.</p>
-  </blockquote>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>Nếu nhịp hồi xuyên qua vùng stacked hoặc đóng ngược qua cạnh vừa phá, phe vừa đẩy đã không bảo vệ mốc của mình, nên mốc hỏng. Với fail break thì ngược lại: chỉ khi nến đã đóng trở lại trong range mới chứng tỏ cú phá thất bại.</p>
-  <h4>Nhìn trên chart</h4>
+  <p class="cond">Test không quá sâu: chưa xuyên stacked, chưa đóng ngược qua cạnh. Fail break: đã đóng lại trong range (hoặc xác nhận lần 2).</p>
+  <p>Khi giá hồi về mốc, phe vừa đẩy phải giữ được mốc. <b>Nhịp hồi xuyên qua vùng stacked, hoặc có nến đóng ngược lại qua cạnh vừa phá, thì mốc đã hỏng</b>: bỏ ý định follow.</p>
+  <p>Đánh fail break thì ngược lại: phải chờ nến <b>đóng trở lại trong range</b> mới chứng tỏ cú phá thất bại. Ngoại lệ “xác nhận lần 2”: giá chọc ra ngoài thêm một lần nữa và lần này có thêm dấu hiệu thì vào được dù chưa vào lòng range, xem <a class="xref" href="#vi-du-3">ví dụ 3</a>.</p>
   <figure>
-    <a href="img/0-07-55.jpg"><img src="img/0-07-55.jpg" alt="Sierra Chart NQZ26 M1 ngày 06/11 lúc giảng về range và fail break" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:07:55 — NQZ26 (Nasdaq) M1, 06/11, 14:40–15:46.</b> Số dưới mỗi nến là delta của nến. Dải xanh ngọc và dải đỏ là vùng stacked imbalance (kéo dài sang phải tới khi bị chạm). Nến ≈ 15:12 đâm xuống ≈ 26940 rồi rút lên; ngay sau đó hình thành dải stacked imbalance ≈ 26968 kéo dài sang phải, và các nhịp hồi sau đó (≈ 15:28–15:30) dừng phía trên dải này.</figcaption>
+    <a href="img/0-07-55.jpg"><img src="img/0-07-55.jpg" alt="Nhịp hồi dừng trên vùng stacked imbalance, NQ M1 ngày 06/11" width="1128" height="559" loading="lazy"></a>
+    <figcaption><b>Nasdaq (NQ) M1, 06/11.</b> Sau nến đâm xuống ≈ 15:12, dải xanh ≈ 26968 là stacked imbalance buy vừa tạo. Các nhịp hồi sau đó dừng phía trên dải này: test không quá sâu.</figcaption>
   </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Vào fail break khi nến vẫn còn đóng ngoài range (xem ví dụ 3).</li>
-    <li>Giữ ý định follow dù nhịp hồi đã xuyên qua vùng stacked dùng làm mốc.</li></ul></div>
 </section>
 
 <!-- ============================ ③ ============================ -->
-<h2 id="g3">③ Xác nhận tại mốc — cần ≥ 2 dấu hiệu cùng phe</h2>
+<h2 id="g3">③ Xác nhận tại mốc — cần ≥ 2</h2>
+<p><b>Dấu hiệu xác nhận là cái xuất hiện ngay lúc giá đang ở mốc.</b> Cần ít nhất 2 trong 5 dấu hiệu dưới, cùng phe. Cách đếm:</p>
+<ul class="the">
+  <li>Stacked imbalance <b>cũ</b> dùng làm mốc thì <b>không</b> tính là dấu hiệu. Chỉ stacked <b>mới hình thành ngay trong nhịp test</b> mới tính.</li>
+  <li>Trap và kiệt sức có thể nằm trên cùng một nến nhưng tính là <b>hai</b>: trap là nhìn giá (râu quét rồi quay lại), kiệt sức là nhìn số Ask/Bid ở râu.</li>
+</ul>
 
 <section class="item" id="b3-delta">
-  <h3><span class="k">3.1</span>Delta đồng thuận và có lực</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span><b>Delta đồng thuận và có lực</b>: cùng chiều giá, to và thẳng; delta nhỏ lình xình hoặc ngược giá → không vào.</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">0:31:20</span>Đây là cái đáy, đáy quan trọng. Khi retest xuống chỗ này, delta đẩy đà nó phá đáy này, nhưng giá không phá đáy — chỉ là nó bị hấp thụ.</p>
-    <p><span class="ts">0:31:42</span>Delta phải đi theo giá thì mới đồng thuận. Còn nó đi ngược giá là bị hấp thụ, bị kiệt sức.</p>
-    <p><span class="ts">0:34:08</span>Cái này để xem delta to hay nhỏ. … Buy mà delta nhỏ, lình xình thì để ý vào.</p>
-    <p><span class="ts">0:35:42</span>Muốn buy hay sell mà đánh đảo chiều: ví dụ đoạn này đánh đảo chiều vòng lên mà thấy delta nhỏ thì không chơi được.</p>
-    <p><span class="ts">0:35:55</span>Delta dương nhưng nhỏ thì không đánh được. Muốn đảo chiều thì delta phải dương to lên, thẳng lên.</p>
-    <p><span class="ts">0:45:48</span>Xong tìm xem có tín hiệu buy vào không thì buy lên. Cứ nhìn xem delta có đi lên không, hay buy có khỏe không.</p>
-  </blockquote>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>Delta là lượng lệnh market buy trừ lệnh market sell. Giá đi cùng chiều delta nghĩa là lệnh chủ động đang thật sự đẩy được giá. Delta lớn mà giá không đi là lệnh chủ động bị limit phía kia hấp thụ; delta nhỏ là phe đẩy chưa thật sự vào.</p>
-  <h4>Nhìn trên chart</h4>
+  <h3><span class="k">3.1</span>Delta ủng hộ hướng đánh</h3>
+  <p class="cond">Delta ủng hộ hướng đánh: to, thẳng, cùng chiều lệnh, hoặc giá và delta vừa đi ngược nhau. Nhỏ, lình xình → không.</p>
+  <p>Delta tính là một dấu hiệu khi có <b>một trong hai dạng</b>:</p>
+  <ul class="the">
+    <li><b>Đồng thuận:</b> delta to và thẳng, cùng chiều lệnh mình định vào (buy: delta dương; sell: delta âm), nhiều nến liền cùng dấu. Lệnh market đang thật sự đẩy được giá.</li>
+    <li><b>Ngược giá:</b> nhịp vừa rồi giá đi một hướng mà delta đi hướng kia, ví dụ giá hồi lên mà delta vẫn âm. Nhịp đó yếu, lực bị hấp thụ, nên ủng hộ đánh ngược lại nhịp đó.</li>
+  </ul>
+  <p>Delta nhỏ, lúc âm lúc dương (lình xình) thì không tính. Và thấy delta âm lớn chưa phải là sell ngay: phải xem giá có xuống theo không.</p>
   <figure>
-    <a href="img/0-31-20.jpg"><img src="img/0-31-20.jpg" alt="Sierra Chart GCZ26 M1 ngày 06/11, delta phá đáy nhưng giá không phá" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:31:20 — GCZ26 M1, 06/11, 10:47–11:55.</b> Đáy quan trọng ≈ 4047 lúc ≈ 11:10 (có bóng lớn, delta −45). Lần retest ≈ 11:29 (nến delta −47), khung delta cộng dồn ở giữa xuống ≈ −120, sâu ngang hoặc hơn lần trước, trong khi giá chỉ về ≈ 4049, không phá đáy. Sau đó giá lên ≈ 4056: delta đi ngược giá = bị hấp thụ.</figcaption>
+    <a href="img/0-35-50.jpg"><img src="img/0-35-50.jpg" alt="Delta co lại ở đáy rồi nến tăng delta 66, GCZ26 M1 ngày 06/11" width="1128" height="559" loading="lazy"></a>
+    <figcaption><b>Vàng M1, 06/11.</b> Giá rơi với delta −104, −113; tới đáy delta co lại còn −22 rồi −4 (sell yếu dần). Nến trắng ≈ 06:20 có delta 66, thân dài thẳng lên ≈ 4093: delta to, cùng chiều buy.</figcaption>
   </figure>
-  <figure>
-    <a href="img/0-35-50.jpg"><img src="img/0-35-50.jpg" alt="Sierra Chart GCZ26 M1 ngày 06/11, delta co lại ở đáy rồi nến tăng delta 66" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:35:50 — GCZ26 M1, 06/11, 04:50–06:46.</b> Giá rơi với delta −104 và −113; ở đáy ≈ 4081 delta co lại còn −22 rồi −4 (bên sell yếu dần). Nến tăng đảo chiều ≈ 06:23 có delta 66, thân dài thẳng lên ≈ 4093: đúng kiểu “dương to lên, thẳng lên”.</figcaption>
-  </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Vào đảo chiều khi delta cùng chiều nhưng chỉ nhỏ, lình xình.</li>
-    <li>Thấy delta âm lớn là sell ngay mà không xem giá có đi theo không.</li></ul></div>
 </section>
 
 <section class="item" id="b3-bong">
-  <h3><span class="k">3.2</span>Bóng đúng phe nổ ở mốc</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span><b>Bóng đúng phe nổ ở mốc</b>: bóng xanh ở đáy nhịp hồi (buy) / bóng đỏ ở đỉnh nhịp hồi (sell), nằm ở phần nến phía mình đẩy.</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">0:24:28</span>Đây nhiều SL, mà thấy nổ bóng xanh → chắc chắn ở đây không phải người mua thật rồi.</p>
-    <p><span class="ts">0:26:48</span>Cùng 1 lệnh buy chủ động nhưng có 3 hành vi: 1. Ép người bán phải cắt lỗ (giá hồi lên chỗ này ép người sell cắt lỗ). 2. Muốn mua thật. 3. Lệnh thoát lệnh sell (chốt lời sell).</p>
-    <p><span class="ts">0:27:22</span>Phải đặt bối cảnh vào để nhìn, chứ không phải cứ thấy bóng xanh là bảo mua. Nó chốt lời? Nó cắt lỗ?</p>
-    <p><span class="ts">0:46:03</span>Như đoạn này stop hunt: có bóng đỏ → chắc chắn stop. Nếu buy thì đặt SL dưới cái đáy này. Nhưng chỗ này chưa buy được.</p>
-    <p><span class="ts">0:46:13</span>Delta buy với bóng xanh phải vào [thì mới có tín hiệu]. Đoạn này trap xong, buy có vào đâu — thấy không, nó nhỏ mà. Cây 10 kia cũng không vào được: nhỏ mà, không có bóng xanh.</p>
-  </blockquote>
-  <p class="note">Ý “nằm ở phần nến phía mình đẩy” lấy từ bản chốt tháng 7/2026 (<span class="mono">CORVEN_SPEC_V1.md</span> §4 KB-C): bóng lệnh lớn nằm ở 30 % dưới của nến, delta xanh, thân vừa đủ dài, đóng đẹp (sell thì đối xứng). Đây là ghi chép lại, không phải câu nguyên văn trong buổi Meet.</p>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>Bóng là lệnh market lớn. Cùng một bóng xanh có thể là buy thật, buy để cắt lỗ sell, hoặc buy để chốt lời sell. Ở đáy nhịp hồi sau khi đã phá lên, bóng xanh nhiều khả năng là buy thật; ở ngay trên đỉnh range, bóng xanh thường là buy-stop bị quét. Vì vậy bóng chỉ có nghĩa khi đặt vào vị trí.</p>
-  <h4>Nhìn trên chart</h4>
+  <h3><span class="k">3.2</span>Bóng đúng phe tại mốc</h3>
+  <p class="cond">Bóng đúng phe nổ tại mốc (xanh ở đáy hồi → buy; đỏ ở đỉnh hồi → sell).</p>
+  <p>Bóng xanh không phải lúc nào cũng là người muốn buy. Người đang giữ lệnh sell muốn thoát (cắt lỗ hoặc chốt lời) cũng phải buy lại, nên lệnh thoát của họ cũng hiện thành bóng xanh. <b>Vì vậy bóng chỉ có nghĩa khi xét vị trí.</b></p>
+  <p>Bóng xanh ở đáy nhịp hồi sau khi đã phá lên: nhiều khả năng là buy thật. Bóng xanh ngay trên cạnh trên range: thường là SL của phe sell bị quét, chưa phải xác nhận phá. Bóng tốt nằm ở phần nến phía mình đẩy (buy: nửa dưới nến) và nến đóng đẹp.</p>
   <figure>
-    <a href="img/0-28-00.jpg"><img src="img/0-28-00.jpg" alt="Sierra Chart GCZ26 M1 ngày 06/11, nến đen to quét qua đường xu hướng rồi giá lên lại" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:28:00 — GCZ26 M1, 06/11, 15:12–16:20.</b> Nến đen to ≈ 15:51 (delta −96, cụm bóng) quét xuống dưới đường xu hướng tăng, rồi nến sau (delta 70) đánh ngược lên, giá lên ≈ 4085. Đây là đoạn CORVEN nói những lệnh sell này “không phải muốn sell, mà là lệnh của bên buy chỗ này bị SL” (0:27:59).</figcaption>
+    <a href="img/0-28-00.jpg"><img src="img/0-28-00.jpg" alt="Cụm bóng đỏ quét xuống rồi giá lên lại, GCZ26 M1 ngày 06/11" width="1128" height="559" loading="lazy"></a>
+    <figcaption><b>Vàng M1, 06/11.</b> Nến đen to ≈ 15:51 (delta −96, cụm bóng đỏ) quét xuống dưới đường xu hướng, rồi nến sau (delta 70) kéo ngược lên. Cụm bóng đỏ này không phải sell thật mà là phe buy bị quét SL.</figcaption>
   </figure>
-  <figure>
-    <a href="img/0-46-05.jpg"><img src="img/0-46-05.jpg" alt="Sierra Chart GCZ26 M1 ngày 06/11, bóng trong range" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:46:05 — GCZ26 M1, 06/11.</b> Trong range ≈ 4108,5–4114 có bóng lớn ≈ 03:42 (delta −81) giữa lòng hộp và nhiều nến delta nhỏ (10, 11, 3…) ở cạnh dưới. Đây là đoạn CORVEN nói “buy có vào đâu… nhỏ mà, không có bóng xanh” (0:46:13).</figcaption>
-  </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Thấy bóng xanh là buy, không hỏi bóng đó là buy thật, cắt lỗ hay chốt lời.</li>
-    <li>Coi bóng nổ ngay trên cạnh range là xác nhận phá, trong khi đó có thể là quét SL.</li></ul></div>
 </section>
 
 <section class="item" id="b3-kietsuc">
   <h3><span class="k">3.3</span>Phe ngược kiệt sức</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span><b>Phe ngược kiệt sức</b> ở râu nến tại mốc (đáy: Bid ≈ 0 → buy; đỉnh: Ask ≈ 0 → sell) và chưa bị râu quét qua.</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">0:10:25</span>Kiệt sức: ở đỉnh thì xem bên Ask, ở đáy thì xem bên Bid.</p>
-    <p><span class="ts">0:10:30</span>Thấy nó nhỏ là được — nhỏ, hoặc giảm dần về 0 [?] là được.</p>
-    <p><span class="ts">0:33:14</span>[Kiệt sức] lấy ở râu nến thôi, đừng lấy ở thân nến. Số kiệt sức là ở râu nến.</p>
-    <p><span class="ts">0:33:55</span>Màu vàng là kiệt sức buy, màu xanh là kiệt sức sell. (chấm màu trên chart Sierra của người giảng)</p>
-    <p><span class="ts">0:54:05</span>Kiệt sức đáy: điều kiện là giá phải quét qua được cái đáy này thì kiệt sức mới bị vô hiệu, thì mới chơi [sell] được.</p>
-    <p><span class="ts">0:54:13</span>HV: Quét qua, hay phải đóng nến ở dưới? — Quét qua là được rồi, không cần [đóng nến].</p>
-    <p><span class="ts">0:54:43</span>Đỉnh thì kiệt sức buy — đỉnh không có người mua. Đáy thì kiệt sức sell — đáy không có người bán. Chỉ cần quét qua là có người mua lại / có người bán lại rồi — không còn kiệt sức nữa.</p>
-  </blockquote>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>Ở đỉnh, nếu cột Ask gần 0 thì không còn ai buy chủ động ở giá cao nhất, phe buy hết sức đẩy. Nếu giá quay lại quét qua đúng mức đó thì đã có người giao dịch lại, nên dấu hiệu mất hiệu lực. Ba cách dùng râu nến khác nhau, đừng lẫn: phá cấu trúc / phá range cần <b>đóng nến</b>; vô hiệu kiệt sức chỉ cần <b>râu quét qua</b>; đo kiệt sức thì <b>lấy số ở râu</b>.</p>
-  <h4>Nhìn trên chart</h4>
+  <p class="cond">Phe ngược kiệt sức ở râu (đáy Bid ≈ 0 → buy; đỉnh Ask ≈ 0 → sell), chưa bị quét qua.</p>
+  <p><b>Đỉnh xem Ask, đáy xem Bid, lấy số ở râu.</b> Trên footprint, râu là các mức giá nằm ngoài thân nến. Số ở mức cao nhất (hoặc thấp nhất) nhỏ hẳn so với các mức khác, hoặc giảm dần về 0 khi đi ra đầu râu, là kiệt sức. Đỉnh kiệt sức buy ủng hộ sell; đáy kiệt sức sell ủng hộ buy.</p>
+  <p>Kiệt sức <b>hết hiệu lực khi có nến sau quét râu qua đúng mức đó</b>, không cần đóng nến. Trên Order Flow Bubbles: tam giác vàng ở đỉnh = kiệt sức buy, tam giác xanh ở đáy = kiệt sức sell. Ảnh buổi học chỉ có tam giác, không hiện số; muốn thấy số Ask/Bid thì mở footprint trên Optimus Flow.</p>
   <figure>
-    <a href="img/0-10-25.jpg"><img src="img/0-10-25.jpg" alt="Sierra Chart NQZ26 M1 ngày 06/11 với tam giác kiệt sức ở đỉnh và đáy" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:10:25 — NQZ26 (Nasdaq) M1, 06/11, 20:28–21:36.</b> Tam giác vàng ở đỉnh nến = kiệt sức buy, tam giác xanh ở đáy nến = kiệt sức sell (quy ước 0:33:55). Ví dụ đáy nến ≈ 20:29 (delta −178) có tam giác xanh, sau đó giá hồi lên.</figcaption>
+    <a href="img/0-53-30.jpg"><img src="img/0-53-30.jpg" alt="Kiệt sức đáy bị râu quét qua, GCZ26 M1 ngày 05/11" width="1128" height="559" loading="lazy"></a>
+    <figcaption><b>Vàng M1, 05/11.</b> Nến ≈ 22:52 phá xuống nhưng đáy có tam giác xanh nhỏ (kiệt sức sell) ≈ 4104,5: chưa nên sell. Nến kế quét râu qua đáy đó rồi rơi tới ≈ 4098: kiệt sức hết hiệu lực, sell tiếp được.</figcaption>
   </figure>
-  <figure>
-    <a href="img/0-53-30.jpg"><img src="img/0-53-30.jpg" alt="Sierra Chart GCZ26 M1 ngày 05/11, kiệt sức đáy bị quét qua" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:53:30 — GCZ26 M1, 05/11, 22:15–23:13.</b> Nến ≈ 22:51 phá xuống dưới cạnh ≈ 4109,5 nhưng đáy nến có tam giác xanh (kiệt sức sell) ≈ 4104,5. Nến kế tiếp quét râu qua đáy đó và rơi tới ≈ 4098: kiệt sức đã bị vô hiệu, sell mới tiếp tục được (0:53:35).</figcaption>
-  </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Lấy số kiệt sức ở thân nến thay vì ở râu.</li>
-    <li>Vẫn tin kiệt sức sau khi giá đã quét râu qua mức đó.</li></ul></div>
+  <p class="memo"><b>Râu nến dùng 3 kiểu, đừng lẫn:</b> phá range / gãy cấu trúc cần <b>nến đóng</b>; làm mất kiệt sức chỉ cần <b>râu quét qua</b>; đo kiệt sức thì <b>lấy số ở râu</b>.</p>
 </section>
 
 <section class="item" id="b3-stacked">
   <h3><span class="k">3.4</span>Stacked imbalance mới cùng hướng</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span><b>Stacked imbalance mới</b> cùng hướng vừa hình thành ở mốc (nằm giữa thân nến, giá đi tiếp sau đó).</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">0:03:14</span>Đây là stacked imbalance sell, đây là stacked imbalance buy — nó là một vùng chứ không phải một điểm.</p>
-    <p><span class="ts">0:03:35</span>Còn nếu nó ở giữa thân nến thì nó mới khỏe.</p>
-    <p><span class="ts">0:03:40</span>Hoặc nó ở đỉnh nến cũng được, nhưng sau đấy giá phải đi lên tiếp.</p>
-    <p><span class="ts">0:03:45</span>Chứ nó ở đỉnh nến xong bị rút râu xuống thì cũng không đẹp lắm.</p>
-    <p><span class="ts">0:03:56</span>Đây nhé, nó so chéo Ask với Bid, người ta hay để gấp 3, [người giảng] đang để 250%.</p>
-    <p><span class="ts">0:05:36</span>Với lại cái trap đấy — ví dụ nó tạo ra xong nó phá cấu trúc — thì nó sẽ mạnh.</p>
-  </blockquote>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>Stacked imbalance là nhiều mức giá liên tiếp mà một phe market áp đảo phe kia (so chéo Ask với Bid, 250–300 %). Nằm giữa thân nến nghĩa là sau khi áp đảo, giá còn đi tiếp, tức là lực đẩy thật. Nằm sát râu rồi giá rút về nghĩa là lực đó đã bị chặn lại.</p>
-  <h4>Nhìn trên chart</h4>
-  <figure>
-    <a href="img/0-19-30.jpg"><img src="img/0-19-30.jpg" alt="Sierra Chart GCZ26 M1 ngày 06/11, stacked imbalance sell gần đỉnh" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:19:30 — GCZ26 M1, 06/11, 18:51–19:59.</b> Đỉnh ≈ 4082 lúc ≈ 19:20. Vùng đỏ (stacked imbalance sell) ≈ 4080 hình thành trong nến đen delta −40; giá đi tiếp xuống, về ≈ 4073 cuối khung. Dải xanh ngọc ≈ 4072,5 kéo từ ≈ 19:13 là stacked imbalance buy cũ ở dưới.</figcaption>
-  </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Dùng stacked nằm sát râu, giá đã rút ngược lại ngay.</li>
-    <li>Dùng stacked một mình, không kèm bóng, trap hay range (0:07:01, 0:07:47).</li></ul></div>
+  <p class="cond">Stacked imbalance mới cùng hướng, nằm giữa thân nến.</p>
+  <p>Mỗi mức giá trên footprint có hai cột Bid và Ask. Imbalance buy là khi Ask ở một mức gấp ít nhất 2,5 lần Bid ở mức ngay dưới nó (sell thì ngược lại). <b>Từ 3 mức liên tiếp cùng phe áp đảo trở lên là stacked imbalance.</b> Indicator tự tính và vẽ thành dải màu, không cần tự đếm.</p>
+  <p>Tốt khi nằm giữa thân nến và giá đi tiếp sau đó: lực đẩy là thật. Nằm sát râu rồi giá rút ngược lại thì lực đã bị chặn: bỏ. Để tính là dấu hiệu xác nhận, nó phải <b>mới hình thành ngay trong nhịp test ở mốc</b>. Ảnh: vùng đỏ ở mục <a class="xref" href="#b2-moc">2.1</a>.</p>
 </section>
 
 <section class="item" id="b3-trap">
   <h3><span class="k">3.5</span>Trap / stop hunt phe ngược</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span><b>Trap / stop hunt phe ngược</b> vừa xảy ra: râu quét mốc quan trọng + nổ bóng, rồi đẩy ngược về.</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">0:09:42</span>… fail break đâm ngược vào, bóng xanh nổ, trap, sell, stop hunt, đẩy ngược vào → buy được.</p>
-    <p><span class="ts">0:23:45</span>HV: Stop hunt là gì? — [Stop hunt] là quét SL: ví dụ nó quét qua cái đỉnh này mà nổ bóng thì là stop hunt.</p>
-    <p><span class="ts">0:23:57</span>Cái mốc đấy phải là một cái mốc quan trọng. Nó có thể xuất hiện ở nhiều nơi, nhưng phải xác định được đâu là điểm quan trọng — thì biết là chỗ đấy dễ có người đặt SL.</p>
-    <p><span class="ts">0:24:11</span>Ví dụ trên này đi range, thì thường người ta đặt SL trên đỉnh này một tí, hoặc nói chung là quanh cạnh range bên trên một tí.</p>
-    <p><span class="ts">0:24:34</span>SL ở đây là lệnh buy-stop, mà lệnh buy-stop cũng là nổ bóng xanh.</p>
-  </blockquote>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>SL của phe sell nằm ngay trên cạnh range; khi giá chọc lên, các SL này khớp thành lệnh buy market, nổ bóng xanh. Nếu sau đó giá quay ngay vào trong, lượng buy đó không phải buy thật mà là phe sell bị ép thoát; phe đặt bẫy đã lấy được thanh khoản và đẩy giá đi hướng ngược lại.</p>
-  <h4>Nhìn trên chart</h4>
+  <p class="cond">Trap / stop hunt phe ngược vừa xảy ra rồi đẩy ngược.</p>
+  <p>Người sell trong range hay đặt SL ngay trên cạnh trên. Khi giá chạm, các SL này tự khớp thành lệnh buy market, nổ bóng xanh. <b>Nếu sau đó giá quay ngay vào trong, đó là bẫy</b>: phe kia đã gom được lệnh và đẩy giá đi hướng ngược lại. Phía dưới đáy thì ngược lại.</p>
+  <p>Chỉ tính ở chỗ dễ có nhiều SL (cạnh range, đỉnh/đáy quan trọng). Chờ giá quay về và nến đóng rồi mới dùng.</p>
   <figure>
-    <a href="img/0-24-15.jpg"><img src="img/0-24-15.jpg" alt="Sierra Chart GCZ26 M1 ngày 06/11, râu quét trên cạnh trên range" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:24:15 — GCZ26 M1, 06/11, 15:42–16:50.</b> Range hồng ≈ 4087–4090 (≈ 15:58–16:32). Lúc ≈ 16:24 râu nến chọc lên trên cạnh trên tới ≈ 4090,5, có cụm bóng, rồi quay vào trong; sau đó giá đóng dưới cạnh dưới ≈ 4087 lúc ≈ 16:33 và về ≈ 4082.</figcaption>
+    <a href="img/0-09-42.jpg"><img src="img/0-09-42.jpg" alt="Fail break đáy hộp với delta âm 353, NQ M1 ngày 06/11" width="1128" height="559" loading="lazy"></a>
+    <figcaption><b>Nasdaq M1, 06/11.</b> Nến ≈ 20:11 đâm thủng đáy hộp với delta −353 và chuỗi bóng đỏ; nến sau (delta 131) kéo ngược vào hộp, rồi giá vượt cạnh trên ≈ 27125.</figcaption>
   </figure>
-  <figure>
-    <a href="img/0-09-42.jpg"><img src="img/0-09-42.jpg" alt="Sierra Chart NQZ26 M1 ngày 06/11, fail break đáy hộp với delta âm 353" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:09:42 — NQZ26 (Nasdaq) M1, 06/11, 19:31–20:39.</b> Hộp viền đỏ ≈ 27088–27125. Nến ≈ 20:11 đâm thủng đáy hộp với delta −353 và một chuỗi bóng; nến sau delta 131 kéo ngược vào trong hộp, giá sau đó lên trên ≈ 27125.</figcaption>
-  </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Gọi mọi râu là stop hunt, kể cả râu ở chỗ không phải mốc quan trọng.</li>
-    <li>Vào ngay khi râu vừa quét, chưa chờ giá đẩy ngược về và nến đóng.</li></ul></div>
 </section>
 
 <!-- ============================ ④ ============================ -->
@@ -328,180 +196,92 @@
 
 <section class="item" id="b4-nen">
   <h3><span class="k">4.1</span>Nến xác nhận đã đóng</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span><b>Nến xác nhận đã đóng</b>: thân vừa đủ, đóng sát cực trị, không rút râu dài. Sau fail break chờ 1–2 nến giữ được trong range.</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">Messenger 08–09/02</span>Chú xem cây giảm vol có ngon k / Đóng có đẹp k / Mấy cây giảm đóng râu dưới vẫn rút kìa</p>
-    <p><span class="ts">0:08:46</span>HV: Cái âm 23 [?] đấy chơi được không? — Chơi được. Hoặc cẩn thận thì chờ 1–2 cây sau xem nó có giữ được trong range không.</p>
-    <p><span class="ts">0:37:44</span>Vì nó bị rút râu nên phải chờ đoạn này tạo ra được stacked imbalance ở đây, may ra đến cây này chơi mới được.</p>
-    <p><span class="ts">0:43:53</span>Nó phá thì phải giữ được ở [vùng] dưới thì mới tính. Phá mà rút râu luôn thì khả năng là fail.</p>
-  </blockquote>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>Nến đóng sát cực trị nghĩa là phe đẩy giữ được giá tới phút cuối. Râu dài ngược hướng nghĩa là phe kia đã kéo lại được, xác nhận yếu đi. Chờ nến đóng (và sau fail break chờ thêm 1–2 nến) để không vào theo một cú chọc chưa hoàn tất.</p>
-  <h4>Nhìn trên chart</h4>
-  <figure>
-    <a href="img/0-35-50.jpg"><img src="img/0-35-50.jpg" alt="Sierra Chart GCZ26 M1 ngày 06/11, nến tăng thân dài đóng sát đỉnh" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:35:50 — GCZ26 M1, 06/11.</b> Nến tăng ≈ 06:23 (delta 66): thân trắng dài từ ≈ 4085 lên ≈ 4093, đóng gần đỉnh, gần như không có râu trên. So với các nến đáy trước đó (râu ngắn, thân nhỏ, delta −22 và −4).</figcaption>
-  </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Vào khi nến chưa đóng, rồi nến rút râu dài ngược lại.</li>
-    <li>Sau fail break vào ngay ở nến đầu tiên đóng lại trong range mà không xem các nến sau có giữ được không.</li></ul></div>
+  <p class="cond">Nến xác nhận đã đóng: thân đủ, đóng sát cực trị, không rút râu. Sau fail break chờ 1–2 nến.</p>
+  <p><b>Chỉ vào khi nến tín hiệu đã đóng.</b> Nến tốt có thân đủ dài, đóng sát đỉnh nến (buy) hoặc sát đáy nến (sell), không có râu dài ngược lại. Râu dài ngược lại nghĩa là phe kia đã kéo giá về: xác nhận yếu.</p>
+  <p>Sau fail break, đừng vào ngay ở nến đầu tiên quay lại; cẩn thận thì chờ thêm 1–2 nến vẫn đóng trong range. Ngoại lệ là xác nhận lần 2 (<a class="xref" href="#vi-du-3">ví dụ 3</a>).</p>
 </section>
 
 <section class="item" id="b4-sl">
   <h3><span class="k">4.2</span>SL sau mốc quan trọng gần nhất</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span>SL <b>sau mốc quan trọng gần nhất</b> (dưới đáy vừa quét / trên đỉnh yếu), không đặt sát.</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">0:50:18</span>Muốn chơi thì vẫn được, nhưng phải đặt dừng lỗ trên cái đỉnh này.</p>
-    <p><span class="ts">0:50:25</span>HV: Sao xa thế, không đặt ngay dưới cái kia? — Đặt gần thì dễ bị quét. Nhiều lúc nó quét râu lên, không đóng nến lên nhưng vẫn quét râu. Còn chỗ này quan trọng, đặt ở đây khó bị quét hơn.</p>
-    <p><span class="ts">0:51:16</span>HV: Chơi được ở K4 hay K5 [?] không? — SL phải ở dưới này; nếu SL bị xa quá thì thôi.</p>
-    <p><span class="ts">0:51:25</span>HV: Tưởng đặt dưới đáy chỗ quét SL? — Ừ, đặt dưới cái đáy mới quét [cái đáy vừa bị quét].</p>
-  </blockquote>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>SL đặt sát thì nằm đúng vùng râu hay quét, bị quét dù hướng lệnh đúng. Đặt sau mốc quan trọng thì nếu giá qua được mốc đó, lý do vào lệnh đã sai thật. Nếu mốc ấy xa tới mức không còn 1,7R thì bỏ lệnh, không kéo SL lại gần cho đủ R.</p>
-  <h4>Nhìn trên chart</h4>
-  <figure>
-    <a href="img/0-50-25.jpg"><img src="img/0-50-25.jpg" alt="Sierra Chart GCZ26 ngày 05 và 06/11, phá cạnh dưới range rồi hồi lên" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:50:25 — GCZ26 M1, đêm 05/11 sang 06/11, 23:52–00:50.</b> Cạnh dưới range ≈ 4127,5 bị phá lúc ≈ 00:20 (delta −42, −14). Các nến hồi ≈ 00:22–00:24 lên chạm vùng đỏ ≈ 4128,5 rồi rơi (nến delta −112), giá về ≈ 4119. Sell ở nhịp hồi thì SL nằm trên đỉnh nhịp hồi / trên vùng đỏ, không đặt sát giá vào <span class="dg">diễn giải</span>.</figcaption>
-  </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Đặt SL vài giá sát điểm vào cho đẹp R, rồi bị râu quét.</li>
-    <li>SL xa quá vẫn vào, chấp nhận R:R dưới 1,7.</li></ul></div>
+  <p class="cond">SL sau mốc quan trọng gần nhất, không đặt sát.</p>
+  <p>Đặt SL <b>dưới đáy vừa bị quét</b> (buy) hoặc <b>trên đỉnh yếu</b>, tức đỉnh vừa chọc lên rồi bị đẩy xuống (sell). Đặt sát giá vào thì dễ bị râu quét dù đánh đúng hướng.</p>
+  <p>Nếu mốc đó xa tới mức không còn 1,7R thì bỏ lệnh, <b>không kéo SL lại gần cho đủ R</b>.</p>
 </section>
 
 <section class="item" id="b4-rr">
   <h3><span class="k">4.3</span>Đủ 2R tới mục tiêu</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span>Từ điểm vào tới mục tiêu (cạnh đối diện / mốc kế) <b>≥ 2R</b> (1,7R chấp nhận). TP đặt 2R. Không đủ → không chơi, kể cả 1R.</p>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">0:58:13</span>Nếu không 2R thì không chơi nữa — kể cả 1R [cũng không].</p>
-    <p><span class="ts">0:58:29</span>Nếu vào lệnh sâu quá thì nó sẽ thành 1,5R hay 1R thôi.</p>
-    <p><span class="ts">0:58:35</span>Cứ xác định từ chỗ vào đến [cạnh] range này 1,7R — nó sấp sỉ 2R rồi thì có thể [chơi], vì nhiều lúc nó quét râu qua rồi cũng chạy luôn.</p>
-    <p><span class="ts">0:58:49</span>Tầm 1,7R là được. Nhưng TP vẫn cứ đặt 2R.</p>
-  </blockquote>
-  <p class="note">Bản chốt tháng 7/2026 ghi “mỗi kịch bản cố định 1:3”. Buổi Meet 07/11 nói tối thiểu 2R. Xem <a href="#mau-thuan">bảng mâu thuẫn</a>.</p>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>Đánh theo xác nhận thì tỷ lệ thắng không cao, nên phần thắng phải lớn hơn hẳn phần thua. Mục tiêu tự nhiên là cạnh đối diện hoặc mốc kế tiếp; nếu khoảng tới đó không đủ 1,7 lần SL thì dù tín hiệu đẹp cũng bỏ.</p>
-  <h4>Nhìn trên chart</h4>
-  <figure>
-    <a href="img/0-58-35.jpg"><img src="img/0-58-35.jpg" alt="Sierra Chart GCZ26 M1 ngày 05/11 với công cụ đo lệnh R/R 1,71" width="1128" height="559" loading="lazy"></a>
-    <figcaption><b>0:58:35 — GCZ26 M1, 05/11, 21:03–22:02.</b> Công cụ đo lệnh vẽ trên chart hiện <b>R/R: 1,71</b>, mục tiêu đặt ở cạnh dưới range (≈ 4130,5 theo trục giá). Đây là lúc CORVEN nói “tầm 1,7R là được”.</figcaption>
-  </figure>
-  <div class="err"><h4>Lỗi hay gặp</h4>
-    <ul><li>Vào muộn (“vào lệnh sâu quá”) nên chỉ còn 1–1,5R tới cạnh đối diện.</li>
-    <li>Chấp nhận 1,7R rồi đặt TP luôn ở 1,7R; CORVEN vẫn đặt TP 2R.</li></ul></div>
+  <p class="cond">Tới mục tiêu ≥ 2R (1,7R chấp nhận), TP 2R. Không đủ → không chơi.</p>
+  <p>Mục tiêu là cạnh đối diện của range hoặc mốc kế tiếp. <b>Khoảng tới mục tiêu phải gấp ít nhất 2 lần khoảng tới SL.</b> Dưới 1,7R (kể cả 1,5R) thì không vào, dù tín hiệu đẹp.</p>
+  <p>Nếu mục tiêu chỉ cách 1,7R thì vẫn vào, nhưng <b>đặt TP ở 2R, tức hơi vượt qua cạnh</b>. Lý do CORVEN đưa ra: nhiều lúc giá quét qua cạnh rồi chạy luôn. Không phải lúc nào cũng vậy: ở <a class="xref" href="#vi-du-1">ví dụ 1</a> giá chỉ về sát cạnh rồi quay đầu.</p>
 </section>
 
 <section class="item" id="b4-ngay">
-  <h3><span class="k">4.4</span>Đóng trong ngày, không nhồi lệnh</h3>
-  <p class="cond"><span class="lbl">Điều kiện đầy đủ</span>Đóng trong ngày, không nhồi lệnh.</p>
-  <h4>Nguồn</h4>
-  <blockquote class="q">
-    <p><span class="ts">Messenger 05/02</span>nay t méo nhồi nữa / nhồi hay quét vl / vào một phát to mẹ luôn</p>
-  </blockquote>
-  <p class="note">“Đóng trong ngày” lấy từ bản chốt tháng 7/2026 (<span class="mono">CORVEN_SPEC_V1.md</span>: “Chỉ trong ngày. Không qua đêm”); đây là ghi chép tổng hợp, buổi Meet 07/11 không nhắc lại.</p>
-  <h4>Cơ chế</h4>
-  <p><span class="dg">diễn giải</span>Nhồi thêm lệnh khi giá đi đúng hướng làm giá vốn xấu đi và SL chung bị kéo gần, nên một cú quét có thể lấy cả lãi lẫn vốn. Lệnh scalp theo order flow sống trên tín hiệu M1 trong phiên; để qua đêm là giữ lệnh khi tín hiệu đã hết hiệu lực.</p>
+  <h3><span class="k">4.4</span>Trong ngày, không nhồi</h3>
+  <p class="cond">Trong ngày, không nhồi.</p>
+  <p>Lệnh theo tín hiệu M1 chỉ sống trong phiên, không giữ qua đêm. Không nhồi (vào thêm lệnh) khi giá đi đúng hướng: giá vốn xấu đi, một cú quét có thể lấy cả lãi lẫn vốn. Vào một lần, đủ khối lượng.</p>
 </section>
 
 <!-- ============================ ⛔ ============================ -->
 <section class="item" id="khong-vao">
   <h3><span class="k">⛔</span>Không vào khi</h3>
-  <ul>
-    <li>Delta nhỏ, "buy không vào" (không có bóng) · Kiệt sức đang chống lại hướng mình đánh · Tín hiệu còn ngoài range</li>
-    <li>Nhịp đẩy do quét stop (chạy mạnh, không đi xa) · Range chồng range, đoạn đi xấu · Đấu giá vừa xong (profile nhọn, đều 2 cạnh) → chờ break</li>
+  <ul class="nogo">
+    <li><b>Delta nhỏ, không có bóng</b> (“buy không vào”): phe đẩy chưa thật sự vào.</li>
+    <li><b>Kiệt sức đang chống lại hướng mình đánh</b>, ví dụ muốn sell mà đáy vừa kiệt sức sell: chờ râu quét qua mức đó đã.</li>
+    <li><b>Giá còn ngoài range và mới có 1 dấu hiệu.</b></li>
+    <li><b>Nhịp đẩy do quét stop:</b> chạy rất mạnh nhưng chỉ là lệnh cắt lỗ khớp hàng loạt, hết là hết, không đi xa.</li>
+    <li><b>Range chồng range</b>, giá đi lộn xộn, không rõ cạnh.</li>
+    <li><b>Đấu giá vừa xong</b> (TPO profile nhọn, đều 2 cạnh: hai phe đã cân bằng, chưa có hướng): đứng ngoài, chờ break.</li>
   </ul>
-  <h4>Nguyên văn CORVEN</h4>
-  <blockquote class="q">
-    <p><span class="ts">0:35:55</span>Delta dương nhưng nhỏ thì không đánh được. Muốn đảo chiều thì delta phải dương to lên, thẳng lên.</p>
-    <p><span class="ts">0:46:13</span>Delta buy với bóng xanh phải vào [thì mới có tín hiệu]. Đoạn này trap xong, buy có vào đâu — thấy không, nó nhỏ mà. Cây 10 kia cũng không vào được: nhỏ mà, không có bóng xanh.</p>
-    <p><span class="ts">0:53:05</span>Vì cái âm 34 [?] này: ví dụ kiệt sức ở đỉnh là kiệt sức buy, đáy bị kiệt sức sell. Sell xuống, đáy bị kiệt sức lúc đấy → hơi không muốn sell.</p>
-    <p><span class="ts">0:59:37</span>HV: Cây K23 [?] sao không vào? — Vì nó vẫn ở ngoài range, mà tín hiệu mới có mỗi một cái.</p>
-    <p><span class="ts">0:27:59</span>Đoạn cây to đùng như thế này thì khả năng những lệnh sell này không phải muốn sell, mà là lệnh của bên buy chỗ này bị SL — buy chỗ này bị quét mạnh thì phải cắt lỗ bằng lệnh sell chủ động.</p>
-    <p><span class="ts">0:45:02</span>Đoạn này đi hơi xấu. Đoạn này range chồng range thì khó.</p>
-    <p><span class="ts">0:48:28</span>Đoạn này quét cũng kiểu chưa dứt khoát. Đoạn retest lên trên này có thể xem, nhưng cấu trúc gãy rồi.</p>
-  </blockquote>
-  <p class="note">“Đấu giá vừa xong (profile nhọn, đều 2 cạnh) → chờ break” là ghi chú cuối của người học trong file gốc. Vế “không đi xa” trong “nhịp đẩy do quét stop” là <span class="dg">diễn giải</span>: lượng lệnh cắt lỗ chỉ đẩy giá một đoạn ngắn rồi hết.</p>
 </section>
 
 <!-- ============================ VÍ DỤ ============================ -->
-<h2 id="vi-du">Ba ví dụ trọn vẹn</h2>
-<p class="note">Ráp từng bước vào checklist là <span class="dg">diễn giải</span> của Claude dựa trên lời CORVEN và ảnh. Con số đọc trên ảnh là xấp xỉ theo trục giá.</p>
+<h2 id="vi-du">Ba ví dụ</h2>
+<p class="note">Giá và giờ đọc trên ảnh là xấp xỉ.</p>
 
 <section class="ex sell" id="vi-du-1">
-  <h3>Ví dụ 1 — Fail break đỉnh range → sell (GCZ26, 05/11, 21:04–21:33)</h3>
-  <blockquote class="q">
-    <p><span class="ts">0:56:49</span>Đánh range thì đánh ở đây — đọc bối cảnh vào là đánh. Lên đây yếu, fail break range, nhìn delta: delta giảm dần, xong đóng ngược lại vào range → sell, SL trên đỉnh yếu này được không? — [được].</p>
-    <p><span class="ts">0:58:35</span>Cứ xác định từ chỗ vào đến [cạnh] range này 1,7R — nó sấp sỉ 2R rồi thì có thể [chơi], vì nhiều lúc nó quét râu qua rồi cũng chạy luôn.</p>
-    <p><span class="ts">0:58:49</span>Tầm 1,7R là được. Nhưng TP vẫn cứ đặt 2R.</p>
-  </blockquote>
+  <h3>Ví dụ 1 — Thế A: fail break đỉnh range → sell</h3>
   <figure>
-    <a href="img/0-58-35.jpg"><img src="img/0-58-35.jpg" alt="Ví dụ 1: fail break đỉnh range GCZ26 ngày 05/11" width="1128" height="559" loading="lazy"></a>
-    <figcaption>Range hồng ≈ 4130,5–4135,5. Mũi tên vàng trên giá đi lên (≈ 21:12 → 21:19) trong khi mũi tên vàng ở khung delta cộng dồn đi xuống: delta giảm dần khi giá tăng. Nến ≈ 21:20 chọc lên trên cạnh trên (≈ 4137) rồi các nến sau đóng lại trong hộp. Công cụ đo lệnh hiện R/R: 1,71, mục tiêu ở cạnh dưới.</figcaption>
+    <a href="img/0-58-35.jpg"><img src="img/0-58-35.jpg" alt="Fail break đỉnh range, GCZ26 M1 ngày 05/11" width="1128" height="559" loading="lazy"></a>
+    <figcaption><b>Vàng M1, 05/11.</b> Range hồng ≈ 4130,5–4135,5. Từ ≈ 21:12 đến 21:19 giá đi lên (mũi tên vàng trên giá) nhưng delta cộng dồn đi xuống (mũi tên vàng bên dưới). Nến ≈ 21:20 chọc lên ≈ 4138, có bóng đỏ ở đầu râu, rồi các nến sau đóng lại trong hộp. Công cụ đo lệnh vẽ trên ảnh: vào ở cạnh trên, mục tiêu ngay dưới cạnh dưới, R/R 1,71.</figcaption>
   </figure>
   <ol class="steps">
-    <li><b>① Bối cảnh:</b> giá đang trong range ≈ 4130,5–4135,5 → thế A, chỉ đánh cạnh.</li>
-    <li><b>② Mốc:</b> giá lên cạnh trên, chọc ra ngoài rồi đóng lại trong lòng range (fail break).</li>
-    <li><b>③ Xác nhận:</b> delta ngược giá (giá tăng, delta cộng dồn giảm) + nến đóng ngược lại vào range = 2 dấu hiệu cùng phe sell.</li>
-    <li><b>④ Lệnh:</b> SL trên đỉnh yếu vừa chọc; mục tiêu cạnh dưới; R/R đo được 1,71 → chấp nhận, TP đặt 2R.</li>
-    <li><b>Diễn biến trên ảnh:</b> giá về sát cạnh dưới ≈ 4130,5 lúc ≈ 21:26–21:28. Sau đó lúc ≈ 21:30 có nến tăng vọt lên ≈ 4142 rồi giá rơi mạnh về ≈ 4128 (ngoài phạm vi lời giảng).</li>
+    <li><b>Bối cảnh:</b> giá trong range → thế A, chỉ đánh cạnh.</li>
+    <li><b>Mốc:</b> cạnh trên. Giá chọc qua rồi đóng lại trong range (fail break), không phải gãy cấu trúc.</li>
+    <li><b>Xác nhận:</b> giá lên mà delta đi xuống (delta ngược giá, mục 3.1) + bóng đỏ ở đỉnh vừa chọc (mục 3.2) = 2 dấu hiệu sell.</li>
+    <li><b>Lệnh:</b> vào ≈ cạnh trên, SL trên đỉnh chọc ≈ 4138, mục tiêu cạnh dưới: R/R ≈ 1,7 → chấp nhận, TP đặt 2R.</li>
+    <li><b>Kết quả trên ảnh:</b> giá về ≈ 4129,5 lúc ≈ 21:27, sát mục tiêu 1,7R nhưng chưa tới TP 2R. Lúc ≈ 21:30 nến vọt lên ≈ 4142, quét SL, rồi giá mới sập về ≈ 4128. <b>Setup đúng vẫn có thể thua</b>; đó là lý do phải đòi R đủ lớn.</li>
   </ol>
 </section>
 
 <section class="ex sell" id="vi-du-2">
-  <h3>Ví dụ 2 — Phá range → retest + stacked + đỉnh kiệt sức → sell</h3>
-  <blockquote class="q">
-    <p><span class="ts">0:20:31</span>Hoặc đây: cấu trúc, bối cảnh với range. Trap phá range đâm xuống, retest lên range, retest luôn cái stacked imbalance này → sell xuống. Chỗ này đỉnh kiệt sức nữa (thấy cái bóng không?).</p>
-  </blockquote>
+  <h3>Ví dụ 2 — Thế B: phá range → hồi về cạnh vừa phá → sell</h3>
   <figure>
-    <a href="img/0-19-30.jpg"><img src="img/0-19-30.jpg" alt="Ví dụ 2: retest stacked imbalance sell GCZ26 ngày 06/11" width="1128" height="559" loading="lazy"></a>
-    <figcaption>GCZ26 M1, 06/11, 18:51–19:59. Đỉnh ≈ 4082 lúc ≈ 19:20; vùng đỏ (stacked imbalance sell) ≈ 4080 hình thành trong nến delta −40; tam giác vàng (kiệt sức buy) ở đỉnh nến ≈ 19:25 quanh ≈ 4079,5; sau đó giá rơi về ≈ 4073. Ảnh này không có hộp range vẽ sẵn, nên chưa xác định chính xác range nào bị phá trong lời 0:20:31.</figcaption>
+    <a href="img/0-50-25.jpg"><img src="img/0-50-25.jpg" alt="Phá cạnh dưới range rồi hồi về test, GCZ26 M1 đêm 05 sang 06/11" width="1128" height="559" loading="lazy"></a>
+    <figcaption><b>Vàng M1, đêm 05/11.</b> Đường hồng ngang ≈ 4127,4 là cạnh dưới range. Lúc ≈ 00:19–00:20 hai nến đóng dưới cạnh (delta −42, −14), để lại vùng đỏ ≈ 4128,5 (stacked imbalance sell). Các nến ≈ 00:22–00:23 hồi lên chạm lại cạnh nhưng delta âm (−30, −32); nến ≈ 00:23 có bóng đỏ và đóng thấp hơn đỉnh của nó. Sau đó giá rơi về ≈ 4119.</figcaption>
   </figure>
   <ol class="steps">
-    <li><b>① Bối cảnh:</b> range đã bị phá xuống (thế B) → chỉ tìm sell theo hướng phá.</li>
-    <li><b>② Mốc:</b> giá hồi lên retest cạnh range vừa phá, trùng vùng stacked imbalance sell mới tạo.</li>
-    <li><b>③ Xác nhận:</b> stacked imbalance sell mới + đỉnh kiệt sức buy (tam giác vàng) + bóng ở đỉnh = ≥ 2 dấu hiệu cùng phe sell.</li>
-    <li><b>④ Lệnh:</b> SL trên đỉnh nhịp retest; mục tiêu mốc kế phía dưới, đủ 2R mới vào.</li>
+    <li><b>Bối cảnh:</b> nến đóng dưới cạnh dưới và các nến sau không đóng lại vào trong → phá thật, thế B, chỉ tìm sell.</li>
+    <li><b>Mốc:</b> cạnh vừa phá ≈ 4127,4, ngay dưới vùng đỏ. Vùng đỏ tạo lúc phá, là mốc, <b>không</b> tính là dấu hiệu. Test không quá sâu: không nến nào đóng lại hẳn vào trong range.</li>
+    <li><b>Xác nhận:</b> giá hồi lên mà delta âm (delta ngược giá) + bóng đỏ nổ ở đỉnh nhịp hồi = 2 dấu hiệu sell.</li>
+    <li><b>Lệnh:</b> vào khi nến ≈ 00:23 đóng (≈ 4126,6), SL trên vùng đỏ ≈ 4129 (≈ 2,4 điểm), TP 2R ≈ 4121,8. Giá về ≈ 4119: chạm TP. Vào ở nhịp hồi, không đuổi theo nến sập phía sau.</li>
   </ol>
 </section>
 
 <section class="ex" id="vi-du-3">
-  <h3>Ví dụ 3 — Chưa vào lòng range → không vào; xác nhận lần 2 → vào buy</h3>
-  <blockquote class="q">
-    <p><span class="ts">0:59:37</span>HV: Cây K23 [?] sao không vào? — Vì nó vẫn ở ngoài range, mà tín hiệu mới có mỗi một cái.</p>
-    <p><span class="ts">1:00:02</span>HV: Nó có tín hiệu mà chưa vào lòng range đúng không? Điều kiện là phải vào lòng range à? — Ừ, phải vào lòng range nữa.</p>
-    <p><span class="ts">1:00:09</span>Nhưng đến cây này: chưa vào lòng range nhưng nó confirm lại lần 2 rồi — nó trap đáy một lần nữa và bị kiệt sức đáy → vào được.</p>
-  </blockquote>
+  <h3>Ví dụ 3 — Thế A: lần 1 chưa vào; xác nhận lần 2 → buy</h3>
   <figure>
-    <a href="img/0-59-50.jpg"><img src="img/0-59-50.jpg" alt="Ví dụ 3: fail break đáy range GCZ26 ngày 05/11" width="1128" height="559" loading="lazy"></a>
-    <figcaption>GCZ26 M1, 05/11, 20:09–21:07. Range hồng ≈ 4123–4126,5 (≈ 20:19–20:43). Nến ≈ 20:30 chọc xuống ≈ 4121 (delta −13), các nến sau (delta −17, 23, 3) vẫn đóng quanh hoặc dưới cạnh dưới. Nến ≈ 20:34 có tam giác xanh (kiệt sức sell) ở đáy ≈ 4121: trap đáy lần 2. Hai nến sau (delta 33 và 64) đẩy lên lại trong range rồi vượt cạnh trên, lên ≈ 4131.</figcaption>
+    <a href="img/0-59-50.jpg"><img src="img/0-59-50.jpg" alt="Fail break đáy range hai lần, GCZ26 M1 ngày 05/11" width="1128" height="559" loading="lazy"></a>
+    <figcaption><b>Vàng M1, 05/11.</b> Range hồng ≈ 4123,2–4126,3. Nến ≈ 20:30 chọc xuống ≈ 4120, các nến sau vẫn đóng quanh hoặc dưới cạnh dưới. Nến ≈ 20:34 chọc xuống lần nữa, đáy có tam giác xanh (kiệt sức sell). Bên trái range, giá từng giao dịch ở ≈ 4128–4130. Hai nến sau (delta 33 và 64) kéo lên qua cạnh trên, lên ≈ 4131.</figcaption>
   </figure>
   <ol class="steps">
-    <li><b>① Bối cảnh:</b> trong range → đánh cạnh dưới (thế A, buy).</li>
-    <li><b>② Mốc:</b> giá chọc xuống dưới cạnh dưới; lần đầu nến vẫn ở ngoài range → điều kiện “đóng lại trong lòng range” chưa đạt.</li>
-    <li><b>③ Xác nhận:</b> lần đầu mới có một tín hiệu → không vào. Lần 2: trap đáy thêm lần nữa + kiệt sức sell ở đáy = 2 dấu hiệu → CORVEN cho vào dù chưa vào lòng range (1:00:09).</li>
-    <li><b>④ Lệnh:</b> SL dưới đáy vừa quét (≈ 4121); mục tiêu cạnh trên range ≈ 4126,5 trở lên.</li>
+    <li><b>Bối cảnh:</b> giá trong range → đánh cạnh dưới, hướng buy.</li>
+    <li><b>Lần 1 (≈ 20:30):</b> giá chọc xuống rồi vẫn đóng ngoài range, mới có một dấu hiệu → <b>không vào</b>.</li>
+    <li><b>Lần 2 (≈ 20:34):</b> râu quét đáy thêm lần nữa rồi quay lên (trap) + tam giác xanh kiệt sức sell (indicator báo Bid ở râu đáy rất nhỏ) = 2 dấu hiệu → <b>vào được</b>, dù giá chưa vào lòng range.</li>
+    <li><b>Lệnh:</b> vào khi nến ≈ 20:34 đóng (≈ 4122,7), SL dưới đáy vừa quét ≈ 4120 (≈ 2,7 điểm). Tới cạnh trên chỉ ≈ 1,3R, chưa đủ, nên mục tiêu phải là vùng giá cũ ≈ 4128,5–4129 (≈ 2,2R). Giá lên ≈ 4131: chạm TP.</li>
   </ol>
-  <p class="note">Ví dụ này cho thấy điều kiện “phải vào lòng range” có ngoại lệ do chính CORVEN nêu: khi đã có xác nhận lần 2 (trap đáy lần nữa + kiệt sức đáy).</p>
 </section>
 
-<!-- ============================ MÂU THUẪN ============================ -->
-<h2 id="mau-thuan">Mâu thuẫn trong nguồn và cách chốt</h2>
-<p>Nguồn cũ (tin nhắn CORVEN tháng 5–8/2026, bản chốt tháng 7/2026) và buổi Meet 07/11 có chỗ khác nhau. Không giấu, ghi rõ để biết vì sao trang chính chọn như vậy.</p>
-<div class="tbl">
-<table>
-  <thead><tr><th>Vấn đề</th><th>Nguồn cũ</th><th>Nguồn mới</th><th>Chốt</th></tr></thead>
-  <tbody>
-    <tr><td data-label="Vấn đề">R:R (tỷ lệ lời : lỗ)</td><td data-label="Nguồn cũ">Bản chốt tháng 7/2026: “mỗi kịch bản cố định 1:3”</td><td data-label="Nguồn mới">Meet 07/11 0:58:13–0:58:49: “không 2R thì không chơi… 1,7R được, TP vẫn 2R”</td><td data-label="Chốt"><b>Tối thiểu 2R (1,7R chấp nhận), TP đặt 2R.</b> Ghi chú bản 7/2026 nói 1:3.</td></tr>
-    <tr><td data-label="Vấn đề">SL</td><td data-label="Nguồn cũ">Tin nhắn CORVEN tháng 5/2026 (R7): SL 2–4 giá, dưới cây M1</td><td data-label="Nguồn mới">Meet 0:50:25: “đặt gần thì dễ bị quét… đặt dưới cái đáy mới quét”; 0:51:16 “SL xa quá thì thôi”</td><td data-label="Chốt"><b>SL sau mốc quan trọng gần nhất (đáy/đỉnh vừa quét, cạnh range); không sát; xa quá không đủ 1,7R thì bỏ.</b></td></tr>
-    <tr><td data-label="Vấn đề">Fail break</td><td data-label="Nguồn cũ">Tin nhắn CORVEN tháng 5/2026 (W3): “đừng đánh UT sớm, sang D mới đánh” — <i>UT</i> = cú phá hụt lên trên đỉnh range; <i>sang D</i> = giai đoạn sau khi đã có cú phá hụt, giá phá thật và giữ được</td><td data-label="Nguồn mới">Meet: fail break → tìm tín hiệu ngược, “chờ 1–2 cây xem giữ được trong range không” (0:08:46), “phải vào lòng range” (1:00:02)</td><td data-label="Chốt"><b>Fail break một mình chưa đủ</b>: cần đóng lại trong range + xác nhận order flow + 2R tới cạnh đối diện.</td></tr>
-    <tr><td data-label="Vấn đề">Follow khi nào</td><td data-label="Nguồn cũ">“không cản tàu”</td><td data-label="Nguồn mới">Tin nhắn CORVEN tháng 8/2026 (R13): trong range thì không follow giữa lòng range</td><td data-label="Chốt">Follow chỉ <b>sau khi đã phá</b> (đóng nến + giữ được); trong range chỉ đánh cạnh.</td></tr>
-  </tbody>
-</table>
-</div>
-
-<p class="src">Nguồn: <span class="mono">corven-meet/2026-11-07/transcript.md</span> (bản chép lời đã soát, ảnh cắt từ <span class="mono">frames/</span>, chỉ giữ vùng chart) · <span class="mono">data-export/messages-with-pro-trader/TRANSCRIPT.md</span> §7, §8, §13 · <span class="mono">CORVEN_SPEC_V1.md</span> (bản chốt tháng 7/2026) · bản tổng hợp của CORVEN 02/11/2026. Đây là lời giảng, chưa phải luật đã kiểm chứng bằng số.</p>
+<p class="src">Tóm từ buổi học Meet với CORVEN ngày 07/11/2026 và tin nhắn của CORVEN. Đây là lời giảng, chưa phải luật đã kiểm chứng bằng số.</p>
 </main>
 
 <a id="back" href="index.html">← Trang chính</a>

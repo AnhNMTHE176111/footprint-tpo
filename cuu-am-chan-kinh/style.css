@@ -170,3 +170,16 @@ td:last-child{background:var(--accent-soft)}
 }
 .nw{white-space:nowrap}
 .note .mono,.src .mono,.lead .mono{font-size:13px}
+
+/* Trang chi tiết bản gọn (2026-11-08): công thức, từ cần biết, ghi nhớ, danh sách không vào */
+.formula{font-size:17px;background:var(--accent-soft);border-left:5px solid var(--accent);border-radius:4px;padding:12px 16px;margin:14px 0;max-width:72ch}
+ul.the{padding-left:20px;max-width:72ch}
+ul.the li{margin:8px 0}
+.gloss-h{margin-top:28px}
+dl.gloss{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:10px 0 0;max-width:72ch;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 16px}
+dl.gloss dt{font-weight:700;white-space:nowrap}
+dl.gloss dd{margin:0}
+@media (max-width:599px){dl.gloss{grid-template-columns:1fr;gap:0}dl.gloss dt{margin-top:8px}dl.gloss dt:first-child{margin-top:0}}
+.memo{background:var(--warn-soft);border-radius:4px;padding:8px 12px;margin:12px 0;max-width:72ch;font-size:15px}
+ul.nogo{padding-left:20px;max-width:72ch}
+ul.nogo li{margin:8px 0}

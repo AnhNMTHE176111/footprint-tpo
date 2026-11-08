@@ -42,8 +42,12 @@ file (default glob `*.cs` trong thư mục) — không cần sửa gì thêm. N�
 (`qw-build.sh <file> <asm>`) thì PHẢI build cả 2 file cùng lúc (viết tạm 1 csproj liệt kê cả 2
 `<Compile Include>`), vì `qw-build.sh` chỉ nhận 1 file nguồn.
 
+⚠️ **Từ 2026-11-08 thêm file thứ 3: `ExhaustionLogic.cs`** (logic kiệt sức thuần theo CORVEN, không
+phụ thuộc Quantower). Build tay thì liệt kê CẢ 3 file trong `<Compile Include>`.
+
 ## Test
-`tests/` (`OrderFlowBubblesTests`) test riêng `SignalCache.cs` (gồm cả `BigTradeLog`) — không cần SDK
+`tests/` (`OrderFlowBubblesTests`) test riêng `SignalCache.cs` (gồm cả `BigTradeLog`) và `ExhaustionLogic.cs`
+(`tests/ExhaustionTests.cs`; đặt biến `EXH_XCHECK_CSV` để đối chiếu thêm với Python trên dữ liệu thật) — không cần SDK
 Quantower vì các class này không phụ thuộc `TradingPlatform.BusinessLayer`. Chạy:
 `dotnet run --project quantower-orderflow-indicator/tests`.
 

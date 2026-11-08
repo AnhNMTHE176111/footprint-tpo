@@ -194,6 +194,7 @@ static class Tests
         CorruptLineIsSkipped();
         FingerprintMismatchMeansMiss();
         BigTradeLogDedupSurvivesRestart();
+        _fail += ExhaustionTests.Run();
         Console.WriteLine(_fail == 0 ? "\n=== TAT CA PASS ===" : $"\n=== {_fail} FAIL ===");
         return _fail == 0 ? 0 : 1;
     }

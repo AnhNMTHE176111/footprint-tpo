@@ -65,7 +65,8 @@
 //    • Big Delta line  = GẠCH NGANG (rộng = nến), xanh(buy)/đỏ(sell).
 //    • Nến delta lớn   = TÔ THÂN NẾN xanh(+delta)/đỏ(−delta).
 //    • Số delta        = chữ dưới đáy nến, xanh/đỏ theo dấu.
-//    • Exhaustion/Divergence/Sweep = tam giác;  Stacked Imbalance = thoi;  Unfinished = ngoặc.
+//    • Kiệt sức = tam giác vàng chỉ xuống ở đỉnh / xanh chỉ lên ở đáy (rỗng khi bị râu quét qua);
+//    • Divergence/Sweep = tam giác;  Stacked Imbalance = thoi;  Unfinished = ngoặc.
 //  Vẽ tay bằng GDI+ trong OnPaintChart (Quantower không có PriceSelectionValue).
 //  _bubbles/_barTint bị GHI ở thread tính (Process) và ĐỌC ở thread vẽ → mọi truy cập
 //  trong lock(_sync); thread vẽ copy snapshot rồi vẽ ngoài lock.
@@ -83,7 +84,7 @@ namespace OrderFlowBubbles
     public class OrderFlowBubbles : Indicator, IVolumeAnalysisIndicator
     {
         // ===================== hình + bubble =====================
-        private enum Shape { Ellipse, Triangle, Rectangle, Diamond, HLine }
+        private enum Shape { Ellipse, Triangle, Rectangle, Diamond, HLine, ExhTop, ExhBottom }   // ExhTop/ExhBottom = kiệt sức (thêm CUỐI để số cũ trong SignalCache không lệch)
 
         private sealed class Bubble
         {
@@ -133,6 +134,10 @@ namespace OrderFlowBubbles
         // ô có EFFORT cao theo nến (idx -> danh sách chỉ số tick) — dùng cho điểm "đa nến"
         private readonly Dictionary<int, List<long>> _hotLvls = new();
         private readonly List<AbsRec> _absRecs = new();   // absorption chờ xác nhận
+
+        // kiệt sức còn HIỆU LỰC (chưa bị râu nến sau quét qua) — xem ExhaustionLogic.cs
+        private sealed class ExhRec { public int Idx; public long Tick; public bool Top; public Bubble B; }
+        private readonly List<ExhRec> _exhRecs = new();
 
         // ===================== niêm phong tín hiệu (xem SignalCache.cs) =====================
         // Mỗi nến ĐÃ ĐÓNG chỉ tính tín hiệu 1 lần; kết quả khoá theo THỜI GIAN mở nến, sống sót
@@ -383,18 +388,36 @@ namespace OrderFlowBubbles
         [InputParameter("Big Delta line · số mức mạnh nhất / nến", 73, 1, 10, 1, 0)]
         public int DLineTopN { get; set; } = 1;
 
-        // ---------- 4) Exhaustion ----------
-        [InputParameter("Exhaustion · Bật", 80)]
-        public bool ExhaustionEnabled { get; set; } = false;
+        // ---------- 4) Exhaustion — KIỆT SỨC thuần theo CORVEN (Meet 2026-11-07, xem ExhaustionLogic.cs) ----------
+        //  Đỉnh soi ASK, đáy soi BID, chỉ lấy ở RÂU nến; "nhỏ, hoặc giảm dần về 0". Vô hiệu khi một nến
+        //  sau đó chỉ cần RÂU quét qua mức đó (không cần đóng nến) → vẽ rỗng/mờ (hoặc ẩn).
+        //  Đã BỎ định nghĩa cũ (volume nến ≤ × nến trước, delta co khỏi đỉnh intrabar, lookback swing).
+        //  Đo GCZ26 M1 90 ngày: Ask đỉnh/Bid đáy trung vị = 1 hợp đồng → "nhỏ" phải TƯƠNG ĐỐI theo TB
+        //  volume/mức của chính nến. Mặc định dưới đây ≈ 14 dấu/60 nến (đếm trên chart CORVEN: 2-14/60).
+        //  ⚠️ Công cụ ĐÁNH DẤU để đọc chart, CHƯA kiểm định lợi thế.
+        [InputParameter("Kiệt sức · Bật", 80)]
+        public bool ExhaustionEnabled { get; set; } = true;
 
-        [InputParameter("Exhaustion · Volume nến ≤ × nến trước", 81, 0.1, 1.5, 0.05, 2)]
-        public double ExhVolFadeRatio { get; set; } = 0.65;
+        [InputParameter("Kiệt sức · Nhỏ: Ask đỉnh / Bid đáy ≤ × TB volume mỗi mức của nến (0 = phải bằng 0)", 81, 0.0, 1.0, 0.01, 2)]
+        public double ExhSmallRel { get; set; } = 0.10;
 
-        [InputParameter("Exhaustion · Delta co ≤ × đỉnh intrabar", 82, 0.0, 1.0, 0.05, 2)]
-        public double ExhDeltaFadeRatio { get; set; } = 0.40;
+        [InputParameter("Kiệt sức · Giảm dần về 0: số mức trên râu xét (0-1 = tắt)", 82, 0, 10, 1, 0)]
+        public int ExhFadeLevels { get; set; } = 3;
 
-        [InputParameter("Exhaustion · Lookback đỉnh/đáy", 83, 1, 50, 1, 0)]
-        public int ExhSwingLookback { get; set; } = 3;
+        [InputParameter("Kiệt sức · Giảm dần: mức cuối ≤ × TB volume mỗi mức", 83, 0.0, 1.0, 0.01, 2)]
+        public double ExhFadeEndRel { get; set; } = 0.25;
+
+        [InputParameter("Kiệt sức · Vô hiệu khi râu nến sau vượt qua (ticks, 0 = chạm lại cũng tính)", 84, 0, 20, 1, 0)]
+        public int ExhSweepTicks { get; set; } = 1;
+
+        [InputParameter("Kiệt sức · Ẩn hẳn khi đã bị vô hiệu (tắt = vẽ rỗng, mờ)", 85)]
+        public bool ExhHideInvalidated { get; set; } = false;
+
+        [InputParameter("Kiệt sức · Màu kiệt sức buy (đỉnh, tam giác chỉ xuống)", 86)]
+        public Color ExhTopColor { get; set; } = Color.FromArgb(0xFF, 0xC8, 0x00);
+
+        [InputParameter("Kiệt sức · Màu kiệt sức sell (đáy, tam giác chỉ lên)", 87)]
+        public Color ExhBottomColor { get; set; } = Color.FromArgb(0x3D, 0xB8, 0xFF);
 
         // ---------- 5) Stacked Imbalance ----------
         [InputParameter("Stacked Imbalance · Bật", 90)]
@@ -489,7 +512,7 @@ namespace OrderFlowBubbles
                 WNoResult, WProminent, WDivergence, WTwoSided, WMulti, WSwing,
                 BigTradeEnabled, BigZ, BigVolMult, BigTradeTopN, BigTradeRequireRealTrades, BigTradeSkipOnAbsorption, BigTradeFixedContracts, BigTradeAbsFloor,
                 DLineEnabled, DLineFloor, DLineZ, DLineTopN,
-                ExhaustionEnabled, ExhVolFadeRatio, ExhDeltaFadeRatio, ExhSwingLookback,
+                ExhaustionEnabled, ExhSmallRel, ExhFadeLevels, ExhFadeEndRel, ExhSweepTicks,
                 ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun,
                 DivergenceEnabled, DivSwingLookback, DivVolPartic, DivCooldown,
                 SweepEnabled, SweepLookback, UnfinishedEnabled,
@@ -517,6 +540,7 @@ namespace OrderFlowBubbles
             _lastDivPivot = int.MinValue;
             _hotLvls.Clear();
             _absRecs.Clear();
+            _exhRecs.Clear();
         }
 
         // ================================================================
@@ -571,6 +595,7 @@ namespace OrderFlowBubbles
 
                     AddToBaseline(bar);
                     UpdateAbsorptionConfirms(i, tick);     // mức của các nến trước giữ hay vỡ?
+                    UpdateExhaustionSweeps(i, bar, tick);  // kiệt sức của các nến trước bị râu quét qua chưa?
                 }
                 if (closedCount > _processedClosedCount) _processedClosedCount = closedCount;
 
@@ -582,6 +607,8 @@ namespace OrderFlowBubbles
                     _cvd[cur] = (cur > 0 ? _cvd[cur - 1] : 0.0) + BarDelta(curBar);
                     bool ready = _rBarVol.BarCount >= MinBars;
                     ComputeBar(cur, curBar, tick, ready, isClosed: false);
+                    // râu nến đang chạy đã quét qua thì KHÔNG rút lại được (high/low chỉ nới ra) → vô hiệu ngay
+                    UpdateExhaustionSweeps(cur, curBar, tick);
                 }
             }
         }
@@ -898,7 +925,7 @@ namespace OrderFlowBubbles
                     });
 
             // ---- detector theo NẾN ----
-            if (ExhaustionEnabled) TryExhaustion(idx, bar, barVol, barDelta, barMaxDelta, barMinDelta, maxPosPrice, minNegPrice, list);
+            if (ExhaustionEnabled) TryExhaustion(idx, bar, va, tick, list, isClosed);
             if (SweepEnabled) TrySweep(idx, bar, barDelta, list);
             if (StopHuntEnabled && ready) TryStopHunt(idx, bar, tick, list);
             if (DivergenceEnabled && isClosed) TryDivergence(idx);
@@ -914,24 +941,47 @@ namespace OrderFlowBubbles
         //  BAR-LEVEL DETECTORS
         // ================================================================
 
-        // Exhaustion — dùng delta intrabar THẬT (Total.MaxDelta/MinDelta).
-        private void TryExhaustion(int idx, HistoryItemBar cur, double curVol, double curDelta,
-            double maxDelta, double minDelta, double maxPosPrice, double minNegPrice, List<Bubble> list)
+        // KIỆT SỨC thuần theo CORVEN — logic nằm trong ExhaustionLogic.cs (test được, không cần nền tảng).
+        private void TryExhaustion(int idx, HistoryItemBar bar, VolumeAnalysisData va, double tick, List<Bubble> list, bool isClosed)
         {
-            if (idx < 1) return;
-            var prev = Bar(idx - 1);
-            if (prev == null) return;
-            if (curVol >= PrevVol(prev) * ExhVolFadeRatio) return;   // volume phải teo lại
+            var levels = new List<ExhLevel>(va.PriceLevels.Count);
+            foreach (var kv in va.PriceLevels)   // Bid = SellVolume (khớp ở Bid), Ask = BuyVolume (khớp ở Ask)
+                levels.Add(new ExhLevel((long)Math.Round(kv.Key / tick), kv.Value.SellVolume, kv.Value.BuyVolume, kv.Value.Volume));
+            var s = new ExhSettings { SmallRel = ExhSmallRel, FadeLevels = ExhFadeLevels, FadeEndRel = ExhFadeEndRel };
+            long o = (long)Math.Round(bar.Open / tick), h = (long)Math.Round(bar.High / tick);
+            long l = (long)Math.Round(bar.Low / tick), c = (long)Math.Round(bar.Close / tick);
+            foreach (bool top in new[] { true, false })
+            {
+                var r = ExhaustionLogic.Detect(top, o, h, l, c, levels, s);
+                if (!r.Hit) continue;
+                var b = new Bubble
+                {
+                    Price = top ? bar.High : bar.Low, Shape = top ? Shape.ExhTop : Shape.ExhBottom,
+                    Color = top ? ExhTopColor : ExhBottomColor, Size = MidSize(), Transparency = SolidTransparency,
+                    UseBarWidth = true, Tooltip = ExhaustionLogic.Describe(r)
+                };
+                list.Add(b);
+                if (isClosed) _exhRecs.Add(new ExhRec { Idx = idx, Tick = r.Tick, Top = top, B = b });
+            }
+        }
 
-            int n = ExhSwingLookback;
-            // buy exhaustion tại đỉnh: delta rút khỏi đỉnh intrabar
-            if (IsLocalHigh(idx, n) && maxDelta > 0 && curDelta < maxDelta * ExhDeltaFadeRatio)
-                list.Add(new Bubble { Price = maxPosPrice, Shape = Shape.Triangle, Color = BuyColor, Size = MidSize(), Transparency = SolidTransparency,
-                    Tooltip = $"Buy đuối sức tại đỉnh: delta lúc mạnh nhất +{maxDelta:0}, giờ chỉ còn {curDelta:0}" });
-            // sell exhaustion tại đáy: delta hồi lên khỏi đáy intrabar
-            if (IsLocalLow(idx, n) && minDelta < 0 && curDelta > minDelta * ExhDeltaFadeRatio)
-                list.Add(new Bubble { Price = minNegPrice, Shape = Shape.Triangle, Color = SellColor, Size = MidSize(), Transparency = SolidTransparency,
-                    Tooltip = $"Sell đuối sức tại đáy: delta lúc mạnh nhất {minDelta:0}, giờ chỉ còn {curDelta:0}" });
+        // VÔ HIỆU kiệt sức (CORVEN 0:54): nến SAU chỉ cần RÂU quét qua mức là đủ, không cần đóng nến.
+        private void UpdateExhaustionSweeps(int idx, HistoryItemBar bar, double tick)
+        {
+            if (_exhRecs.Count == 0 || bar == null) return;
+            long h = (long)Math.Round(bar.High / tick), l = (long)Math.Round(bar.Low / tick);
+            List<ExhRec> done = null;
+            foreach (var r in _exhRecs)
+            {
+                if (r.Idx >= idx) continue;
+                if (!ExhaustionLogic.IsSwept(r.Top, r.Tick, h, l, ExhSweepTicks)) continue;
+                lock (_sync) { r.B.Confirm = -1; }
+                r.B.Tooltip += "  → ĐÃ BỊ RÂU QUÉT QUA: hết hiệu lực";
+                (done ??= new List<ExhRec>()).Add(r);
+                RePersistBar(r.Idx);
+            }
+            if (done != null) foreach (var r in done) _exhRecs.Remove(r);
+            if (_exhRecs.Count > 3000) _exhRecs.RemoveRange(0, _exhRecs.Count - 3000);
         }
 
         // Divergence neo vào nến PIVOT = idx-n. Idempotent + cooldown + volume participation.
@@ -1161,6 +1211,31 @@ namespace OrderFlowBubbles
                 return;
             }
 
+            // KIỆT SỨC (kiểu chart CORVEN): đỉnh = tam giác VÀNG mũi chỉ XUỐNG, cạnh đáy nằm ở giá cao nhất;
+            // đáy = tam giác XANH mũi chỉ LÊN, cạnh nằm ở giá thấp nhất. Bị râu quét qua → rỗng + mờ (hoặc ẩn).
+            if (b.Shape == Shape.ExhTop || b.Shape == Shape.ExhBottom)
+            {
+                bool dead = b.Confirm < 0;
+                if (dead && ExhHideInvalidated) return;
+                var col = b.Shape == Shape.ExhTop ? ExhTopColor : ExhBottomColor;   // màu HIỆN TẠI (đổi màu có hiệu lực ngay)
+                float half = Math.Max(1, size) / 2f, th = Math.Max(1, size) * 0.85f;
+                float dir = b.Shape == Shape.ExhTop ? 1f : -1f;
+                var pts = new[] { new PointF(cx - half, cy), new PointF(cx + half, cy), new PointF(cx, cy + dir * th) };
+                if (!dead)
+                {
+                    using var fb = new SolidBrush(Color.FromArgb(alpha, col));
+                    gr.FillPolygon(fb, pts);
+                    using var op = new Pen(Color.FromArgb(Math.Min(alpha, 160), Color.Black), 1f);
+                    gr.DrawPolygon(op, pts);
+                }
+                else
+                {
+                    using var dp = new Pen(Color.FromArgb(Math.Max(40, alpha / 3), col), 1f);
+                    gr.DrawPolygon(dp, pts);
+                }
+                return;
+            }
+
             // mức đã VỠ → làm mờ hẳn (giữ lại để học, không gây nhiễu mắt)
             if (b.Confirm < 0) alpha = Math.Max(30, alpha / 3);
 
@@ -1378,6 +1453,12 @@ namespace OrderFlowBubbles
                 if (list.Count > 0) _bubbles[idx] = list; else _bubbles.Remove(idx);
                 if (tint != 0) _barTint[idx] = tint; else _barTint.Remove(idx);
             }
+            // kiệt sức còn hiệu lực từ phiên trước -> tiếp tục theo dõi bị râu quét qua chưa
+            double tk = Symbol?.TickSize ?? 0;
+            if (tk > 0)
+                foreach (var b in list)
+                    if ((b.Shape == Shape.ExhTop || b.Shape == Shape.ExhBottom) && b.Confirm == 0)
+                        _exhRecs.Add(new ExhRec { Idx = idx, Tick = (long)Math.Round(b.Price / tk), Top = b.Shape == Shape.ExhTop, B = b });
             // absorption còn "đang chờ xác nhận" từ phiên trước -> tiếp tục theo dõi (giữ/vỡ mức)
             if (AbsConfirmBars > 0)
                 foreach (var b in list)

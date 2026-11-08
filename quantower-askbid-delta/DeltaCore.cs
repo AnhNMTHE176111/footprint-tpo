@@ -116,6 +116,73 @@ namespace AskBidDeltaCore
             return groups;
         }
 
+        // ------------------------------------------------------------------
+        //  LỰC ÁP ĐẢO trong nến (tô xanh/đỏ/xám kiểu "CC Delta Bar" của CORVEN)
+        // ------------------------------------------------------------------
+        //  Reverse-engineer từ video buổi Meet 2026-11-07 (Sierra, GCZ26 M1): màu KHÔNG theo
+        //  delta cuối nến — có cột xanh mà delta cuối ≈ 0 hoặc âm (râu dưới dài), có −9 tô đỏ
+        //  nhưng −13 tô xám, −35 đỏ nhưng −27 xám (ngưỡng thay đổi theo độ sôi động gần đây).
+        //  Quy tắc đã chọn (khớp mọi cột đọc được trên ảnh, xem báo cáo):
+        //    buy  = Close − Low   (quãng buy đẩy từ đáy delta lên tới delta đóng)
+        //    sell = High − Close  (quãng sell đè từ đỉnh delta xuống tới delta đóng)
+        //    ngưỡng T = max(mult × trung bình |delta| của `lookback` nến TRƯỚC, minPush)
+        //    xanh nếu buy ≥ T và buy > sell; đỏ nếu sell ≥ T và sell > buy; còn lại xám.
+        //  Open = 0 (Low ≤ 0 ≤ High) nên nến đóng âm luôn có sell ≥ |delta|: muốn xanh thì
+        //  buy phải đẩy từ đáy lên NHIỀU HƠN phần còn thua (vd −30 → +20: buy 50 > sell 0).
+        //  Nến thiếu đỉnh/đáy delta (nến lịch sử không dựng được từ tick) có High/Low = 0..delta
+        //  nên tự rơi về quy tắc theo delta cuối — không bịa râu.
+
+        /// <summary>Quãng buy đẩy lên (Close−Low) và sell đè xuống (High−Close) trong một nến, tính với Open = 0.</summary>
+        public static void Push(double delta, double hi, double lo, out double buy, out double sell)
+        {
+            double h = Math.Max(Math.Max(hi, 0.0), delta);
+            double l = Math.Min(Math.Min(lo, 0.0), delta);
+            buy = delta - l;
+            sell = h - delta;
+        }
+
+        /// <summary>+1 buy áp đảo (xanh), −1 sell áp đảo (đỏ), 0 yếu (xám) cho một nến khi đã biết ngưỡng.</summary>
+        public static sbyte ToneOf(double buy, double sell, double threshold)
+        {
+            if (!(threshold > 0) || double.IsNaN(buy) || double.IsNaN(sell)) return 0;
+            if (buy >= threshold && buy > sell) return 1;
+            if (sell >= threshold && sell > buy) return -1;
+            return 0;
+        }
+
+        /// <summary>
+        /// Màu lực áp đảo cho cả chuỗi nến delta (High/Low/Close tính tương đối với Open của từng nến
+        /// nên dùng được cho cả nến từng-nến lẫn cộng dồn). Nền so sánh = trung bình |delta| của
+        /// `lookback` nến có dữ liệu ngay TRƯỚC nến đang xét (không tính chính nó, nến đang chạy
+        /// không tự nâng ngưỡng của mình). Chưa đủ min(lookback, 5) nến nền → xám. Nến rỗng → 0
+        /// và không vào nền.
+        /// </summary>
+        public static sbyte[] StrengthTones(CumBar[] chain, int lookback, double mult, double minPush)
+        {
+            var res = new sbyte[chain?.Length ?? 0];
+            if (res.Length == 0) return res;
+            if (lookback < 1) lookback = 1;
+            int need = Math.Min(lookback, 5);
+            var win = new Queue<double>(lookback + 1);
+            double sum = 0;
+            for (int i = 0; i < chain.Length; i++)
+            {
+                var c = chain[i];
+                if (c.Empty) continue;
+                if (win.Count >= need)
+                {
+                    double thr = Math.Max(mult * (sum / win.Count), minPush);
+                    Push(c.Delta, c.High - c.Open, c.Low - c.Open, out double buy, out double sell);
+                    res[i] = ToneOf(buy, sell, thr);
+                }
+                double a = Math.Abs(c.Delta);
+                if (double.IsNaN(a)) continue;
+                win.Enqueue(a); sum += a;
+                if (win.Count > lookback) sum -= win.Dequeue();
+            }
+            return res;
+        }
+
         /// <summary>Khoá "ngày giao dịch": đổi giá trị khi qua mốc reset (phút trong ngày, giờ local = UTC + tz).</summary>
         public static long DayKey(long utcTicks, int tzHours, int resetMinutes)
         {

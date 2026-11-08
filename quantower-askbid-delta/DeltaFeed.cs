@@ -272,8 +272,11 @@ namespace AskBidDeltaFeed
         // ---------------------------------------------------------------- vẽ
         public static void Draw(Graphics gr, RectangleF clip, CumBar[] chain, int li, int ri, double barsW,
                                 Func<DateTime, double> chartX, Func<double, double> chartY,
-                                Color up, Color down, double bodyFrac, int wickPx, bool showNumbers)
+                                Color up, Color down, double bodyFrac, int wickPx, bool showNumbers,
+                                sbyte[] tones = null, Color neutral = default)
         {
+            // tones == null → màu theo Close ≥ Open (CumDeltaCandles, hành vi cũ);
+            // có tones → +1 up / −1 down / 0 neutral (lực áp đảo, AskBidDeltaBars)
             float bodyW = (float)Math.Max(1.0, barsW * bodyFrac);
             bool labels = showNumbers && barsW >= 26;
             using var font = new Font("Arial", 8, FontStyle.Regular);
@@ -285,7 +288,8 @@ namespace AskBidDeltaFeed
                 float yO = (float)chartY(c.Open), yC = (float)chartY(c.Close);
                 float yH = (float)chartY(c.High), yL = (float)chartY(c.Low);
                 bool isUp = c.Close >= c.Open;
-                Color col = isUp ? up : down;
+                Color col = tones == null || i >= tones.Length ? (isUp ? up : down)
+                          : tones[i] > 0 ? up : tones[i] < 0 ? down : neutral;
                 float top = Math.Min(yO, yC), bot = Math.Max(yO, yC);
                 float h = Math.Max(1f, bot - top);
                 if (c.Src == RangeSrc.None)

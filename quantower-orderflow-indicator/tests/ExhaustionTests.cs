@@ -163,13 +163,13 @@ static class ExhaustionTests
             Check(killedAt == 3, "vo hieu dung nen co high 107", $"killedAt={killedAt}");
         }
 
-        Console.WriteLine("[E15] Tooltip noi thang con so");
+        Console.WriteLine("[E15] Tooltip ngan: Kiet suc buy/sell");
         {
             var lv = Lv((100, 10, 10), (101, 10, 10), (102, 10, 10), (103, 10, 10), (104, 6, 9), (105, 6, 5), (106, 6, 2));
             string t = ExhaustionLogic.Describe(Top(101, 106, 100, 103, lv));
-            Check(t.Contains("Kiệt sức buy") && t.Contains("Ask tại đỉnh = 2") && t.Contains("9 → 5 → 2") && t.Contains("giảm dần về 0"), "tooltip co so Ask + chuoi giam", t);
+            Check(t == "Kiệt sức buy", "tooltip dinh ngan gon", t);
             string tb = ExhaustionLogic.Describe(Bot(103, 103, 100, 102, Lv((100, 0, 40), (101, 6, 6), (102, 6, 6), (103, 6, 6))));
-            Check(tb.Contains("Kiệt sức sell") && tb.Contains("Bid tại đáy = 0"), "tooltip day noi Bid", tb);
+            Check(tb == "Kiệt sức sell", "tooltip day ngan gon", tb);
             Check(ExhaustionLogic.Describe(default) == "", "khong kiet suc -> tooltip rong");
         }
 

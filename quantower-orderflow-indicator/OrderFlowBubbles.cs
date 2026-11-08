@@ -949,6 +949,14 @@ namespace OrderFlowBubbles
             }
         }
 
+        // Kiệt sức luôn hiện chữ NGẮN, kể cả bubble cũ trong SignalCache còn tooltip dài (2026-11-08).
+        private static string ShortTip(Bubble b)
+        {
+            if (b.Shape != Shape.ExhTop && b.Shape != Shape.ExhBottom) return b.Tooltip;
+            string t = b.Shape == Shape.ExhTop ? "Kiệt sức buy" : "Kiệt sức sell";
+            return b.Confirm < 0 ? t + " · hết hiệu lực" : t;
+        }
+
         // VÔ HIỆU kiệt sức (CORVEN 0:54): nến SAU chỉ cần RÂU quét qua mức là đủ, không cần đóng nến.
         private void UpdateExhaustionSweeps(int idx, HistoryItemBar bar, double tick)
         {
@@ -960,7 +968,7 @@ namespace OrderFlowBubbles
                 if (r.Idx >= idx) continue;
                 if (!ExhaustionLogic.IsSwept(r.Top, r.Tick, h, l, ExhSweepTicks)) continue;
                 lock (_sync) { r.B.Confirm = -1; }
-                r.B.Tooltip += "  → ĐÃ BỊ RÂU QUÉT QUA: hết hiệu lực";
+                r.B.Tooltip += " · hết hiệu lực";
                 (done ??= new List<ExhRec>()).Add(r);
                 RePersistBar(r.Idx);
             }
@@ -1088,7 +1096,7 @@ namespace OrderFlowBubbles
             int ri = (int)Math.Ceiling(conv.GetBarIndex(rightTime));
 
             var mouse = args.MousePosition;
-            string hoverTip = null; int hoverX = 0, hoverY = 0;
+            string hoverTip = null; int hoverX = 0, hoverY = 0; Color hoverCol = Color.White;
 
             var prevClip = gr.ClipBounds;
             gr.SetClip(clip);
@@ -1099,7 +1107,7 @@ namespace OrderFlowBubbles
                 int tintAlpha = (int)Math.Round(255 * Math.Clamp(DeltaBarTintPct, 0, 100) / 100.0);
 
                 // --- vùng Stacked Imbalance: hình chữ nhật từ nến tạo vùng kéo sang phải (như Sierra CORVEN) ---
-                var zoneHits = new List<(RectangleF r, string tip)>();
+                var zoneHits = new List<(RectangleF r, string tip, Color c)>();
                 if (ImbalanceEnabled)
                 {
                     int last = HistoricalData.Count - 1;
@@ -1155,7 +1163,7 @@ namespace OrderFlowBubbles
                             : end == SiEnd.Touched ? $" · giá chạm lại sau {age} nến"
                             : end == SiEnd.ClosedThrough ? $" · nến đóng xuyên qua sau {age} nến (không giữ được)"
                             : $" · hết hạn sau {age} nến";
-                        zoneHits.Add((rect, b.Tooltip + status));
+                        zoneHits.Add((rect, b.Tooltip + status, col));
                     }
                 }
 
@@ -1206,7 +1214,11 @@ namespace OrderFlowBubbles
                             {
                                 float dx = mouse.X - cx, dy = mouse.Y - y;
                                 float r = Math.Max(drawSize / 2f, 6f);
-                                if (dx * dx + dy * dy <= r * r) { hoverTip = b.Tooltip; hoverX = (int)cx; hoverY = (int)y; }
+                                if (dx * dx + dy * dy <= r * r)
+                                {
+                                    hoverTip = ShortTip(b); hoverX = (int)cx; hoverY = (int)y;
+                                    hoverCol = b.Shape == Shape.ExhTop ? ExhTopColor : b.Shape == Shape.ExhBottom ? ExhBottomColor : b.Color;
+                                }
                             }
                         }
                     }
@@ -1233,16 +1245,24 @@ namespace OrderFlowBubbles
 
                 if (hoverTip == null)   // bóng được ưu tiên; không trúng bóng thì xét vùng (vùng vẽ sau = trên cùng)
                     for (int zi = zoneHits.Count - 1; zi >= 0; zi--)
-                        if (zoneHits[zi].r.Contains(mouse.X, mouse.Y)) { hoverTip = zoneHits[zi].tip; hoverX = mouse.X; hoverY = mouse.Y; break; }
+                        if (zoneHits[zi].r.Contains(mouse.X, mouse.Y)) { hoverTip = zoneHits[zi].tip; hoverCol = zoneHits[zi].c; hoverX = mouse.X; hoverY = mouse.Y; break; }
 
                 if (hoverTip != null)
                 {
-                    using var tipFont = new Font("Arial", 9, FontStyle.Regular);
+                    // Nền ĐẶC (không trong suốt) + viền màu tín hiệu → đọc rõ trên mọi nền chart (2026-11-08).
+                    using var tipFont = new Font("Arial", 10, FontStyle.Bold);
                     var sz = gr.MeasureString(hoverTip, tipFont);
-                    float tx = hoverX + 12, ty = hoverY - sz.Height - 4;
-                    using var bg = new SolidBrush(Color.FromArgb(220, 20, 20, 20));
-                    gr.FillRectangle(bg, tx - 3, ty - 2, sz.Width + 6, sz.Height + 4);
-                    gr.DrawString(hoverTip, tipFont, Brushes.White, tx, ty);
+                    float w = sz.Width + 12, h = sz.Height + 6;
+                    float bx = hoverX + 12, by = hoverY - h - 4;
+                    if (bx + w > clip.Right) bx = Math.Max(clip.Left, hoverX - 12 - w);
+                    if (by < clip.Top) by = hoverY + 12;
+                    using (var bg = new SolidBrush(Color.FromArgb(255, 24, 26, 32)))
+                        gr.FillRectangle(bg, bx, by, w, h);
+                    using (var strip = new SolidBrush(Color.FromArgb(255, hoverCol)))
+                        gr.FillRectangle(strip, bx, by, 4, h);
+                    using (var bp = new Pen(Color.FromArgb(255, hoverCol), 1.5f))
+                        gr.DrawRectangle(bp, bx, by, w, h);
+                    gr.DrawString(hoverTip, tipFont, Brushes.White, bx + 8, by + 3);
                 }
             }
             finally { gr.SetClip(prevClip); }

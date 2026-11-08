@@ -129,17 +129,11 @@ namespace OrderFlowBubbles
             return top ? laterHighTick >= levelTick + t : laterLowTick <= levelTick - t;
         }
 
-        // Tooltip tiếng Việt (giữ buy/sell/Ask/Bid theo quy ước dự án).
+        // Tooltip NGẮN (người học chốt 2026-11-08: "ghi là kiệt sức buy/sell thôi").
         public static string Describe(ExhResult r)
         {
             if (!r.Hit) return "";
-            string side = r.Top ? "Ask" : "Bid";
-            string head = r.Top ? "Kiệt sức buy ở đỉnh (không còn người mua)" : "Kiệt sức sell ở đáy (không còn người bán)";
-            string why = r.Kind == ExhKind.Small ? "nhỏ" : "giảm dần về 0";
-            var parts = new string[r.Seq.Length];
-            for (int i = 0; i < r.Seq.Length; i++) parts[i] = r.Seq[i].ToString("0");
-            return $"{head} — {why}: {side} tại {(r.Top ? "đỉnh" : "đáy")} = {r.ExtremeVol:0} (TB {r.MeanLevelVol:0.0}/mức)"
-                 + (parts.Length > 1 ? $" · {side} râu (trong → {(r.Top ? "đỉnh" : "đáy")}): {string.Join(" → ", parts)}" : "");
+            return r.Top ? "Kiệt sức buy" : "Kiệt sức sell";
         }
     }
 }

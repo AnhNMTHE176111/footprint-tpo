@@ -502,3 +502,5 @@ Người học yêu cầu: research internet + brainstorm (Fable) → Opus imple
   - Câu 3 "canh sell ở HVN trên": thiếu điều kiện bias phiên + xác nhận M1, thiếu play phá vùng, và chỗ canh là MÉP DƯỚI HVN.
 - Người học bỏ hiểu nhầm "2 HVN" (4077–4040 + 4040–4000 là một vùng liền). Yêu cầu research lại HVN từ internet → chốt cách xác định 6 bước (làm mượt, độ nổi ≥30% POC, mép 60% quãng) trong `tpo/HVN-CACH-XAC-DINH.md`. Áp vào ảnh 2: HVN chính 4040–4018 (POC 4026), HVN phụ 4076–4070, LVN 4068–4042; giá rơi từ 4060 canh buy ở 4040–4038.
 - Áp cách 6 bước lên profile ngày 30/10 (ảnh không có số → đo độ dài thanh khối lượng bằng pixel; dòng 3970–3976 bị vạch phủ, sửa tay). HVN bền qua mọi cách làm mượt/cỡ dòng: 4010–3989 (đỉnh ~4000), 3928–3904 (đỉnh 3907–3908 = POC), 3894–3886 (đỉnh ~3891). Nút 3975 và 3954 không bền. Câu hỏi mở: CORVEN dùng TPO daily hôm nay hay hôm qua.
+
+<!-- Thử push: kiểm tra git push hoạt động sau khi xác minh email (2026-11-08) -->

@@ -34,7 +34,7 @@ tiêu** → cùng cấu hình chạy đúng cho GC, MGC, hay feed proxy. Knob **
 | **Nến delta lớn** | **tô thân nến** | cả thân | **xanh (Δ>0) / đỏ (Δ<0)** |
 | **Số Delta** | chữ dưới nến | — | xanh/đỏ theo dấu |
 | Exhaustion / Divergence / Sweep | ▲ tam giác | vừa | đỉnh→cyan, đáy→đỏ |
-| Stacked Imbalance | ◆ thoi | theo ratio | phe áp đảo |
+| Stacked Imbalance | ▭ vùng chữ nhật kéo sang phải | số mức | xanh lơ buy / hồng sell (nhạt = bị rút râu hoặc đã xa) |
 | Unfinished / Stop-hunt | ▭ / ⬤ halo | nhỏ / lớn | 2 phía / phe hấp thụ |
 
 Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score, deltaPct…).
@@ -47,7 +47,7 @@ Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score,
 | 3 | **Big Delta line** | 1 mức có net delta lệch mạnh: `|Δ/Vol| ≥ 0.35` **và** `|Δ|` z cao. Giữ **top-N** mức/nến. | **BẬT** |
 | 4/5 | **Nến delta lớn** | `|Δ/Vol| ≥ 0.30` **và** `|Δ|` z ≥ 2 **và** volume ≥ 0.8× median → tô thân **theo DẤU DELTA** (không theo close). | **BẬT** |
 | 6 | **Exhaustion** | Cực trị swing mới + volume teo + **delta rút khỏi đỉnh intrabar** (dùng `Total.MaxDelta/MinDelta` THẬT). | tắt |
-| 7 | **Stacked Imbalance** | Chéo `buy[i]` vs `sell[i-1]` ≥ 3:1, ≥3 mức liên tiếp; min-vol = **median động** (không cố định). | tắt |
+| 7 | **Stacked Imbalance** (2026-11-08, theo CORVEN) | Thuần: chéo Ask[i] ≥ 250% × Bid[i−1] (buy) / Bid[i] ≥ 250% × Ask[i+1] (sell), ≥3 mức liên tiếp, bên áp đảo ≥ 5 hợp đồng (sàn tuyệt đối, chỉnh được). Vẽ vùng từ nến tạo ra, kéo sang phải tới nến đầu tiên chạm lại (hoặc tới khi nến đóng xuyên qua). Logic ở `StackedImbalance.cs`. | bật |
 | 8 | **Delta Divergence** | Giá HH nhưng CVD LH (ngược ở đáy) tại pivot + **volume pivot ≥ 1.5× median** + cooldown. | tắt |
 | 9 | **Liquidity Sweep** | Wick vượt swing cũ + đóng lại trong range + delta ngược dấu. | tắt |
 | 10 | **Unfinished** | Đỉnh/đáy còn cả 2 phía (> sàn nhiễu). | tắt |

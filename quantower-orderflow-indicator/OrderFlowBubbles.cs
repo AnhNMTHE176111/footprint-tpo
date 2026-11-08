@@ -65,7 +65,8 @@
 //    • Big Delta line  = GẠCH NGANG (rộng = nến), xanh(buy)/đỏ(sell).
 //    • Nến delta lớn   = TÔ THÂN NẾN xanh(+delta)/đỏ(−delta).
 //    • Số delta        = chữ dưới đáy nến, xanh/đỏ theo dấu.
-//    • Exhaustion/Divergence/Sweep = tam giác;  Stacked Imbalance = thoi;  Unfinished = ngoặc.
+//    • Exhaustion/Divergence/Sweep = tam giác;  Unfinished = ngoặc.
+//    • Stacked Imbalance = VÙNG CHỮ NHẬT xanh lơ(buy)/hồng(sell) kéo sang phải (xem StackedImbalance.cs).
 //  Vẽ tay bằng GDI+ trong OnPaintChart (Quantower không có PriceSelectionValue).
 //  _bubbles/_barTint bị GHI ở thread tính (Process) và ĐỌC ở thread vẽ → mọi truy cập
 //  trong lock(_sync); thread vẽ copy snapshot rồi vẽ ngoài lock.
@@ -83,7 +84,7 @@ namespace OrderFlowBubbles
     public class OrderFlowBubbles : Indicator, IVolumeAnalysisIndicator
     {
         // ===================== hình + bubble =====================
-        private enum Shape { Ellipse, Triangle, Rectangle, Diamond, HLine }
+        private enum Shape { Ellipse, Triangle, Rectangle, Diamond, HLine, Zone }
 
         private sealed class Bubble
         {
@@ -98,6 +99,18 @@ namespace OrderFlowBubbles
             public int Confirm;         // absorption: 0 = đang chờ, +1 = mức GIỮ được, -1 = mức VỠ
             public bool Confirmable;    // true = thuộc luồng Absorption (được SignalCache/UpdateAbsorptionConfirms theo dõi)
             public bool IsDivergence;   // true = thuộc luồng Divergence (TryDivergence dò lại bằng field này, KHÔNG dò tooltip)
+            public double PriceHi;      // Shape.Zone: mép trên vùng (Price = mép dưới)
+            public int ZoneSide;        // Shape.Zone: +1 buy / −1 sell
+            public bool ZoneWeak;       // Shape.Zone: buy ở râu trên / sell ở râu dưới (bị rút râu)
+        }
+
+        // vùng Stacked Imbalance đang theo dõi (kéo sang phải tới khi kết thúc)
+        private sealed class ZoneRec
+        {
+            public int Idx;             // nến tạo vùng
+            public Bubble B;
+            public int EndIdx = -1;     // nến kết thúc (-1 = còn hiệu lực)
+            public SiEnd End;
         }
 
         // absorption đang chờ xác nhận (mức giữ hay vỡ trong N nến sau)
@@ -133,6 +146,7 @@ namespace OrderFlowBubbles
         // ô có EFFORT cao theo nến (idx -> danh sách chỉ số tick) — dùng cho điểm "đa nến"
         private readonly Dictionary<int, List<long>> _hotLvls = new();
         private readonly List<AbsRec> _absRecs = new();   // absorption chờ xác nhận
+        private readonly List<ZoneRec> _zones = new();    // vùng Stacked Imbalance (của nến ĐÃ ĐÓNG), lock(_sync)
 
         // ===================== niêm phong tín hiệu (xem SignalCache.cs) =====================
         // Mỗi nến ĐÃ ĐÓNG chỉ tính tín hiệu 1 lần; kết quả khoá theo THỜI GIAN mở nến, sống sót
@@ -396,15 +410,47 @@ namespace OrderFlowBubbles
         [InputParameter("Exhaustion · Lookback đỉnh/đáy", 83, 1, 50, 1, 0)]
         public int ExhSwingLookback { get; set; } = 3;
 
-        // ---------- 5) Stacked Imbalance ----------
+        // ---------- 5) Stacked Imbalance — THUẦN, vẽ VÙNG như chart CORVEN (2026-11-08) ----------
+        // Định nghĩa + lời giảng: xem StackedImbalance.cs. ĐÃ BỎ mọi cổng ngoài định nghĩa của bản cũ:
+        // chờ đủ 40 nến thống kê ("ready"), ngưỡng volume TƯƠNG ĐỐI max(5, trung vị 3 ô đậm nhất 100 nến)
+        // (đo: ngưỡng trung vị 8 hợp đồng, chỉ còn 17 vùng/phiên so với 141 của bản mới), và tắt mặc định. Chỉ giữ 1 sàn TUYỆT ĐỐI cho bên áp
+        // đảo — đo trên GCZ26 M1 69 phiên (08-03 → 10-21): với sàn 1 hợp đồng, 92% vùng chứa ít nhất một
+        // mức "x vs 0" và cứ 1,2 nến lại có 1 vùng (ngập chart); sàn 5 → 1 vùng / 7 nến giờ London, gần
+        // mật độ đếm trên chart CORVEN (~1 / 9-13 nến). Đây là mật độ hiển thị, KHÔNG phải lợi thế đã kiểm định.
         [InputParameter("Stacked Imbalance · Bật", 90)]
-        public bool ImbalanceEnabled { get; set; } = false;
+        public bool ImbalanceEnabled { get; set; } = true;
 
-        [InputParameter("Stacked Imbalance · Tỷ lệ chéo % (300 = 3:1)", 91, 100, 2000, 10, 0)]
-        public int ImbalanceRatioPct { get; set; } = 300;
+        [InputParameter("Stacked Imbalance · Tỷ lệ chéo % (CORVEN dùng 250; hay gặp 300)", 91, 100, 2000, 10, 0)]
+        public int ImbalanceRatioPct { get; set; } = 250;
 
         [InputParameter("Stacked Imbalance · Số mức liên tiếp", 92, 2, 20, 1, 0)]
         public int ImbalanceRun { get; set; } = 3;
+
+        [InputParameter("Stacked Imbalance · Volume tối thiểu bên áp đảo (hợp đồng, chặn ca 1-vs-0)", 93, 1, 1000000, 1, 0)]
+        public double ImbMinVolume { get; set; } = 5;
+
+        // Bật (mặc định) = như Sierra của CORVEN: vùng dừng ở nến ĐẦU TIÊN chạm lại vùng (đo: 64% vùng bị chạm
+        // ngay nến kế tiếp, trung vị 1 nến, 95% trong 42 nến). Tắt = giữ vùng qua các lần test, chỉ dừng khi
+        // một nến ĐÓNG CỬA xuyên qua mép xa ("không giữ được giá, đâm thủng").
+        [InputParameter("Stacked Imbalance · Kết thúc khi giá chạm lại (tắt = khi nến đóng xuyên qua)", 94)]
+        public bool ImbEndOnTouch { get; set; } = true;
+
+        [InputParameter("Stacked Imbalance · Kéo dài tối đa (nến, 0 = tới khi kết thúc)", 95, 0, 100000, 1, 0)]
+        public int ImbMaxBars { get; set; } = 0;
+
+        // CORVEN: "dùng gần thôi, đừng dùng xa" → vùng còn hiệu lực nhưng đã quá N nến thì vẽ mờ đi.
+        // 60 nến (~1 giờ M1) > 95% thời gian chờ bị chạm đo được (42 nến).
+        [InputParameter("Stacked Imbalance · Quá N nến chưa kết thúc thì vẽ mờ (xa)", 96, 0, 100000, 1, 0)]
+        public int ImbFarBars { get; set; } = 60;
+
+        [InputParameter("Stacked Imbalance · Màu vùng buy", 97)]
+        public Color ImbBuyZoneColor { get; set; } = Color.FromArgb(0x5F, 0xD3, 0xE0);
+
+        [InputParameter("Stacked Imbalance · Màu vùng sell", 98)]
+        public Color ImbSellZoneColor { get; set; } = Color.FromArgb(0xF2, 0x8F, 0xA6);
+
+        [InputParameter("Stacked Imbalance · Độ đậm vùng (0-100)", 99, 5, 100, 1, 0)]
+        public int ImbZoneOpacity { get; set; } = 45;
 
         // ---------- 6) Delta Divergence ----------
         [InputParameter("Divergence · Bật", 100)]
@@ -490,7 +536,7 @@ namespace OrderFlowBubbles
                 BigTradeEnabled, BigZ, BigVolMult, BigTradeTopN, BigTradeRequireRealTrades, BigTradeSkipOnAbsorption, BigTradeFixedContracts, BigTradeAbsFloor,
                 DLineEnabled, DLineFloor, DLineZ, DLineTopN,
                 ExhaustionEnabled, ExhVolFadeRatio, ExhDeltaFadeRatio, ExhSwingLookback,
-                ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun,
+                ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun, ImbMinVolume,
                 DivergenceEnabled, DivSwingLookback, DivVolPartic, DivCooldown,
                 SweepEnabled, SweepLookback, UnfinishedEnabled,
                 StopHuntEnabled, StopHuntLookback);
@@ -510,7 +556,7 @@ namespace OrderFlowBubbles
 
         private void ResetState()
         {
-            lock (_sync) { _bubbles.Clear(); _barTint.Clear(); }
+            lock (_sync) { _bubbles.Clear(); _barTint.Clear(); _zones.Clear(); }
             InitBaselines();
             _cvd.Clear();
             _processedClosedCount = 0;
@@ -550,6 +596,7 @@ namespace OrderFlowBubbles
                 //     có mỏng hơn lúc live cũng mặc kệ (xem SignalCache.cs).
                 EnsureCache();
                 _settingsFingerprint = ComputeSettingsFingerprint();
+                if (_processedClosedCount == 0) lock (_sync) { _zones.Clear(); }   // tính lại từ đầu (đổi tham số)
                 for (int i = _processedClosedCount; i < closedCount; i++)
                 {
                     var bar = Bar(i);
@@ -569,6 +616,8 @@ namespace OrderFlowBubbles
                         PersistBar(i, bar, timeKey);
                     }
 
+                    UpdateZones(i, bar);                   // vùng stacked imbalance của các nến TRƯỚC có kết thúc ở nến này?
+                    RegisterZones(i);                      // rồi mới nhận vùng của chính nến này
                     AddToBaseline(bar);
                     UpdateAbsorptionConfirms(i, tick);     // mức của các nến trước giữ hay vỡ?
                 }
@@ -637,8 +686,6 @@ namespace OrderFlowBubbles
             var bigTradeCands = new List<(Bubble b, double z, long k)>();
             var cellBigCands = new List<(Bubble b, double magnitude, long k)>();
             var absCands = new List<(Bubble b, int score, double z, long k, bool top)>();
-            int imbBuyRun = 0, imbSellRun = 0;
-            double imbMinVol = Math.Max(MinLevelVolFloor, _rLvlVol.Median);
 
             // ---- POC của nến + ô đậm thứ nhì (điểm "POC nổi bật" của Valtos) ----
             double pocVol = 0, secondVol = 0; long pocTick = long.MinValue;
@@ -668,7 +715,7 @@ namespace OrderFlowBubbles
 
             for (long k = loIdx; k <= hiIdx; k++)
             {
-                if (!byTick.TryGetValue(k, out var lvl)) { imbBuyRun = 0; imbSellRun = 0; continue; }
+                if (!byTick.TryGetValue(k, out var lvl)) continue;
                 double price = lvl.price;
                 var it = lvl.it;
                 double buy = it.BuyVolume, sell = it.SellVolume, vol = it.Volume;
@@ -805,32 +852,6 @@ namespace OrderFlowBubbles
                         dLineCands.Add((price, z, dNet > 0 ? 1 : -1, buy, sell));
                 }
 
-                // 5) STACKED IMBALANCE — chéo (buy[k] vs sell[k-1]), min-vol RELATIVE
-                if (ImbalanceEnabled && ready && byTick.TryGetValue(k - 1, out var lo))
-                {
-                    double askFilter = lo.it.SellVolume * ImbalanceRatioPct / 100.0;
-                    if (buy > askFilter && buy > imbMinVol) imbBuyRun++; else imbBuyRun = 0;
-                    if (imbBuyRun >= ImbalanceRun)
-                        list.Add(new Bubble
-                        {
-                            Price = price, Shape = Shape.Diamond, Color = BuyColor,
-                            Size = SizeFromMagnitude(askFilter > 0 ? buy / askFilter : 1, 1),
-                            Transparency = SolidTransparency,
-                            Tooltip = $"Buy áp đảo {imbBuyRun} mức liên tiếp: buy {buy:0} vs sell mức dưới {lo.it.SellVolume:0}"
-                        });
-
-                    double bidFilter = buy * ImbalanceRatioPct / 100.0;
-                    if (lo.it.SellVolume > bidFilter && lo.it.SellVolume > imbMinVol) imbSellRun++; else imbSellRun = 0;
-                    if (imbSellRun >= ImbalanceRun)
-                        list.Add(new Bubble
-                        {
-                            Price = lo.price, Shape = Shape.Diamond, Color = SellColor,
-                            Size = SizeFromMagnitude(bidFilter > 0 ? lo.it.SellVolume / bidFilter : 1, 1),
-                            Transparency = SolidTransparency,
-                            Tooltip = $"Sell áp đảo {imbSellRun} mức liên tiếp: sell {lo.it.SellVolume:0} vs buy mức trên {buy:0}"
-                        });
-                }
-
                 // 8) UNFINISHED — đỉnh/đáy còn cả 2 phía (min-vol relative)
                 if (UnfinishedEnabled)
                 {
@@ -838,6 +859,30 @@ namespace OrderFlowBubbles
                         list.Add(new Bubble { Price = bar.High, Shape = Shape.Rectangle, Color = SellColor, Size = MinBubbleSize, Transparency = SolidTransparency, Tooltip = $"Đấu giá chưa xong tại đỉnh: buy {buy:0} / sell {sell:0}" });
                     if (k == loIdx && buy > MinLevelVolFloor && sell > MinLevelVolFloor)
                         list.Add(new Bubble { Price = bar.Low, Shape = Shape.Rectangle, Color = BuyColor, Size = MinBubbleSize, Transparency = SolidTransparency, Tooltip = $"Đấu giá chưa xong tại đáy: buy {buy:0} / sell {sell:0}" });
+                }
+            }
+
+            // 5) STACKED IMBALANCE — định nghĩa THUẦN (StackedImbalance.cs), vẽ VÙNG. Không cần "ready".
+            if (ImbalanceEnabled && hiIdx > loIdx)
+            {
+                int n = (int)(hiIdx - loIdx + 1);
+                var askArr = new double[n]; var bidArr = new double[n];
+                for (long k = loIdx; k <= hiIdx; k++)
+                    if (byTick.TryGetValue(k, out var lv)) { askArr[k - loIdx] = lv.it.BuyVolume; bidArr[k - loIdx] = lv.it.SellVolume; }
+                foreach (var z in StackedImbalanceCalc.Detect(loIdx * tick, tick, askArr, bidArr, ImbalanceRatioPct, ImbalanceRun, ImbMinVolume))
+                {
+                    StackedImbalanceCalc.Classify(z, bar.Open, bar.Close);
+                    string ratioTxt = double.IsPositiveInfinity(z.MinRatio) ? "bên kia = 0" : $"yếu nhất {z.MinRatio * 100:0}%";
+                    string tip = $"Stacked imbalance {(z.Side > 0 ? "BUY" : "SELL")} {z.Levels} mức {z.Lo:0.0}–{z.Hi:0.0}: "
+                               + (z.Side > 0 ? $"buy {z.DomVolume:0} vs sell chéo {z.OppVolume:0}" : $"sell {z.DomVolume:0} vs buy chéo {z.OppVolume:0}")
+                               + $" ({ratioTxt}) · {StackedImbalanceCalc.PositionText(z.Position)}"
+                               + (z.Weak ? " — bị rút râu (CORVEN: không đẹp)" : "");
+                    list.Add(new Bubble
+                    {
+                        Price = z.Lo, PriceHi = z.Hi, Shape = Shape.Zone, ZoneSide = z.Side, ZoneWeak = z.Weak,
+                        Color = z.Side > 0 ? ImbBuyZoneColor : ImbSellZoneColor, Size = 0, Transparency = 0,
+                        Tooltip = tip
+                    });
                 }
             }
 
@@ -1064,6 +1109,67 @@ namespace OrderFlowBubbles
                 using var centerFmt = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
                 int tintAlpha = (int)Math.Round(255 * Math.Clamp(DeltaBarTintPct, 0, 100) / 100.0);
 
+                // --- vùng Stacked Imbalance: hình chữ nhật từ nến tạo vùng kéo sang phải (như Sierra CORVEN) ---
+                var zoneHits = new List<(RectangleF r, string tip)>();
+                if (ImbalanceEnabled)
+                {
+                    int last = HistoricalData.Count - 1;
+                    var lastBar = Bar(last);
+                    var mode = ImbEndOnTouch ? SiEndMode.Touch : SiEndMode.CloseThrough;
+                    var snap = new List<(int idx, Bubble b, int endIdx, SiEnd end)>();
+                    lock (_sync)
+                    {
+                        foreach (var z in _zones)
+                            if (z.Idx <= ri && (z.EndIdx < 0 || z.EndIdx >= li)) snap.Add((z.Idx, z.B, z.EndIdx, z.End));
+                        if (_bubbles.TryGetValue(last, out var lb))      // nến đang chạy: vùng tạm thời
+                            foreach (var b in lb) if (b.Shape == Shape.Zone) snap.Add((last, b, -1, SiEnd.Active));
+                    }
+                    foreach (var (zIdx, b, endIdx0, end0) in snap)
+                    {
+                        var src = Bar(zIdx);
+                        if (src == null) continue;
+                        int endIdx = endIdx0; var end = end0;
+                        // còn hiệu lực: nến ĐANG CHẠY đã chạm/xuyên chưa (xem trước, chốt khi nến đóng)
+                        if (endIdx < 0 && zIdx < last && lastBar != null)
+                        {
+                            var e = StackedImbalanceCalc.CheckEnd(b.ZoneSide, b.Price, b.PriceHi, lastBar.High, lastBar.Low, lastBar.Close, mode);
+                            if (e != SiEnd.Active) { endIdx = last; end = e; }
+                        }
+                        float x0 = (float)(conv.GetChartX(src.TimeLeft) + barsW / 2.0);
+                        float x1;
+                        if (endIdx >= 0)
+                        {
+                            var eb = Bar(endIdx);
+                            if (eb == null) continue;
+                            x1 = (float)(conv.GetChartX(eb.TimeLeft) + barsW / 2.0);
+                        }
+                        else x1 = clip.Right;
+                        if (x1 < clip.Left || x0 > clip.Right) continue;
+                        float yTop = (float)conv.GetChartY(b.PriceHi + tick / 2.0);
+                        float yBot = (float)conv.GetChartY(b.Price - tick / 2.0);
+                        var rect = new RectangleF(x0, yTop, Math.Max((float)barsW / 2f, x1 - x0), Math.Max(3f, yBot - yTop));
+
+                        int age = (endIdx >= 0 ? endIdx : last) - zIdx;
+                        bool far = endIdx < 0 && ImbFarBars > 0 && age >= ImbFarBars;
+                        double op = Math.Clamp(ImbZoneOpacity, 0, 100) / 100.0;
+                        if (b.ZoneWeak) op *= 0.5;    // bị rút râu → nhạt
+                        if (far) op *= 0.5;           // "đừng dùng xa" → nhạt
+                        var col = b.ZoneSide > 0 ? ImbBuyZoneColor : ImbSellZoneColor;
+                        using (var zb = new SolidBrush(Color.FromArgb((int)Math.Round(255 * op), col)))
+                            gr.FillRectangle(zb, rect);
+                        if (endIdx < 0)               // còn hiệu lực → viền rõ
+                            using (var zp = new Pen(Color.FromArgb((int)Math.Round(255 * Math.Min(1.0, op * 2)), col), 1f))
+                                gr.DrawRectangle(zp, rect.X, rect.Y, rect.Width, rect.Height);
+
+                        string status = endIdx < 0
+                            ? (far ? $" · còn hiệu lực {age} nến — đã XA (CORVEN: đừng dùng xa)" : $" · còn hiệu lực {age} nến")
+                            : end == SiEnd.Touched ? $" · giá chạm lại sau {age} nến"
+                            : end == SiEnd.ClosedThrough ? $" · nến đóng xuyên qua sau {age} nến (không giữ được)"
+                            : $" · hết hạn sau {age} nến";
+                        zoneHits.Add((rect, b.Tooltip + status));
+                    }
+                }
+
                 for (int i = li; i <= ri; i++)
                 {
                     if (i < 0 || i >= HistoricalData.Count) continue;
@@ -1095,6 +1201,7 @@ namespace OrderFlowBubbles
                     {
                         foreach (var b in bubbles)
                         {
+                            if (b.Shape == Shape.Zone) continue;   // vùng stacked imbalance đã vẽ ở trên
                             float y = (float)conv.GetChartY(b.Price);
                             // absorption dùng bề rộng nến, nhưng có SÀN px: khi zoom hẹp nó từng nhỏ
                             // hơn cả halo Big Trade nên gần như vô hình.
@@ -1134,6 +1241,10 @@ namespace OrderFlowBubbles
                         }
                     }
                 }
+
+                if (hoverTip == null)   // bóng được ưu tiên; không trúng bóng thì xét vùng (vùng vẽ sau = trên cùng)
+                    for (int zi = zoneHits.Count - 1; zi >= 0; zi--)
+                        if (zoneHits[zi].r.Contains(mouse.X, mouse.Y)) { hoverTip = zoneHits[zi].tip; hoverX = mouse.X; hoverY = mouse.Y; break; }
 
                 if (hoverTip != null)
                 {
@@ -1305,6 +1416,37 @@ namespace OrderFlowBubbles
             if (_absRecs.Count > 500) _absRecs.RemoveRange(0, _absRecs.Count - 500);
         }
 
+        // ---- vùng Stacked Imbalance: nhận vùng của nến ĐÃ ĐÓNG (tính mới hoặc khôi phục từ niêm phong) ----
+        private void RegisterZones(int idx)
+        {
+            lock (_sync)
+            {
+                _zones.RemoveAll(z => z.Idx == idx);
+                if (_bubbles.TryGetValue(idx, out var l))
+                    foreach (var b in l)
+                        if (b.Shape == Shape.Zone) _zones.Add(new ZoneRec { Idx = idx, B = b });
+                // giữ bộ nhớ gọn: bỏ vùng ĐÃ kết thúc cũ nhất khi quá nhiều
+                if (_zones.Count > 4000) _zones.RemoveAll(z => z.EndIdx >= 0 && z.EndIdx < idx - 5000);
+            }
+        }
+
+        // Nến idx vừa đóng: vùng nào (của nến TRƯỚC) dừng kéo dài ở nến này. OHLC không đổi khi Quantower
+        // nạp lại → tính lại luôn ra cùng kết quả, không cần niêm phong trạng thái kết thúc.
+        private void UpdateZones(int idx, HistoryItemBar bar)
+        {
+            var mode = ImbEndOnTouch ? SiEndMode.Touch : SiEndMode.CloseThrough;
+            lock (_sync)
+            {
+                foreach (var z in _zones)
+                {
+                    if (z.EndIdx >= 0 || z.Idx >= idx) continue;
+                    var e = StackedImbalanceCalc.CheckEnd(z.B.ZoneSide, z.B.Price, z.B.PriceHi, bar.High, bar.Low, bar.Close, mode);
+                    if (e == SiEnd.Active && ImbMaxBars > 0 && idx - z.Idx >= ImbMaxBars) e = SiEnd.Expired;
+                    if (e != SiEnd.Active) { z.EndIdx = idx; z.End = e; }
+                }
+            }
+        }
+
         // ================================================================
         //  NIÊM PHONG TÍN HIỆU (xem SignalCache.cs) — sống sót qua ResetState()
         // ================================================================
@@ -1350,7 +1492,8 @@ namespace OrderFlowBubbles
                     {
                         Price = b.Price, Shape = (int)b.Shape, ColorArgb = b.Color.ToArgb(), Size = b.Size,
                         Transparency = b.Transparency, Halo = b.Halo, UseBarWidth = b.UseBarWidth,
-                        Tooltip = b.Tooltip, Confirm = b.Confirm, Confirmable = b.Confirmable
+                        Tooltip = b.Tooltip, Confirm = b.Confirm, Confirmable = b.Confirmable,
+                        PriceHi = b.PriceHi, ZoneSide = b.ZoneSide, ZoneWeak = b.ZoneWeak
                     });
             return d;
         }
@@ -1363,7 +1506,8 @@ namespace OrderFlowBubbles
                 {
                     Price = cb.Price, Shape = (Shape)cb.Shape, Color = Color.FromArgb(cb.ColorArgb), Size = cb.Size,
                     Transparency = cb.Transparency, Halo = cb.Halo, UseBarWidth = cb.UseBarWidth,
-                    Tooltip = cb.Tooltip, Confirm = cb.Confirm, Confirmable = cb.Confirmable
+                    Tooltip = cb.Tooltip, Confirm = cb.Confirm, Confirmable = cb.Confirmable,
+                    PriceHi = cb.PriceHi, ZoneSide = cb.ZoneSide, ZoneWeak = cb.ZoneWeak
                 });
             return list;
         }

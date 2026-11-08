@@ -37,13 +37,14 @@ Xem `OrderFlowBubbles.csproj`. Chỉnh `<QuantowerDir>` = thư mục cài Quanto
 Reference cần: `TradingPlatform.BusinessLayer.dll` + `System.Drawing.Common.dll` (trong `…\TradingPlatform\v<ver>\bin\`).
 
 ⚠️ **Từ 2026-09-15 indicator gồm 2 file: `OrderFlowBubbles.cs` + `SignalCache.cs`** (niêm phong tín
-hiệu — xem comment đầu 2 file). `OrderFlowBubbles.csproj` là SDK-style project nên tự động gộp cả 2
+hiệu — xem comment đầu 2 file). **Từ 2026-11-08 thêm file thứ 3: `StackedImbalance.cs`** (logic thuần
+Stacked Imbalance) — build tay phải liệt kê CẢ 3 file. `OrderFlowBubbles.csproj` là SDK-style project nên tự động gộp cả 2
 file (default glob `*.cs` trong thư mục) — không cần sửa gì thêm. Nếu build tay bằng script 1-file
 (`qw-build.sh <file> <asm>`) thì PHẢI build cả 2 file cùng lúc (viết tạm 1 csproj liệt kê cả 2
 `<Compile Include>`), vì `qw-build.sh` chỉ nhận 1 file nguồn.
 
 ## Test
-`tests/` (`OrderFlowBubblesTests`) test riêng `SignalCache.cs` (gồm cả `BigTradeLog`) — không cần SDK
+`tests/` (`OrderFlowBubblesTests`) test riêng `SignalCache.cs` (gồm cả `BigTradeLog`) và `StackedImbalance.cs` — không cần SDK
 Quantower vì các class này không phụ thuộc `TradingPlatform.BusinessLayer`. Chạy:
 `dotnet run --project quantower-orderflow-indicator/tests`.
 

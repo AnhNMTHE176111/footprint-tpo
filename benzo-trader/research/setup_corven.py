@@ -90,14 +90,15 @@ class CP:
     bo_quet_stop: bool = False     # bỏ ⛔ nhịp đẩy do quét stop
     b_bo_rmin: bool = False        # thế B: bỏ 4c R sẵn ≥ 1,7 (TP vẫn 2R)
     trap_hoi: bool = False         # thế B: thêm dấu hiệu "trap trong nhịp hồi"
+    sl_b_canh_sat: bool = False    # corven-3: thế B mốc cạnh — SL = min(đáy cửa sổ, cạnh) − đệm (bỏ trừ dung sai cạnh)
 
 
-LIVE_VERSION = 'corven-2'
+LIVE_VERSION = 'corven-3'
 
 
 def cp_live() -> 'CP':
-    """Bộ tham số đang chạy trong indicator (LogicVersion corven-2)."""
-    return CP(hoi_khong_cham=True, bo_quet_stop=True, b_bo_rmin=True, trap_hoi=True)
+    """Bộ tham số đang chạy trong indicator (LogicVersion corven-3)."""
+    return CP(hoi_khong_cham=True, bo_quet_stop=True, b_bo_rmin=True, trap_hoi=True, sl_b_canh_sat=True)
 
 
 # =====================================================================================================
@@ -988,7 +989,9 @@ def eval_order(c: Cand, f: Feat, cp: CP, m: Step2Machine, chong: dict, use_chong
         edge = [mo for mo in c.mocs if mo['kind'] == 'canh']
         if edge:
             mo = edge[0]
-            if S > 0:
+            if cp.sl_b_canh_sat:
+                raw = (min(min(L[c.w0:cf + 1]), mo['level']) - buf) if S > 0 else (max(max(H[c.w0:cf + 1]), mo['level']) + buf)
+            elif S > 0:
                 raw = min(min(L[c.w0:cf + 1]), mo['level'] - mo['tol']) - buf
             else:
                 raw = max(max(H[c.w0:cf + 1]), mo['level'] + mo['tol']) + buf

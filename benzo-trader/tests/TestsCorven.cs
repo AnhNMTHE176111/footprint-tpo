@@ -399,12 +399,12 @@ static partial class Program
         const int Cut = 51318, Deny = 3697;    // nến cuối TRAIN (2026-09-15) · 4 phiên mỏng đầu file (Python `good`)
         var (tb, tl) = CorvenData.Load(prefix, Cut);
 
-        Console.WriteLine("[C12] Hồi quy TRAIN trên file 90d (corven-2): 333 lệnh = Python cp_live (thế A 31, thế B 302)");
+        Console.WriteLine("[C12] Hồi quy TRAIN trên file 90d (corven-3): 399 lệnh = Python cp_live (thế A 32, thế B 367)");
         var (engT, _) = CorvenData.Run(tb, tl, 0.1, Deny);
         var sg = engT.Signals;
-        Check(sg.Count == 333, "333 lệnh TRAIN", sg.Count.ToString());
-        Check(sg.Count(x => x.Setup == 'A') == 31 && sg.Count(x => x.Setup == 'B') == 302, "thế A 31 · thế B 302", $"{sg.Count(x => x.Setup == 'A')}/{sg.Count(x => x.Setup == 'B')}");
-        Check(sg.Count(x => x.Outcome == "TP") == 105 && sg.Count(x => x.Outcome == "SL") == 217, "105 TP · 217 SL · 11 TIME (= Python cp_live)", $"{sg.Count(x => x.Outcome == "TP")}/{sg.Count(x => x.Outcome == "SL")}");
+        Check(sg.Count == 399, "399 lệnh TRAIN", sg.Count.ToString());
+        Check(sg.Count(x => x.Setup == 'A') == 32 && sg.Count(x => x.Setup == 'B') == 367, "thế A 32 · thế B 367", $"{sg.Count(x => x.Setup == 'A')}/{sg.Count(x => x.Setup == 'B')}");
+        Check(sg.Count(x => x.Outcome == "TP") == 140 && sg.Count(x => x.Outcome == "SL") == 250, "140 TP · 250 SL · 9 TIME (= Python cp_live)", $"{sg.Count(x => x.Outcome == "TP")}/{sg.Count(x => x.Outcome == "SL")}");
         Check(sg[0].BarIdx == 4050 && sg[0].Signs == "kiệt sức: kiệt sức đỉnh (Ask 0) @4084,2 (nến 4048) | stacked: stacked sell 3 mức 4083,2–4083,4 (nến 4050)", "lệnh đầu: nến 4050, chuỗi dấu hiệu đúng định dạng Python", sg[0].Signs);
 
         Console.WriteLine("[C11] Chạy một mạch = chạy từng nến · giá ×10 (bước giá ×10) ra cùng tín hiệu");

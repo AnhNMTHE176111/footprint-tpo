@@ -104,7 +104,7 @@ static partial class Program
             var cB = new SignalCache(cp, BenzoCore.CacheVersion(true)); cB.Load();
             var (eOn, _) = CorvenData.Run(b, l, 0.1, Deny, cache: cB);
             int want = e0.Signals.Count(x => x.BarIdx < mid), got = eOn.Signals.Count(x => x.BarIdx < mid);
-            Check(want == 80 && got == 80 && eOn.Signals.Select(x => x.Id).SequenceEqual(e0.Signals.Select(x => x.Id)), "bật lại: 80/80 lệnh trước nến 15000 có lại, toàn bộ = chạy chuẩn", $"{got}/{want}");
+            Check(want == 95 && got == 95 && eOn.Signals.Select(x => x.Id).SequenceEqual(e0.Signals.Select(x => x.Id)), "bật lại: 95/95 lệnh trước nến 15000 có lại, toàn bộ = chạy chuẩn", $"{got}/{want}");
 
             // đang TẮT nhưng cache đã có lệnh ⇒ lệnh vẫn hiện (bảng đếm được), không dò mới
             var cC = new SignalCache(cp, BenzoCore.CacheVersion(true)); cC.Load();

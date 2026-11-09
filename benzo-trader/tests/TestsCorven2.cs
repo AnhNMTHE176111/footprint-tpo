@@ -1,5 +1,5 @@
 // Unit test corven-2 (4 sửa đổi người học 2026-11-09, research/report/VARIANTS-NGUOI-HOC-2026-11-09.md) = setup_corven.cp_live().
-// Mỗi luật: bộ mặc định (corven-2) và CorvenCfg.V1() (corven-1) cho kết quả ngược nhau trên cùng một ca.
+// Mỗi luật: bộ mặc định (corven-3) và CorvenCfg.V1() (corven-1) cho kết quả ngược nhau trên cùng một ca.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,7 +12,7 @@ static partial class Program
     static void TestsCorven2()
     {
         Console.WriteLine("[V2-0] Phiên bản");
-        Check(CorvenParams.LogicVersion == "corven-2", "LogicVersion = corven-2");
+        Check(CorvenParams.LogicVersion == "corven-3", "LogicVersion = corven-3");
 
         Console.WriteLine("[V2-1] Trap trong nhịp hồi (thế B sell): ô Ask 20 ở nến hồi 13 @4126,8, CF đóng 4126,6 dưới ô");
         {
@@ -52,6 +52,15 @@ static partial class Program
             var (g, _) = GeoWorld(41377);
             Check(Eval(GeoCand(41356 - 40), g).Gates.Contains("r_nho"), "thế A vẫn bị luật R ≥ 1,7");
         }
+        Console.WriteLine("[V3-1] SL thế B mốc cạnh: ngay dưới cạnh vừa phá − đệm (corven-3), không trừ dung sai (corven-1/2)");
+        {
+            var (f, _) = World(Ex2Rows());
+            CorvenCand Mk() => Ex2Cand(new List<CorvenMoc> { Canh(41280) });     // sell, cạnh 4128,0 ± 0,75; đỉnh cửa sổ 4128,4
+            var c3 = Eval(Mk(), f);
+            Check(c3.Sl == 41287 && c3.MocUsed == "canh", "corven-3: SL = max(4128,4; 4128,0) + 3 tick = 4128,7", c3.Sl.ToString());
+            var c1 = Eval(Mk(), f, CorvenCfg.V1());
+            Check(c1.Sl == 41291, "corven-1: SL = max(4128,4; 4128,0 + 0,75) + 3 tick, làm tròn ra xa = 4129,1", c1.Sl.ToString());
+        }
         Console.WriteLine("[V2-4] Ca thật 09/11 11:26 VN (buy, nhịp hồi không chạm cạnh + trap hồi) — file 3 tháng mới");
         {
             string root = RepoRoot();
@@ -59,10 +68,12 @@ static partial class Program
             if (prefix == null || !File.Exists(prefix + "_bars.csv")) { Console.WriteLine("  (bỏ qua: không có file 20260811-20261109)"); return; }
             var (b, l) = CorvenData.Load(prefix);
             var (eng, _) = CorvenData.Run(b, l, 0.1);
-            var s = eng.Signals.FirstOrDefault(x => x.Time == new DateTime(2026, 11, 9, 4, 26, 0, DateTimeKind.Utc));
-            Check(s != null && s.Setup == 'B' && s.Side == 1 && Near(s.Entry, 4132.3, 1e-6) && Near(s.Sl, 4128.0, 1e-6) && Near(s.Tp, 4140.9, 1e-6),
-                  "có lệnh B buy 4132,3 · SL 4128,0 · TP 4140,9", s == null ? "không có" : $"{s.Setup} {s.Side} {s.Entry} {s.Sl} {s.Tp}");
-            Check(s != null && s.Signs.Contains("trap hồi, bóng đỏ 20 @4131,3"), "dấu hiệu gồm trap hồi bóng đỏ 20 @4131,3", s?.Signs);
+            var day = eng.Signals.Where(x => x.Time.Date == new DateTime(2026, 11, 9)).ToList();
+            var sell = day.FirstOrDefault(x => x.Time == new DateTime(2026, 11, 9, 3, 11, 0, DateTimeKind.Utc));
+            Check(sell != null && sell.Side == -1 && Near(sell.Entry, 4126.0, 1e-6) && Near(sell.Sl, 4135.1, 1e-6) && sell.Outcome == "SL"
+                  && sell.ExitTime == new DateTime(2026, 11, 9, 4, 30, 0, DateTimeKind.Utc),
+                  "corven-3 (= Python cp_live): lệnh B sell 10:11 VN, SL 4135,1 (cạnh 4134,6 + 3 tick), dính SL 11:30 VN", sell == null ? "không có" : $"{sell.Entry} {sell.Sl} {sell.Outcome}");
+            Check(!day.Any(x => x.Time == new DateTime(2026, 11, 9, 4, 26, 0, DateTimeKind.Utc)), "⇒ ca 11:26 VN không vào vì đang có lệnh (luật 1 lệnh mở)");
         }
     }
 }

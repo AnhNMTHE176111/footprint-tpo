@@ -20,3 +20,16 @@ Sửa đổi:
 
 Kết luận: cả 4 sửa đổi cùng chiều cải thiện (−0,29 → −0,07R) nhưng **vẫn âm và ngang vào ngẫu nhiên** ⇒ chưa có lợi thế. Đã thử 11 tổ hợp trên TRAIN ⇒ hậu kiểm.
 Ca 11:26 với 1+2+3+4: được vào (dấu hiệu stacked buy 4131,7–4132,0 + trap hồi bóng đỏ 20 @4131,3), SL 4128,0, TP 4140,9 ⇒ TP +1,95R. Đây là dữ liệu mới, chỉ xác nhận cơ chế, không tính làm bằng chứng.
+
+## Sửa đổi 5 (corven-3): SL thế B mốc cạnh ngay sau cạnh vừa phá
+
+Người học: "chỉ cần dưới range phá + buffer". Cũ: SL = min(đáy cửa sổ, cạnh − dung sai) − đệm ⇒ ca 11:26 SL 4128,0 (dưới cạnh 4129,4 thêm 1,05 dung sai).
+Mới: SL = min(đáy cửa sổ, cạnh) − đệm ⇒ ca 11:26 SL 4129,1.
+
+| | n | R TB | WR | nửa 1 / nửa 2 | vào ngẫu nhiên sau CF |
+|---|---|---|---|---|---|
+| corven-2 | 333 | −0,075 | 33 % | −0,05 / −0,10 | −0,08 |
+| **corven-3** | **399** | **+0,02** | 37 % | 0,00 / +0,04 | −0,04 |
+
+Lần đầu dương và hơn vào ngẫu nhiên, nhưng nhỏ và là hậu kiểm (12 tổ hợp) ⇒ chưa đủ chắc. Hệ quả trên ngày 09/11: corven-3 vào lệnh B sell 10:11 VN
+(entry 4126,0, SL 4135,1 = cạnh 4134,6 + đệm, entry cách cạnh 8,6 giá vì sửa đổi 1 bỏ giới hạn khoảng cách) — dính SL 11:30 ⇒ ca 11:26 bị chặn bởi luật 1 lệnh mở.

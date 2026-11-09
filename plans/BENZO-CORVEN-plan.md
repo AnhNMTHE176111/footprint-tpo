@@ -13,7 +13,7 @@
 | nến tăng: (high−close)/biên độ | p50 0,20 · p75 0,39 | "đóng sát cực trị" = ≤ 0,3 biên độ |
 | \|Δ\| / trung vị \|Δ\| 50 nến | ≥ 2× ở 26 % nến · ≥ 3× ở 14 % | delta "to" = ≥ 2× |
 | ô Bid/Ask lớn nhất nến / nền (trung vị của "trung vị 3 ô to nhất mỗi nến", 100 nến) | ≥ 3× ở 17 % nến · ≥ 4× ở 10 % · ô p90 = 9 hợp đồng | "bóng" = ≥ 3× nền VÀ ≥ 10 hợp đồng |
-| stacked ≥ 3 mức, 250 % (định nghĩa CORVEN) | có ở **32 %** nến (≥ 4 mức: 16 %) | stacked quá phổ biến ⇒ chỉ tính khi "mới + giữa thân + giá đi tiếp" (mục 1.③d) |
+| stacked ≥ 3 mức, 250 % (định nghĩa CORVEN) | có ở **32 % nến theo TỪNG PHÍA** (buy 32 %, sell 33 %; nến có vùng bất kỳ phía 55 %; ≥ 4 mức: 16 %/phía) | stacked quá phổ biến ⇒ chỉ tính khi "mới + giữa thân + đóng phía đẩy" (mục 1.③d) |
 | kiệt sức "nhỏ" có râu (ExhaustionLogic mặc định) | ≈ 9 % nến mỗi phía | giữ nguyên định nghĩa đã có |
 | `max_one_trade` | = 0 ở 100 % nến | **không** có dấu hiệu nào dựa lệnh đơn |
 | Range Box (MEASURE.md) | 19–20 range/ngày; cao trung vị 36–38 tick ≈ 2,1 mbr; fail break ≈ 2/range; vào máy móc ngay fail break = −0,2R sau phí | thế A phải thêm ③ mới có cơ hội khác 0 |
@@ -32,7 +32,8 @@ Ký hiệu: `tick` = 0,1 (GC/MGC); `mbr` như trên; `tol` = max(2 tick, 0,5 mbr
 
 **1b. Hai thế** (chỉ hai, không có thế thứ ba):
 - **Thế A** — range ACTIVE, vừa có `FailBreak` ở cạnh E (đóng ngoài rồi đóng lại trong trong ≤ K nến). Hướng = vào lòng range, mục tiêu cạnh đối diện.
-- **Thế B** — range BROKEN theo hướng D (`BreakConfirmed`), chưa `ReEntry`, tuổi ≤ 30 nến kể từ nến đóng ngoài. Hướng = D. Mốc = cạnh vừa phá hoặc stacked mới cùng hướng D hình thành trong cú đẩy.
+- **Thế B** — range BROKEN theo hướng D (`BreakConfirmed`), chưa `ReEntry`, tuổi ≤ 30 nến kể từ nến đóng ngoài. Hướng = D. Mốc = cạnh vừa phá hoặc stacked mới cùng hướng D hình thành trong cú đẩy. **Gồm cả** `BreakConfirmed` làm range DEAD ngay vì hết lượt ReEntry (Q4, 19 % số cú phá): cú phá thật lần 3 vẫn là cú phá thật và cạnh vẫn là mốc; gắn cờ `b_from_exhausted` và **báo tách riêng** — GĐ2 được phép bật/tắt nhóm này (tính là 1 tham số quét).
+- **1c (Q15):** pivot ngược D được chọn = pivot 1 nến ngược D **gần nhất sau nến đóng ngoài và sau lần gãy trước**; thế B tạm huỷ cho tới khi giá lập cực trị mới theo D (vượt cực trị cú đẩy tính tới lúc đó).
 - Không có range ACTIVE/BROKEN ⇒ không có tín hiệu (= "không follow giữa lòng range", và "trend không có range thì không vẽ" BRAINSTORM #12). **Không code "phá cấu trúc không có range"** — không có mốc/mục tiêu đo được, và cả 3 ví dụ có số của CORVEN đều dựa range.
 
 **1c. Cấu trúc gần nhất chưa gãy ngược** (0:18:39, 0:42:23 "một nến là đủ"):
@@ -45,13 +46,14 @@ Ký hiệu: `tick` = 0,1 (GC/MGC); `mbr` như trên; `tol` = max(2 tick, 0,5 mbr
 |---|---|---|
 | A | cạnh E vừa fail break | nến xác nhận (CF) đóng **trong** [bottom, top] và cách E ≤ **1,0 mbr** (ví dụ 1: vào ≈ cạnh trên). Đóng sâu hơn vào lòng range ⇒ không vào (R:R tự giảm, và "giữa lòng range không có chỗ đặt SL"). |
 | B | cạnh vừa phá | trong cửa sổ test (mục 2c) có nến mà râu chạm dải [E − tol, E + tol] **và** CF đóng cách E ≤ 1,0 mbr về phía D (ví dụ 2: vào 4126,6 với cạnh 4127,4 = 0,5 mbr). |
-| B | stacked mới cùng hướng D | vùng stacked (250 %, ≥ 3 mức) hình thành **sau** nến đóng ngoài, tuổi ≤ 30 nến, vị trí Body hoặc râu phía đẩy, **chưa từng bị chạm** trước nhịp test này (CORVEN 0:20:12 "chạm một mớ → vứt"; chế độ `SiEndMode.Touch` của StackedImbalance.cs chính là đếm lần chạm đầu), và chưa `ClosedThrough`. "Gần" = râu nến trong cửa sổ test chạm [Lo − tol, Hi + tol]. |
+| B | stacked mới cùng hướng D | vùng stacked (250 %, ≥ 3 mức) hình thành **từ nến đóng ngoài trở đi** (Q8: ví dụ 2 vùng nằm trong chính cú phá), tuổi ≤ 30 nến, vị trí **Body, không Weak** (Q3: "râu phía đẩy" theo `Classify` luôn là Weak — CORVEN "ở đỉnh rồi rút râu thì không đẹp" ⇒ không làm mốc), **chưa từng bị chạm** trước nhịp test này (chạm = râu vào đúng [Lo, Hi], như `SiEndMode.Touch`; CORVEN 0:20:12 "chạm một mớ → vứt"), và chưa `ClosedThrough`. "Gần" = râu nến trong cửa sổ test chạm [Lo − tol, Hi + tol] (Q6: hai thước khác nhau vì hai mục đích khác nhau — "đã chạm" là chạm thật, "đang test" là đang tới gần) **và** CF đóng cách mép gần của vùng ≤ 1,0 mbr về phía D (Q5: "gần" là tính chất chung của mọi mốc, không riêng cạnh). |
 - Mốc "xa" = không thoả tuổi/khoảng cách trên ⇒ bỏ (0:06:54 "dùng gần thôi"). Không có mốc "đỉnh/đáy vừa gãy" riêng ở v1 (chỉ tồn tại khi có range phá — đã là cạnh vừa phá).
 - **Stacked cũ làm mốc KHÔNG tính dấu hiệu** (chi-tiet ③ cách đếm) — code bằng id vùng: vùng dùng làm mốc bị loại khỏi danh sách ③d.
 
 **2b. Test không quá sâu:**
 - Thế B: không nến nào trong cửa sổ test đóng lại trong range (= engine không phát `ReEntry`; nếu phát ⇒ thế B chết, range sống lại) và không nến nào đóng xuyên mép xa của vùng stacked làm mốc (`CheckEnd` CloseThrough). Râu xuyên **được phép** (ví dụ 2 râu chạm lại cạnh).
-- Thế A: CF phải đóng **trong** range (1:00:02 "phải vào lòng range"). **Ngoại lệ "xác nhận lần 2"** (ví dụ 3, 1:00:09): range đang PENDING/BROKEN hướng −D, nến mới có râu quét qua (≥ 1 tick) cực trị của cú thủng trước rồi đóng cao hơn (sell: thấp hơn) cực trị đó ≥ tol, cùng ≥ 2 dấu hiệu ⇒ cho vào dù chưa đóng trong range; SL sau râu mới. Chỉ 1 lần mỗi cú thủng.
+- Thế A: CF phải đóng **trong** range (1:00:02 "phải vào lòng range"). **Ngoại lệ "xác nhận lần 2"** (ví dụ 3, 1:00:09): range đang PENDING/BROKEN hướng −S (S = hướng vào lòng range), **phải có "lần 1"** = một nến y trước đó trong cùng cú thủng có râu phía −S và đóng lùi về phía S ≥ tol so với cực trị của nó (phe S đã thử một lần mà chưa vào được lòng range); rồi nến x quét qua cực trị của y ≥ 1 tick, đóng lùi về phía S ≥ tol so với cực trị mới, cùng ≥ 2 dấu hiệu ⇒ cho vào dù chưa đóng trong range; SL sau râu x. Chỉ 1 lần mỗi cú thủng, trong ≤ 30 nến từ nến đóng ngoài (Q12: bản không đòi lần 1 cho 25 ứng viên/ngày — quá lỏng). Báo nhóm này **tách riêng** trong bảng.
+- **FailBreak "whipsaw"** (đóng lại xuyên luôn cạnh đối diện, engine phát FailBreak + CloseOutside cùng nến): **không lập thế A** (Q13) — nến to hơn cả range thì không có mốc để chờ, CORVEN "không đuổi giá".
 
 **2c. Cửa sổ test (cũng là cửa sổ "cùng lúc" của ③):**
 - Thế A: từ nến đóng ngoài (ref của FailBreak) tới CF, **tối đa 5 nến** (K=3 + 2 nến chờ).
@@ -62,16 +64,16 @@ Ký hiệu: `tick` = 0,1 (GC/MGC); `mbr` như trên; `tol` = max(2 tick, 0,5 mbr
 Hướng vào S (+1 buy / −1 sell).
 
 **③a. Delta** (một trong hai dạng, tính tối đa 1):
-- *Đồng thuận, to-thẳng* (0:35:55 "dương to lên, thẳng lên"): nến neo = CF hoặc nến ngay trước CF, với Δ·S > 0, |Δ| ≥ **2 × medΔ**, và "thẳng" = Δ không đảo trong nến: buy `delta ≥ 0,8 × max_delta`, sell `delta ≤ 0,8 × min_delta` (cột `max_delta/min_delta` có sẵn trong `_bars.csv`; live lấy từ Volume Analysis). Lý do 2×: p75 của tỷ lệ (26 % nến) — "to" phải hiếm hơn một nửa; 3× (14 %) để quét.
-- *Ngược giá* (0:31:42; ví dụ 1 và 2): nhịp test = chuỗi 2–8 nến liền đi ngược S tới mốc (sell: giá lên), biên độ nhịp ≥ 1,0 mbr; **tổng Δ của nhịp có dấu ngược chiều giá** (sell: giá lên mà ΣΔ ≤ 0). Nến neo = nến cực trị của nhịp. Không đòi ngưỡng độ lớn (ví dụ 2: −30, −32 là đủ) — chỉ đòi dấu.
+- *Đồng thuận, to* (0:35:55 "dương to lên, thẳng lên"): nến neo = CF hoặc nến ngay trước CF, với Δ·S > 0, |Δ| ≥ **2 × medΔ**, và nến neo đóng theo S. **Bỏ điều kiện "thẳng" (`0,8 × max_delta`) ở v1 — Q1:** Footprint Export ghi `max_delta = min_delta = delta` ở 100 % nến lịch sử ⇒ điều kiện này không đo được; theo nguyên tắc "chưa đo được thì không code thành signal", C# **cũng không được dùng** `max_delta` (nếu không Python/C# lệch ở live). Việc phụ cho v2: sửa Footprint Export ghi intrabar thật rồi xuất lại. Lý do 2×: p75 của tỷ lệ (26 % nến) — "to" phải hiếm hơn một nửa; 3× (14 %) để quét.
+- *Ngược giá* (0:31:42; ví dụ 1 và 2) — định nghĩa máy móc (Q9, chốt theo Opus): nến neo x = nến cực trị của nhịp, râu x chạm dải mốc (sell: H[x] ≥ mốc − tol); điểm xuất phát s = nến có đáy thấp nhất (sell; buy: đỉnh cao nhất) trong [x−8, x−2]; nhịp = s+1…x; biên độ L[s]→H[x] ≥ 1,0 mbr; **ΣΔ(s+1…x) có dấu ngược chiều giá** (sell: giá lên mà ΣΔ ≤ 0). Không đòi ngưỡng độ lớn (ví dụ 2: −30, −32 là đủ) — chỉ đòi dấu.
 
-**③b. Bóng đúng phe tại mốc** (0:46:03–0:46:13): ô có side-volume phía S (buy: ask, sell: bid) ≥ **3 × nền_ô** và ≥ **10 hợp đồng**, nằm ở **nửa nến phía S** (buy: ô ≤ trung điểm nến) hoặc trong dải mốc ± tol. Nến neo = nến chứa ô. Nền_ô lấy cách tính của OrderFlowBubbles (median trên top-3 ô/nến, 100 nến) nhưng **bỏ MAD/z** — chỉ dùng bội số để Python/C# khớp dễ và người đọc hiểu ("gấp 3 lần ô bình thường"). Lý do 3×: 17 % nến — bóng là "đại diện chính" trên chart CORVEN nên không được quá hiếm; 10 hợp đồng = p90 ô, chặn nến đêm mỏng. Quét {3,4}.
+**③b. Bóng đúng phe tại mốc** (0:46:03–0:46:13): ô có side-volume phía S (buy: ask, sell: bid) ≥ **3 × nền_ô** và ≥ **10 hợp đồng**, nằm ở **nửa nến phía S** (buy: ô ≤ trung điểm nến) hoặc trong dải mốc ± tol. Nến neo = nến chứa ô. Nền_ô = trung vị 100 nến của (trung vị 3 ô side-volume lớn nhất mỗi nến), **tính trên các nến TRƯỚC nến hiện tại** (Q11, như OrderFlowBubbles; mbr và medΔ thì gồm nến hiện tại như Range Box/kernel — giữ hai quy ước này, ghi vào code), **bỏ MAD/z** — chỉ dùng bội số để Python/C# khớp dễ và người đọc hiểu ("gấp 3 lần ô bình thường"). Lý do 3×: 17 % nến — bóng là "đại diện chính" trên chart CORVEN nên không được quá hiếm; 10 hợp đồng = p90 ô, chặn nến đêm mỏng. Quét {3,4}.
 
 **③c. Phe ngược kiệt sức ở râu** = `ExhaustionLogic.Detect` mặc định (SmallRel 0,10 · Fade 3 mức/0,25 · bắt buộc râu ≥ 1 tick): sell cần kiệt sức **đỉnh** (Ask), buy cần kiệt sức **đáy** (Bid), ở nến trong cửa sổ test, và mức đó **chưa bị râu quét qua** (`IsSwept`, sweepTicks 1) tính tới CF. Nến neo = nến kiệt sức.
 
-**③d. Stacked mới cùng hướng S**: vùng `StackedImbalanceCalc.Detect(250 %, run 3, minVol 1)` phía S, hình thành ở nến trong cửa sổ test, `Position == Body` hoặc râu phía S mà **nến tạo vùng đóng ở phía S của vùng** (buy: close ≥ Hi; CORVEN 0:03:40 "ở đỉnh cũng được nhưng sau đó giá phải đi tiếp"), `Weak == false`. Không tính vùng đang làm mốc (id loại). Nến neo = nến tạo vùng. Vì 32 % nến có stacked, nếu sau GĐ1 dấu hiệu này chiếm > 50 % số lệnh thì nâng run lên 4 (quét {3,4}).
+**③d. Stacked mới cùng hướng S**: vùng `StackedImbalanceCalc.Detect(250 %, run 3, minVol 1)` phía S, hình thành ở nến trong cửa sổ test, **`Position == Body` và `Weak == false` và nến tạo vùng đóng ở phía S của vùng** (buy: close ≥ Hi). Nhánh "râu phía S" **bỏ** (Q3: theo `Classify` vùng ở râu phía S luôn Weak và không thể đóng vượt nó — nhánh này rỗng; câu CORVEN 0:03:40 "ở đỉnh cũng được nếu sau đó giá đi tiếp" cần nhìn nến SAU, không code ở v1). Không tính vùng đang làm mốc (id loại). Nến neo = nến tạo vùng. Vì ~31 % nến có stacked đủ điều kiện này (run 4: 16,5 %), nếu sau GĐ1 dấu hiệu này có mặt trong > 50 % số lệnh thì nâng run lên 4 (quét {3,4}).
 
-**③e. Trap / stop hunt phe ngược** (0:23:45 "quét qua đỉnh mà nổ bóng thì là stop hunt"; 0:24:34 SL = bóng ngược màu): một nến có râu quét qua **mốc quan trọng** ≥ 1 tick và đóng lại phía S của mốc; mốc quan trọng = cạnh range (thế A: chính cú thủng; thế B: cực trị của cú đẩy hoặc pivot gần nhất ngược S), **và** trong phần râu có ô side-volume phía −S ≥ 3 × nền_ô (bóng ngược màu = SL khớp). Nến neo = nến quét. Trap và kiệt sức trên cùng nến = **2 dấu hiệu** (chi-tiet); trap và ③b khác màu nên không trùng.
+**③e. Trap / stop hunt phe ngược** (0:23:45 "quét qua đỉnh mà nổ bóng thì là stop hunt"; 0:24:34 SL = bóng ngược màu): một nến có râu quét qua **mốc quan trọng** ≥ 1 tick và đóng lại phía S của mốc; mốc quan trọng = cạnh range (thế A: chính cú thủng; thế B: cực trị của cú đẩy hoặc pivot gần nhất ngược S), **và** trong phần râu có ô side-volume phía −S ≥ 3 × nền_ô **và ≥ 10 hợp đồng** (Q10: cùng sàn với ③b, cùng lý do nến đêm mỏng) (bóng ngược màu = SL khớp). Nến neo = nến quét. Trap và kiệt sức trên cùng nến = **2 dấu hiệu** (chi-tiet); trap và ③b khác màu nên không trùng.
 
 Đếm: số loại dấu hiệu ≥ 2 ⇒ qua ③. Reason phải liệt kê từng dấu hiệu kèm số (mục 2 kiến trúc).
 
@@ -123,9 +125,9 @@ Hướng vào S (+1 buy / −1 sell).
 - CSV log thêm cột `the,moc,signs`.
 
 ## 3. GIAO THỨC ĐO (chống khớp quá tay)
-1. **Dữ liệu:** chỉ `fp_GCZ26_..._90d` (QĐ-6). Bỏ 4 phiên thưa đầu file và phiên `thin`. **TRAIN ≤ 2026-09-15 (≈ 40 phiên) / TEST ≥ 2026-09-16 (≈ 25 phiên)** — giữ đúng mốc chia của vòng 1–2 để so được. TEST **chỉ mở một lần**, ở GĐ2 sau khi đã chốt bộ tham số trên TRAIN; mở rồi không sửa gì nữa (sửa = ghi "đã nhìn TEST", kết quả mất giá trị).
+1. **Dữ liệu:** chỉ `fp_GCZ26_..._90d` (QĐ-6). Bỏ 4 phiên thưa đầu file và phiên `thin`. **TRAIN ≤ 2026-09-15 (= 35 phiên dày, 47.622 nến) / TEST ≥ 2026-09-16 (= 26 phiên)** (Q14) — giữ đúng mốc chia của vòng 1–2 để so được. TEST **chỉ mở một lần**, ở GĐ2 sau khi đã chốt bộ tham số trên TRAIN; mở rồi không sửa gì nữa (sửa = ghi "đã nhìn TEST", kết quả mất giá trị).
 2. **Mô phỏng:** `kernel.simulate` — chi phí 0,2 giá/lệnh, chạm SL+TP cùng nến = SL, vào ở giá đóng CF, 1 lệnh mở.
-3. **Tham số ĐƯỢC quét (và chỉ những cái này):** cửa sổ test thế B {2,3,4}; bội bóng {3,4}; run stacked {3,4}; bội delta {2,3}; "gần" {0,5; 1,0; 1,5} mbr; đệm SL {2,3,5} tick. Quét **từng tham số một** quanh bộ mặc định (như MEASURE.md), không quét lưới đầy đủ. **Tối đa 3 vòng** tinh chỉnh trên TRAIN; mỗi vòng ghi bảng đầy đủ, không chỉ ô tốt. Range, kiệt sức, 250 %, K/G, 1,7R/2R, thân 0,4/0,3: **đóng băng**.
+3. **Tham số ĐƯỢC quét (và chỉ những cái này):** cửa sổ test thế B {2,3,4}; bội bóng {3,4}; run stacked {3,4}; bội delta {2,3}; "gần" {0,5; 1,0; 1,5} mbr; đệm SL {2,3,5} tick; nhóm thế B từ range DEAD-ngay {bật, tắt} (Q4). Quét **từng tham số một** quanh bộ mặc định (như MEASURE.md), không quét lưới đầy đủ. **Tối đa 3 vòng** tinh chỉnh trên TRAIN; mỗi vòng ghi bảng đầy đủ, không chỉ ô tốt. Range, kiệt sức, 250 %, K/G, 1,7R/2R, thân 0,4/0,3: **đóng băng**.
 4. **Đối chứng (bắt buộc, cùng SL/TP/chi phí):** (C1) *bỏ ③* — vào ở mọi CF hợp lệ tại mốc mà không đòi dấu hiệu; (C2) *ngẫu nhiên cùng giờ cùng hướng* — với mỗi lệnh thật, chọn 20 nến ngẫu nhiên trong cùng phiên, cùng giờ ±30′, cùng hướng, SL/TP cùng khoảng (rủi ro tính bằng mbr), lấy trung bình; (C3) *từng dấu hiệu đơn lẻ* — chỉ đòi 1 dấu hiệu, báo R theo từng loại.
 5. **Bảng phải báo** (TRAIN, TEST, cả hai): n, lệnh/ngày, WR, R TB + KTC 95 % (bootstrap), ΣR, max DD (R), chuỗi thua dài nhất; tách **thế A / thế B**; theo **tổ hợp dấu hiệu** (Δ+bóng, trap+kiệt sức…); theo **giờ VN** (từng giờ) và phiên Á/Âu/Mỹ; theo tháng; tỷ lệ bị loại bởi từng cổng (R < 1,7, trần SL, ⛔ từng mục); 5 lệnh thắng + 5 thua kèm giờ UTC để soi chart.
 6. **Tiêu chí "có lợi thế" (chốt trước):**
@@ -160,3 +162,27 @@ Hướng vào S (+1 buy / −1 sell).
 - **GĐ4 — Tester độc lập** mục 4 → `report/TEST-CORVEN.md` + ảnh. Fable review → sửa → commit/push.
 
 Việc cần người học (1 dòng, không chặn): xuất GCZ26 M1 03→07/11/2026 bằng Footprint Export để thay 3 ca tổng hợp bằng ca thật và so hộp máy với 20 hộp CORVEN.
+
+## 6. QUYẾT ĐỊNH SAU GĐ0 (Fable, 2026-11-09 — trả lời 15 điểm ở `research/report/CORVEN-GD0.md` mục 5)
+GĐ0 đạt: parity stacked + kiệt sức Python↔C# 0 lệch trên 51.319 nến; 39/39 test; TEST chưa chạm; tần suất khớp mục 0. Các mục 1–3 ở trên **đã sửa theo bảng này** (tìm "Qn" trong văn bản).
+| Q | Quyết định | Lý do |
+|---|---|---|
+| Q1 Δ "thẳng" | **Bỏ** `0,8 × max_delta` ở v1, cả Python lẫn C#; ③a chỉ còn "to" (≥ 2× medΔ, cùng dấu, nến đóng theo S) | export ghi `max_delta = delta` 100 % ⇒ không đo được; giữ no-op ở lịch sử mà có tác dụng ở live = Python/C# lệch và R đo không đại diện. Việc v2: sửa Footprint Export ghi intrabar |
+| Q2 stacked 32 % | Sửa câu mục 0: 32 % là theo từng phía (bất kỳ phía 55 %) | định nghĩa và mã đúng, chỉ khác mẫu số |
+| Q3 ③d nhánh râu | ③d = **Body + không Weak + nến tạo vùng đóng phía S**; mốc stacked ở ② cũng **chỉ Body** | nhánh "râu phía S" rỗng theo `Classify`; vùng râu phía đẩy = Weak = "rút râu, không đẹp" ⇒ không làm mốc |
+| Q4 range DEAD ngay | **Có lập thế B**, cờ `b_from_exhausted`, báo tách, GĐ2 được bật/tắt | phá thật lần 3 vẫn là phá thật; 19 % mẫu không được vứt mù, nhưng range đã phá 3 lần là "range xấu" nên phải nhìn số riêng |
+| Q5 mốc stacked khoảng cách | **Thêm** CF đóng ≤ 1,0 mbr từ mép gần vùng | "gần" là tính chất của mọi mốc; 608 thế B chỉ nhờ stacked là lỗ hổng |
+| Q6 hai thước chạm | **Giữ**: đã-chạm = đúng [Lo, Hi]; đang-test = ±tol | hai mục đích khác nhau (đã khớp lệnh ở vùng vs đang tiến về vùng) |
+| Q7 tol | **Giữ**: cạnh dùng `r.tol` lúc sinh range; vùng dùng tol hiện tại | nhất quán với engine; vùng mới sinh thì mbr hiện tại là đúng |
+| Q8 nến đóng ngoài | **Tính cả** nến đóng ngoài vào cú đẩy (bar ≥ ref) | ví dụ 2: vùng đỏ nằm trong chính nến phá |
+| Q9 Δ ngược giá | **Chốt định nghĩa Opus** (s = cực trị đối diện trong [x−8, x−2], nhịp s+1…x, biên độ ≥ 1 mbr, ΣΔ ngược dấu) | máy móc, không nhìn trước, tần suất 25 % trên CF thế A hợp lý |
+| Q10 trap sàn | **Thêm** sàn 10 hợp đồng cho bóng ngược màu của trap | cùng lý do ③b (nến đêm mỏng) |
+| Q11 nền_ô | **Giữ** cách plan, tính TRƯỚC nến hiện tại; mbr/medΔ gồm nến hiện tại | khớp OFB và Range Box tương ứng; ghi rõ hai quy ước trong code |
+| Q12 lần 2 | **Đòi "lần 1"**: nến y trước đó có râu phía −S + đóng lùi ≥ tol; x quét qua cực trị y; ≤ 30 nến; 1 lần/cú thủng; báo tách | 25 ứng viên/ngày là lỏng; CORVEN nói "confirm lại lần 2" = phải có lần 1 chưa vào |
+| Q13 whipsaw | **Không lập thế A** | nến to hơn range thì không có mốc để chờ |
+| Q14 số phiên | TRAIN 35 / TEST 26 phiên dày; tiêu chí n ≥ 60 giữ nguyên | chỉ là số đếm |
+| Q15 1c | **Chốt định nghĩa Opus** | đúng tinh thần "một nến là đủ", không nhìn trước |
+
+Nhận định thêm: ② chỉ lọc 10 % thế A / 3 % thế B là **đúng dự kiến** (fail break vốn đóng sát cạnh), không sửa ②. Toàn bộ sức lọc nằm ở ③④. Mức kỳ vọng sau ③④ (không phải mục tiêu để ép): **1–4 lệnh/ngày**; nếu > 8 lệnh/ngày thì ③ đang quá rẻ — xử lý ở GĐ2 bằng đúng các tham số được phép quét (run 4, bóng 4×), không thêm luật mới.
+
+**Việc GĐ1 (Opus):** hoàn thiện ③ (5 dấu hiệu có nến neo, đếm loại, Q1/Q3/Q9/Q10) + ④ (CF, SL sàn/trần/đệm, mục tiêu, R ≥ 1,7, TP 2R, giới hạn 4d) + ⛔ 4 mục code được + Q4/Q5/Q12; chạy `kernel.simulate` trên TRAIN với **bộ mặc định, không tinh chỉnh**; ra `report/RESULTS-CORVEN.md` đủ bảng mục 3.5, thêm **phễu** (thế → qua ③ → qua ④ → lệnh, kèm lý do loại từng cổng), nhóm tách riêng (`b_from_exhausted`, "lần 2"), 3 đối chứng C1/C2/C3, `_corven_trades.csv` (mỗi lệnh có danh sách dấu hiệu + số). Test mới cho ③④⛔ theo mục 4 (ca 1–7, 10). **Không chạm TEST, không đổi tham số.** Dừng để Fable soi 5 thắng/5 thua trên chart.

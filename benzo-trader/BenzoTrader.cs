@@ -1,11 +1,11 @@
 // ============================================================================
-//  BenzoTrader — indicator signal cho Quantower / Optimus Flow: MỘT setup CORVEN (corven-6)
+//  BenzoTrader — indicator signal cho Quantower / Optimus Flow: MỘT setup CORVEN (corven-7)
 // ============================================================================
 //  Add vào chart M1 có Volume Analysis. Chỉ xử lý nến ĐÃ ĐÓNG, đúng 1 lần/nến, niêm phong theo thời gian mở nến
 //  (sống qua reload, guard khớp nến). Logic thuần ở BenzoCore.cs + BenzoCorven.cs (test được). File này chỉ là lớp dán:
 //  Settings (chỉ công tắc — plan BENZO-CORVEN 10.2), vòng đời, vẽ (hộp range, mốc thế B, mũi tên + SL/TP, nhãn dấu hiệu,
 //  bảng 4 dòng có nhãn trung thực), Telegram + chụp ảnh Win32, CSV lệnh + CSV ứng viên bị loại.
-//  ⚠ Setup CHƯA có lợi thế đo được (backtest 35 phiên −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,09R)) — chạy thử để người học review.
+//  ⚠ Setup CHƯA có lợi thế đo được (backtest 35 phiên −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,12R)) — chạy thử để người học review.
 //  Build: build.sh nối ProfileEngine.cs (chỉ vì NewsCalendar) + StackedImbalance.cs + ExhaustionLogic.cs + RangeLogic.cs +
 //  BenzoCore/Zones/OrderFlow/Corven + file này. Mọi `using` nằm trong namespace.
 // ============================================================================
@@ -224,8 +224,8 @@ namespace BenzoTraderNs
         public BenzoTrader() : base()
         {
             Name = "Benzo Trader";
-            Description = "Benzo Trader — setup CORVEN (corven-6) trên nến M1 đã đóng: range + mốc + ≥ 2 dấu hiệu order flow + nến xác nhận. "
-                        + "Chạy thử: backtest 35 phiên −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,09R) — không phải khuyến nghị. Bật \"SL kiểu cũ\" = SL + trần như corven-5 (+0,02R/lệnh). Cần Volume Analysis.";
+            Description = "Benzo Trader — setup CORVEN (corven-7) trên nến M1 đã đóng: range + mốc + ≥ 2 dấu hiệu order flow + nến xác nhận. "
+                        + "Chạy thử: backtest 35 phiên −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,12R) — không phải khuyến nghị. Bật \"SL kiểu cũ\" = SL + trần như corven-5 (+0,05R/lệnh). Cần Volume Analysis.";
             SeparateWindow = false;
         }
 

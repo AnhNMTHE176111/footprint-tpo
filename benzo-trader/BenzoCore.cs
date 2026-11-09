@@ -293,7 +293,7 @@ namespace BenzoTraderNs
         }
 
         /// <summary>Bảng chart 4 dòng (plan 10.3) — dòng 4 LUÔN hiện:
-        /// "BENZO CORVEN corven-6 · N lệnh · WR x % · ΣR" / "Fail Break · n · WR · ΣR" / "Break · n · WR · ΣR" / nhãn backtest.</summary>
+        /// "BENZO CORVEN corven-7 · N lệnh · WR x % · ΣR" / "Fail Break · n · WR · ΣR" / "Break · n · WR · ΣR" / nhãn backtest.</summary>
         public static List<string> TableLines(StatsResult st, bool slKieuCu = false)
         {
             string open = st.Total.Open > 0 ? $" · {st.Total.Open} đang mở" : "";

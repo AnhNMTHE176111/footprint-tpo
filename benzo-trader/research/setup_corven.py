@@ -98,17 +98,17 @@ class CP:
     sl_cap_gia: float = None       # corven-6: trần SL theo GIÁ (None = trần 4 biên độ cũ); có giá trị ⇒ không xét trần biên độ. Cổng vẫn tên 'tran_sl'
     bat_fail_break: bool = True    # corven-6: công tắc Settings — tắt ⇒ ứng viên Fail Break không được vào và không chiếm chỗ 1 lệnh mở
     bat_break: bool = True
-    dead_run_mult: float = 0.0     # đo (chưa dùng live): range BROKEN mà giá chạy xa cạnh vừa phá ≥ mult × chiều cao range ⇒ Dead, không ReEntry (≤ 0 = TẮT) — truyền vào range_proto.Params.DeadRunMult
+    dead_run_mult: float = 0.0     # corven-7 (cp_live = 2,0): range BROKEN mà giá chạy xa cạnh vừa phá ≥ mult × chiều cao range ⇒ Dead, không ReEntry (≤ 0 = TẮT) — truyền vào range_proto.Params.DeadRunMult
     gan_range_gan_nhat: bool = False  # corven-5: nhiều Break cùng nến xác nhận ⇒ xét range có nến đóng ngoài (ref) MUỘN nhất trước
 
 
-LIVE_VERSION = 'corven-6'
+LIVE_VERSION = 'corven-7'
 
 
 def cp_live(sl_kieu_cu: bool = False) -> 'CP':
-    """Bộ tham số đang chạy trong indicator (LogicVersion corven-6). sl_kieu_cu=True (Settings "SL kiểu cũ"): SL Break + trần SL như corven-5."""
+    """Bộ tham số đang chạy trong indicator (LogicVersion corven-7). sl_kieu_cu=True (Settings "SL kiểu cũ"): SL Break + trần SL như corven-5."""
     return CP(hoi_khong_cham=True, bo_quet_stop=True, b_bo_rmin=True, trap_hoi=True, sl_b_canh_sat=True, hoi_trong_n_nen=True,
-              b_bo_moc_stacked=True, gan_range_gan_nhat=True, sl_b_canh_3tick=not sl_kieu_cu, sl_cap_gia=None if sl_kieu_cu else 5.0)
+              b_bo_moc_stacked=True, gan_range_gan_nhat=True, sl_b_canh_3tick=not sl_kieu_cu, sl_cap_gia=None if sl_kieu_cu else 5.0, dead_run_mult=2.0)
 
 
 # =====================================================================================================

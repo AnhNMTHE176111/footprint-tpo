@@ -452,3 +452,9 @@ Cài đặt: Python `sl_b_canh_3tick`, `sl_cap_gia` (cổng `tran_sl`), `bat_fai
 Kiểm: C# 179/179 (V6-1…3 + ca thật 06/11), pytest 114, parity TRAIN 232/232, Gd4 90/90 (Settings đúng 5 mục mới), build + deploy.
 
 **16b. "SL kiểu cũ" (2026-11-09, người học yêu cầu):** thêm Settings bool "SL kiểu cũ" (mặc định TẮT, dưới "SL tối đa") — bật = SL Break + trần SL như corven-5 (trần 4 biên độ, bỏ qua SL tối đa). Python `cp_live(sl_kieu_cu)`. TRAIN bật = corven-5 (266 lệnh +0,016R, C2' −0,013); tắt = corven-6 (232 lệnh −0,068R). Khoá cache `-old<0|1>`, nhãn theo chế độ, parity cả hai chế độ. LogicVersion giữ `corven-6`.
+
+## 17. corven-7 (2026-11-09) — người học yêu cầu, Opus chọn số, Sonnet implement
+
+Range bị phá thật rồi giá chạy xa (≥ 2 × chiều cao range, đo High/Low từ nến phá) ⇒ range Dead + Exhausted: không ReEntry, không Merge, hộp "Hiện range" không kéo dài. `RangeParams.DeadRunMult` (mặc định 0 = tắt ở Range Box gốc; Benzo 2,0; V1 tắt). Python `CP.dead_run_mult` (cp_live = 2,0 cả hai chế độ SL) → `range_proto.Params.DeadRunMult`.
+Quét {0,5; 1; 1,5; 2; 3} chọn 2 (lý do ở `VARIANTS-NGUOI-HOC-2026-11-09.md`). TRAIN: SL mới 229 lệnh −0,068R (ngẫu nhiên −0,120); SL cũ 267 lệnh +0,047R (ngẫu nhiên −0,029). Nhãn theo chế độ. `LogicVersion = "corven-7"`.
+Kiểm: C# 192/192 (ca thật 29/10), quantower-range 127/127 (+ unit DeadRunMult biên 2,0 / 1,9), parity 229/229 và 267/267, Gd4 94/94, pytest 114, build + deploy.

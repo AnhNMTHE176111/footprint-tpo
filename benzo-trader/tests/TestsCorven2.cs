@@ -1,5 +1,5 @@
 // Unit test corven-2 (4 sửa đổi người học 2026-11-09, research/report/VARIANTS-NGUOI-HOC-2026-11-09.md) = setup_corven.cp_live().
-// Mỗi luật: bộ mặc định (corven-6) và CorvenCfg.V1() (corven-1) cho kết quả ngược nhau trên cùng một ca.
+// Mỗi luật: bộ mặc định (corven-7) và CorvenCfg.V1() (corven-1) cho kết quả ngược nhau trên cùng một ca.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,7 +12,7 @@ static partial class Program
     static void TestsCorven2()
     {
         Console.WriteLine("[V2-0] Phiên bản");
-        Check(CorvenParams.LogicVersion == "corven-6", "LogicVersion = corven-6");
+        Check(CorvenParams.LogicVersion == "corven-7", "LogicVersion = corven-7");
 
         Console.WriteLine("[V2-1] Trap trong nhịp hồi (thế B sell): ô Ask 20 ở nến hồi 13 @4126,8, CF đóng 4126,6 dưới ô");
         {
@@ -122,14 +122,14 @@ static partial class Program
             {
                 var (tb, tl) = CorvenData.Load(prefix, 51318);
                 var (eNo, _) = CorvenData.Run(tb, tl, 0.1, 3697, cfg: new CorvenCfg { BatBreak = false });
-                Check(eNo.Signals.Count == 43 && eNo.Signals.All(x => x.Setup == 'A') && eNo.Signals.Count(x => x.Outcome == "TP") == 10 && eNo.Signals.Count(x => x.Outcome == "SL") == 33,
-                      "tắt Break: 43 lệnh, toàn Fail Break (= Python; mặc định có 41 Fail Break ⇒ thêm 2 vì không còn bị lệnh Break chiếm chỗ)", $"{eNo.Signals.Count}");
+                Check(eNo.Signals.Count == 44 && eNo.Signals.All(x => x.Setup == 'A') && eNo.Signals.Count(x => x.Outcome == "TP") == 11 && eNo.Signals.Count(x => x.Outcome == "SL") == 33,
+                      "tắt Break: 44 lệnh, toàn Fail Break (= Python; mặc định có 43 Fail Break ⇒ thêm 1 vì không còn bị lệnh Break chiếm chỗ)", $"{eNo.Signals.Count}");
                 var (eKc, _) = CorvenData.Run(tb, tl, 0.1, 3697, cfg: CorvenCfg.KieuCu_(true, new CorvenCfg()));
-                Check(eKc.Signals.Count == 266 && eKc.Signals.Count(x => x.Setup == 'A') == 37 && eKc.Signals.Count(x => x.Setup == 'B') == 229 && eKc.Signals.Count(x => x.Outcome == "TP") == 95 && eKc.Signals.Count(x => x.Outcome == "SL") == 169,
-                      "SL kiểu cũ BẬT: 266 lệnh (37/229, 95 TP · 169 SL) = Python cp_live(sl_kieu_cu=True) = corven-5", $"{eKc.Signals.Count}");
+                Check(eKc.Signals.Count == 267 && eKc.Signals.Count(x => x.Setup == 'A') == 41 && eKc.Signals.Count(x => x.Setup == 'B') == 226 && eKc.Signals.Count(x => x.Outcome == "TP") == 98 && eKc.Signals.Count(x => x.Outcome == "SL") == 167,
+                      "SL kiểu cũ BẬT: 267 lệnh (41/226, 98 TP · 167 SL) = Python cp_live(sl_kieu_cu=True)", $"{eKc.Signals.Count}");
                 var (eNoF, _) = CorvenData.Run(tb, tl, 0.1, 3697, cfg: new CorvenCfg { BatFailBreak = false });
-                Check(eNoF.Signals.Count == 192 && eNoF.Signals.All(x => x.Setup == 'B') && eNoF.Signals.Count(x => x.Outcome == "TP") == 67 && eNoF.Signals.Count(x => x.Outcome == "SL") == 123,
-                      "tắt Fail Break: 192 lệnh, toàn Break (= Python; mặc định có 191 Break ⇒ thêm 1)", $"{eNoF.Signals.Count}");
+                Check(eNoF.Signals.Count == 187 && eNoF.Signals.All(x => x.Setup == 'B') && eNoF.Signals.Count(x => x.Outcome == "TP") == 65 && eNoF.Signals.Count(x => x.Outcome == "SL") == 120,
+                      "tắt Fail Break: 187 lệnh, toàn Break (= Python; mặc định có 186 Break ⇒ thêm 1)", $"{eNoF.Signals.Count}");
             }
         }
         Console.WriteLine("[V6-4] corven-6: Settings \"SL kiểu cũ\" — bật ⇒ SL Break + trần SL như corven-5, bỏ qua SL tối đa");
@@ -151,7 +151,27 @@ static partial class Program
             string prefix = root == null ? null : Path.Combine(root, "data-export", "data-footprint", "fp_GCZ26_XCEC_Time_20260811-20261109_90d");
             if (prefix == null || !File.Exists(prefix + "_bars.csv")) { Console.WriteLine("  (bỏ qua: không có file 20260811-20261109)"); return; }
             var (b, l) = CorvenData.Load(prefix);
-            var (eng, _) = CorvenData.Run(b, l, 0.1);
+            bool liveAt0211 = true, liveAt0230 = true; int idxR = -1;
+            bool IsR(RangeBox.RangeInfo r) => r.Top0 == 40685 && r.Bottom0 == 40647 && b[r.Start].Time == new DateTime(2026, 10, 29, 1, 35, 0, DateTimeKind.Utc);
+            var (eng, detX) = CorvenData.Run(b, l, 0.1, onBar: (i, d) =>
+            {
+                var t = b[i].Time;
+                if (t == new DateTime(2026, 10, 29, 2, 11, 0, DateTimeKind.Utc)) liveAt0211 = d.M.LiveRanges().Any(IsR);
+                if (t == new DateTime(2026, 10, 29, 2, 30, 0, DateTimeKind.Utc)) { liveAt0230 = d.M.LiveRanges().Any(IsR); var rr = d.M.Eng.Ranges.FirstOrDefault(IsR); idxR = rr == null ? -1 : rr.Id; }
+            });
+            Check(idxR >= 0, "tìm thấy range 29/10 4064,7–4068,5 (bắt đầu 08:35 VN)");
+            if (idxR >= 0)
+            {
+                var rr = detX.M.Eng.Ranges[idxR];
+                var evR = detX.M.Eng.Events.Where(e => e.Start == rr.Start).ToList();
+                Check(rr.State == RangeBox.RangeState.Dead && rr.Exhausted, "corven-7: range 29/10 chuyển Dead (giá chạy lên 4078,0 = 2,3 × chiều cao) — không sống lại", $"{rr.State} {rr.Exhausted}");
+                int bcBar = evR.First(q => q.Kind == RangeBox.RangeEventKind.BreakConfirmed).Bar;
+                Check(!evR.Any(e => e.Kind == RangeBox.RangeEventKind.ReEntry) && !evR.Any(e => e.Kind == RangeBox.RangeEventKind.Merge) && evR.Count(e => e.Kind == RangeBox.RangeEventKind.BreakConfirmed) == 1 && evR.All(e => e.Bar <= bcBar),
+                      "không ReEntry 09:10 VN, không Merge, không sự kiện nào sau BreakConfirmed 08:53 VN", string.Join(",", evR.Select(e => e.Kind)));
+                Check(!liveAt0211 && !liveAt0230, "LiveRanges (hộp 'Hiện range') không còn range đó sau lúc chết (09:11 và 09:30 VN)");
+            }
+            var s0910 = eng.Signals.FirstOrDefault(x => x.Time == new DateTime(2026, 10, 29, 2, 10, 0, DateTimeKind.Utc));
+            Check(s0910 != null && s0910.Setup == 'B' && s0910.Side == -1 && Near(s0910.Entry, 4067.8, 1e-6) && s0910.Outcome == "TP", "lệnh Break sell 09:10 VN 29/10 (4067,8) vẫn còn, kết cục TP", s0910 == null ? "không có" : $"{s0910.Entry} {s0910.Outcome}");
             var s63 = eng.Signals.FirstOrDefault(x => x.Time == new DateTime(2026, 11, 6, 3, 33, 0, DateTimeKind.Utc));
             Check(s63 != null && s63.Setup == 'B' && s63.Side == -1 && Near(s63.Entry, 4055.3, 1e-6) && Near(s63.Sl, 4058.8, 1e-6) && Near(s63.Tp, 4048.3, 1e-6) && s63.Outcome == "TP",
                   "corven-6 (= Python): 06/11 10:33 VN Break sell 4055,3 · SL 4058,8 · TP 4048,3 ⇒ TP", s63 == null ? "không có" : $"{s63.Entry} {s63.Sl} {s63.Tp} {s63.Outcome}");

@@ -162,3 +162,30 @@ Người học gửi 2 ca 29/10 00:42 và 06:53 VN (cả hai SL, đều bị má
 
 Thêm luật trên TRAIN: SL mới −0,07 → −0,14R/lệnh; SL cũ +0,02 → −0,07. Hai giai đoạn ngược chiều, mẫu nhỏ; gộp 26 lệnh vẫn dương
 (+0,38R mới / +0,62R cũ). Opus: không triển khai, báo người học.
+
+
+## corven-7: range bị phá thật rồi giá chạy XA ⇒ range kết thúc (DeadRunMult = 2)
+
+Feedback người học (ca 29/10, range 4064,7–4068,5): range bị phá thật, giá chạy lên 4078,0 (2,3 × chiều cao range) rồi 09:10 VN ReEntry ⇒ range sống lại, còn FailBreak / BreakConfirmed trên chính range đó và hộp "Hiện range" bị kéo dài. Luật: `RangeParams.DeadRunMult` — range đang Broken mà cực trị High/Low kể từ nến phá vượt cạnh vừa phá ≥ mult × (top − bottom) ⇒ Dead ngay, đánh dấu Exhausted (không ReEntry, Merge không hồi sinh). Mặc định TẮT ở Range Box gốc; Benzo dùng 2,0 (`CorvenParams.DeadRunMult`; `V1()` tắt; Python `cp_live()` cả hai chế độ SL `dead_run_mult = 2.0`).
+
+Quét TRAIN 35 phiên (`research/variants_dead_run.py`, `report/_variants_dead_run.csv`):
+
+| Chế độ SL | DeadRunMult | n | Fail Break | Break | R TB | WR | nửa 1 | nửa 2 | C2' | ΣR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| corven-6 (SL sát cạnh, trần 5 giá) | tắt | 232 | 41 | 191 | −0,068 | 34.1 % | +0,025 | −0,177 | −0,094 | −15,790 |
+| corven-6 (SL sát cạnh, trần 5 giá) | 0.5 | 169 | 30 | 139 | −0,042 | 34.9 % | +0,082 | −0,176 | −0,057 | −7,061 |
+| corven-6 (SL sát cạnh, trần 5 giá) | 1.0 | 199 | 43 | 156 | −0,066 | 34.2 % | −0,011 | −0,127 | −0,082 | −13,221 |
+| corven-6 (SL sát cạnh, trần 5 giá) | 1.5 | 217 | 39 | 178 | −0,081 | 33.6 % | +0,034 | −0,214 | −0,133 | −17,635 |
+| corven-6 (SL sát cạnh, trần 5 giá) | 2.0 | 229 | 43 | 186 | −0,068 | 34.1 % | +0,013 | −0,158 | −0,120 | −15,550 |
+| corven-6 (SL sát cạnh, trần 5 giá) | 3.0 | 228 | 42 | 186 | −0,077 | 33.8 % | +0,028 | −0,198 | −0,084 | −17,544 |
+| SL kiểu cũ (= corven-5) | tắt | 266 | 37 | 229 | +0,016 | 36.1 % | −0,018 | +0,048 | −0,013 | +4,372 |
+| SL kiểu cũ (= corven-5) | 0.5 | 202 | 27 | 175 | +0,004 | 35.6 % | +0,006 | +0,002 | −0,024 | +0,799 |
+| SL kiểu cũ (= corven-5) | 1.0 | 237 | 39 | 198 | +0,036 | 36.7 % | −0,015 | +0,079 | −0,010 | +8,502 |
+| SL kiểu cũ (= corven-5) | 1.5 | 253 | 35 | 218 | +0,014 | 36.0 % | +0,020 | +0,008 | −0,035 | +3,448 |
+| SL kiểu cũ (= corven-5) | 2.0 | 267 | 41 | 226 | +0,047 | 37.1 % | +0,024 | +0,066 | −0,029 | +12,424 |
+| SL kiểu cũ (= corven-5) | 3.0 | 266 | 38 | 228 | +0,028 | 36.5 % | +0,015 | +0,040 | −0,010 | +7,427 |
+
+Opus chọn 2: không mức nào cải thiện rõ ngoài nhiễu (±0,03R); mức 2 không làm xấu ở cả hai chế độ SL (mới −0,068 = tắt; cũ +0,047 vs +0,016), đủ để chặn ca 29/10 (giá vượt cạnh 2,3 × chiều cao), ít tác dụng phụ nhất (số lệnh gần như giữ nguyên); không chọn 0,5 dù tốt nhất ở SL mới vì nó cắt 27 % số lệnh và ngược chiều ở SL cũ.
+
+Mã thật (`cp_live()`): **SL mới 229 lệnh (Fail Break 43, Break 186), −0,068R, WR 33 % (76 TP / 151 SL / 2 TIME), nửa +0,013 / −0,158, C2' −0,120; SL kiểu cũ 267 lệnh (41 / 226), +0,047R, WR 37 % (98 TP / 167 SL / 2 TIME), nửa +0,024 / +0,066, C2' −0,029** — khớp bảng quét. Nhãn: SL mới "−0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,12R)"; SL cũ "+0,05R/lệnh, hơn vào ngẫu nhiên (−0,03R) chưa đủ chắc".
+Ca 29/10: range chuyển Dead tại BreakConfirmed 08:53 VN, không ReEntry 09:10, không sự kiện nào sau đó; LiveRanges không còn range đó (hộp "Hiện range" không kéo dài); lệnh Break sell 09:10 VN (4067,8, TP) vẫn còn.

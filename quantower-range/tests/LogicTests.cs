@@ -103,6 +103,30 @@ static class LogicTests
             Check(!lg2.Events.Any(e => e.Kind == RangeEventKind.ReEntry), "quay lại SAU G=30 nến: không ReEntry");
         }
 
+        Console.WriteLine("[4b] DeadRunMult: giá chạy xa cạnh vừa phá ≥ mult × chiều cao ⇒ Dead ngay (không ReEntry, không Merge); mặc định TẮT không đổi");
+        {
+            // range [1000,1028] cao 28 tick; phá lên (nến phá b, xác nhận b+3, cạnh 1028); một nến chạy xa có High = hi; rồi quay về lòng range trong G
+            Synth Mk(long hi)
+            {
+                var s = CleanRange(); s.MoveTo(1020);
+                s.Step(14); s.Step(6); s.Step(6); s.Step(6);                 // xác nhận ở b+3, đóng 1052
+                s.Bar(1052, hi, 1050, 1056);                                  // nến chạy xa: vượt cạnh 1028 đúng (hi − 1028) tick
+                s.Step(-6); s.Step(-6); s.Step(-6); s.Step(-6); s.Step(-6);   // 1050 … 1026 (vào lòng)
+                return s;
+            }
+            RangeLogic L(long hi, double mult) { var p = new RangeParams { DeadRunMult = mult }; return Run(Mk(hi), p); }
+            bool Re(RangeLogic lg) => lg.Events.Any(e => e.Kind == RangeEventKind.ReEntry);
+            var a1 = L(1084, 2.0);   // vượt 56 = đúng 2,0 × 28
+            Check(!Re(a1) && a1.Ranges.Count > 0 && a1.Ranges[0].State == RangeState.Dead && a1.Ranges[0].Exhausted, "vượt đúng 2,0 × chiều cao ⇒ Dead (exhausted), không ReEntry", string.Join(",", a1.Events.Select(e => e.Kind)));
+            Check(!a1.Events.Any(e => e.Kind == RangeEventKind.Merge) && a1.Events.Count(e => e.Kind == RangeEventKind.BreakConfirmed) == 1, "không Merge hồi sinh; không sự kiện range thêm sau khi chết");
+            var a2 = L(1083, 2.0);   // vượt 55 < 56
+            Check(Re(a2) && a2.Ranges[0].State == RangeState.Active, "vượt 1,96 × (< 2,0) ⇒ vẫn Broken ⇒ ReEntry bình thường");
+            var a3 = L(1084, 0.0);
+            Check(Re(a3) && Re(Run(Mk(1084))), "mặc định TẮT (DeadRunMult = 0, và RangeParams mặc định) ⇒ vẫn ReEntry như cũ");
+            Check(Re(L(1081, 1.9)) && !Re(L(1082, 1.9)), "mult 1,9: vượt 53 (< 53,2) vẫn Broken + ReEntry; vượt 54 (≥ 53,2) ⇒ Dead");
+            Check(new RangeParams().DeadRunMult == 0, "RangeParams.DeadRunMult mặc định = 0 (Range Box gốc không đổi)");
+        }
+
         Console.WriteLine("[5] Đoạn trend không ra range");
         {
             var s = Synth.Warm();

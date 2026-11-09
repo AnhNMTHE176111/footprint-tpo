@@ -1,7 +1,7 @@
 // ============================================================================
 //  BenzoCorven — setup "follow theo footprint" của CORVEN (plans/BENZO-CORVEN-plan.md, GĐ3 mục 10)
 // ============================================================================
-//  PORT Y CHỮ từ benzo-trader/research/setup_corven.py (LogicVersion "corven-6" = corven-1 + 10 sửa đổi người học 2026-11-09, setup_corven.cp_live()):
+//  PORT Y CHỮ từ benzo-trader/research/setup_corven.py (LogicVersion "corven-7" = corven-1 + 11 sửa đổi người học 2026-11-09, setup_corven.cp_live()):
 //    ① bối cảnh = RangeLogic (quantower-range/RangeLogic.cs, nối nguồn lúc build) — thế A (fail break) / thế B (phá giữ được)
 //    ② mốc "gần" + test không quá sâu + cửa sổ test          (Step2Machine.on_bar / _a_candidate / _b_step / _b_eval)
 //    ③ 5 loại dấu hiệu, cần ≥ 2 loại                          (find_signs)
@@ -26,7 +26,7 @@ namespace BenzoTraderNs
     /// muốn đổi phải đo lại bằng Python rồi tăng LogicVersion.</summary>
     public static class CorvenParams
     {
-        public const string LogicVersion = "corven-6";
+        public const string LogicVersion = "corven-7";
         public const double NearMbr = 1.0;
         public const int WinB = 3;
         public const int WinAMax = 5;
@@ -79,13 +79,15 @@ namespace BenzoTraderNs
         // ---- corven-6 (người học yêu cầu 2026-11-09): SL Break mốc cạnh = cạnh vừa phá ∓ 3 tick; trần SL theo GIÁ (Settings "SL tối đa (giá)") thay trần 4 biên độ ----
         public const bool SlBCanh3Tick = true;
         public const double SlMaxGia = 5.0;
+        // ---- corven-7 (Opus chọn 2026-11-09): range Broken mà giá chạy xa cạnh vừa phá ≥ 2 × chiều cao range ⇒ Dead (không ReEntry, không Merge) ----
+        public const double DeadRunMult = 2.0;
 
         // ---- nhãn trung thực (plan 10.3) — test so đúng chữ ----
-        public const string BacktestLine = "Backtest 35 phiên: −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,09R) · chạy thử, không phải khuyến nghị";
+        public const string BacktestLine = "Backtest 35 phiên: −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,12R) · chạy thử, không phải khuyến nghị";
         public const string TeleWarn = "⚠ Chưa có lợi thế đo được (−0,07R/lệnh, 35 phiên)";
         // chế độ "SL kiểu cũ" (Settings, mặc định tắt) = SL Break + trần SL của corven-5 ⇒ nhãn theo số backtest của chế độ đó
-        public const string BacktestLineOld = "Backtest 35 phiên: +0,02R/lệnh, hơn vào ngẫu nhiên (−0,01R) chưa đủ chắc · chạy thử, không phải khuyến nghị";
-        public const string TeleWarnOld = "⚠ Chưa có lợi thế đo được (+0,02R/lệnh, 35 phiên)";
+        public const string BacktestLineOld = "Backtest 35 phiên: +0,05R/lệnh, hơn vào ngẫu nhiên (−0,03R) chưa đủ chắc · chạy thử, không phải khuyến nghị";
+        public const string TeleWarnOld = "⚠ Chưa có lợi thế đo được (+0,05R/lệnh, 35 phiên)";
         public static string Backtest(bool kieuCu) => kieuCu ? BacktestLineOld : BacktestLine;
         public static string Warn(bool kieuCu) => kieuCu ? TeleWarnOld : TeleWarn;
     }
@@ -112,10 +114,12 @@ namespace BenzoTraderNs
         public double SlMaxGia = CorvenParams.SlMaxGia;
         /// <summary>corven-6: công tắc Settings — tắt ⇒ ứng viên kiểu đó không được vào (và không chiếm chỗ lệnh mở).</summary>
         public bool BatFailBreak = true, BatBreak = true;
+        /// <summary>corven-7: truyền vào RangeParams.DeadRunMult (0 = tắt — V1).</summary>
+        public double DeadRunMult = CorvenParams.DeadRunMult;
         /// <summary>Settings "SL kiểu cũ": SL Break + trần SL như corven-5 (SL cạnh có râu hồi + dung sai, trần 4 biên độ, bỏ qua SL tối đa).</summary>
         public static CorvenCfg KieuCu_(bool on, CorvenCfg c) { if (on) { c.SlBCanh3Tick = false; c.SlMaxGia = 0; } return c; }
-        /// <summary>Bộ corven-1 (mọi cờ corven-2/3/4/5/6 tắt (trần SL về 4 biên độ)) — cho test cũ dựng ca biên của luật đã bỏ.</summary>
-        public static CorvenCfg V1() => new CorvenCfg { HoiKhongCham = false, BoQuetStop = false, BBoRMin = false, TrapHoi = false, SlBCanhSat = false, HoiTrongNNen = false, BBoMocStacked = false, GanRangeGanNhat = false, SlBCanh3Tick = false, SlMaxGia = 0 };
+        /// <summary>Bộ corven-1 (mọi cờ corven-2/3/4/5/6/7 tắt (trần SL về 4 biên độ)) — cho test cũ dựng ca biên của luật đã bỏ.</summary>
+        public static CorvenCfg V1() => new CorvenCfg { HoiKhongCham = false, BoQuetStop = false, BBoRMin = false, TrapHoi = false, SlBCanhSat = false, HoiTrongNNen = false, BBoMocStacked = false, GanRangeGanNhat = false, SlBCanh3Tick = false, SlMaxGia = 0, DeadRunMult = 0 };
     }
 
     // ======================================================================== đặc trưng từng nến (Feat)
@@ -502,7 +506,7 @@ namespace BenzoTraderNs
         public CorvenMachine(double tick, CorvenCfg cfg = null)
         {
             Cfg = cfg ?? new CorvenCfg();
-            Eng = new RangeLogic(tick);
+            Eng = new RangeLogic(tick, new RangeParams { DeadRunMult = Cfg.DeadRunMult });
             F = new CorvenFeat { Tick = tick };
         }
 

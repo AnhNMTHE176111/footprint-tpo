@@ -145,6 +145,16 @@ sai ở hoàn cảnh nào thì mới dám cược tiền theo nó.
 | LVN ⇒ trend / HVN ⇒ sideway | ⏳ chưa đo | |
 | Break 2 lần: lần 2 là clean break | ⏳ chưa đo | |
 | Poor high/low ⇒ bị test lại | ⏳ chưa đo | đếm được từ CSV `TPO Up/Down` + High/Low |
+| Follow F1 nguyên thủy: trap sell ở nhịp hồi + CF (GCZ26 M1, TRAIN 35 phiên, GĐ-F1 2026-11-09) | ⏳ **chưa đo được** (n=11 < 30) | +0,31R, n quá nhỏ |
+| Follow F2 bóng buy ở CF (GCZ26 M1, TRAIN 35 phiên, GĐ-F1 2026-11-09) | ⏳ **chưa đo được** (n=26 < 30) | −0,36R |
+| Follow F3 kiệt sức sell ở đáy hồi (GCZ26 M1, TRAIN 35 phiên, GĐ-F1 2026-11-09) | ❌ đã đo, không hơn nền / ngẫu nhiên | n=82, 0,00R (F0 −0,05, C2 +0,31) |
+| Follow F4 trap + bóng CF (GCZ26 M1, TRAIN 35 phiên, GĐ-F1 2026-11-09) | ⏳ **chưa đo được** (n=0) | T và Bc không trùng ca nào |
+| Follow F5 trap + kiệt sức (GCZ26 M1, TRAIN 35 phiên, GĐ-F1 2026-11-09) | ⏳ **chưa đo được** (n=2) |  |
+| Follow F6 stacked giữ ở nhịp hồi (GCZ26 M1, TRAIN 35 phiên, GĐ-F1 2026-11-09) | ❌ đã đo, ngang nền | n=226, −0,04R |
+| Follow F7 Δ ngược giá ở nhịp hồi (GCZ26 M1, TRAIN 35 phiên, GĐ-F1 2026-11-09) | ❌ dương nhưng **không qua** C2 + 0,15 và hoán vị | n=96, +0,20R (C2 +0,33; p cực đại 0,76) |
+| Follow F8 hồi nông + lực CF (GCZ26 M1, TRAIN 35 phiên, GĐ-F1 2026-11-09) | ❌ đã đo, kém nền | n=49, −0,16R |
+| Follow F9 move mạnh + 1 dấu hiệu (GCZ26 M1, TRAIN 35 phiên, GĐ-F1 2026-11-09) | ❌ đã đo, ngang nền | n=214, −0,07R |
+| Follow F10 ≥ 2 dấu hiệu khác loại (Follow) (GCZ26 M1, TRAIN 35 phiên, GĐ-F1 2026-11-09) | ❌ dương nhưng không qua C2 + 0,15 và hoán vị | n=120, +0,12R (C2 +0,35) |
 
 > Quy tắc: luật ở trạng thái ⏳ hoặc ❌ thì **được dùng để đọc chart**, nhưng **không được code thành
 > signal** và tôi **không được nói như thể đã kiểm định**.

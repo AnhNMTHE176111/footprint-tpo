@@ -186,6 +186,11 @@ def test_6_leg2_only_on_new_extreme_max_two():
     rows += [dict(o=41346, h=41348, l=41344, c=41347) for _ in range(4)]
     _, _, m = run(rows)
     assert [(r['leg'], r['idx_x'], r['idx_c']) for r in m.rows] == [(1, 20, 22), (2, 23, 25)]
+    # S3 (plan 9.1-4): leg 1 = S2; leg 2 neo min(cực trị leg 1 4133,2, đáy nhịp hồi ∪ CF 4133,0) − đệm 3 = 41327
+    # ⇒ rủi ro 9 < sàn 15 ⇒ SL 41321; S2 leg 2 = min(E 41310, 41330) − 3 = 41307
+    r1, r2 = m.rows
+    assert r1['sl_S3'] == r1['sl_S2'] and r1['tp_S3'] == r1['tp_S2']
+    assert r2['sl_S2'] == 41307 and r2['sl_S3'] == 41321 and r2['tp_S3'] == 41336 + 2 * 15
     # không có cực trị mới ⇒ không có leg 2
     rows = photo_rows(tail=False)
     rows.append(dict(o=41322, h=41330, l=41320, c=41328, d=9))

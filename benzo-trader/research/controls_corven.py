@@ -29,16 +29,26 @@ def c3(R: dict) -> dict:
     return out
 
 
-def c2(R: dict, n_random: int = 20, seed: int = 0, minutes: int = 30):
-    """Trả (DataFrame mỗi lệnh thật: idx, r_that, r_c2_tb, n_c2), mảng mọi R đối chứng."""
+def c2(R: dict, n_random: int = 20, seed: int = 0, minutes: int = 30, after_only: bool = False):
+    """Trả (DataFrame mỗi lệnh thật: idx, r_that, r_c2_tb, n_c2), mảng mọi R đối chứng.
+
+    after_only=False (mặc định, hành vi cũ — giữ parity/kết quả đã in): pool = nến cùng phiên, |sm[j] − sm[i]| ≤ minutes, j ≠ i.
+    after_only=True  (C2', plans/BENZO-FOLLOW-COMBO-plan.md 9.1-3, 2026-11-09): pool = chỉ nến SAU nến CF,
+        0 < sm[j] − sm[i] ≤ minutes (bỏ thiên lệch "nhìn trước" của nến trước cú phá); pool < 5 nến ⇒ bỏ lệnh đó."""
     f, df, cp = R['feat'], R['df'], R['cp']
     rng = np.random.default_rng(seed)
     rows, allr = [], []
     for c, (_, t) in zip(R['chosen'], R['trades'].iterrows()):
         i, S = c.cf, c.S
         s0, s1 = int(f.sstart[i]), int(f.send[i])
-        pool = [j for j in range(s0, s1) if j != i and abs(int(f.sm[j]) - int(f.sm[i])) <= minutes and f.good[j]
-                and f.mbr[j] > 0]
+        if after_only:
+            pool = [j for j in range(s0, s1) if j > i and 0 < int(f.sm[j]) - int(f.sm[i]) <= minutes and f.good[j]
+                    and f.mbr[j] > 0]
+            if len(pool) < 5:
+                continue
+        else:
+            pool = [j for j in range(s0, s1) if j != i and abs(int(f.sm[j]) - int(f.sm[i])) <= minutes and f.good[j]
+                    and f.mbr[j] > 0]
         if not pool:
             continue
         pick = rng.choice(pool, size=min(n_random, len(pool)), replace=False)

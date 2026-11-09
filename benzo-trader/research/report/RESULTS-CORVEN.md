@@ -3,6 +3,24 @@
 > Opus, 2026-11-09. **Chỉ TRAIN**: 35 phiên dày, nến bar_idx 0…51318 (tới 2026-09-15 20:59 UTC). TEST chưa chạy, chưa đọc. `kernel.simulate` (phí 0,2 giá/lệnh, chạm SL+TP cùng nến = SL, vào giá đóng CF, 1 lệnh mở), lệnh còn mở tới nến cuối phiên đóng `TIME`.
 > ⚠️ Mẫu TRAIN, chưa kiểm định ngoài mẫu — không dùng để vào lệnh thật.
 
+# Đính chính C2 2026-11-09 (plan `BENZO-FOLLOW-COMBO-plan.md` 9.1-3 / 9.3-A, hậu kiểm)
+
+> **Vì sao:** C2 cũ (`controls_corven.c2`) lấy 20 nến ngẫu nhiên **±30′ quanh** nến CF, cùng hướng lệnh thật. Với nến j **trước** CF, hướng lệnh được lấy từ cú phá xảy ra **sau** j ⇒ lệnh giả "biết trước" hướng của chính cú đẩy đã định nghĩa setup ⇒ C2 có thiên lệch dương. **C2'** = cùng hàm với `after_only=True`: pool chỉ gồm nến **sau** CF, cùng phiên, 0 < Δphút ≤ 30, các điều kiện khác giữ nguyên (cùng hướng, cùng rủi ro theo mbr, TP 2R, 20 nến, pool < 5 ⇒ bỏ lệnh). Ý nghĩa mới: *"vào đúng nến CF có hơn vào bừa một nến bất kỳ trong 30 phút sau đó không"*. Mặc định `after_only=False` giữ nguyên hành vi cũ (test bit-giống `test_controls_c2.py`), nên mọi bảng phía dưới **không đổi**. Script: `c2p_corven.py` → `report/_c2p_corven.json`.
+
+| Đo trên bộ gốc vòng 1 (TRAIN 35 phiên) | n lệnh thật đối chứng được | lệnh giả | WR lệnh giả | R TB | KTC 95 % | R thật − đối chứng (theo cặp) | thế A | thế B |
+|---|---|---|---|---|---|---|---|---|
+| **R thật CORVEN** | 97 | – | 26,8 % | **-0,29** | [-0,55; -0,02] | – | -0,40 (43) | -0,21 (54) |
+| C1 — bỏ ③ | 194 | – | 29,4 % | -0,24 | [-0,43; -0,04] | – | – | – |
+| C2 cũ (±30′ quanh CF) | 97 | 1940 | 34,1 % | **-0,08** | [-0,20; 0,03] | -0,21 | -0,45 (43) | 0,21 (54) |
+| C2' (chỉ 30′ SAU CF) | 97 | 1940 | 34,5 % | **-0,08** | [-0,22; 0,06] | -0,21 | -0,15 (43) | -0,03 (54) |
+
+**Nhánh (a)** — công thức đăng ký trước 9.1-3: (a) nếu R thật < C2' − 0,05 thì nhãn **giữ**; (b) nếu R thật ≥ C2' − 0,05 thì đổi nhãn. Số đo: R thật **−0,294** < C2' − 0,05 = −0,080 − 0,05 = **−0,130** ⇒ **nhánh (a): nhãn "kém vào ngẫu nhiên" GIỮ**. Số trong ngoặc đổi từ C2 cũ −0,083 sang C2' −0,080 — làm tròn 2 chữ số vẫn là **−0,08R**, nên 4 chuỗi nhãn trên Benzo corven-1 (`BenzoCorven.cs` `BacktestLine`/`SettingLabel`, `BenzoTrader.cs`, README, test `Program.cs`) **không phải sửa chữ nào**; không build/deploy lại.
+
+- Kết luận "chưa có lợi thế" của CORVEN **không đổi**: −0,29R có KTC dưới 0 và thua C1 (−0,24, không dính lỗi này).
+- Ở **mức tổng**, lỗi nhìn trước gần như không ảnh hưởng bộ CORVEN (C2 −0,083 → C2' −0,080), khác hẳn Follow (F0: C2 +0,28 → C2' −0,02). Nhưng **theo thế** thì có: thế B (vào sau `BreakConfirmed`, cùng hướng cú phá) C2 cũ +0,21 → C2' −0,03; thế A (fail break, ngược hướng cú thủng) C2 cũ −0,45 → C2' −0,15. Hai lệch ngược dấu triệt nhau ở mức tổng. ⇒ Từ nay mọi so sánh với C2 **tách theo thế** phải dùng C2'; so sánh mức tổng R TB với C2 trong các bảng dưới vẫn dùng được (lệch ≈ 0,003R ở bộ gốc; các ô khác chưa đo lại).
+- Dự đoán đăng ký trước của Fable (C2' bộ gốc rơi về −0,25…−0,10, nhiều khả năng nhánh (b)): **sai** — C2' = −0,08, nhánh (a).
+- Các ô GĐ2 vòng 2 (quét tham số) **chưa** đo lại bằng C2' — không ô nào đạt (a) ≥ C1 nên kết luận không đổi; nếu cần thì chạy lại `sweep_corven.py` với `after_only=True`.
+
 # GĐ2 vòng 2 — quét từng tham số quanh bộ vòng 1 (plan 8.4)
 
 > Bộ gốc = vòng 1: neo SL cú thủng / mốc, "lần 2" tắt. Mỗi ô đổi **đúng một** tham số; C1 (bỏ ③) và C2 (ngẫu nhiên cùng phiên/giờ ±30′/hướng/rủi ro mbr, 20 nến mỗi lệnh) **chạy lại cho từng ô**. Không lưới chéo. Chỉ TRAIN (35 phiên dày).

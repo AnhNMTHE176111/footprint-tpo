@@ -351,9 +351,14 @@ class FollowMachine:
         ext_seg = min(int(L[j]) for j in seg) if D > 0 else max(int(H[j]) for j in seg)
         raw2 = (min(b.E, ext_seg) - buf) if D > 0 else (max(b.E, ext_seg) + buf)
         raw1 = (ext_seg - buf) if D > 0 else (ext_seg + buf)
+        # S3 (biến thể báo cáo, plan 9.1-4, hậu kiểm): leg 1 = S2; leg 2 = neo cực trị leg 1 (b.trig, chốt khi leg 1 kết thúc)
+        if b.leg >= 2 and b.trig is not None:
+            raw3 = (min(int(b.trig), ext_seg) - buf) if D > 0 else (max(int(b.trig), ext_seg) + buf)
+        else:
+            raw3 = raw2
         hgt = b.top - b.bottom
         tgt = b.E + D * hgt
-        for nm, raw in (('S2', raw2), ('S1', raw1)):
+        for nm, raw in (('S2', raw2), ('S1', raw1), ('S3', raw3)):
             risk = (ent - raw) * D
             if risk < p.sl_floor_mbr * mbr:
                 risk = p.sl_floor_mbr * mbr
@@ -418,6 +423,10 @@ def to_entry(r: dict, nm: str = 'S2') -> dict:
                 tp=round(r[f'tp_{nm}'] * TICK, 6), setup='Follow', zone='', note='')
 
 
+def sfx(nm: str) -> str:
+    return '' if nm == 'S2' else '_' + nm
+
+
 def simulate_alone(d: pd.DataFrame, df, f, sim_one, nm: str = 'S2') -> pd.DataFrame:
     """Mô phỏng ĐỘC LẬP từng F0 (không one_at_a_time) — cột r_alone/outcome_alone/exit_alone theo neo nm."""
     rr, oo, xx = [], [], []
@@ -428,7 +437,7 @@ def simulate_alone(d: pd.DataFrame, df, f, sim_one, nm: str = 'S2') -> pd.DataFr
         else:
             rr.append(float(t['r'])); oo.append(t['outcome']); xx.append(int(t['exit_idx']))
     d = d.copy()
-    suf = '' if nm == 'S2' else '_S1'
+    suf = sfx(nm)
     d['r_alone' + suf] = rr
     d['outcome_alone' + suf] = oo
     d['exit_alone' + suf] = xx
@@ -442,14 +451,14 @@ def tradeable(d: pd.DataFrame, nm='S2', block_us=True, gate17=False) -> np.ndarr
         ok &= d['chan_1920'].to_numpy() == 0
     if gate17:
         ok &= d[f'r17_{nm}'].to_numpy() == 1
-    suf = '' if nm == 'S2' else '_S1'
+    suf = sfx(nm)
     ok &= np.isin(d['outcome_alone' + suf].to_numpy(), ['TP', 'SL', 'TIME'])
     return ok
 
 
 def select(d: pd.DataFrame, mask: np.ndarray, nm='S2') -> pd.DataFrame:
     """2e: 1 lệnh mở (vào được khi idx ≥ exit của lệnh trước) · 1 lệnh / (range, cạnh, leg). d đã sắp theo idx_c."""
-    suf = '' if nm == 'S2' else '_S1'
+    suf = sfx(nm)
     busy = -1
     used = set()
     keep = []
@@ -564,18 +573,19 @@ def build(bars, df, good, fp: FP, f=None, eng_out=None):
         d['month'] = df['month'].to_numpy()[d['idx_c'].to_numpy()] if 'month' in df else pd.to_datetime(d['t_utc']).dt.strftime('%Y-%m')
         d = simulate_alone(d, df, f, SC.sim_one, 'S2')
         d = simulate_alone(d, df, f, SC.sim_one, 'S1')
+        d = simulate_alone(d, df, f, SC.sim_one, 'S3')
     return m, d, f, eng_out
 
 
-def c2_for(trades: pd.DataFrame, f, df, fp: FP, nm='S2'):
-    """controls_corven.c2 bọc cho Follow (chosen = .cf/.S/.risk; trades có cột r)."""
+def c2_for(trades: pd.DataFrame, f, df, fp: FP, nm='S2', after_only: bool = False):
+    """controls_corven.c2 bọc cho Follow (chosen = .cf/.S/.risk; trades có cột r). after_only=True ⇒ C2' (plan 9.1-3)."""
     import controls_corven as CC
     if len(trades) == 0:
         return None, 0
-    suf = '' if nm == 'S2' else '_S1'
+    suf = sfx(nm)
     chosen = [SimpleNamespace(cf=int(r.idx_c), S=int(r.D), risk=float(getattr(r, f'risk_{nm}'))) for r in trades.itertuples()]
     tr = pd.DataFrame({'r': trades['r_alone' + suf].to_numpy()})
-    d2, allr = CC.c2(dict(feat=f, df=df, cp=SimpleNamespace(tp_r=fp.tp_r), chosen=chosen, trades=tr))
+    d2, allr = CC.c2(dict(feat=f, df=df, cp=SimpleNamespace(tp_r=fp.tp_r), chosen=chosen, trades=tr), after_only=after_only)
     if len(d2) == 0:
         return None, 0
     return float(d2['r_c2_tb'].mean()), len(allr)
@@ -605,7 +615,7 @@ def main(n_perm: int = 2000):
     legs = pd.DataFrame(m.legs)
     legs_g = legs[[good[min(int(x), len(good) - 1)] for x in legs['ref']]] if len(legs) else legs
     L = []
-    L += ['# Benzo FOLLOW-COMBO — kết quả GĐ-F0 + GĐ-F1 trên TRAIN', '',
+    L += ['# Benzo FOLLOW-COMBO — kết quả GĐ-F0 + GĐ-F1 trên TRAIN (+ chấm lại C2’ theo plan 9.3-A)', '',
           f'> Opus, 2026-11-09, theo `plans/BENZO-FOLLOW-COMBO-plan.md` (đăng ký trước, commit ee8b252). **Chỉ TRAIN**: {nd} phiên dày, '
           f'nến 0…{cut} (tới {str(df["datetime"].iloc[-1])[:16]} UTC). **TEST (≥ 2026-09-16) không nạp, không đọc.** '
           '`kernel.simulate` (phí 0,2 giá/lệnh, chạm SL+TP cùng nến = SL, vào giá đóng CF), lệnh còn mở tới nến cuối phiên đóng `TIME`.',
@@ -670,7 +680,9 @@ def main(n_perm: int = 2000):
     pd.DataFrame({'max_diff': maxs}).to_csv(os.path.join(REPORT, '_follow_perm.csv'), index=False)
     n_sel = M.sum(0)
     big = n_sel >= 30
-    thr30 = float(np.percentile(np.nanmax(perm[:, big], axis=1), 95)) if big.any() else np.nan
+    maxs30 = np.nanmax(perm[:, big], axis=1) if big.any() else np.full(n_perm, np.nan)
+    thr30 = float(np.percentile(maxs30, 95)) if big.any() else np.nan
+    p_max30 = np.array([float(np.mean(maxs30 >= obs[k] - EPS)) if (obs[k] == obs[k] and big[k]) else np.nan for k in range(len(obs))])
     suf = ''
     s_c1 = stats_r(main_cfg['F0']['r_alone'].to_numpy(), nd)
     res = {}
@@ -680,49 +692,69 @@ def main(n_perm: int = 2000):
         rest = select(d, ok & ~masks[k], 'S2') if k != 'F0' else t.iloc[0:0]
         s_rest = stats_r(rest['r_alone'].to_numpy(), nd)
         c2, n2 = c2_for(t, f, df, fp)
+        c2p, n2p = c2_for(t, f, df, fp, after_only=True)          # C2' (plan 9.1-3)
         h1 = t[t['half'] == 1]['r_alone'].mean() if len(t) else np.nan
         h2 = t[t['half'] == 2]['r_alone'].mean() if len(t) else np.nan
         if k == 'F0':
-            o, pr, pm, jd = np.nan, np.nan, np.nan, dict(inner=False, dat=False, ly_do='đối chứng')
+            o, pr, pm, pm30 = np.nan, np.nan, np.nan, np.nan
+            jd = jd2 = dict(inner=False, dat=False, ly_do='đối chứng')
         else:
             j = SEL_COMBOS.index(k)
-            o, pr, pm = obs[j], p_raw[j], p_max[j]
-            jd = judge(s, s_c1.get('avg', np.nan), c2, h1, h2, o, thr)
-        res[k] = dict(s=s, rest=s_rest, c2=c2, n2=n2, h1=h1, h2=h2, obs=o, p_raw=pr, p_max=pm, jd=jd, n_alone=int(masks[k][ok].sum()))
+            o, pr, pm, pm30 = obs[j], p_raw[j], p_max[j], p_max30[j]
+            jd = judge(s, s_c1.get('avg', np.nan), c2, h1, h2, o, thr)              # cũ (GĐ-F1): C2 lệch + ngưỡng 10 combo
+            jd2 = judge(s, s_c1.get('avg', np.nan), c2p, h1, h2, o, thr30)          # chấm (9.1-2/9.1-3): C2' + ngưỡng combo ≥ 30 F0
+            jd2['ly_do'] = jd2['ly_do'].replace('C2+0,15', "C2'+0,15")
+        res[k] = dict(s=s, rest=s_rest, c2=c2, n2=n2, c2p=c2p, n2p=n2p, h1=h1, h2=h2, obs=o, p_raw=pr, p_max=pm, p_max30=pm30,
+                      jd=jd, jd2=jd2, n_alone=int(masks[k][ok].sum()))
         t.to_csv(os.path.join(REPORT, f'_follow_trades_{k}.csv'), index=False, encoding='utf-8')
     L += ['## 2. GĐ-F1 — bảng chính (cấu hình chính: S2 · TP 2R không cổng · cf_within 3 · CF lỏng)', '',
+          "> **Cập nhật 2026-11-09 theo plan mục 9.3-A (hậu kiểm):** thêm cột **C2'** = `controls_corven.c2(after_only=True)` — chỉ nến SAU "
+          "nến CF, 0 < Δphút ≤ 30, cùng phiên/hướng/rủi ro mbr, 20 nến, pool < 5 ⇒ bỏ lệnh (C2 cũ có thiên lệch dương vì nến trước cú phá "
+          "\"biết trước\" hướng). Cột **vòng trong / ĐẠT (C2')** là cột chấm: C2' thay C2, ngưỡng hoán vị = max chỉ trên combo có ≥ 30 F0 "
+          "(plan 9.1-2). Hai cột \"(C2 cũ)\" giữ để đối chiếu kết luận GĐ-F1.", '',
           f'Hoán vị thống kê cực đại (4.4): {n_perm} lần, hoán vị nguyên dòng cờ giữa các F0 cùng phiên (trên {len(sub)} F0 đã qua Vk + cổng, '
-          f'dùng `r_alone`), thống kê = R TB(combo) − R TB(F0), lấy max trên 10 combo. **Ngưỡng phân vị 95 = {f2(thr, 3)}R** '
-          f'(nếu chỉ lấy max trên các combo có ≥ 30 F0: {f2(thr30, 3)}R — chỉ để tham khảo, không dùng để chấm).', '',
-          '| Combo | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD | chuỗi thua | C1 toàn F0 | C1 F0∖combo | C2 | R nửa 1 / nửa 2 | '
-          'Δ r_alone vs F0 (n F0) | p thô / p cực đại | vòng trong? | ĐẠT? |',
-          '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|']
+          f'dùng `r_alone`), thống kê = R TB(combo) − R TB(F0). Ngưỡng phân vị 95: max trên cả 10 combo = {f2(thr, 3)}R (GĐ-F1, cũ) · '
+          f'**max chỉ trên combo có ≥ 30 F0 = {f2(thr30, 3)}R (ngưỡng CHẤM từ 9.1-2)**.', '',
+          "| Combo | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD | chuỗi thua | C1 toàn F0 | C1 F0∖combo | C2 cũ | **C2'** | R nửa 1 / nửa 2 | "
+          "Δ r_alone vs F0 (n F0) | p thô / p cực đại (10 combo) / p cực đại (≥ 30) | vòng trong (C2 cũ) | ĐẠT (C2 cũ) | "
+          "**vòng trong (C2')** | **ĐẠT (C2')** |",
+          '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|']
     for k in COMBOS:
         u = res[k]
         s = u['s']
         if s.get('n', 0) == 0:
-            L.append(f"| **{k}** {COMBO_NAME[k]} | 0 | – | – | – | – | – | – | – | {f2(s_c1.get('avg'))} | – | – | – | – | – | – | không đo được |")
+            L.append(f"| **{k}** {COMBO_NAME[k]} | 0 | – | – | – | – | – | – | – | {f2(s_c1.get('avg'))} | – | – | – | – | – | – | – | không đo được | – | không đo được |")
             continue
-        jd = u['jd']
+        jd, jd2 = u['jd'], u['jd2']
         L.append(f"| **{k}** {COMBO_NAME[k]} | {s['n']} | {f2(s['per_day'])} | {f2(100 * s['wr'], 1)} % | **{f2(s['avg'])}** | "
                  f"[{f2(s['lo'])}; {f2(s['hi'])}] | {f2(s['sum'], 1)} | {f2(s['dd'], 1)} | {s['streak']} | {f2(s_c1.get('avg'))} | "
-                 f"{f2(u['rest'].get('avg')) if k != 'F0' else '–'} | {f2(u['c2'])} | {f2(u['h1'])} / {f2(u['h2'])} | "
-                 f"{f2(u['obs'], 3) if k != 'F0' else '–'} ({u['n_alone']}) | {f2(u['p_raw'], 3)} / {f2(u['p_max'], 3)} | "
-                 f"{'có' if jd['inner'] else ('–' if k == 'F0' else 'không')} | {'**ĐẠT**' if jd['dat'] else jd['ly_do']} |")
+                 f"{f2(u['rest'].get('avg')) if k != 'F0' else '–'} | {f2(u['c2'])} | **{f2(u['c2p'])}** | {f2(u['h1'])} / {f2(u['h2'])} | "
+                 f"{f2(u['obs'], 3) if k != 'F0' else '–'} ({u['n_alone']}) | {f2(u['p_raw'], 3)} / {f2(u['p_max'], 3)} / {f2(u['p_max30'], 3)} | "
+                 f"{'có' if jd['inner'] else ('–' if k == 'F0' else 'không')} | {'**ĐẠT**' if jd['dat'] else jd['ly_do']} | "
+                 f"{'**có**' if jd2['inner'] else ('–' if k == 'F0' else 'không')} | {'**ĐẠT**' if jd2['dat'] else jd2['ly_do']} |")
     n_dat = sum(1 for k in SEL_COMBOS if res[k]['jd']['dat'])
-    inner = [k for k in SEL_COMBOS if res[k]['jd']['inner']]
-    L += ['', f"**Kết luận GĐ-F1: {n_dat} combo ĐẠT** · lọt vòng trong (n ≥ 30, ≥ C1, ≥ C2): {', '.join(inner) if inner else 'không combo nào'} · "
-          f"chưa đo được (n < 30): {', '.join(k for k in SEL_COMBOS if res[k]['s'].get('n', 0) < 30) or 'không'}.",
+    inner_old = [k for k in SEL_COMBOS if res[k]['jd']['inner']]
+    n_dat2 = sum(1 for k in SEL_COMBOS if res[k]['jd2']['dat'])
+    inner = [k for k in SEL_COMBOS if res[k]['jd2']['inner']]
+    L += ['', f"**Kết luận GĐ-F1 (C2 cũ): {n_dat} combo ĐẠT** · lọt vòng trong: {', '.join(inner_old) if inner_old else 'không combo nào'}.", '',
+          f"**Chấm lại theo C2' (9.3-A, hậu kiểm): {n_dat2} combo ĐẠT** · lọt vòng trong (n ≥ 30, ≥ C1, ≥ C2'): "
+          f"{', '.join(inner) if inner else 'không combo nào'} · "
+          f"chưa đo được (n < 30): {', '.join(k for k in SEL_COMBOS if res[k]['s'].get('n', 0) < 30) or 'không'}."
+          + (' ⚠️ Chấm lại SAU khi đã nhìn R trên TRAIN — không tự mở TEST; Fable quyết.' if n_dat2 else ''),
           '', 'Ghi chú cột: n/WR/R TB… là lệnh thật (1 lệnh mở, 1 lệnh/(range, cạnh, leg)). "C1 toàn F0" = mọi F0 cùng cấu hình; '
-          '"C1 F0∖combo" = F0 không thuộc combo, chọn lệnh cùng cách. C2 = `controls_corven.c2` (20 nến ngẫu nhiên cùng phiên ±30′, cùng '
-          'hướng, cùng rủi ro theo mbr) cho các lệnh của combo. "Δ r_alone" = R TB(combo) − R TB(F0) trên F0 mô phỏng độc lập (thống kê '
-          'của kiểm hoán vị; n F0 trong ngoặc). p thô = so với phân bố hoán vị của chính combo; p cực đại = so với phân bố max của 10 combo.', '']
+          '"C1 F0∖combo" = F0 không thuộc combo, chọn lệnh cùng cách. C2 cũ = `controls_corven.c2` (20 nến ngẫu nhiên cùng phiên ±30′, cùng '
+          "hướng, cùng rủi ro theo mbr) cho các lệnh của combo; C2' = cùng hàm với `after_only=True` (chỉ nến trong 30′ SAU CF). "
+          '"Δ r_alone" = R TB(combo) − R TB(F0) trên F0 mô phỏng độc lập (thống kê '
+          'của kiểm hoán vị; n F0 trong ngoặc). p thô = so với phân bố hoán vị của chính combo; p cực đại (10 combo) = so với phân bố max '
+          'của 10 combo; p cực đại (≥ 30) = so với phân bố max chỉ trên combo có ≥ 30 F0.', '']
     # ------------------------------------------------------------ (iii) biến thể báo cáo
     var_rows = []
     variants = [('S1 (SL sát nhịp hồi)', dict(nm='S1'), None), ('gate17 (đòi R sẵn ≥ 1,7 tới E + chiều cao range)', dict(gate17=True), None),
                 ('cf_strict (CF đóng > high nhịp hồi)', None, replace(fp, cf_mode='strict')),
                 ('cf_within 4', None, replace(fp, cf_within=4)), ('cf_4a (CF thoả 4a đầy đủ)', None, replace(fp, cf_mode='4a')),
-                ('chặn 19:20–20:30 TẮT', dict(block_us=False), None)]
+                ('chặn 19:20–20:30 TẮT', dict(block_us=False), None),
+                ('S3 (leg 2 neo cực trị leg 1; 9.1-4, hậu kiểm)', dict(nm='S3'), None),
+                ('move_mbr 1,5 (9.1-1, hậu kiểm)', None, replace(fp, move_mbr=1.5))]
     L += ['## 3. Biến thể báo cáo — **không có sức chọn** (mục 4.2), chỉ để biết', '',
           '| Biến thể | Combo | n | WR | R TB | KTC 95 % | ΣR | C1 (F0 cùng biến thể) |', '|---|---|---|---|---|---|---|---|']
     for name, kw, fpv in variants:
@@ -732,7 +764,7 @@ def main(n_perm: int = 2000):
         else:
             cfg = run_cfg(d, **kw)
         nm = (kw or {}).get('nm', 'S2')
-        col = 'r_alone' if nm == 'S2' else 'r_alone_S1'
+        col = 'r_alone' + sfx(nm)
         c1v = stats_r(cfg['F0'][col].to_numpy(), nd)
         for k in COMBOS:
             s = stats_r(cfg[k][col].to_numpy(), nd)
@@ -791,6 +823,9 @@ def main(n_perm: int = 2000):
     with open(os.path.join(REPORT, '_follow_summary.json'), 'w', encoding='utf-8') as fh:
         import json
         json.dump({k: dict(n=res[k]['s'].get('n', 0), avg=res[k]['s'].get('avg'), c1=s_c1.get('avg'), c2=res[k]['c2'],
+                           c2p=res[k]['c2p'], n2p=res[k]['n2p'], inner_c2p=res[k]['jd2']['inner'], dat_c2p=res[k]['jd2']['dat'],
+                           ly_do_c2p=res[k]['jd2']['ly_do'],
+                           p_max30=None if res[k]['p_max30'] != res[k]['p_max30'] else float(res[k]['p_max30']),
                            dat=res[k]['jd']['dat'], inner=res[k]['jd']['inner'], ly_do=res[k]['jd']['ly_do'],
                            p_raw=None if res[k]['p_raw'] != res[k]['p_raw'] else float(res[k]['p_raw']),
                            p_max=None if res[k]['p_max'] != res[k]['p_max'] else float(res[k]['p_max']))

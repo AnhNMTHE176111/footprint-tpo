@@ -1,4 +1,4 @@
-# Benzo FOLLOW-COMBO — kết quả GĐ-F0 + GĐ-F1 trên TRAIN
+# Benzo FOLLOW-COMBO — kết quả GĐ-F0 + GĐ-F1 trên TRAIN (+ chấm lại C2’ theo plan 9.3-A)
 
 > Opus, 2026-11-09, theo `plans/BENZO-FOLLOW-COMBO-plan.md` (đăng ký trước, commit ee8b252). **Chỉ TRAIN**: 35 phiên dày, nến 0…51318 (tới 2026-09-15 20:59 UTC). **TEST (≥ 2026-09-16) không nạp, không đọc.** `kernel.simulate` (phí 0,2 giá/lệnh, chạm SL+TP cùng nến = SL, vào giá đóng CF), lệnh còn mở tới nến cuối phiên đóng `TIME`.
 > ⚠️ Mẫu TRAIN, chưa kiểm định ngoài mẫu — không dùng để vào lệnh thật.
@@ -39,25 +39,29 @@ Nhãn đo thêm trên F0: CF thoả 4a đầy đủ `cf_4a` 47,5 % · `cf_strict
 
 ## 2. GĐ-F1 — bảng chính (cấu hình chính: S2 · TP 2R không cổng · cf_within 3 · CF lỏng)
 
-Hoán vị thống kê cực đại (4.4): 2000 lần, hoán vị nguyên dòng cờ giữa các F0 cùng phiên (trên 451 F0 đã qua Vk + cổng, dùng `r_alone`), thống kê = R TB(combo) − R TB(F0), lấy max trên 10 combo. **Ngưỡng phân vị 95 = 1,979R** (nếu chỉ lấy max trên các combo có ≥ 30 F0: 0,314R — chỉ để tham khảo, không dùng để chấm).
+> **Cập nhật 2026-11-09 theo plan mục 9.3-A (hậu kiểm):** thêm cột **C2'** = `controls_corven.c2(after_only=True)` — chỉ nến SAU nến CF, 0 < Δphút ≤ 30, cùng phiên/hướng/rủi ro mbr, 20 nến, pool < 5 ⇒ bỏ lệnh (C2 cũ có thiên lệch dương vì nến trước cú phá "biết trước" hướng). Cột **vòng trong / ĐẠT (C2')** là cột chấm: C2' thay C2, ngưỡng hoán vị = max chỉ trên combo có ≥ 30 F0 (plan 9.1-2). Hai cột "(C2 cũ)" giữ để đối chiếu kết luận GĐ-F1.
 
-| Combo | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD | chuỗi thua | C1 toàn F0 | C1 F0∖combo | C2 | R nửa 1 / nửa 2 | Δ r_alone vs F0 (n F0) | p thô / p cực đại | vòng trong? | ĐẠT? |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **F0** nền = C1 | 340 | 9,71 | 34,1 % | **-0,05** | [-0,20; 0,10] | -16,9 | 46,2 | 10 | -0,05 | – | 0,28 | -0,09 / -0,00 | – (451) | – / – | – | đối chứng |
-| **F1** nguyên thủy (T) | 11 | 0,31 | 45,5 % | **0,31** | [-0,51; 1,13] | 3,4 | 3,2 | 3 | -0,05 | -0,06 | 0,84 | 0,07 / 0,95 | 0,360 (11) | 0,226 / 0,633 | không | n < 30 — không đo được |
-| **F2** bóng CF (Bc) | 26 | 0,74 | 23,1 % | **-0,36** | [-0,83; 0,11] | -9,5 | 9,8 | 8 | -0,05 | -0,03 | 0,12 | -0,50 / -0,15 | -0,312 (26) | 0,889 / 1,000 | không | n < 30 — không đo được |
-| **F3** kiệt sức hồi (K) | 82 | 2,34 | 35,4 % | **0,00** | [-0,29; 0,33] | 0,3 | 15,7 | 7 | -0,05 | -0,07 | 0,31 | 0,28 / -0,21 | 0,102 (84) | 0,205 / 0,889 | không | < C1+0,15; < C2+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị |
-| **F4** trap + bóng CF (T∧Bc) | 0 | – | – | – | – | – | – | – | -0,05 | – | – | – | – | – | – | không đo được |
-| **F5** trap + kiệt sức (T∧K) | 2 | 0,06 | 50,0 % | **0,42** | [-1,04; 1,87] | 0,8 | 1,0 | 1 | -0,05 | -0,05 | 0,19 | 0,42 / – | 0,468 (2) | 0,453 / 0,522 | không | n < 30 — không đo được |
-| **F6** stacked giữ (S) | 226 | 6,46 | 34,1 % | **-0,04** | [-0,23; 0,14] | -10,1 | 19,9 | 11 | -0,05 | -0,05 | 0,28 | -0,08 / -0,01 | 0,011 (272) | 0,469 / 0,990 | không | < C1+0,15; < C2+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị |
-| **F7** Δ ngược hồi (Dh) | 96 | 2,74 | 42,7 % | **0,20** | [-0,10; 0,51] | 19,2 | 9,1 | 4 | -0,05 | -0,13 | 0,33 | 0,29 / 0,08 | 0,201 (110) | 0,049 / 0,764 | không | < C2+0,15; không vượt ngưỡng hoán vị |
-| **F8** hồi nông + lực CF (Sh∧(Bc∨Dc)) | 49 | 1,40 | 30,6 % | **-0,16** | [-0,53; 0,23] | -7,8 | 10,4 | 6 | -0,05 | -0,07 | 0,20 | -0,26 / -0,07 | 0,016 (52) | 0,420 / 0,987 | không | < C1+0,15; < C2+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị |
-| **F9** move mạnh + 1 dấu hiệu (Mv∧(T∨Bc∨K∨S)) | 214 | 6,11 | 33,2 % | **-0,07** | [-0,26; 0,11] | -15,6 | 24,3 | 10 | -0,05 | -0,03 | 0,29 | -0,09 / -0,05 | -0,015 (258) | 0,611 / 0,996 | không | < C1+0,15; < C2+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị |
-| **F10** ≥ 2 dấu hiệu khác loại {T,Bc,K,S,Dh} | 120 | 3,43 | 39,2 % | **0,12** | [-0,14; 0,37] | 14,0 | 9,7 | 5 | -0,05 | -0,11 | 0,35 | 0,16 / 0,07 | 0,143 (128) | 0,147 / 0,843 | không | < C2+0,15; KTC dưới ≤ −0,10; không vượt ngưỡng hoán vị |
+Hoán vị thống kê cực đại (4.4): 2000 lần, hoán vị nguyên dòng cờ giữa các F0 cùng phiên (trên 451 F0 đã qua Vk + cổng, dùng `r_alone`), thống kê = R TB(combo) − R TB(F0). Ngưỡng phân vị 95: max trên cả 10 combo = 1,979R (GĐ-F1, cũ) · **max chỉ trên combo có ≥ 30 F0 = 0,314R (ngưỡng CHẤM từ 9.1-2)**.
 
-**Kết luận GĐ-F1: 0 combo ĐẠT** · lọt vòng trong (n ≥ 30, ≥ C1, ≥ C2): không combo nào · chưa đo được (n < 30): F1, F2, F4, F5.
+| Combo | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD | chuỗi thua | C1 toàn F0 | C1 F0∖combo | C2 cũ | **C2'** | R nửa 1 / nửa 2 | Δ r_alone vs F0 (n F0) | p thô / p cực đại (10 combo) / p cực đại (≥ 30) | vòng trong (C2 cũ) | ĐẠT (C2 cũ) | **vòng trong (C2')** | **ĐẠT (C2')** |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **F0** nền = C1 | 340 | 9,71 | 34,1 % | **-0,05** | [-0,20; 0,10] | -16,9 | 46,2 | 10 | -0,05 | – | 0,28 | **-0,02** | -0,09 / -0,00 | – (451) | – / – / – | – | đối chứng | – | đối chứng |
+| **F1** nguyên thủy (T) | 11 | 0,31 | 45,5 % | **0,31** | [-0,51; 1,13] | 3,4 | 3,2 | 3 | -0,05 | -0,06 | 0,84 | **0,51** | 0,07 / 0,95 | 0,360 (11) | 0,226 / 0,633 / – | không | n < 30 — không đo được | không | n < 30 — không đo được |
+| **F2** bóng CF (Bc) | 26 | 0,74 | 23,1 % | **-0,36** | [-0,83; 0,11] | -9,5 | 9,8 | 8 | -0,05 | -0,03 | 0,12 | **-0,34** | -0,50 / -0,15 | -0,312 (26) | 0,889 / 1,000 / – | không | n < 30 — không đo được | không | n < 30 — không đo được |
+| **F3** kiệt sức hồi (K) | 82 | 2,34 | 35,4 % | **0,00** | [-0,29; 0,33] | 0,3 | 15,7 | 7 | -0,05 | -0,07 | 0,31 | **-0,06** | 0,28 / -0,21 | 0,102 (84) | 0,205 / 0,889 / 0,598 | không | < C1+0,15; < C2+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị | **có** | < C1+0,15; < C2'+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị |
+| **F4** trap + bóng CF (T∧Bc) | 0 | – | – | – | – | – | – | – | -0,05 | – | – | – | – | – | – | – | không đo được | – | không đo được |
+| **F5** trap + kiệt sức (T∧K) | 2 | 0,06 | 50,0 % | **0,42** | [-1,04; 1,87] | 0,8 | 1,0 | 1 | -0,05 | -0,05 | 0,19 | **0,12** | 0,42 / – | 0,468 (2) | 0,453 / 0,522 / – | không | n < 30 — không đo được | không | n < 30 — không đo được |
+| **F6** stacked giữ (S) | 226 | 6,46 | 34,1 % | **-0,04** | [-0,23; 0,14] | -10,1 | 19,9 | 11 | -0,05 | -0,05 | 0,28 | **-0,04** | -0,08 / -0,01 | 0,011 (272) | 0,469 / 0,990 / 0,937 | không | < C1+0,15; < C2+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị | không | < C1+0,15; < C2'+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị |
+| **F7** Δ ngược hồi (Dh) | 96 | 2,74 | 42,7 % | **0,20** | [-0,10; 0,51] | 19,2 | 9,1 | 4 | -0,05 | -0,13 | 0,33 | **0,05** | 0,29 / 0,08 | 0,201 (110) | 0,049 / 0,764 / 0,232 | không | < C2+0,15; không vượt ngưỡng hoán vị | **có** | không vượt ngưỡng hoán vị |
+| **F8** hồi nông + lực CF (Sh∧(Bc∨Dc)) | 49 | 1,40 | 30,6 % | **-0,16** | [-0,53; 0,23] | -7,8 | 10,4 | 6 | -0,05 | -0,07 | 0,20 | **-0,08** | -0,26 / -0,07 | 0,016 (52) | 0,420 / 0,987 / 0,927 | không | < C1+0,15; < C2+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị | không | < C1+0,15; < C2'+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị |
+| **F9** move mạnh + 1 dấu hiệu (Mv∧(T∨Bc∨K∨S)) | 214 | 6,11 | 33,2 % | **-0,07** | [-0,26; 0,11] | -15,6 | 24,3 | 10 | -0,05 | -0,03 | 0,29 | **-0,05** | -0,09 / -0,05 | -0,015 (258) | 0,611 / 0,996 / 0,978 | không | < C1+0,15; < C2+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị | không | < C1+0,15; < C2'+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị |
+| **F10** ≥ 2 dấu hiệu khác loại {T,Bc,K,S,Dh} | 120 | 3,43 | 39,2 % | **0,12** | [-0,14; 0,37] | 14,0 | 9,7 | 5 | -0,05 | -0,11 | 0,35 | **0,01** | 0,16 / 0,07 | 0,143 (128) | 0,147 / 0,843 / 0,421 | không | < C2+0,15; KTC dưới ≤ −0,10; không vượt ngưỡng hoán vị | **có** | < C2'+0,15; KTC dưới ≤ −0,10; không vượt ngưỡng hoán vị |
 
-Ghi chú cột: n/WR/R TB… là lệnh thật (1 lệnh mở, 1 lệnh/(range, cạnh, leg)). "C1 toàn F0" = mọi F0 cùng cấu hình; "C1 F0∖combo" = F0 không thuộc combo, chọn lệnh cùng cách. C2 = `controls_corven.c2` (20 nến ngẫu nhiên cùng phiên ±30′, cùng hướng, cùng rủi ro theo mbr) cho các lệnh của combo. "Δ r_alone" = R TB(combo) − R TB(F0) trên F0 mô phỏng độc lập (thống kê của kiểm hoán vị; n F0 trong ngoặc). p thô = so với phân bố hoán vị của chính combo; p cực đại = so với phân bố max của 10 combo.
+**Kết luận GĐ-F1 (C2 cũ): 0 combo ĐẠT** · lọt vòng trong: không combo nào.
+
+**Chấm lại theo C2' (9.3-A, hậu kiểm): 0 combo ĐẠT** · lọt vòng trong (n ≥ 30, ≥ C1, ≥ C2'): F3, F7, F10 · chưa đo được (n < 30): F1, F2, F4, F5.
+
+Ghi chú cột: n/WR/R TB… là lệnh thật (1 lệnh mở, 1 lệnh/(range, cạnh, leg)). "C1 toàn F0" = mọi F0 cùng cấu hình; "C1 F0∖combo" = F0 không thuộc combo, chọn lệnh cùng cách. C2 cũ = `controls_corven.c2` (20 nến ngẫu nhiên cùng phiên ±30′, cùng hướng, cùng rủi ro theo mbr) cho các lệnh của combo; C2' = cùng hàm với `after_only=True` (chỉ nến trong 30′ SAU CF). "Δ r_alone" = R TB(combo) − R TB(F0) trên F0 mô phỏng độc lập (thống kê của kiểm hoán vị; n F0 trong ngoặc). p thô = so với phân bố hoán vị của chính combo; p cực đại (10 combo) = so với phân bố max của 10 combo; p cực đại (≥ 30) = so với phân bố max chỉ trên combo có ≥ 30 F0.
 
 ## 3. Biến thể báo cáo — **không có sức chọn** (mục 4.2), chỉ để biết
 
@@ -129,6 +133,28 @@ Ghi chú cột: n/WR/R TB… là lệnh thật (1 lệnh mở, 1 lệnh/(range, 
 | chặn 19:20–20:30 TẮT | F8 | 51 | 31,4 % | -0,14 | [-0,51; 0,24] | -6,9 | -0,05 |
 | chặn 19:20–20:30 TẮT | F9 | 226 | 33,2 % | -0,07 | [-0,25; 0,12] | -16,1 | -0,05 |
 | chặn 19:20–20:30 TẮT | F10 | 131 | 37,4 % | 0,06 | [-0,19; 0,32] | 8,5 | -0,05 |
+| S3 (leg 2 neo cực trị leg 1; 9.1-4, hậu kiểm) | F0 | 409 | 34,2 % | -0,05 | [-0,19; 0,09] | -20,3 | -0,05 |
+| S3 (leg 2 neo cực trị leg 1; 9.1-4, hậu kiểm) | F1 | 20 | 45,0 % | 0,28 | [-0,32; 0,89] | 5,6 | -0,05 |
+| S3 (leg 2 neo cực trị leg 1; 9.1-4, hậu kiểm) | F2 | 30 | 30,0 % | -0,16 | [-0,66; 0,34] | -4,9 | -0,05 |
+| S3 (leg 2 neo cực trị leg 1; 9.1-4, hậu kiểm) | F3 | 97 | 35,1 % | -0,02 | [-0,30; 0,27] | -1,5 | -0,05 |
+| S3 (leg 2 neo cực trị leg 1; 9.1-4, hậu kiểm) | F4 | 1 | 0,0 % | -1,08 | [-1,08; -1,08] | -1,1 | -0,05 |
+| S3 (leg 2 neo cực trị leg 1; 9.1-4, hậu kiểm) | F5 | 4 | 50,0 % | 0,41 | [-1,08; 1,90] | 1,6 | -0,05 |
+| S3 (leg 2 neo cực trị leg 1; 9.1-4, hậu kiểm) | F6 | 278 | 35,3 % | -0,01 | [-0,18; 0,15] | -4,1 | -0,05 |
+| S3 (leg 2 neo cực trị leg 1; 9.1-4, hậu kiểm) | F7 | 112 | 40,2 % | 0,12 | [-0,15; 0,40] | 12,9 | -0,05 |
+| S3 (leg 2 neo cực trị leg 1; 9.1-4, hậu kiểm) | F8 | 73 | 30,1 % | -0,18 | [-0,48; 0,14] | -12,9 | -0,05 |
+| S3 (leg 2 neo cực trị leg 1; 9.1-4, hậu kiểm) | F9 | 269 | 34,9 % | -0,02 | [-0,20; 0,15] | -6,7 | -0,05 |
+| S3 (leg 2 neo cực trị leg 1; 9.1-4, hậu kiểm) | F10 | 147 | 39,5 % | 0,11 | [-0,13; 0,34] | 16,6 | -0,05 |
+| move_mbr 1,5 (9.1-1, hậu kiểm) | F0 | 297 | 35,0 % | -0,02 | [-0,18; 0,14] | -5,8 | -0,02 |
+| move_mbr 1,5 (9.1-1, hậu kiểm) | F1 | 8 | 37,5 % | 0,08 | [-0,68; 1,20] | 0,6 | -0,02 |
+| move_mbr 1,5 (9.1-1, hậu kiểm) | F2 | 23 | 17,4 % | -0,54 | [-0,93; -0,01] | -12,3 | -0,02 |
+| move_mbr 1,5 (9.1-1, hậu kiểm) | F3 | 71 | 33,8 % | -0,04 | [-0,37; 0,30] | -2,6 | -0,02 |
+| move_mbr 1,5 (9.1-1, hậu kiểm) | F4 | 0 | – | – | – | – | -0,02 |
+| move_mbr 1,5 (9.1-1, hậu kiểm) | F5 | 1 | 0,0 % | -1,04 | [-1,04; -1,04] | -1,0 | -0,02 |
+| move_mbr 1,5 (9.1-1, hậu kiểm) | F6 | 205 | 34,1 % | -0,04 | [-0,23; 0,16] | -8,1 | -0,02 |
+| move_mbr 1,5 (9.1-1, hậu kiểm) | F7 | 82 | 41,5 % | 0,16 | [-0,15; 0,48] | 13,5 | -0,02 |
+| move_mbr 1,5 (9.1-1, hậu kiểm) | F8 | 46 | 30,4 % | -0,17 | [-0,53; 0,23] | -7,6 | -0,02 |
+| move_mbr 1,5 (9.1-1, hậu kiểm) | F9 | 201 | 33,8 % | -0,05 | [-0,25; 0,15] | -10,3 | -0,02 |
+| move_mbr 1,5 (9.1-1, hậu kiểm) | F10 | 105 | 36,2 % | 0,03 | [-0,25; 0,29] | 3,3 | -0,02 |
 
 ## 4. Tách nhóm (cấu hình chính, lệnh thật): R TB (n)
 
@@ -150,24 +176,64 @@ Ghi chú cột: n/WR/R TB… là lệnh thật (1 lệnh mở, 1 lệnh/(range, 
 
 **F0 theo tháng:** 2026-07 0,06 (24) · 2026-08 -0,14 (203) · 2026-09 0,09 (113)
 
+**F3 theo giờ VN (giờ mở nến CF):** 00h -1,11 (1) · 01h -0,56 (6) · 02h 0,73 (5) · 03h -1,00 (3) · 05h -1,20 (1) · 06h 1,90 (2) · 07h 1,35 (5) · 08h -0,04 (3) · 09h -0,29 (4) · 10h -0,47 (5) · 11h -1,09 (4) · 12h 0,44 (2) · 13h 0,46 (2) · 14h -0,07 (9) · 15h 1,92 (1) · 16h 0,13 (5) · 17h -0,08 (3) · 18h 0,12 (5) · 19h -1,04 (2) · 20h -0,27 (4) · 21h -0,02 (6) · 22h 0,98 (3) · 23h -1,04 (1)
+
+**F3 theo tháng:** 2026-07 0,73 (5) · 2026-08 0,04 (49) · 2026-09 -0,20 (28)
+
+**F7 theo giờ VN (giờ mở nến CF):** 00h 1,94 (2) · 01h -1,09 (4) · 02h 0,66 (6) · 03h -1,14 (1) · 05h -1,13 (3) · 06h 0,42 (4) · 07h 0,65 (7) · 08h 0,16 (5) · 09h -0,46 (5) · 10h -0,06 (6) · 11h 1,17 (4) · 12h 0,23 (7) · 13h -1,08 (4) · 14h 0,94 (6) · 15h 1,96 (2) · 16h 0,90 (3) · 17h 0,42 (4) · 18h -0,06 (6) · 19h -1,03 (1) · 20h -1,01 (1) · 21h 0,25 (7) · 22h -0,03 (3) · 23h 0,15 (5)
+
+**F7 theo tháng:** 2026-07 0,80 (8) · 2026-08 0,10 (54) · 2026-09 0,21 (34)
+
+**F10 theo giờ VN (giờ mở nến CF):** 00h 0,42 (2) · 01h -1,06 (6) · 02h 0,81 (8) · 03h -1,05 (2) · 05h -1,13 (4) · 06h 0,91 (3) · 07h 0,95 (6) · 08h 0,16 (5) · 09h 0,24 (7) · 10h -0,06 (6) · 11h -0,59 (6) · 12h 0,23 (7) · 13h -0,05 (6) · 14h -0,21 (7) · 15h 0,96 (3) · 16h 0,20 (7) · 17h 1,16 (4) · 18h 0,06 (8) · 19h -0,04 (3) · 20h -1,02 (2) · 21h 0,48 (10) · 22h -0,43 (5) · 23h 0,95 (3)
+
+**F10 theo tháng:** 2026-07 0,21 (7) · 2026-08 0,11 (69) · 2026-09 0,11 (44)
+
 ## 5. 5 thắng + 5 thua (rải đều theo thời gian) — combo lọt vòng trong
 
-Không combo nào lọt vòng trong ⇒ không có danh sách (mục 5 plan chỉ áp cho combo lọt vòng trong). Để Fable soi chart, liệt kê 5 thắng + 5 thua của **F0** thay thế:
-
-### F0
+### F3
 
 | | UTC | VN | side | leg | E | vào | SL | TP | cờ | kết cục | R |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| thắng 1 | 2026-07-29 00:36 | 07:36 | buy | 1 | 4082,7 | 4084,0 | 4082,3 | 4087,4 | – | TP | 1,88 |
-| thắng 2 | 2026-08-12 10:41 | 17:41 | sell | 1 | 4476,6 | 4473,4 | 4476,9 | 4466,4 | S+Mv | TP | 1,94 |
-| thắng 3 | 2026-08-24 17:47 | 00:47 | sell | 2 | 4698,8 | 4693,5 | 4699,3 | 4681,9 | S+Sh | TP | 1,97 |
-| thắng 4 | 2026-09-04 17:29 | 00:29 | sell | 1 | 4479,2 | 4476,0 | 4480,3 | 4467,4 | Bc+Dc+Mv | TP | 1,95 |
+| thắng 1 | 2026-07-29 03:15 | 10:15 | sell | 1 | 4088,0 | 4086,2 | 4088,3 | 4082,0 | K+Dh+Sh | TP | 1,90 |
+| thắng 2 | 2026-08-10 11:06 | 18:06 | sell | 1 | 4396,8 | 4393,7 | 4397,1 | 4386,9 | K+S+Dc+Sh+Mv | TP | 1,94 |
+| thắng 3 | 2026-08-18 00:26 | 07:26 | buy | 1 | 4480,8 | 4484,5 | 4480,5 | 4492,5 | Bc+K+S+Mv | TP | 1,95 |
+| thắng 4 | 2026-09-01 07:26 | 14:26 | sell | 1 | 4479,5 | 4476,4 | 4479,8 | 4469,6 | K+S+Dh+Mv | TP | 1,94 |
 | thắng 5 | 2026-09-15 19:17 | 02:17 | sell | 1 | 4343,7 | 4341,4 | 4344,0 | 4336,2 | K+S+Mv | TP | 1,92 |
-| thua 1 | 2026-07-29 00:06 | 07:06 | buy | 1 | 4078,5 | 4081,9 | 4078,2 | 4089,3 | Sh+Mv | SL | -1,05 |
-| thua 2 | 2026-08-11 02:57 | 09:57 | sell | 1 | 4474,4 | 4471,5 | 4474,9 | 4464,7 | Mv | SL | -1,06 |
-| thua 3 | 2026-08-21 05:29 | 12:29 | sell | 2 | 4591,0 | 4586,7 | 4591,3 | 4577,5 | S+Dh+Sh+Mv | SL | -1,04 |
-| thua 4 | 2026-09-02 22:20 | 05:20 | sell | 1 | 4434,1 | 4432,9 | 4434,4 | 4429,9 | S+Dh+Mv | SL | -1,13 |
+| thua 1 | 2026-07-29 20:02 | 03:02 | sell | 2 | 4125,0 | 4106,4 | 4126,1 | 4067,0 | K+S+Sh+Mv | SL | -1,01 |
+| thua 2 | 2026-08-14 13:56 | 20:56 | sell | 1 | 4448,2 | 4441,3 | 4448,7 | 4426,5 | K+Sh+Mv | SL | -1,03 |
+| thua 3 | 2026-08-28 02:51 | 09:51 | buy | 1 | 4635,7 | 4639,5 | 4635,3 | 4647,9 | K+Dc+Sh+Mv | SL | -1,05 |
+| thua 4 | 2026-09-04 03:46 | 10:46 | sell | 1 | 4518,0 | 4515,7 | 4518,3 | 4510,5 | K+Sh+Mv | SL | -1,08 |
+| thua 5 | 2026-09-15 18:15 | 01:15 | buy | 1 | 4339,4 | 4344,8 | 4339,1 | 4356,2 | K+S+Dc+Sh+Mv | SL | -1,04 |
+
+### F7
+
+| | UTC | VN | side | leg | E | vào | SL | TP | cờ | kết cục | R |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| thắng 1 | 2026-07-29 03:15 | 10:15 | sell | 1 | 4088,0 | 4086,2 | 4088,3 | 4082,0 | K+Dh+Sh | TP | 1,90 |
+| thắng 2 | 2026-08-06 05:21 | 12:21 | sell | 1 | 4317,1 | 4313,8 | 4317,4 | 4306,6 | K+S+Dh | TP | 1,94 |
+| thắng 3 | 2026-08-21 05:46 | 12:46 | buy | 2 | 4593,3 | 4599,0 | 4593,0 | 4611,0 | T+S+Dh+Sh+Mv | TP | 1,97 |
+| thắng 4 | 2026-09-07 08:44 | 15:44 | sell | 1 | 4464,1 | 4460,4 | 4464,5 | 4452,2 | S+Dh+Sh+Mv | TP | 1,95 |
+| thắng 5 | 2026-09-15 15:50 | 22:50 | buy | 1 | 4326,4 | 4331,4 | 4324,8 | 4344,6 | Dh+Dc+Mv | TP | 1,97 |
+| thua 1 | 2026-07-29 06:17 | 13:17 | buy | 1 | 4095,6 | 4097,5 | 4095,3 | 4101,9 | Bc+Dh+Dc+Mv | SL | -1,09 |
+| thua 2 | 2026-08-12 15:16 | 22:16 | buy | 1 | 4482,6 | 4486,3 | 4481,9 | 4495,1 | Dh+Dc+Mv | SL | -1,05 |
+| thua 3 | 2026-08-21 11:24 | 18:24 | buy | 1 | 4650,8 | 4655,4 | 4650,4 | 4665,4 | S+Dh+Mv | SL | -1,04 |
+| thua 4 | 2026-09-04 02:59 | 09:59 | buy | 1 | 4522,1 | 4523,8 | 4521,7 | 4528,0 | Dh+Mv | SL | -1,10 |
 | thua 5 | 2026-09-15 20:29 | 03:29 | sell | 1 | 4335,2 | 4334,1 | 4335,5 | 4331,3 | Dh+Sh+Mv | SL | -1,14 |
+
+### F10
+
+| | UTC | VN | side | leg | E | vào | SL | TP | cờ | kết cục | R |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| thắng 1 | 2026-07-29 03:15 | 10:15 | sell | 1 | 4088,0 | 4086,2 | 4088,3 | 4082,0 | K+Dh+Sh | TP | 1,90 |
+| thắng 2 | 2026-08-13 14:25 | 21:25 | sell | 1 | 4432,9 | 4431,0 | 4434,6 | 4423,8 | K+S | TP | 1,94 |
+| thắng 3 | 2026-08-21 16:50 | 23:50 | buy | 1 | 4679,0 | 4681,9 | 4678,5 | 4688,7 | S+Dh+Sh+Mv | TP | 1,94 |
+| thắng 4 | 2026-09-07 05:01 | 12:01 | buy | 1 | 4443,0 | 4446,0 | 4442,7 | 4452,6 | S+Dh | TP | 1,94 |
+| thắng 5 | 2026-09-15 19:17 | 02:17 | sell | 1 | 4343,7 | 4341,4 | 4344,0 | 4336,2 | K+S+Mv | TP | 1,92 |
+| thua 1 | 2026-07-29 06:17 | 13:17 | buy | 1 | 4095,6 | 4097,5 | 4095,3 | 4101,9 | Bc+Dh+Dc+Mv | SL | -1,09 |
+| thua 2 | 2026-08-07 15:20 | 22:20 | buy | 2 | 4410,8 | 4415,6 | 4410,0 | 4426,8 | K+S | SL | -1,04 |
+| thua 3 | 2026-08-24 18:18 | 01:18 | sell | 1 | 4689,5 | 4686,6 | 4690,1 | 4679,6 | S+Dh | SL | -1,06 |
+| thua 4 | 2026-09-04 02:31 | 09:31 | sell | 2 | 4524,4 | 4518,7 | 4524,9 | 4506,3 | K+S+Mv | SL | -1,03 |
+| thua 5 | 2026-09-15 18:15 | 01:15 | buy | 1 | 4339,4 | 4344,8 | 4339,1 | 4356,2 | K+S+Dc+Sh+Mv | SL | -1,04 |
 
 ## 6. Cách Opus hiểu các chỗ plan chưa ghi rõ (chọn cách khớp ảnh gốc, cố định TRƯỚC khi nhìn R)
 
@@ -196,3 +262,16 @@ Không combo nào lọt vòng trong ⇒ không có danh sách (mục 5 plan ch�
 - F1/F5 n < 30: **đúng**; F2 và F4 cũng n < 30 (F4 không có lệnh nào: T và Bc không trùng nhau trên F0 nào qua được cổng).
 - "1–2 combo dương nhưng không qua hoán vị": **đúng**. F7 (+0,20, dương cả hai nửa) và F10 (+0,12) dương, nhưng không qua C2 + 0,15 và không qua ngưỡng hoán vị (p cực đại 0,76 / 0,84). F7 có p thô 0,049 (< 0,05) nhưng không qua p cực đại; theo plan mục 8.2, combo như vậy **không** được gọi là có lợi thế. Hai combo này không nằm trong nhóm Fable đoán {F2, F4, F8, F9}.
 - Có combo ĐẠT: **không** ⇒ theo 4.7 **không mở TEST**. Theo 4.5 cũng không combo nào lọt vòng trong, vì tất cả đều thua C2 của chính mình ⇒ GĐ-F2 (mổ SL) không có đối tượng hợp lệ. Fable quyết bước tiếp theo.
+
+## 9. Lượt 9.3-A (Opus, 2026-11-09, hậu kiểm — chỉ TRAIN)
+
+- **C2' đã thay C2 làm cột chấm.** Cấu hình chính, số lệnh và R TB của mọi combo **không đổi** (cùng 340 lệnh F0, F7 +0,20, F10 +0,12…); chỉ đối chứng đổi.
+  C2 → C2': F0 +0,28 → **−0,02** · F1 +0,84 → +0,51 · F3 +0,31 → −0,06 · F7 +0,33 → **+0,05** · F10 +0,35 → **+0,01**. Dự đoán đăng ký trước của Fable
+  (C2' của F0 rơi về −0,10…+0,05): **đúng** (−0,02).
+- **Lọt vòng trong theo C2' (n ≥ 30, ≥ C1, ≥ C2'): F3, F7, F10.** Không combo nào ĐẠT: F7 chỉ vướng đúng một điều kiện — Δ 0,201 < ngưỡng hoán vị
+  ≥ 30 F0 = 0,314 (p cực đại ≥ 30 = 0,23); F10 vướng < C2'+0,15, KTC dưới ≤ −0,10, hoán vị; F3 vướng mọi tiêu chí trừ n.
+- **F3 lọt vòng trong** nhưng plan 9.2/9.3-B chỉ giao mổ F7, F10 (+ F1 xem) ⇒ lượt này **chưa** mổ F3 (R TB +0,00 [−0,29; 0,33], dương nửa 1 / âm nửa 2) — Fable quyết.
+- **S3** (leg 2 neo cực trị leg 1): giữ được nhiều lệnh hơn S2 (F0 409 so với 340, vì ít lệnh vượt trần 4 mbr) nhưng R TB F0 như nhau (−0,05); F7 +0,12 (n 112), F10 +0,11 (n 147).
+- **move_mbr 1,5**: F0 −0,02 (n 297), F7 +0,16 (n 82), F10 +0,03 (n 105). Cả hai biến thể **không có sức chọn**, chỉ báo.
+- C2' bỏ lệnh khi pool < 5 nến sau CF (cuối phiên): F0 còn 6.778/6.800 lệnh giả.
+- Mổ SL vòng 1 (F7, F10; F1 chỉ xem): `report/MO-SL-FOLLOW.md`, ảnh `report/follow_shots/`, nhãn máy `report/_mo_sl_follow.csv`.

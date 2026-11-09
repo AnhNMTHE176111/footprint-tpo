@@ -3,6 +3,8 @@
 > Opus, 2026-11-09, theo `plans/BENZO-CORVEN-plan.md` (bản sau quyết định Q1–Q15). **Chỉ TRAIN**: 35 phiên dày, nến bar_idx 0…51318 (tới 2026-09-15 20:59 UTC). TEST chưa chạy, chưa đọc. Mô phỏng `kernel.simulate` (phí 0,2 giá/lệnh, chạm SL+TP cùng nến = SL, vào giá đóng CF, 1 lệnh mở), lệnh còn mở tới nến cuối phiên đóng `TIME`.
 > ⚠️ Kết quả trên một mẫu TRAIN, chưa kiểm định ngoài mẫu — không dùng để vào lệnh thật.
 
+> **Đính chính C2 2026-11-09:** C2 trong file này dùng nến ±30′ quanh CF, có thiên lệch "nhìn trước" (nến trước cú phá biết hướng). Đo lại bằng C2' (chỉ nến 30′ sau CF) cho bộ gốc GĐ2 vòng 1 thì mức tổng gần như không đổi (−0,08), nhưng theo thế lệch ngược dấu (thế B C2 cũ +0,21 → C2' −0,03; thế A −0,45 → −0,15). Chi tiết + nhánh (a): `RESULTS-CORVEN.md` mục "Đính chính C2 2026-11-09".
+
 ## 1. Tổng
 
 | | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |

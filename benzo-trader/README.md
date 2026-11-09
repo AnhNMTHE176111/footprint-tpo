@@ -5,6 +5,7 @@
 (Δ, bóng, kiệt sức, stacked, trap) ⇒ vào ở giá đóng nến xác nhận, SL sau cực trị cú thủng/mốc, TP 2R.
 **Số backtest (35 phiên TRAIN, file 90 ngày GCZ26):** 97 lệnh, **−0,29R/lệnh** [KTC 95 % −0,55; −0,02], kém cả hai đối chứng
 — vào mọi nến xác nhận tại mốc không cần dấu hiệu (C1 −0,24R) và vào ngẫu nhiên cùng giờ cùng hướng (C2 −0,08R).
+*Đính chính 2026-11-09:* C2 cũ lấy nến ±30′ quanh CF nên "nhìn trước" hướng cú phá; đo lại bằng C2' (chỉ nến trong 30′ **sau** CF) vẫn ra **−0,08R** ⇒ nhãn "kém vào ngẫu nhiên" giữ nguyên (nhánh (a), `research/report/RESULTS-CORVEN.md` mục "Đính chính C2 2026-11-09").
 **Đang forward test để người học review và sửa dần, KHÔNG phải khuyến nghị vào lệnh** (người học chọn lựa chọn A, plan mục 10).
 
 Bốn setup A/B/C/D cũ đã bỏ (không setup nào có lợi thế đo được) — kết quả cũ: `research/report/TONG-KET-VONG-1-2.md`.

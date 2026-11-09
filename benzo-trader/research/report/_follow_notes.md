@@ -25,3 +25,16 @@
 - F1/F5 n < 30: **đúng**; F2 và F4 cũng n < 30 (F4 không có lệnh nào: T và Bc không trùng nhau trên F0 nào qua được cổng).
 - "1–2 combo dương nhưng không qua hoán vị": **đúng**. F7 (+0,20, dương cả hai nửa) và F10 (+0,12) dương, nhưng không qua C2 + 0,15 và không qua ngưỡng hoán vị (p cực đại 0,76 / 0,84). F7 có p thô 0,049 (< 0,05) nhưng không qua p cực đại; theo plan mục 8.2, combo như vậy **không** được gọi là có lợi thế. Hai combo này không nằm trong nhóm Fable đoán {F2, F4, F8, F9}.
 - Có combo ĐẠT: **không** ⇒ theo 4.7 **không mở TEST**. Theo 4.5 cũng không combo nào lọt vòng trong, vì tất cả đều thua C2 của chính mình ⇒ GĐ-F2 (mổ SL) không có đối tượng hợp lệ. Fable quyết bước tiếp theo.
+
+## 9. Lượt 9.3-A (Opus, 2026-11-09, hậu kiểm — chỉ TRAIN)
+
+- **C2' đã thay C2 làm cột chấm.** Cấu hình chính, số lệnh và R TB của mọi combo **không đổi** (cùng 340 lệnh F0, F7 +0,20, F10 +0,12…); chỉ đối chứng đổi.
+  C2 → C2': F0 +0,28 → **−0,02** · F1 +0,84 → +0,51 · F3 +0,31 → −0,06 · F7 +0,33 → **+0,05** · F10 +0,35 → **+0,01**. Dự đoán đăng ký trước của Fable
+  (C2' của F0 rơi về −0,10…+0,05): **đúng** (−0,02).
+- **Lọt vòng trong theo C2' (n ≥ 30, ≥ C1, ≥ C2'): F3, F7, F10.** Không combo nào ĐẠT: F7 chỉ vướng đúng một điều kiện — Δ 0,201 < ngưỡng hoán vị
+  ≥ 30 F0 = 0,314 (p cực đại ≥ 30 = 0,23); F10 vướng < C2'+0,15, KTC dưới ≤ −0,10, hoán vị; F3 vướng mọi tiêu chí trừ n.
+- **F3 lọt vòng trong** nhưng plan 9.2/9.3-B chỉ giao mổ F7, F10 (+ F1 xem) ⇒ lượt này **chưa** mổ F3 (R TB +0,00 [−0,29; 0,33], dương nửa 1 / âm nửa 2) — Fable quyết.
+- **S3** (leg 2 neo cực trị leg 1): giữ được nhiều lệnh hơn S2 (F0 409 so với 340, vì ít lệnh vượt trần 4 mbr) nhưng R TB F0 như nhau (−0,05); F7 +0,12 (n 112), F10 +0,11 (n 147).
+- **move_mbr 1,5**: F0 −0,02 (n 297), F7 +0,16 (n 82), F10 +0,03 (n 105). Cả hai biến thể **không có sức chọn**, chỉ báo.
+- C2' bỏ lệnh khi pool < 5 nến sau CF (cuối phiên): F0 còn 6.778/6.800 lệnh giả.
+- Mổ SL vòng 1 (F7, F10; F1 chỉ xem): `report/MO-SL-FOLLOW.md`, ảnh `report/follow_shots/`, nhãn máy `report/_mo_sl_follow.csv`.

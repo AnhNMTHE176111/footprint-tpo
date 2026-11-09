@@ -571,7 +571,9 @@ namespace OrderFlowBubbles
                     // Chỉ khôi phục khi CÙNG dấu vân tay tham số — đổi tham số (vd bật ngưỡng cố
                     // định) là hành động CHỦ Ý của người dùng, phải tính lại; khác với feed nạp lại
                     // dữ liệu (tham số không đổi) — trường hợp đó mới cần niêm phong bất di bất dịch.
-                    if (_cache != null && _cache.TryGet(timeKey, out var cached) && cached.SettingsFingerprint == _settingsFingerprint)
+                    // FitsBar: bản ghi có bóng nằm ngoài biên độ nến = của nến khác → tính lại, ghi đè bản hỏng
+                    if (_cache != null && _cache.TryGet(timeKey, out var cached) && cached.SettingsFingerprint == _settingsFingerprint
+                        && SignalCache.FitsBar(cached, bar.High, bar.Low, 2 * tick))
                         RestoreFromCache(i, bar, cached);
                     else
                     {
@@ -1488,15 +1490,26 @@ namespace OrderFlowBubbles
         {
             if (_cache != null) return;
             string symName = Symbol?.Name ?? "unknown";
-            string period = HistoricalData?.Aggregation?.Title ?? HistoricalData?.Aggregation?.Name ?? "unknown";
-            string safe = SignalCache.SanitizeFileName(symName + "_" + period);
+            var agg = HistoricalData?.Aggregation;
+            string aggName = agg?.Name ?? "unknown";
+            // ⚠️ tên file PHẢI có khung (xem SignalCache.CacheName): bản cũ M1/M15/H1 dùng chung 1 file
+            var at = agg as HistoryAggregationTime;
+            string tf = at != null ? $"{at.Period.PeriodMultiplier}{at.Period.BasePeriod}" : (agg?.ToString() ?? "unknown");
+            bool isM1 = at != null && at.Period.BasePeriod == BasePeriod.Minute && at.Period.PeriodMultiplier == 1;
+            string safe = SignalCache.CacheName(symName, aggName, tf);
             try
             {
                 string dir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "OrderFlowBubbles", "signal-cache");
-                _cache = new SignalCache(Path.Combine(dir, safe + ".jsonl"));
+                string path = Path.Combine(dir, safe + ".jsonl");
+                bool fresh = !File.Exists(path);
+                _cache = new SignalCache(path);
                 _cache.Load();
+                // lần đầu chạy bản mới trên M1: giữ niêm phong cũ CHẮC CHẮN của M1 (phút lẻ), phần còn lại tính lại
+                if (fresh && isM1)
+                    _cache.ImportLegacy(Path.Combine(dir, SignalCache.LegacyCacheName(symName, aggName) + ".jsonl"),
+                                        SignalCache.IsSafeLegacyM1);
             }
             catch
             {

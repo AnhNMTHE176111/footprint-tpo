@@ -108,6 +108,61 @@ namespace OrderFlowBubbles
             foreach (char c in Path.GetInvalidFileNameChars()) s = s.Replace(c, '_');
             return s;
         }
+
+        // ---------------- FIX 2026-11-09: bóng / vùng / tam giác LƠ LỬNG giữa chart ----------------
+        //  Bản cũ đặt tên file = mã + Aggregation.Name. Với nến thời gian Name chỉ là "Time" → M1, M15,
+        //  M30, H1… DÙNG CHUNG 1 file, mà khoá lại là GIỜ MỞ NẾN. Nến M15 lúc 11:00 ghi sau sẽ ĐÈ bản ghi
+        //  của nến M1 lúc 11:00; lần nạp lại kế tiếp (đổi History range, mở lại chart) M1 khôi phục bóng
+        //  của nến M15 → vẽ ở giá của cả cây M15, xa thân nến M1. Đo file thật: 1.151 bóng nằm ngoài
+        //  biên độ nến, 100 % ở phút :00/:15/:30/:45. Sửa: tên file có khung (vd Time_1Minute).
+
+        /// <summary>Tên file cache THEO KHUNG: mã + kiểu nến + khung (vd "_GCZ26_XCEC_Time_1Minute").</summary>
+        public static string CacheName(string symbol, string aggregation, string timeframe)
+            => SanitizeFileName($"{symbol}_{aggregation}_{timeframe}");
+
+        /// <summary>Tên file kiểu cũ (không có khung) — chỉ dùng để chuyển dữ liệu sang file mới.</summary>
+        public static string LegacyCacheName(string symbol, string aggregation)
+            => SanitizeFileName(symbol + "_" + aggregation);
+
+        /// <summary>Mọi bóng của bản ghi có nằm trong biên độ nến (± tol) không. Bóng do chính nến đó sinh ra
+        /// luôn nằm trong [Low, High]; nằm ngoài = bản ghi của nến khác (khung khác) → không được khôi phục.</summary>
+        public static bool FitsBar(CachedBarData d, double high, double low, double tol)
+        {
+            if (d?.Bubbles == null) return true;
+            foreach (var b in d.Bubbles)
+            {
+                if (b.Price < low - tol || b.Price > high + tol) return false;
+                if (b.ZoneSide != 0 && (b.PriceHi < low - tol || b.PriceHi > high + tol)) return false;
+            }
+            return true;
+        }
+
+        /// <summary>Bản ghi file cũ chắc chắn là của nến M1: phút KHÔNG chia hết cho 5 (M5/M15/M30/H1 không mở ở đó).</summary>
+        public static bool IsSafeLegacyM1(long timeTicks) => new DateTime(timeTicks).Minute % 5 != 0;
+
+        /// <summary>Chép từ file cũ các bản ghi thoả <paramref name="keep"/> (chưa có trong cache này) — ghi 1 lần.
+        /// Trả về số bản ghi đã chép.</summary>
+        public int ImportLegacy(string legacyPath, Func<long, bool> keep)
+        {
+            if (string.IsNullOrEmpty(legacyPath) || !File.Exists(legacyPath) || keep == null) return 0;
+            var old = new SignalCache(legacyPath);
+            old.Load();
+            var take = new List<CachedBarData>();
+            foreach (var d in old._byTime.Values)
+                if (keep(d.TimeTicks) && !_byTime.ContainsKey(d.TimeTicks)) take.Add(d);
+            if (take.Count == 0) return 0;
+            take.Sort((a, b) => a.TimeTicks.CompareTo(b.TimeTicks));
+            var sb = new System.Text.StringBuilder();
+            foreach (var d in take) { _byTime[d.TimeTicks] = d; sb.Append(JsonSerializer.Serialize(d)).Append(Environment.NewLine); }
+            if (!string.IsNullOrEmpty(FilePath))
+                lock (_fileLock)
+                {
+                    string dir = Path.GetDirectoryName(FilePath);
+                    if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                    File.AppendAllText(FilePath, sb.ToString());
+                }
+            return take.Count;
+        }
     }
 
     // ========================================================================

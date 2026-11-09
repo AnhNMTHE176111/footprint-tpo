@@ -48,6 +48,13 @@ mục `tests/` vào — build tay bằng csproj liệt kê đúng 4 file, `Enabl
 Quantower vì các class này không phụ thuộc `TradingPlatform.BusinessLayer`. Chạy:
 `dotnet run --project quantower-orderflow-indicator/tests`.
 
+## File niêm phong tách theo khung (fix 2026-11-09)
+`%AppData%\OrderFlowBubbles\signal-cache\<mã>_Time_<khung>.jsonl` (vd `_GCZ26_XCEC_Time_1Minute.jsonl`).
+Bản cũ đặt tên `<mã>_Time.jsonl` cho MỌI khung → M15/M30/H1 ghi đè bản ghi M1 cùng giờ mở nến → sau khi nạp
+lại (đổi History range) bóng/vùng/tam giác lơ lửng cách nến (đo được 1.151 bóng lệch, 100 % ở phút
+:00/:15/:30/:45). Lần đầu chạy M1, file cũ được chép sang file mới nhưng CHỈ các phút không chia hết cho 5;
+khi khôi phục còn chặn thêm `FitsBar` (bóng ngoài biên độ nến ± 2 tick → tính lại). File cũ không còn dùng.
+
 ## Log lệnh đơn thật (BigTradeLog, 2026-09-16)
 Chưa đo được ngưỡng "lệnh đơn bao nhiêu là to" bằng số liệu thật (mọi file export lịch sử đều có
 `MaxOneTradeVolume = 0` — feed chỉ cấp số này lúc đang chạy SỐNG). Indicator giờ tự ghi log mỗi lệnh

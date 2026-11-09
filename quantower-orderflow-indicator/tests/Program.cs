@@ -185,6 +185,69 @@ static class Tests
         finally { File.Delete(path); }
     }
 
+    // [8] FIX 2026-11-09 — bóng lơ lửng: M1 và M15 từng dùng CHUNG 1 file cache (tên chỉ có "Time")
+    static void CacheNamePerTimeframe()
+    {
+        Console.WriteLine("[8] Ten file cache tach theo khung (M1 khac M15)");
+        string m1 = SignalCache.CacheName("/GCZ26:XCEC", "Time", "1Minute");
+        string m15 = SignalCache.CacheName("/GCZ26:XCEC", "Time", "15Minute");
+        string legacy = SignalCache.LegacyCacheName("/GCZ26:XCEC", "Time");
+        Check(m1 != m15, "M1 va M15 khac file", m1 + " vs " + m15);
+        Check(m1 != legacy && m15 != legacy, "khong trung file cu", legacy);
+        Check(m1.IndexOfAny(Path.GetInvalidFileNameChars()) < 0, "ten file hop le", m1);
+    }
+
+    static CachedBarData Rec(long t, params (double p, double hi, int side)[] bs)
+    {
+        var d = new CachedBarData { TimeTicks = t };
+        foreach (var (p, hi, side) in bs) d.Bubbles.Add(new CachedBubbleData { Price = p, PriceHi = hi, ZoneSide = side, Tooltip = "t" });
+        return d;
+    }
+
+    // [9] Bản ghi của nến khác (giá ngoài biên độ nến) KHÔNG được khôi phục
+    static void FitsBarGuard()
+    {
+        Console.WriteLine("[9] FitsBar: bong ngoai bien do nen -> khong khoi phuc");
+        const double hi = 4146.6, lo = 4144.8, tol = 0.2;
+        Check(SignalCache.FitsBar(Rec(1), hi, lo, tol), "nen khong bong -> hop le");
+        Check(SignalCache.FitsBar(Rec(1, (4145.0, 0, 0), (4146.6, 0, 0), (4144.8, 0, 0)), hi, lo, tol), "bong trong bien do (ca 2 mep)");
+        Check(SignalCache.FitsBar(Rec(1, (4146.7, 0, 0)), hi, lo, tol), "lech 1 tick van hop le (dung sai)");
+        // ca that trong file cache 2026-10-08 11:00 (nen M1 4144.8–4146.6, ban ghi M15 de len)
+        Check(!SignalCache.FitsBar(Rec(1, (4138.9, 0, 0)), hi, lo, tol), "kiet suc 4138.9 ngoai nen -> loai");
+        Check(!SignalCache.FitsBar(Rec(1, (4145.0, 0, 0), (4141.5, 4141.7, -1)), hi, lo, tol), "1 vung ngoai nen -> loai ca ban ghi");
+        Check(!SignalCache.FitsBar(Rec(1, (4146.0, 4147.5, 1)), hi, lo, tol), "mep tren vung vuot dinh nen -> loai");
+    }
+
+    // [10] Chuyển dữ liệu file cũ sang file M1: chỉ lấy phút lẻ (chắc chắn không phải nến M5/M15/M30/H1)
+    static void ImportLegacyM1Only()
+    {
+        Console.WriteLine("[10] ImportLegacy: chi chep ban ghi chac chan cua M1");
+        var day = new DateTime(2026, 10, 8);
+        long t1100 = day.AddHours(11).Ticks, t1107 = day.AddHours(11).AddMinutes(7).Ticks;
+        long t1115 = day.AddHours(11).AddMinutes(15).Ticks, t1105 = day.AddHours(11).AddMinutes(5).Ticks;
+        Check(!SignalCache.IsSafeLegacyM1(t1100) && !SignalCache.IsSafeLegacyM1(t1115) && !SignalCache.IsSafeLegacyM1(t1105), "phut :00/:15/:05 khong chep");
+        Check(SignalCache.IsSafeLegacyM1(t1107), "phut :07 chep");
+
+        string legacy = Path.Combine(Path.GetTempPath(), "sc_legacy_" + Guid.NewGuid() + ".jsonl");
+        string fresh = Path.Combine(Path.GetTempPath(), "sc_new_" + Guid.NewGuid() + ".jsonl");
+        try
+        {
+            var old = new SignalCache(legacy);
+            old.Put(Rec(t1100, (4138.9, 0, 0)));
+            old.Put(Rec(t1107, (4145.0, 0, 0)));
+            old.Put(Rec(t1115, (4150.0, 0, 0)));
+            var c = new SignalCache(fresh);
+            c.Load();
+            int n = c.ImportLegacy(legacy, SignalCache.IsSafeLegacyM1);
+            Check(n == 1 && c.TryGet(t1107, out _) && !c.TryGet(t1100, out _) && !c.TryGet(t1115, out _), "chi chep 11:07", "n=" + n);
+            var c2 = new SignalCache(fresh); c2.Load();
+            Check(c2.Count == 1 && c2.TryGet(t1107, out _), "ghi ra file, instance moi doc lai thay");
+            Check(c2.ImportLegacy(legacy, SignalCache.IsSafeLegacyM1) == 0, "chep lan 2 khong trung");
+            Check(new SignalCache(fresh).ImportLegacy(legacy + ".khong-co", SignalCache.IsSafeLegacyM1) == 0, "file cu khong ton tai -> 0, khong loi");
+        }
+        finally { File.Delete(legacy); File.Delete(fresh); }
+    }
+
     static int Main()
     {
         InMemoryRoundtrip();
@@ -194,6 +257,9 @@ static class Tests
         CorruptLineIsSkipped();
         FingerprintMismatchMeansMiss();
         BigTradeLogDedupSurvivesRestart();
+        CacheNamePerTimeframe();
+        FitsBarGuard();
+        ImportLegacyM1Only();
         _fail += ExhaustionTests.Run();
         StackedImbalanceTests.RunAll();
         _fail += StackedImbalanceTests.Fail;

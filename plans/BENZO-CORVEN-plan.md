@@ -256,3 +256,79 @@ Vòng 3 chốt bộ **đơn giản nhất** thoả (a) R TB TRAIN ≥ C1 **và**
 - Quan sát hậu kiểm ghi lại (không dùng): Á âm 12/12 ô, Mỹ âm 12/12 ô, Âu ≥ 0 ở 10/12 ô; phí không giải thích (0,03–0,04R). Ví dụ CORVEN đều ở phiên Mỹ — chính phiên máy thua đều ⇒ bằng chứng là cơ khí hoá chưa bắt được cái CORVEN nhìn.
 - Bản cho người học: `benzo-trader/research/report/KET-LUAN-CORVEN.md` — 3 lựa chọn (A port gắn nhãn forward test · B không bắn tín hiệu, giữ Range Box + Bubbles · C đăng ký trước giả thuyết "chỉ phiên Âu", chờ ≥ 60 phiên dữ liệu mới rồi chạy một lần). **Khuyến nghị: B ngay + C chạy nền.**
 - Việc còn lại tuỳ người học chọn. Nếu chọn A thì GĐ3 làm theo mục 2 với LogicVersion `corven-1`, bảng phải ghi "−0,29R/lệnh trong 35 phiên, kém vào ngẫu nhiên". Nếu chọn C thì giả thuyết đăng ký ở đây: **bộ gốc vòng 1, chỉ nến CF có giờ VN trong 12:30–19:00 theo mốc neo Mỹ, chạy một lần trên dữ liệu từ 22/10/2026 trở đi khi đủ ≥ 60 phiên dày; tiêu chí = T1 mục 3.6.** Không được đổi gì khác trước khi chạy.
+
+## 10. QUYẾT ĐỊNH GĐ3 — PORT (người học chọn A, Fable 2026-11-09)
+
+Người học trả lời nguyên văn: *"cứ thay hẳn đi, rồi dần dần tôi review và update tín hiệu này để dần có lợi thế nhé"* ⇒ **lựa chọn A**:
+port vào Benzo, **thay hẳn** A/B/C/D, gắn nhãn chưa có lợi thế, forward test; người học sẽ lặp "review → sửa tín hiệu" dần.
+Mục này là lệnh làm việc cho Opus; chỗ nào mâu thuẫn với mục 2 thì **mục 10 thắng**. Opus không hỏi lại — thiếu gì thì chọn cách đơn giản nhất và ghi vào README mục "Quyết định khi port".
+
+### 10.1 Bộ tham số được port = **bộ gốc vòng 1** (RESULTS-CORVEN.md dòng 766), `LogicVersion = "corven-1"`
+Giá trị mặc định (đóng cứng trong `BenzoCorven.cs`, một `static class CorvenParams` để test đọc được):
+`near_mbr 1,0 · win_b 3 · win_a_max 5 · cf_after_fb 2 · age_b 30 · si_ratio 250 · si_run 3 · si_minvol 1 · b_from_exhausted BẬT ·
+same_session BẬT · delta_mult 2 · bubble_mult 3 · bubble_min 10 · div_min_len 2 · div_max_len 8 · need_signs 2 ·
+cf_body 0,4 · cf_close_ext 0,3 · cf_min_rng_mbr 0,5 · cf_min_delta 0,5 · sl_buf_ticks 3 (đệm = max(3 tick, 0,2 mbr)) ·
+sl_floor_mbr 1,0 · sl_cap_mbr 4,0 · r_min 1,7 · tp_r 2,0 · dead_look 300 · block_first_bars 15 · veto_window 5 · stop_run_k 3 ·
+overlap_bars 30 · overlap_frac 0,5 (luật chồng range GIỮ — chỉ loại 1,8 % thế A)`.
+**Không port:** ngoại lệ "lần 2" (`a2_on`, `exc_max_age`, `a2_cf_after` — nhóm báo cáo Python, G1), neo SL `pivot`/`piv_back` (8.1 đã bác),
+`overlap_max_drop` (là luật báo cáo, không phải luật live), bộ lọc thin/splice của Python. Neo SL duy nhất = `cu_thung` (4b).
+`block_us_open` là công tắc Settings (10.2), mặc định BẬT.
+
+### 10.2 Settings: **không đưa tham số số ra Settings**; chỉ công tắc
+Danh sách Settings cuối cùng (thay dòng `BenzoTrader.cs` ở mục 2, bỏ hết A/B/C/D):
+`Lệch giờ · Telegram: bật / token / chat id / gửi thử · Bật setup CORVEN (chạy thử — backtest −0,29R/lệnh, kém vào ngẫu nhiên) [BẬT] ·
+Chặn 19:20–20:30 VN (mốc neo Mỹ) [BẬT] · Hiện range [BẬT] · Hiện dấu hiệu đã đếm [BẬT] · Đặt lại thống kê · Hiện lại toàn bộ thống kê · Hiện bảng [BẬT]`.
+- **Lý do không đưa `win_b / bubble_mult / need_signs / sl_buf / near_mbr / lọc phiên` ra Settings:** đổi tham số sống mà không đo lại trên dữ liệu
+  = đúng lỗi A/B/C/D; và mỗi bộ tham số là một chuỗi forward test riêng — n live vốn đã nhỏ (≈ 3 lệnh/ngày), chia theo bộ thì vô nghĩa.
+  Vòng "review → update" của người học đi qua **Python trước** (`setup_corven.py` sửa → đo TRAIN + đối chứng → sửa C# → `LogicVersion` mới `corven-2`…),
+  không qua nút bấm. Ghi quy trình này thành mục "Cách đề xuất sửa tín hiệu" trong README (5 dòng).
+- **Cache key** = `LogicVersion + "-us" + (chặn ? 1 : 0)` (thay `BModeKey/CModeKey`). "Hiện range"/"Hiện dấu hiệu" chỉ vẽ ⇒ **không** vào key.
+- **Chỉ chạy trên nến 1 phút**: `BarMinutes != 1` ⇒ không dựng engine, chart hiện 1 dòng "Benzo CORVEN chỉ chạy trên chart M1". Bỏ hẳn chế độ M5.
+- Bảng trên chart ghi thêm `corven-1` ở dòng đầu để ảnh chụp nào cũng biết đang chạy phiên bản nào.
+
+### 10.3 Nhãn trung thực — chuỗi cố định, test phải so đúng chữ
+- **Bảng chart (4 dòng):** `BENZO CORVEN corven-1 · N lệnh · WR x % · ΣR` / `Thế A · n · WR · ΣR` / `Thế B · n · WR · ΣR` /
+  `Backtest 35 phiên: −0,29R/lệnh, kém vào ngẫu nhiên (−0,08R) · chạy thử, không phải khuyến nghị`. Dòng 4 **luôn hiện**, không có điều kiện tắt.
+- **Telegram tin mở:** caption như mục 2 (4 dòng) + dòng cuối `⚠ Chưa có lợi thế đo được (−0,29R/lệnh, 35 phiên)`.
+- **README** khối đầu: 3 câu — setup là gì, số backtest trên (kèm C1/C2), "đang forward test để người học review, không phải khuyến nghị".
+  Bảng A/B/C/D cũ **xoá khỏi README**, thay bằng 1 dòng trỏ `research/report/TONG-KET-VONG-1-2.md`.
+- Nhãn Settings của công tắc setup như 10.2. Lint thuật ngữ (mục 4e) áp cho mọi chuỗi trên.
+
+### 10.4 Cơ chế để người học review dần (giữ đơn giản: 1 CSV lệnh + 1 CSV ứng viên + nhãn chart + Telegram)
+1. **CSV lệnh** `signals_<sym>_<tf>_corven-1.csv`, header mới (thay hẳn header cũ):
+   `time_utc,time_vn,the,side,range_lo,range_hi,b_from_exhausted,moc,n_signs,signs,entry,sl,tp,risk,r_avail,outcome,exit_time,r,mfe_r,mae_r,phien`.
+   `signs` **đúng định dạng chuỗi của cột `dau_hieu` Python** (`Δ: Δ to -36 = 3,8× medΔ (nến 4769) | bóng: …`) để parity so thẳng chuỗi;
+   `the` = A/B; `moc` = `canh` hoặc `stacked lo–hi`; `phien` = Á/Âu/Mỹ theo neo Mỹ; `mfe_r/mae_r` = chạy xa nhất thuận/nghịch (theo R) từ vào tới đóng,
+   tính trong `Simulate` (thêm 2 trường vào `Signal`, cache lưu luôn) — đây là số để tự kiểm lại tranh luận "SL sát" trên dữ liệu live.
+2. **CSV ứng viên bị loại** `candidates_<sym>_<tf>_corven-1.csv` — **chỉ ghi live** (nến vừa đóng, không ghi lịch sử, không cache):
+   `time_utc,the,side,moc,gate,detail` với `gate` ∈ {`③ 0 loại`, `③ 1 loại`, `④ CF`, `④ R<1,7`, `④ trần SL`, `⛔ veto kiệt sức`, `⛔ quét stop`, `⛔ chồng range`, `chặn giờ`, `tin USD`, `đang có lệnh`}
+   và `detail` = dấu hiệu đã đếm được (nếu có). Mục đích: người học thấy "chỗ này tôi thấy đẹp mà máy không vào — vì cổng nào". Mỗi CF qua ② một dòng.
+3. **Nhãn chart "Hiện dấu hiệu đã đếm":** tại nến CF của mỗi lệnh, 1 dòng ngắn `A sell · Δ ngược + bóng đỏ 18` (loại dấu hiệu + số đắt nhất của mỗi loại);
+   **không** vẽ ứng viên bị loại lên chart (tránh rối; đã có CSV 2).
+4. **"Hiện range":** hộp range theo trạng thái (PENDING/ACTIVE/BROKEN) mượn cách vẽ `RangeRenderer.cs`; thế B đang sống vẽ thêm đường đứt tại mốc.
+5. **Telegram** như 10.3. Tin đóng giữ dạng cũ `✅/🛑 CORVEN thế A ±x,xR · giờ→giờ`.
+
+### 10.5 Bug cache phải sửa khi port (cùng loại bug đã sửa ở `quantower-orderflow-indicator/SignalCache.cs`)
+Hiện `BenzoTrader.cs` ~371/396 đặt tên `cache_<symbol>_<Aggregation.Title|Name>.jsonl` — không chắc chứa khung ⇒ đổi khung hoặc đổi History range làm lẫn tín hiệu. Sửa:
+- Tên file = `cache_<sym>_<aggName>_<minutes>m.jsonl` (lấy phút từ `Aggregation` như cách tính `BarMinutes` dòng ~425; không dùng `Title`). Cùng quy tắc cho 2 file CSV ở 10.4.
+- **Guard khớp nến** khi nạp cache (như `FitsBar`): mỗi dòng `sig` lưu thêm `H,L` của nến CF; khi gắn lại vào nến cùng `Time`, nếu `|Entry − C| > tick/2` hoặc `H/L` lệch > 1 tick ⇒ **bỏ toàn bộ cache**, dò lại từ đầu (ghi 1 dòng `error_log`). Không vá từng dòng.
+- Khi `BarMinutes != 1` không tạo cache (10.2). File cache cũ `cache_<sym>_<Title>.jsonl` của logic A/B/C/D: **xoá** khi gặp (version lệch nào cũng vô dụng).
+- Test: (i) cùng file 90d chạy M1 rồi chạy M1 với History range ngắn hơn → tập tín hiệu chung phải trùng, không có tín hiệu "lạ"; (ii) sửa tay `H` một dòng cache → nạp phải bỏ cache.
+
+### 10.6 Nghiệm thu GĐ3 + GĐ4 — parity và ranh giới TEST
+- **TEST vẫn chưa "mở".** Định nghĩa "mở TEST" (3.1) = đọc **kết quả R/WR** của các lệnh sau 2026-09-15. Parity là kiểm **mã**, không phải kiểm **lợi thế** ⇒
+  `ReplayCorven` được chạy **toàn file 90d**, nhưng `parity_corven.py` **chỉ so định danh** trên phần TEST (giờ, thế, mốc, dấu hiệu, entry/SL/TP),
+  **so cả kết cục + R chỉ trên TRAIN** (bar_idx ≤ cut 2026-09-15). `PARITY-CORVEN.md` báo hai số: `TRAIN n/n khớp (kể cả kết cục) · TEST m/m khớp định danh`,
+  **không in R, WR, ΣR, không liệt kê từng lệnh TEST**. Script phải bỏ cột `ket_cuc,r,exit_idx,giu_nen` của phần TEST trước khi so.
+  Test hồi quy C# [12] "số lệnh trên file" **chỉ đếm TRAIN: 97 lệnh (A/B theo RESULTS 2.3)**. Giữ TEST nguyên vẹn cho giả thuyết C (mục 9) nếu sau này dùng.
+- **GĐ3 đạt khi:** build 0 cảnh báo mới · unit test C# đủ 12 ca mục 4 (ca 3 ghi rõ A2 không port nên chỉ kiểm "bị loại", ca 11 ×10 + chạy mạch = từng nến) + 2 test cache 10.5 + test chuỗi nhãn 10.3 ·
+  parity **100 %** theo định nghĩa trên (lệch có chủ đích duy nhất: tin USD) · deploy `qw-deploy.sh` · README viết lại theo 10.3/10.4.
+- **GĐ4 (tester độc lập):** mục 4 (a)–(f) nguyên trạng, thêm (g) `git grep` xác nhận không script nào đọc R của phần TEST; (h) chạy test cache 10.5 trên máy khác thư mục; (i) ảnh bảng chart có đủ dòng 4 của 10.3. Ghi `report/TEST-CORVEN.md`.
+
+### 10.7 File xoá / chuyển — xác nhận mục 2, bổ sung
+- **Xoá khỏi build và repo (git giữ lịch sử, không cần `_old` cho C#):** `BenzoDetectors.cs`, `BenzoSetupA5.cs`, `BenzoLayers.cs`, `BenzoSr.cs`, tham chiếu `vung-canh-lenh/VclCore.cs` trong `build.sh`, `tests/TestsA5.cs`, `tools/ReplayA5`, **`tools/ReplayCsv`** (mục 2 quên — nó chạy A/B/C/D).
+- **Giữ:** `ProfileEngine.cs` trong chuỗi nối **chỉ vì `NewsCalendar`** (ghi 1 dòng README; tách sau), `tools/OfSignalsDump` (parity stacked/kiệt sức GĐ0 vẫn dùng), `BenzoCore.cs` (cắt `DemoDetector` nếu còn tham chiếu detector cũ), `BenzoZones.cs` cắt theo mục 2 (tách phiên, sm/phase, giờ Mỹ, medΔ, mbr; bỏ VA/IB/VWAP/M5/zigzag/`BenzoRisk`).
+- **`research/_old/`** (chuyển, không build/không test): `setup_a_*.py, setup_b_*.py, setup_c_*.py, setup_d_trap.py, zones_*.py, test_setup_a_*.py, test_b_*.py, test_setup_c_*.py, parity_check.py, parity_a_v5.py, parity_b_v3.py, benzo_vcl.py, test_benzo_vcl.py, sr_measure.py, _dissect*.py, _plot_run.py, _plot_sl.py, PLAN-C-v2.md, PLAN-C-v3.md`.
+  **Giữ nguyên chỗ:** `kernel.py, kernel_check.py, test_kernel.py, of_signals.py, test_of_signals.py, parity_of_signals.py, setup_corven.py, controls_corven.py, results_corven.py, sweep_corven.py, test_setup_corven*.py, test_sweep_corven.py, plot_corven.py` và toàn bộ `report/` (không xoá báo cáo cũ).
+- `tests/Program.cs`: giữ test `BenzoCore/Zones` còn áp dụng, xoá test detector cũ; thêm `tests/TestsCorven.cs`.
+- Thứ tự làm: (1) nối nguồn + `BenzoCorven/BenzoOrderFlow` + test xanh → (2) `ReplayCorven` + parity 100 % → (3) mới xoá file cũ, sửa Settings/vẽ/README → (4) build, deploy, commit. Không xoá trước khi parity xong.

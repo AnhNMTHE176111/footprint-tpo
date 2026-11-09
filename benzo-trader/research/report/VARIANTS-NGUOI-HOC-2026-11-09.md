@@ -33,3 +33,20 @@ Mới: SL = min(đáy cửa sổ, cạnh) − đệm ⇒ ca 11:26 SL 4129,1.
 
 Lần đầu dương và hơn vào ngẫu nhiên, nhưng nhỏ và là hậu kiểm (12 tổ hợp) ⇒ chưa đủ chắc. Hệ quả trên ngày 09/11: corven-3 vào lệnh B sell 10:11 VN
 (entry 4126,0, SL 4135,1 = cạnh 4134,6 + đệm, entry cách cạnh 8,6 giá vì sửa đổi 1 bỏ giới hạn khoảng cách) — dính SL 11:30 ⇒ ca 11:26 bị chặn bởi luật 1 lệnh mở.
+
+## Lệnh sell 10:11 VN 09/11 — có nên giới hạn nhịp hồi? (đo TRAIN, `variants_corven3_gioihan.py`)
+
+Lệnh 10:11: 22 nến sau nến đóng ngoài, entry cách cạnh 8,6 giá = 3,7 mbr, rủi ro 3,96 mbr (sát trần 4). corven-2 không vào vì SL cũ (trừ dung sai) vượt trần 4 mbr;
+corven-3 kéo SL sát cạnh nên lọt trần. Không phải lỗi mã (Python = C#).
+
+| Biến thể (chỉ nhánh "hồi không chạm") | n | R TB | nửa 1 / nửa 2 | ngẫu nhiên |
+|---|---|---|---|---|
+| corven-3 | 399 | +0,020 | 0,00 / +0,04 | −0,04 |
+| CF cách cạnh ≤ 2 mbr | 319 | −0,057 | −0,12 / +0,01 | −0,08 |
+| ≤ 2,5 mbr | 353 | −0,020 | −0,12 / +0,09 | −0,09 |
+| ≤ 3 mbr | 377 | +0,001 | −0,07 / +0,07 | −0,09 |
+| ≤ 10 nến sau phá | 393 | +0,014 | 0,00 / +0,03 | −0,06 |
+| ≤ 15 nến sau phá | 399 | +0,029 | +0,01 / +0,05 | −0,07 |
+| trần SL 3 mbr (mọi lệnh) | 317 | −0,023 | −0,13 / +0,09 | −0,11 |
+
+Opus: không giới hạn nào cải thiện rõ; giới hạn khoảng cách làm xấu đi ⇒ giữ corven-3, không thêm luật từ một ca.

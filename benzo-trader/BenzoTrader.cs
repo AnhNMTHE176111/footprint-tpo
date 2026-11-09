@@ -190,10 +190,6 @@ namespace BenzoTraderNs
 
         [InputParameter("Gửi lệnh sang MT5", 40)]
         public bool Mt5Send { get; set; } = false;
-        [InputParameter("MT5: chạy thử (chỉ ghi nhật ký)", 41)]
-        public bool Mt5DryRun { get; set; } = true;
-        [InputParameter("MT5: thư mục Files", 42)]
-        public string Mt5Dir { get; set; } = "";            // trống = %APPDATA%\MetaQuotes\Terminal\Common\Files
 
         // ======= trạng thái =======
         private sealed class BoxV { public DateTime T0, T1; public double Top, Bot; public int State; }   // 0 active, 1 pending, 2 broken
@@ -431,7 +427,7 @@ namespace BenzoTraderNs
                         EmitTele(res, closed);
                         LogCandidates(res, closed);
                     }
-                    _mt5.DryRun = Mt5DryRun; _mt5.Dir = Mt5Dir ?? "";
+                    _mt5.DryRun = false; _mt5.Dir = "";   // 1 công tắc: bật = gửi thật; vào lệnh thật hay không do EA (InpEnableTrading); thư mục = MT5 Common\Files
                     _mt5.Process(_engine.Signals, closed, _symbol, TzOffset, 1, Mt5Send, EnableFailBreak, EnableBreak, DateTime.UtcNow, _engine.Bars[closed].Time);
                     if (first || res.Opened.Count > 0 || res.Closed.Count > 0 || res.Cancelled.Count > 0)
                     {

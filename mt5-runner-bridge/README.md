@@ -26,7 +26,7 @@ BenzoTrader (setup CORVEN: Fail Break / Break) ghi **`benzo_cmd.jsonl`** (file r
 - ⚠ **EA đang gắn sẵn trên chart giữ giá trị `InpCmdFile` cũ** (MT5 nhớ input theo chart): phải vào thuộc tính EA (F7 trên chart → Inputs) thêm `,benzo_cmd.jsonl`, hoặc gỡ EA gắn lại — nếu không lệnh Benzo không tới MT5.
 - `id` = `BENZO|<mã>|<yyyyMMddHHmm nến xác nhận, UTC>|B/S|FB hoặc BR` (prefix riêng, không đụng id của runner). `branch` = `FB` (Fail Break) / `BR` (Break) chỉ là nhãn log/comment.
 - `rr` = 2 (TP 2R như indicator), `sl_dist` = |entry − SL| theo giá. `ts_utc` = giờ ĐÓNG nến xác nhận.
-- Bật ở Optimus Flow: Settings BenzoTrader → "Gửi lệnh sang MT5" (mặc định tắt), "MT5: chạy thử" (mặc định bật). Giai đoạn 1 giữ chạy thử, xem `runner_ack.csv` ghi `LOG`.
+- Bật ở Optimus Flow: Settings BenzoTrader → một ô "Gửi lệnh sang MT5" (mặc định tắt), thư mục Common\Files tự xác định. BenzoTrader KHÔNG có chế độ chạy thử riêng — chạy thử bằng `InpEnableTrading = false` ở EA, xem `runner_ack.csv` ghi `LOG`.
 - BenzoTrader chưa có lợi thế đã đo (backtest −0,07R/lệnh): chỉ chạy thử, không bật vào lệnh thật.
 
 ## ⛔ EA KHÔNG COMPILE ĐƯỢC từ 9f75180 → nhồi chưa từng chạy (sửa 2026-08-04)

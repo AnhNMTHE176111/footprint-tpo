@@ -108,12 +108,12 @@ Trên chart: hộp range (xanh lơ = ACTIVE, chấm = PENDING, xám đứt = BRO
 mũi tên + hộp SL/TP tại nến CF, nhãn ngắn `Fail Break sell · Δ ngược + bóng đỏ 18` (luôn hiện).
 
 ## Gửi lệnh sang MT5 (Exness) — mặc định TẮT
-Settings nhóm riêng: **Gửi lệnh sang MT5** [TẮT] · **MT5: chạy thử (chỉ ghi nhật ký)** [BẬT] · **MT5: thư mục Files** [trống = `%APPDATA%\MetaQuotes\Terminal\Common\Files`].
+Settings: một ô **Gửi lệnh sang MT5** [TẮT]. Bật = ghi lệnh thật (`dry:false`) vào `%APPDATA%\MetaQuotes\Terminal\Common\Filesenzo_cmd.jsonl` (thư mục tự xác định). Vào lệnh thật hay chỉ ghi nhật ký do EA quyết (`InpEnableTrading`).
 - Mỗi lệnh MỚI ghi 1 dòng JSON vào `benzo_cmd.jsonl` (file riêng, không dùng chung `runner_cmd`/`entry_cmd`). EA `mt5-runner-bridge/RunnerBridge.mq5` đọc.
   Không gửi giá tuyệt đối (futures lệch spot): chỉ `side` + `sl_dist` (= |entry − SL|, USD/oz) + `rr` = 2; EA vào market rồi đặt SL/TP quanh giá khớp. Trường `src_*` và `setup` chỉ để ghi nhật ký.
 - Mẫu dòng: `{"id":"BENZO|GCZ26|202610210310|B|BR","ts_utc":"2026-10-21 03:11:00","ts_local":"2026-10-21 10:11:00","tz":7,"src":"GCZ26","branch":"BR","side":"BUY","sl_dist":3.2,"rr":2,"src_entry":4127.4,"src_sl":4124.2,"src_tp":4133.8,"setup":"Break","dry":true}`
 - Chống bắn trùng/lệnh cũ: chỉ lệnh có nến vào là nến **vừa đóng**; lần quét đầu sau attach/reload/dựng lại chỉ nạp id; tuổi ≤ 90 giây so với đồng hồ UTC (lệch hơn thì bỏ + báo lý do trên bảng); id tất định. Bật gửi giữa chừng không bắn bù lệnh sinh ra lúc tắt.
-- Bảng chart thêm 1 dòng: `MT5 (chạy thử): đã gửi N · lệnh cuối dd/MM HH:mm Break buy SL 3,2` (hoặc lý do bỏ). Các mục MT5 **không** nằm trong khoá cache tín hiệu.
+- Bảng chart thêm 1 dòng: `MT5: đã gửi N · lệnh cuối dd/MM HH:mm Break buy SL 3,2` (hoặc lý do bỏ). Các mục MT5 **không** nằm trong khoá cache tín hiệu.
 - Cài EA, ba giai đoạn chạy thử → thật: xem `mt5-runner-bridge/README.md` (mục BenzoTrader). EA phải có `benzo_cmd.jsonl` trong `InpCmdFile`.
 - Code: `BenzoMt5.cs` (logic thuần, có unit test `tests/TestsMt5.cs`).
 

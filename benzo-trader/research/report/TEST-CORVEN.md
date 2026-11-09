@@ -142,3 +142,46 @@ PYTHONIOENCODING=utf-8 python benzo-trader/tools/TesterGd4/e_lint.py            
 dotnet run --project benzo-trader/tools/TesterGd4/Gd4 -c Release -- all              # (c)(d)(f)(h)(i) → tests/ui-out/*.png; hiện 72 PASS / 5 FAIL (= lỗi #2–#5)
 dotnet run --project benzo-trader/tests -c Release                                    # 115 OK
 ```
+
+---
+
+# PHỤ LỤC — Kiểm lại lượt sửa theo plan mục 12 (commit `437d21a`)
+
+> Tester độc lập, 2026-11-09, theo plan 12.3. DLL kiểm = `dist/BenzoTrader.dll` của `437d21a` (git sạch). Chỉ dùng TRAIN. Riêng phép kiểm
+> `--hide-after` phải chạy toàn file: script chỉ **đếm ô rỗng / không rỗng**, không in giá trị, xoá file ngay. **TEST vẫn chưa bị đọc.**
+
+## Kết quả
+
+| Mục | Kết quả | Bằng chứng |
+|---|---|---|
+| #1 `--hide-after` (g) | **PASS** | ReplayCorven toàn file `--hide-after 51318`: 66 lệnh TEST, ô không rỗng `ket_cuc/r/exit_idx` = **0/0/0**. Đối chứng: 97 lệnh TRAIN có dữ liệu **97/97/97** (không ẩn quá tay). Lớp 2: `parity_corven.py` có `assert_test_hidden`, pytest `test_parity_corven.py` xanh. |
+| #2 tắt/bật setup (h) | **PASS** | Kịch bản cũ: tắt tới nến 15000 rồi bật ⇒ **27/27** lệnh có lại. Kịch bản mới của tester (một engine, công tắc đổi giữa chừng: BẬT 0–7999, TẮT 8000–14999, BẬT từ 15000): khoảng niêm phong đúng `[0..7999] [15000..23999]`; nạp lại ⇒ toàn bộ lệnh + kết cục = chạy chuẩn. Lúc đang chạy, đoạn tắt thiếu 16 lệnh, đúng nghĩa "TẮT = tạm ngừng dò"; nạp lại chart thì dò bù. |
+| #3 nhãn mép phải (d) | **PASS** | Đo **pixel nền nhãn** trên ảnh không vẽ nến, không gọi `LabelX`: nền nhãn nằm ở [904; 1260], mong theo công thức plan tính tay [903; 1261]; khung phải 1400; tâm nến 1267 ⇒ nhãn lật sang trái, trọn khung, đủ 354px. Mở ảnh xem: [corven-live-mep-phai-0730-0233.png](../../tests/ui-out/corven-live-mep-phai-0730-0233.png) đọc đủ "B sell · Δ to + bóng đỏ 14 + kiệt sức đỉnh + stacked 4 mức". |
+| #4 mũi tên tâm nến (d) | **PASS** | Trên ảnh **không vẽ nến** ([p12-khong-nen-A-SL.png](../../tests/ui-out/p12-khong-nen-A-SL.png), [p12-khong-nen-B-TP.png](../../tests/ui-out/p12-khong-nen-B-TP.png)), hàng giữa tam giác có tâm trùng tâm nến CF, lệch ≤ 1px, ở cả lệnh buy và sell. |
+| #5 lệch giờ (h) | **PASS** | Lệch giờ 7 → 8: **0** lệnh khác trên 24.000 nến TRAIN (trước sửa: 1). |
+| #6 giờ caption | **PASS** | Lệnh `GCZ26 / 2026-07-29 15:52 UTC / thế A sell`: caption "· 22:52 VN" và "CF 22:52"; `time_vn` CSV = "2026-07-29 22:52"; tin đóng "22:52→23:08" (giờ mở nến thoát). |
+| 7c hộp range lệnh cũ | **PASS** | `RangeT0` là giờ một nến có thật trước CF, `RangeT1` = giờ CF. Trên ảnh không nến, đếm pixel viền mờ đúng y của `range_lo/range_hi`: A-SL cạnh trên 231/231, cạnh dưới 173/231; B-TP cạnh trên 686/686, cạnh dưới 514/686 (nét đứt). Hàng đối chứng ngay ngoài hộp: **0** pixel (A-SL 0/462, B-TP 0/1372). Mở ảnh: hộp đứt mờ 4065,55–4070,5 cạnh lệnh A-SL, 4078,1–4083,7 cạnh lệnh B-TP. |
+| `dotnet run --project tests` | **139 OK / 0 FAIL** | |
+| pytest (`--ignore=_old`) | **106 passed** | 83 CORVEN + 6 parity + 17 FOLLOW. Chạy `pytest` trần sẽ gom cả `research/_old/` (34 FAIL do file cũ không còn) — `_old` theo plan 10.7 là không build, không test, nên đây không phải lỗi. |
+| `parity_corven.py` | **100 %** | TRAIN 97/97 lệnh, 10094/10094 ứng viên; TEST 66/66 định danh, 7302/7302 ứng viên; chong_rate TRAIN 0,018, toàn file 0,025. `PARITY-CORVEN.md` và `_parity_corven_train.csv` không đổi khi chạy lại; không có R/WR của TEST. ReplayCorven báo huỷ (nến cuối phiên) = 0. |
+| `Gd4 -- all` | **90 PASS / 0 FAIL** | 77 kiểm cũ + 13 kiểm độc lập mới (mục `fix12`). |
+| Lint (e) | **PASS** | 0 vi phạm. |
+
+## Đánh giá 3 kiểm Opus đã sửa trong `tools/TesterGd4/Gd4/Program.cs`
+
+1. **Giờ caption (#6): hợp lệ, không bị nới.** Plan 12.1 #6 đổi đặc tả sang giờ mở nến. Kiểm vẫn tự tính giờ mong đợi từ `s.Time + 7`, không gọi lại hàm caption.
+   Tester thêm kiểm khoá cứng theo plan: "22:52" = `time_vn` CSV.
+2. **Mũi tên (#4): bị nới — kiểm có thể qua dù mũi tên sai chỗ.** Kiểm mới tìm pixel cùng màu hướng trong ±5px quanh tâm nến, trên ảnh **có vẽ nến**.
+   Thân nến CF cùng màu với mũi tên (CF sell là nến đỏ, CF buy là nến xanh), nằm đúng tâm, rộng ~10px. Hàng đo cách giá vào 12px, mà giá vào = giá đóng
+   nên hàng đo rơi vào thân nến. Ví dụ lệnh A-SL: thân 0,7 giá ≈ 25px > 12px. ⇒ Kiểm này đo **thân nến**, không đo mũi tên; mũi tên lệch hay mất đều vẫn PASS.
+   Sửa harness `bwD` = số nguyên (khớp `BarsWidth` nguyên của Quantower) là đúng. Tester thay bằng kiểm trên ảnh **không vẽ nến** (mục `fix12`) ⇒ PASS thật.
+3. **Nhãn (#3): tự so với chính nó.** Kiểm gọi `BenzoCore.LabelX` của DLL rồi khẳng định kết quả nằm trong khung — không chứng minh `OnPaintChart` có dùng
+   `LabelX`, cũng không chứng minh nhãn trên ảnh không tràn. Tester thêm kiểm pixel nền nhãn (so với công thức plan tính tay) + mở ảnh xem ⇒ PASS thật.
+   Giữ cả hai kiểm của Opus (vô hại), nhưng chỉ coi kiểm của tester là bằng chứng.
+
+## Lỗi mới
+Không thấy lỗi mới. Ghi chú nhỏ:
+- (a) Khi setup đang TẮT, lệnh đã niêm phong vẫn hiện; tôi kiểm phần này bằng đọc mã (`EmitTele` bỏ qua khi `!EnableCorven`), không chạy được Telegram thật.
+- (b) Nhãn lật trái sẽ che vài nến bên trái lệnh mới nhất. Đây là hệ quả của đặc tả, không phải lỗi.
+
+Ảnh mới: `tests/ui-out/p12-khong-nen-A-SL.png`, `p12-khong-nen-B-TP.png`, `p12-nhan-mep-phai-khong-nen.png`. Các ảnh `corven-*.png` được render lại bằng DLL mới.

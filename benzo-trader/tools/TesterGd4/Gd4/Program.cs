@@ -38,6 +38,7 @@ static class Program
         if (what is "caption" or "all") Caption();
         if (what is "cache" or "all") Cache();
         if (what is "ui" or "all") Ui();
+        if (what is "fix12" or "all") Fix12();
         Console.WriteLine($"== {_ok} PASS, {_fail} FAIL");
         return _fail == 0 ? 0 : 1;
     }
@@ -302,7 +303,7 @@ static class Program
 
     /// <summary>Dựng indicator thật với engine đã chạy tới nến `upto`, render vùng [first, upto + rightPad] ra PNG.</summary>
     static (Bitmap bmp, FakeConv conv, BenzoTrader ind, BenzoEngine eng) Render(string file, List<BarData> b, List<LevelVol>[] l, int upto, int first, int rightPad,
-        int bw = 9, Action<BenzoTrader, BenzoEngine> tweak = null, int W = 1400, int Hh = 760)
+        int bw = 9, Action<BenzoTrader, BenzoEngine> tweak = null, int W = 1400, int Hh = 760, bool candles = true)
     {
         var det = new DetectorCorven { AllowBar = i => i >= Deny };
         var eng = new BenzoEngine("GCZ26", 0.1, null, new ISetupDetector[] { det }) { GetLevels = i => l[i] };
@@ -328,7 +329,7 @@ static class Program
         {
             g.Clear(Color.FromArgb(18, 20, 26));
             // nến (do harness vẽ thay chart Quantower — tâm nến = GetChartX + bw/2)
-            for (int i = first; i <= upto; i++)
+            for (int i = first; i <= (candles ? upto : first - 1); i++)
             {
                 var x = b[i];
                 float xc = (float)(conv.GetChartX(x.Time) + bwD / 2);
@@ -444,5 +445,105 @@ static class Program
         string log = Path.Combine(Path.GetTempPath(), "error_log.txt");   // _dir null (OnInit chưa gọi) ⇒ LogErr ghi vào TEMP
         var paintErr = File.Exists(log) ? File.ReadAllLines(log).Where(x => x.Contains("OnPaintChart") && x.StartsWith(DateTime.UtcNow.ToString("yyyy-MM-dd"))).ToList() : new List<string>();
         Check(paintErr.Count == 0, "OnPaintChart không ném lỗi (error_log hôm nay không có dòng OnPaintChart)", paintErr.FirstOrDefault() ?? "");
+    }
+
+    // ================================================================ PHỤ LỤC — kiểm lại lượt sửa plan mục 12 (độc lập với kiểm do Opus sửa)
+    // viền range mờ (alpha 60 xanh lơ trên nền 18,20,26, nét đứt khử răng cưa): xanh nhạt hơn nền, tối hơn hẳn viền range sống (alpha 200)
+    static bool Faint(Color c) => c.B >= 34 && c.B > c.R + 8 && c.B < 110;
+    static bool ArrowRed(Color c) => c.R > 130 && c.R > c.G + 60;
+    static bool ArrowGreen(Color c) => c.G > 105 && c.G > c.R + 50;
+    static (int lo, int hi) Run(Bitmap bmp, int y, int x0, int x1, Func<Color, bool> f)
+    {
+        int lo = int.MaxValue, hi = int.MinValue;
+        for (int x = Math.Max(0, x0); x <= Math.Min(bmp.Width - 1, x1); x++) if (f(bmp.GetPixel(x, y))) { lo = Math.Min(lo, x); hi = Math.Max(hi, x); }
+        return (lo, hi);
+    }
+
+    static void Fix12()
+    {
+        Console.WriteLine("[P12] Kiểm độc lập lượt sửa plan 12 (ảnh KHÔNG vẽ nến — tránh thân nến CF trùng màu mũi tên)");
+        var (tb, tl) = Train();
+        var (e0, _) = CorvenData.Run(tb.Take(30000).ToList(), tl.Take(30000).ToArray(), 0.1, Deny);
+        // #4 mũi tên — ảnh không có nến: chỉ còn mũi tên/hộp/nhãn của indicator
+        foreach (var (s, tag) in new[] { (e0.Signals.First(x => x.Outcome == "TP" && x.Setup == 'B'), "B-TP"), (e0.Signals.First(x => x.Outcome == "SL" && x.Setup == 'A'), "A-SL") })
+        {
+            int exit = tb.FindIndex(x => x.Time == s.ExitTime);
+            var (bmp, conv, _, eng) = Render($"p12-khong-nen-{tag}.png", tb, tl, exit + 8, s.BarIdx - 70, 6, candles: false);
+            var sig = eng.Signals.First(x => x.Id == s.Id);
+            double left = conv.GetChartX(sig.Time), center = left + Math.Floor(conv.Bw) / 2.0;
+            int yE = (int)Math.Round(conv.GetChartY(sig.Entry));
+            Func<Color, bool> f = sig.Side > 0 ? ArrowGreen : ArrowRed;
+            // hàng giữa tam giác (đáy cách đỉnh 6 px): rộng ~6 px, đối xứng quanh x đỉnh
+            int yMid = sig.Side > 0 ? yE + 4 + 6 + 3 : yE - 4 - 6 - 3;
+            var (lo, hi) = Run(bmp, yMid, (int)left - 20, (int)left + 20, f);
+            double mid = (lo + hi) / 2.0;
+            Console.WriteLine($"  {tag}: mép trái nến {left:0.0}, tâm {center:0.0}, mũi tên đo được [{lo};{hi}] tâm {mid:0.0}");
+            Check(lo != int.MaxValue && Math.Abs(mid - center) <= 1.0 && hi - lo <= 10, $"#4 {tag}: mũi tên ở tâm nến CF (ảnh không nến, lệch ≤ 1 px)", $"tâm đo {mid:0.0} vs {center:0.0}");
+            // 7c: hộp range mờ của lệnh đã đóng
+            Check(sig.RangeT0 > 0 && sig.RangeT1 == sig.Time.Ticks && sig.RangeT0 < sig.RangeT1, "7c: RangeT0 < RangeT1 = giờ CF", $"{sig.RangeT0} {sig.RangeT1}");
+            int t0i = tb.FindIndex(x => x.Time.Ticks == sig.RangeT0);
+            Check(t0i >= 0 && sig.BarIdx - t0i is > 0 and < 2000, "7c: RangeT0 là giờ một nến có thật, trước CF", $"nến {t0i}, CF {sig.BarIdx}");
+            int x0 = (int)conv.GetChartX(new DateTime(sig.RangeT0, DateTimeKind.Utc)) + 2, x1 = (int)left - 2;
+            int yHi = (int)Math.Round(conv.GetChartY(sig.RangeHi)), yLo = (int)Math.Round(conv.GetChartY(sig.RangeLo));
+            var faint = Color.FromArgb(42, 62, 75);
+            int nHi = 0, nLo = 0, nCtl = 0;
+            for (int x = Math.Max(0, x0); x <= x1; x++)
+            {
+                if (Enumerable.Range(-1, 3).Any(d => Faint(bmp.GetPixel(x, yHi + d)))) nHi++;
+                if (Enumerable.Range(-1, 3).Any(d => Faint(bmp.GetPixel(x, yLo + d)))) nLo++;
+                if (yHi - 6 >= 0 && Faint(bmp.GetPixel(x, yHi - 6))) nCtl++;          // đối chứng: hàng ngay NGOÀI hộp
+                if (yLo + 6 < bmp.Height && Faint(bmp.GetPixel(x, yLo + 6))) nCtl++;
+            }
+            Console.WriteLine($"  7c {tag}: range {sig.RangeLo}–{sig.RangeHi} (nến {t0i}→{sig.BarIdx}), cạnh trên {nHi}/{x1 - x0 + 1} px mờ, cạnh dưới {nLo}/{x1 - x0 + 1} px mờ, đối chứng ngoài hộp {nCtl}/{2 * (x1 - x0 + 1)}");
+            Check(nHi > (x1 - x0) / 4 && nLo > (x1 - x0) / 4 && nCtl < (x1 - x0) / 5, $"7c {tag}: thấy hộp range viền đứt mờ đúng giá range_lo/range_hi của lệnh đã đóng");
+        }
+        // #3 nhãn sát mép phải — kiểm bằng PIXEL nền nhãn, không gọi LabelX
+        {
+            var s = e0.Signals.OrderByDescending(x => x.Short.Length).First();
+            var (bmp, conv, _, eng) = Render($"p12-nhan-mep-phai-khong-nen.png", tb, tl, s.BarIdx, s.BarIdx - 90, 4, candles: false);
+            var sig = eng.Signals.Last();
+            double center = conv.GetChartX(sig.Time) + Math.Floor(conv.Bw) / 2.0;
+            using var g = Graphics.FromImage(new Bitmap(10, 10));
+            float w = g.MeasureString(sig.Short, new Font("Consolas", 8, FontStyle.Bold)).Width;
+            int yE = (int)Math.Round(conv.GetChartY(sig.Entry));
+            int yRow = sig.Side > 0 ? yE + 12 + 8 + 2 : yE - 12 - 22 + 2;      // hàng trong nền nhãn (ly + 2)
+            Func<Color, bool> bg = sig.Side > 0 ? (c => c.G > 150 && c.G > c.R + 60) : (c => c.R > 170 && c.R > c.G + 80);
+            var (lo, hi) = Run(bmp, yRow, 0, bmp.Width - 1, bg);
+            double wantLo = center - 8 - w - 2, wantHi = center - 8 - w - 2 + w + 4;   // công thức plan 12.1 #3 tính tay
+            Console.WriteLine($"  #3: nhãn \"{sig.Short}\" w={w:0}; nền nhãn đo [{lo};{hi}], mong [{wantLo:0};{wantHi:0}], khung phải {conv.Rc.Right}, tâm nến {center:0}");
+            Check(lo != int.MaxValue && hi <= conv.Rc.Right - 1 && hi < center && Math.Abs(lo - wantLo) <= 3 && Math.Abs(hi - wantHi) <= 3,
+                  "#3: nền nhãn nằm TRỌN trong khung, lật sang trái mũi tên, đủ bề rộng chuỗi (đo pixel)", $"[{lo};{hi}]");
+        }
+        // #6 giờ caption = time_vn CSV, lệnh mẫu của plan
+        {
+            var s = e0.Signals.First(x => x.Id == "GCZ26|202607291552|A|S");
+            string cap = BenzoCore.ComposeOpen(s, "GCZ26", 7, 1, 1);
+            string csvVn = SignalCsv.ToLine(s, 7).Split(',')[1];
+            Check(cap.Split('\n')[0].EndsWith("· 22:52 VN") && cap.Split('\n')[3].StartsWith("CF 22:52 ") && csvVn == "2026-07-29 22:52",
+                  "#6: caption 22:52 VN = time_vn CSV (15:52 UTC + 7)", cap.Split('\n')[0] + " / " + csvVn);
+            string cl = BenzoCore.ComposeClose(s, 7, 1);
+            Check(cl.EndsWith("· 22:52→" + s.ExitTime.AddHours(7).ToString("HH:mm")), "#6: tin đóng dùng giờ mở nến vào/thoát", cl);
+        }
+        // #2 kịch bản xen kẽ: BẬT 0–7999, TẮT 8000–14999, BẬT từ 15000 (một engine, đổi công tắc giữa chừng như live)
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "benzo_tester_p12_" + Guid.NewGuid().ToString("N").Substring(0, 6)); Directory.CreateDirectory(dir);
+            string cp = Path.Combine(dir, BenzoCore.CacheFileName("GCZ26", "Time", 1));
+            int n = 24000; var b = tb.Take(n).ToList(); var l = tl.Take(n).ToArray();
+            var (eStd, _) = CorvenData.Run(b, l, 0.1, Deny);
+            bool on = true;
+            var c1 = new SignalCache(cp, BenzoCore.CacheVersion(true)); c1.Load();
+            var eng = new BenzoEngine("GCZ26", 0.1, c1, new ISetupDetector[] { new DetectorCorven { AllowBar = i => i >= Deny } }) { GetLevels = i => l[i], IsEnabled = _ => on };
+            eng.Bars.AddRange(b);
+            for (int i = 0; i < n; i++) { on = i < 8000 || i >= 15000; eng.Advance(i); }
+            var c2 = new SignalCache(cp, BenzoCore.CacheVersion(true)); c2.Load();
+            Console.WriteLine("  #2 khoảng niêm phong: " + string.Join(" ", c2.Intervals.Select(x => $"[{tb.FindIndex(y => y.Time.Ticks == x.F)}..{tb.FindIndex(y => y.Time.Ticks == x.L)}]")));
+            Check(c2.Covers(b[100].Time.Ticks) && !c2.Covers(b[8000].Time.Ticks) && !c2.Covers(b[14999].Time.Ticks) && c2.Covers(b[15000].Time.Ticks) && c2.Covers(b[n - 1].Time.Ticks),
+                  "#2: niêm phong phủ đoạn BẬT, chừa đúng đoạn TẮT 8000–14999");
+            var (eRe, _) = CorvenData.Run(b, l, 0.1, Deny, cache: c2);   // nạp lại chart (bật): dò bù đoạn tắt
+            Check(eRe.Signals.Select(x => (x.Id, x.Outcome)).SequenceEqual(eStd.Signals.Select(x => (x.Id, x.Outcome))), "#2: nạp lại sau đoạn tắt = chạy chuẩn (đủ lệnh, đủ kết cục)", $"{eRe.Signals.Count}/{eStd.Signals.Count}");
+            int lostLive = eStd.Signals.Count(x => x.BarIdx >= 8000 && x.BarIdx < 15000) - eng.Signals.Count(x => x.BarIdx >= 8000 && x.BarIdx < 15000);
+            Console.WriteLine($"  #2 lúc đang chạy (không nạp lại): đoạn tắt thiếu {lostLive} lệnh — đúng ý 'TẮT = tạm ngừng dò'");
+            try { Directory.Delete(dir, true); } catch { }
+        }
     }
 }

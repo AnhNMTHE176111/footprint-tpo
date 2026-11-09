@@ -332,3 +332,14 @@ Hiện `BenzoTrader.cs` ~371/396 đặt tên `cache_<symbol>_<Aggregation.Title|
   **Giữ nguyên chỗ:** `kernel.py, kernel_check.py, test_kernel.py, of_signals.py, test_of_signals.py, parity_of_signals.py, setup_corven.py, controls_corven.py, results_corven.py, sweep_corven.py, test_setup_corven*.py, test_sweep_corven.py, plot_corven.py` và toàn bộ `report/` (không xoá báo cáo cũ).
 - `tests/Program.cs`: giữ test `BenzoCore/Zones` còn áp dụng, xoá test detector cũ; thêm `tests/TestsCorven.cs`.
 - Thứ tự làm: (1) nối nguồn + `BenzoCorven/BenzoOrderFlow` + test xanh → (2) `ReplayCorven` + parity 100 % → (3) mới xoá file cũ, sửa Settings/vẽ/README → (4) build, deploy, commit. Không xoá trước khi parity xong.
+
+## 11. FOLLOW-COMBO — thiết kế đo các combo "Follow sau cú phá" (Fable, 2026-11-09) → `plans/BENZO-FOLLOW-COMBO-plan.md`
+Yêu cầu mới của người học (kèm ảnh GCZ26 M1): Follow = **move phá range → nhịp hồi 1–2 nến → dấu hiệu ở nhịp hồi/CF → CF trong ≤ 3 nến**, CF chỉ cần
+"tăng · Δ xanh · đóng cao hơn"; mỗi combo (trap nguyên thủy, bóng CF, kiệt sức hồi, …) có tên, đo riêng, rồi mổ lệnh SL để cải tiến.
+Khác Thế B đang port: xét **ngay từ `CloseOutside`** (không đợi `BreakConfirmed`), không đòi hồi về cạnh, CF lỏng hơn 4a, TP 2R không cổng mục tiêu.
+- File Python **mới** `research/follow_combo.py` + `test_follow_combo.py` + `plot_follow.py` + `mo_sl_follow.py`; **không sửa** `setup_corven.py`/C# (GĐ3 port chạy song song).
+- 10 combo đăng ký trước (F1…F10) + F0 = C1; đối chứng C1/C2 **từng combo**; hiệu chỉnh nhiều phép thử bằng **kiểm hoán vị thống kê cực đại** (2.000 lần, phân vị 95);
+  ĐẠT = n ≥ 30 · ≥ C1+0,15 · ≥ C2+0,15 · KTC dưới > −0,10 · dương cả 2 nửa TRAIN · qua hoán vị. Mổ SL: danh mục nhãn cố định, nhãn phải ≥ 40 % SL và ≤ 20 % TP, ≤ 1 luật/combo/vòng, ≤ 2 vòng, combo sửa không được mở TEST.
+- **TEST 26 phiên dành cho Follow, mở một lần** nếu có combo ĐẠT; **giả thuyết C mục 9 giữ trên dữ liệu mới ≥ 22/10** (10.6 chỉ là dự phòng, mục 9 thắng). Sau khi mở, TEST coi như đã dùng.
+- Port C# (`corven-2`) chỉ khi qua TEST với T1 — khác quyết định A của Thế A/B.
+- Ý kiến thẳng: hướng hợp lý (Thế B không thể bắt ca ảnh; CORVEN 0:46:13/0:48:07 ủng hộ combo "trap + CF có lực"), nhưng nền F0 nhiều khả năng âm, F1/F4/F5 có thể n < 30, dự đoán ~30 % có combo ĐẠT.

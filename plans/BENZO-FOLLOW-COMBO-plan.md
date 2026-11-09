@@ -228,3 +228,79 @@ F2/F4 dương thì lỗi cũ nằm ở cách đếm; nếu tất cả âm thì l
 hoán vị cực đại; F1/F5 n < 30. Xác suất có ≥ 1 combo ĐẠT và mở được TEST: khoảng **30 %**. Nếu đúng vậy thì kết luận trung thực là: Follow kiểu
 này **đọc chart được, chưa code thành signal được** với dữ liệu hiện có — và việc tiếp theo là dữ liệu mới + sửa Footprint Export ghi delta trong
 nến, không phải thêm combo.
+
+## 9. QUYẾT ĐỊNH SAU F1 (Fable, 2026-11-09, đọc `report/RESULTS-FOLLOW.md` commit 9396f30 — kết quả: 0/10 combo ĐẠT, 0 lọt vòng trong)
+
+> Kết luận GĐ-F1 của Opus **đúng theo chữ plan**. Nhưng câu hỏi 3 của Opus chỉ ra một lỗi **trong đối chứng do tôi thiết kế** (C2), và lỗi đó
+> ảnh hưởng tới cả tiêu chí "lọt vòng trong" lẫn nhãn đang in trên Benzo corven-1. Vì vậy thứ tự việc tiếp theo là: **sửa C2 trước → chấm lại
+> vòng trong → mổ SL**. Mọi điều dưới đây là **hậu kiểm** (viết sau khi đã nhìn R trên TRAIN) và chỉ được xác nhận bằng dữ liệu mới ≥ 22/10.
+
+### 9.1 Trả lời 5 câu hỏi
+
+1. **F0 = 22/ngày — KHÔNG siết 2a lúc này.** Ước lượng 2–6/ngày của tôi sai vì tôi không đếm rằng `RangeEngine` sinh ~25 range/ngày ⇒ 97 cú đóng
+   ngoài/ngày; đây là đặc tính của bộ range, không phải Follow lỏng. Sau cổng chỉ còn 9,7 lệnh/ngày. Siết bây giờ = sửa định nghĩa sau khi nhìn R.
+   Ghi nhận cho vòng dữ liệu mới một **biến thể báo cáo** `move_mbr 1,5` (không có sức chọn). Không đổi gì ở cấu hình chính.
+2. **Ngưỡng hoán vị — CHỐT: max chỉ lấy trên combo có ≥ 30 F0 trong lần hoán vị đó** (= 0,31R lượt này). Lý do: combo n < 30 không được chấm theo mục 3,
+   nên không được phép làm phồng phân bố null của các combo được chấm. Đây là sửa giao thức hậu kiểm nhưng **không đổi kết luận lượt này** (F7 Δ 0,20 < 0,31).
+   Báo cả hai ngưỡng trong mọi bảng về sau, ngưỡng ≥ 30 là ngưỡng chấm.
+3. **C2 có thiên lệch dương — ĐÚNG, và đó là lỗi thiết kế của tôi.** Cơ chế: với nến ngẫu nhiên j **trước** nến CF, hướng vào S được lấy từ cú phá
+   xảy ra **sau** j ⇒ lệnh giả "biết trước" hướng của chính cú đẩy đã định nghĩa setup, nên ăn trọn cú đẩy đó. Setup Follow nằm cách cú phá chỉ 2–5
+   nến, cửa sổ −30′ chứa gần như toàn bộ cú đẩy ⇒ C2 +0,28 trong khi F0 −0,05 là hệ quả trực tiếp. Thế A/B của CORVEN dùng cùng `controls_corven.c2`
+   nên **cũng dính**, mức độ nhỏ hơn (CF cách cú phá xa hơn) nhưng chưa đo nên chưa biết.
+   **Sửa (đăng ký trước, không nhìn số rồi chọn):** `C2'` = pool chỉ gồm nến j **sau** nến CF, cùng phiên, `0 < sm[j] − sm[i] ≤ 30′`, các điều kiện khác
+   giữ nguyên (cùng hướng, cùng rủi ro theo mbr, TP 2R, 20 nến, bỏ lệnh nếu pool < 5 nến). Ý nghĩa mới của C2': *"vào đúng nến CF có hơn vào bừa một
+   nến bất kỳ trong 30 phút sau đó không"* = đo giá trị của **thời điểm** vào, không còn nhìn trước. Cài bằng tham số `after_only=False` thêm vào
+   `controls_corven.c2` (mặc định giữ nguyên hành vi cũ ⇒ không ảnh hưởng parity/kết quả đã in), **không** sửa `setup_corven.py`.
+   **Đính chính nhãn — quyết ngay, có điều kiện, không đợi số:** nhãn "kém vào ngẫu nhiên (−0,08R)" trên Benzo corven-1 dựa trên C2 lệch ⇒ phải đo lại
+   C2' cho **bộ gốc vòng 1** (ô đang in −0,29R, C1 −0,24, C2 −0,08) trên TRAIN. (a) Nếu −0,29 < C2' − 0,05: nhãn **giữ**, chỉ thay số trong ngoặc và thêm
+   ghi chú đính chính vào `RESULTS-CORVEN.md`/`RESULTS-CORVEN-GD1.md`/README. (b) Nếu −0,29 ≥ C2' − 0,05: nhãn đổi thành **"−0,29R/lệnh, chưa có lợi thế
+   (kém C1 −0,24R)"** ở cả 4 chỗ (`BenzoCorven.cs` `BacktestLine`/`SettingLabel`, `BenzoTrader.cs`, README, test `Program.cs`), build + test + deploy.
+   Kết luận "chưa có lợi thế" của CORVEN **không đổi** trong cả hai nhánh: −0,29R có KTC dưới 0 và thua C1 (C1 không dính lỗi này). Dự đoán đăng ký
+   trước của tôi: C2' của F0 Follow rơi về −0,10…+0,05; C2' của CORVEN bộ gốc rơi về −0,25…−0,10 ⇒ nhiều khả năng nhánh (b).
+4. **S2 vượt trần 4 mbr ở leg 2 — là đặc tính, giữ S2 làm neo chính.** Nhưng "mốc quan trọng gần nhất" của CORVEN với leg 2 hợp lý hơn là **cực trị
+   leg 1** chứ không phải cạnh E. Đăng ký **biến thể báo cáo S3**: leg 1 = S2; leg 2 = `min(high[x_leg1], min low[nhịp hồi ∪ c]) − đệm`. Chỉ báo cáo,
+   không có sức chọn; chạy cùng lượt C2'.
+5. **Hạng `TIN` — BỎ trên TRAIN.** `NewsCalendar` (ProfileEngine.cs) chỉ tải lịch tuần hiện tại, không có lịch sử 07–09/2026 ⇒ không port được gì
+   có ích. Ghi rõ "TIN không đo được" trong `MO-SL-FOLLOW.md`; danh mục còn 7 nhãn. Lịch tin cho dữ liệu mới: indicator live đã lưu `news_cache.json`
+   hằng tuần — gom lại sau, không chặn việc này.
+
+### 9.2 Có mổ SL không — CÓ, ở chế độ "khám phá, hậu kiểm", trên F7 và F10 (F1 chỉ xem để học)
+
+**Căn cứ:** F7 (Dh, n 96, +0,20, dương cả hai nửa, dương ở cả 5 biến thể báo cáo) và F10 (n 120, +0,12) đều **≥ C1** và n ≥ 30; thứ duy nhất chặn
+chúng khỏi vòng trong là C2 — mà C2 đang lệch. Nếu C2' xác nhận F7/F10 ≥ C2' thì GĐ-F2 chạy **đúng theo plan** (mục 5), không cần ngoại lệ. Nếu
+C2' vẫn cao hơn, vẫn mổ nhưng ghi nhãn "khám phá" và người học hiểu đây là **bài học đọc chart**, không phải bước tới signal.
+**Không được nói "F7 có lợi thế"**: p cực đại 0,76, Δ 0,20 < ngưỡng 0,31. F7 là *triển vọng chưa chứng minh*.
+
+Ràng buộc (ngoài mục 5, không hạ):
+- Nhãn máy tính trên **toàn bộ** lệnh SL **và** TP của combo (để có % TP cho tiêu chí 5.3), ảnh xuất cho mọi SL + 5 TP.
+- **Fable đọc ảnh và gắn nhãn tay TRƯỚC khi xem nhãn máy** (Opus để nhãn máy ở file CSV riêng, không in lên ảnh) — tránh tôi gật theo máy.
+- Mỗi combo tối đa **1 luật** suy từ nhãn đạt 5.3 → `F7b`/`F10b`, đo lại trên TRAIN **chỉ để báo**, xác nhận duy nhất trên dữ liệu mới ≥ 22/10.
+- F1 (n 11): xuất ảnh cả 11 lệnh (thắng lẫn thua) **chỉ để tôi và người học soi định nghĩa trap** — không rút luật, không đổi định nghĩa T từ 11 ca.
+- Tổng cộng vẫn **≤ 2 vòng** mổ trên TRAIN (mục 5.6). Vòng này là vòng 1.
+
+### 9.3 Việc giao Opus (một lượt, thứ tự A → B → C; dừng, Fable review)
+
+**A. Sửa C2 + chạy lại bảng (TRAIN).**
+1. `controls_corven.c2(..., after_only: bool = False)`: khi `True`, pool = `{j : s0 ≤ j < s1, 0 < sm[j] − sm[i] ≤ minutes, good[j], mbr[j] > 0}`;
+   pool < 5 ⇒ bỏ lệnh đó. Mặc định `False` giữ nguyên. Thêm 2 test trong `test_setup_corven_gd1.py` hoặc file test mới: (i) `after_only=True` không bao
+   giờ chọn j ≤ i; (ii) `after_only=False` cho kết quả **bit-giống** cũ trên một ca nhỏ.
+2. `follow_combo.py`: cột **C2'** cạnh C2 cũ cho F0…F10 ở cấu hình chính; cột "lọt vòng trong (C2')" và "ĐẠT (C2')"; ngưỡng hoán vị báo cả hai,
+   chấm bằng ngưỡng ≥ 30. Thêm biến thể báo cáo **S3** (9.1-4) và **move_mbr 1,5** (9.1-1). Không đổi cấu hình chính, không mở TEST.
+3. `results_corven.py` (hoặc script nhỏ mới): C2' cho **bộ gốc vòng 1** CORVEN trên TRAIN (ô đang in −0,29R). Báo C2 cũ / C2' / R thật / C1 trong một bảng.
+4. Áp 9.1-3 (a) hoặc (b) theo đúng số đo được — **ghi rõ nhánh nào và vì sao** vào `RESULTS-CORVEN.md` mục mới "Đính chính C2 2026-11-09". Nhánh (b)
+   thì sửa 4 chỗ chuỗi, `./build.sh`, chạy test C#, deploy; dán kết quả build/test vào báo cáo.
+
+**B. Mổ SL vòng 1 — F7, F10 (+ F1 để xem).**
+1. `plot_follow.py`: với mỗi lệnh → `report/follow_shots/<combo>/SL_<idx_c>.png` / `TP_<idx_c>.png` (F7, F10: mọi SL + 5 TP rải đều theo thời gian;
+   F1: cả 11 lệnh). Vẽ bằng `plot_corven.plot_trade` (trước 40 / sau 30 nến), thêm: hộp range + cạnh E, nến ref (đóng ngoài), nến x, nến hồi, nến CF,
+   mức SL/TP, ô trap/bóng nếu cờ bật. Tiêu đề ảnh: combo · idx · UTC + giờ VN · side · leg · cờ · R. **Không in nhãn máy lên ảnh.**
+2. `mo_sl_follow.py`: 7 nhãn (bỏ `TIN`), ưu tiên từ trên xuống, 1 nhãn/lệnh, tính cho **mọi** lệnh SL và TP của F7, F10, F0 ⇒ `report/_mo_sl_follow.csv`
+   (combo, idx_c, outcome, r, nhãn, các số đo nền của nhãn) và bảng % SL / % TP theo nhãn trong `report/MO-SL-FOLLOW.md` mục "Nhãn máy"; nhãn nào đạt
+   5.3 (≥ 40 % SL và ≤ 20 % TP) in đậm. F0 đưa vào để biết nhãn đó là đặc điểm chung của Follow hay riêng của combo.
+3. `MO-SL-FOLLOW.md` để trống mục "Nhãn tay của Fable" và "Luật đề xuất" — Fable điền vòng sau.
+
+**C. Cập nhật** `RESULTS-FOLLOW.md` (bảng chính thêm cột C2'), `tpo/EVIDENCE-DRILLS.md` bảng cuối (F1…F10 trạng thái: "đo TRAIN, chưa có lợi thế /
+chưa đo được (n<30)"), commit tiếng Việt, push, báo hash. Chỉ `git add` file của mình (có tester khác đang làm trong `tools/TesterGd4/`, `tests/ui-out/`).
+
+**Nhắc người học (không chặn Opus):** xuất **GCZ26 M1 từ 22/10 → nay** (Footprint Export, cùng định dạng `fp_*_90d`) — đó là nơi duy nhất mọi luật
+rút từ mổ SL được xác nhận, và là nơi kiểm máy có bắt đúng ca ảnh gốc (mục 4.9).

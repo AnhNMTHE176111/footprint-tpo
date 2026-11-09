@@ -335,9 +335,14 @@ static partial class Program
             int t = Add(bars, TT + 50, TT + 52, TT + 28, TT + 33);         // râu chạm vùng ± tol lần đầu ⇒ mốc stacked hợp lệ
             int ct = Add(bars, TT + 33, TT + 35, TT + 15, TT + 17);        // đóng dưới mép dưới vùng ⇒ CloseThrough
             int af = Add(bars, TT + 17, TT + 26, TT + 16, TT + 24);
-            (m, cs) = RunM(bars);
-            Check(HasB(cs, bc, t, "stacked", z), "vùng stacked trong cú đẩy làm mốc khi test lần đầu");
+            var cfgZ = new CorvenCfg { BBoMocStacked = false };      // cơ chế vùng stacked (corven-4 trở về trước)
+            (m, cs) = RunM(bars, cfgZ);
+            Check(HasB(cs, bc, t, "stacked", z), "vùng stacked trong cú đẩy làm mốc khi test lần đầu (cờ corven-5 tắt)");
             Check(!HasB(cs, bc, ct, "stacked", z) && !HasB(cs, bc, af, "stacked", z), "đóng xuyên mép xa ⇒ vùng hết làm mốc");
+            (_, cs) = RunM(bars);
+            Check(!cs.Any(c => c.The == 'B' && c.InstFb == bc && c.Cf == t), "corven-5: Break không còn mốc vùng stacked ⇒ không ra ứng viên ở nến test vùng");
+            (_, cs) = RunM(bars, CorvenCfg.V1());
+            Check(HasB(cs, bc, t, "stacked", z), "corven-1 (V1): vẫn ra ứng viên mốc stacked");
 
             bars = BaseBars();
             rf = Add(bars, TT - 8, TT + 12, TT - 10, TT + 8);
@@ -346,7 +351,7 @@ static partial class Program
             bc = Add(bars, TT + 30, TT + 60, TT + 30, TT + 58);
             Add(bars, TT + 58, TT + 75, TT + 55, TT + 70); Add(bars, TT + 70, TT + 85, TT + 66, TT + 80); Add(bars, TT + 80, TT + 82, TT + 60, TT + 65);
             t = Add(bars, TT + 65, TT + 66, TT + 30, TT + 36);
-            (m, cs) = RunM(bars);
+            (m, cs) = RunM(bars, new CorvenCfg { BBoMocStacked = false });
             Check(!HasB(cs, bc, t, "stacked", z), "vùng đã bị chạm trước nhịp test ⇒ vứt (CORVEN 0:20:12)");
         }
         Console.WriteLine("[C9] Cửa sổ test W = 3: chạm ở nến thứ 4 trước CF không tính");
@@ -399,13 +404,22 @@ static partial class Program
         const int Cut = 51318, Deny = 3697;    // nến cuối TRAIN (2026-09-15) · 4 phiên mỏng đầu file (Python `good`)
         var (tb, tl) = CorvenData.Load(prefix, Cut);
 
-        Console.WriteLine("[C12] Hồi quy TRAIN trên file 90d (corven-4): 374 lệnh = Python cp_live (thế A 38, thế B 336)");
+        Console.WriteLine("[C12] Hồi quy TRAIN trên file 90d (corven-5): 266 lệnh = Python cp_live (Fail Break 37, Break 229)");
         var (engT, _) = CorvenData.Run(tb, tl, 0.1, Deny);
         var sg = engT.Signals;
-        Check(sg.Count == 374, "374 lệnh TRAIN", sg.Count.ToString());
-        Check(sg.Count(x => x.Setup == 'A') == 38 && sg.Count(x => x.Setup == 'B') == 336, "thế A 38 · thế B 336", $"{sg.Count(x => x.Setup == 'A')}/{sg.Count(x => x.Setup == 'B')}");
-        Check(sg.Count(x => x.Outcome == "TP") == 130 && sg.Count(x => x.Outcome == "SL") == 241, "130 TP · 241 SL · 3 TIME (= Python cp_live)", $"{sg.Count(x => x.Outcome == "TP")}/{sg.Count(x => x.Outcome == "SL")}");
+        Check(sg.Count == 266, "266 lệnh TRAIN", sg.Count.ToString());
+        Check(sg.Count(x => x.Setup == 'A') == 37 && sg.Count(x => x.Setup == 'B') == 229, "Fail Break 37 · Break 229", $"{sg.Count(x => x.Setup == 'A')}/{sg.Count(x => x.Setup == 'B')}");
+        Check(sg.Count(x => x.Outcome == "TP") == 95 && sg.Count(x => x.Outcome == "SL") == 169, "95 TP · 169 SL · 2 TIME (= Python cp_live)", $"{sg.Count(x => x.Outcome == "TP")}/{sg.Count(x => x.Outcome == "SL")}");
         Check(sg[0].BarIdx == 4050 && sg[0].Signs == "kiệt sức: kiệt sức đỉnh (Ask 0) @4084,2 (nến 4048) | stacked: stacked sell 3 mức 4083,2–4083,4 (nến 4050)", "lệnh đầu: nến 4050, chuỗi dấu hiệu đúng định dạng Python", sg[0].Signs);
+
+        Console.WriteLine("[V5-2] corven-5: nhiều Break cùng nến xác nhận ⇒ gán lệnh cho range có nến đóng ngoài MUỘN nhất (ca thật 2026-09-01 07:29 UTC, nến 36957: range 641 ref 36950 và 642 ref 36951)");
+        {
+            var s5 = sg.FirstOrDefault(x => x.BarIdx == 36957);
+            Check(s5 != null && Near(s5.Sl, 4477.8, 1e-6) && Near(s5.Tp, 4467.9, 1e-6), "mặc định: SL 4477,8 · TP 4467,9 (= Python gan_range_gan_nhat, range ref 36951)", s5 == null ? "không có" : $"{s5.Sl} {s5.Tp}");
+            var (eOld, _) = CorvenData.Run(tb, tl, 0.1, Deny, cfg: new CorvenCfg { GanRangeGanNhat = false });
+            var s5o = eOld.Signals.FirstOrDefault(x => x.BarIdx == 36957);
+            Check(s5o != null && Near(s5o.Sl, 4479.9, 1e-6) && Near(s5o.Tp, 4463.7, 1e-6), "cờ tắt (thứ tự rid): SL 4479,9 · TP 4463,7 (range ref 36950) — khác nhau", s5o == null ? "không có" : $"{s5o.Sl} {s5o.Tp}");
+        }
 
         Console.WriteLine("[C11] Chạy một mạch = chạy từng nến · giá ×10 (bước giá ×10) ra cùng tín hiệu");
         {

@@ -1,5 +1,5 @@
 // Unit test corven-2 (4 sửa đổi người học 2026-11-09, research/report/VARIANTS-NGUOI-HOC-2026-11-09.md) = setup_corven.cp_live().
-// Mỗi luật: bộ mặc định (corven-4) và CorvenCfg.V1() (corven-1) cho kết quả ngược nhau trên cùng một ca.
+// Mỗi luật: bộ mặc định (corven-5) và CorvenCfg.V1() (corven-1) cho kết quả ngược nhau trên cùng một ca.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,7 +12,7 @@ static partial class Program
     static void TestsCorven2()
     {
         Console.WriteLine("[V2-0] Phiên bản");
-        Check(CorvenParams.LogicVersion == "corven-4", "LogicVersion = corven-4");
+        Check(CorvenParams.LogicVersion == "corven-5", "LogicVersion = corven-5");
 
         Console.WriteLine("[V2-1] Trap trong nhịp hồi (thế B sell): ô Ask 20 ở nến hồi 13 @4126,8, CF đóng 4126,6 dưới ô");
         {
@@ -98,6 +98,8 @@ static partial class Program
             var (b, l) = CorvenData.Load(prefix);
             var (eng, _) = CorvenData.Run(b, l, 0.1);
             var day = eng.Signals.Where(x => x.Time.Date == new DateTime(2026, 11, 9)).ToList();
+            Check(!day.Any(x => x.Time == new DateTime(2026, 11, 9, 0, 43, 0, DateTimeKind.Utc)), "corven-5: lệnh Break buy 07:43 VN 09/11 (mốc vùng stacked, 4107,9) không còn");
+            Check(!eng.Signals.Any(x => x.Time == new DateTime(2026, 11, 6, 16, 8, 0, DateTimeKind.Utc)), "corven-5: lệnh Break buy 23:08 VN 06/11 (mốc vùng stacked 4070,8–4071,0, 4072,9) không còn");
             Check(!day.Any(x => x.Time == new DateTime(2026, 11, 9, 3, 11, 0, DateTimeKind.Utc)), "corven-4: lệnh B sell 10:11 VN (nhịp hồi xa cú phá) không còn");
             var s = day.FirstOrDefault(x => x.Time == new DateTime(2026, 11, 9, 4, 26, 0, DateTimeKind.Utc));
             Check(s != null && s.Setup == 'B' && s.Side == 1 && Near(s.Entry, 4132.3, 1e-6) && Near(s.Sl, 4129.1, 1e-6) && Near(s.Tp, 4138.7, 1e-6) && s.Zone == "canh",

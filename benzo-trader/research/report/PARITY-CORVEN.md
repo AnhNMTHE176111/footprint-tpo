@@ -1,4 +1,4 @@
-# Parity Python ↔ C# — setup CORVEN (corven-4, setup_corven.cp_live())
+# Parity Python ↔ C# — setup CORVEN (corven-5, setup_corven.cp_live())
 
 > Opus, GĐ3 (plan mục 10.6). `research/parity_corven.py` chạy `setup_corven.run_gd1` (chuẩn) và `tools/ReplayCorven` (mã C# sản phẩm: BenzoEngine + DetectorCorven + RangeLogic/StackedImbalance/ExhaustionLogic nối nguồn) trên `fp_GCZ26_XCEC_Time_20260723-20261021_90d`. Phiên mỏng đầu file (nến < 3697) không vào lệnh ở cả hai bên.
 
@@ -8,14 +8,14 @@
 
 | Phép so | khớp / tổng |
 |---|---|
-| **TRAIN lệnh (kể cả kết cục, R, nến thoát)** — C# chạy phần TRAIN | **374/374** |
-| TRAIN ứng viên (mọi CF qua ②: dấu hiệu, cổng, entry/SL/TP, R sẵn) | 11591/11591 |
-| **TRAIN lệnh (kể cả kết cục)** — C# chạy TOÀN file một lần | **374/374** |
-| TRAIN ứng viên — C# toàn file | 11591/11591 |
-| **TEST lệnh — CHỈ định danh** | **239/239** |
-| TEST ứng viên — chỉ định danh | 8408/8408 |
+| **TRAIN lệnh (kể cả kết cục, R, nến thoát)** — C# chạy phần TRAIN | **266/266** |
+| TRAIN ứng viên (mọi CF qua ②: dấu hiệu, cổng, entry/SL/TP, R sẵn) | 6961/6961 |
+| **TRAIN lệnh (kể cả kết cục)** — C# chạy TOÀN file một lần | **266/266** |
+| TRAIN ứng viên — C# toàn file | 6961/6961 |
+| **TEST lệnh — CHỈ định danh** | **180/180** |
+| TEST ứng viên — chỉ định danh | 5230/5230 |
 
-Hồi quy TRAIN: Python 374 lệnh (thế A 38, thế B 336) = C# 374 lệnh.
+Hồi quy TRAIN: Python 266 lệnh (thế A 37, thế B 229) = C# 266 lệnh.
 
 ## Lệch có chủ đích
 

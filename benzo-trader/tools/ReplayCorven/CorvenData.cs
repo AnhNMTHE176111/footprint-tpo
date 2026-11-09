@@ -82,9 +82,9 @@ namespace BenzoTraderNs
         /// <summary>Chạy engine TỪNG NẾN (Advance(i) lần lượt) rồi FinishSession. onBar(i, det) gọi sau mỗi nến (lấy ứng viên).</summary>
         public static (BenzoEngine eng, DetectorCorven det) Run(List<BarData> bars, List<LevelVol>[] levels, double tick = 0.1,
                                                               int denyBelow = 0, bool blockUs = true, SignalCache cache = null,
-                                                              Action<int, DetectorCorven> onBar = null, bool oneShot = false)
+                                                              Action<int, DetectorCorven> onBar = null, bool oneShot = false, CorvenCfg cfg = null)
         {
-            var det = new DetectorCorven { BlockUsOpen = blockUs, AllowBar = i => i >= denyBelow };
+            var det = new DetectorCorven(cfg) { BlockUsOpen = blockUs, AllowBar = i => i >= denyBelow };
             var eng = new BenzoEngine("GCZ26", tick, cache, new ISetupDetector[] { det }) { GetLevels = i => levels[i] };
             eng.Bars.AddRange(bars);
             LastCancelled = 0;

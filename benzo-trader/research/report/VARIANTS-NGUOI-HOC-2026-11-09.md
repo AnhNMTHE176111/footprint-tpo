@@ -80,3 +80,34 @@ Opus chọn N=5: N1–N2 kém rõ; từ N3 trở lên chênh nhau trong mức nh
 
 Kết luận: ngang vào ngẫu nhiên, không có lợi thế đo được (hậu kiểm).
 Ca 09/11: lệnh sell 10:11 VN (nhịp hồi xa cú phá) không còn; lệnh buy 11:26 VN vào: B buy 4132,3 · SL 4129,1 · TP 4138,7 · mốc cạnh · "trap hồi, bóng đỏ 20 @4131,3" (Python và C# khớp).
+
+
+## corven-5: Break chỉ còn mốc cạnh vừa phá + gán lệnh cho range gần nhất (Opus quyết, người học duyệt; Sonnet implement)
+
+1. **Bỏ nhánh "vùng stacked làm mốc" của Break.** Break chỉ còn mốc cạnh vừa phá (chạm cạnh như cũ, hoặc hồi không chạm trong ≤ 5 nến). Stacked vẫn là DẤU HIỆU (③d). Cờ Python `b_bo_moc_stacked`, C# `CorvenParams.BBoMocStacked`.
+2. **Gán lệnh cho range gần nhất:** nhiều Break cùng nến xác nhận ⇒ xét range có nến đóng ngoài (ref) muộn nhất trước (Fail Break giữ thứ tự cũ). Cờ Python `gan_range_gan_nhat`, C# `GanRangeGanNhat`.
+
+Đo TRAIN 35 phiên (`research/variants_vung_stacked.py`, hậu xử lý ứng viên, Opus):
+
+| Biến thể (nhánh vùng stacked của Break) | n | R TB | nửa 1 | nửa 2 | C2' | lệnh mốc vùng | R lệnh vùng | R lệnh cạnh |
+|---|---|---|---|---|---|---|---|---|
+| corven-4 (hiện tại) | 374 | −0,023 | −0,054 | +0,007 | −0,047 | 116 | −0,057 | −0,008 |
+| gán range gần nhất | 372 | −0,025 | −0,054 | +0,004 | −0,049 | 110 | −0,055 | −0,013 |
+| vùng cách cạnh ≤ 0 biên độ | 267 | +0,012 | −0,018 | +0,040 | −0,012 | 1 | −1,100 | +0,017 |
+| vùng cách cạnh ≤ 0.5 biên độ | 269 | −0,007 | −0,041 | +0,024 | −0,001 | 5 | −0,491 | +0,002 |
+| vùng cách cạnh ≤ 1 biên độ | 278 | −0,009 | −0,088 | +0,064 | −0,009 | 12 | −0,334 | +0,006 |
+| vùng cách cạnh ≤ 1.5 biên độ | 287 | −0,001 | −0,066 | +0,058 | −0,009 | 21 | −0,083 | +0,005 |
+| vùng cách cạnh ≤ 2 biên độ | 303 | −0,010 | −0,042 | +0,021 | −0,045 | 38 | −0,070 | −0,002 |
+| vùng cách cạnh ≤ 3 biên độ | 324 | −0,054 | −0,084 | −0,026 | −0,046 | 61 | −0,216 | −0,016 |
+| vùng cách cạnh ≤ 4 biên độ | 345 | −0,049 | −0,074 | −0,024 | −0,061 | 83 | −0,163 | −0,012 |
+| vùng cách cạnh ≤ 6 biên độ | 362 | −0,012 | −0,039 | +0,015 | −0,040 | 103 | −0,011 | −0,012 |
+| vùng sinh ≤ 5 nến sau phá | 297 | −0,010 | −0,048 | +0,026 | −0,019 | 32 | −0,078 | −0,001 |
+| vùng sinh ≤ 10 nến sau phá | 328 | −0,026 | −0,081 | +0,028 | −0,045 | 64 | −0,095 | −0,009 |
+| có nến hồi chạm vùng trước nến vào | 310 | −0,026 | −0,069 | +0,016 | −0,038 | 46 | −0,123 | −0,009 |
+| bỏ hẳn nhánh vùng stacked | 266 | +0,017 | −0,018 | +0,048 | −0,010 | 0 | — | +0,017 |
+
+Opus chọn bỏ hẳn nhánh vùng stacked: cả nhánh âm (116 lệnh −0,06R); mọi mức giới hạn khoảng cách / tuổi vùng / nến hồi chạm vùng đều nằm giữa, không mức nào hơn bỏ hẳn; luật đơn giản nhất, đúng ý người học "mốc là cạnh vừa phá".
+
+Mã thật (`cp_live()`): chỉ luật 1 = 266 lệnh, +0,0165R, nửa −0,018 / +0,048, C2' −0,0096 (khớp dòng "bỏ hẳn" ở trên đến chữ số cuối). **Luật 1 + 2 (corven-5): 266 lệnh (Fail Break 37, Break 229), R TB +0,016, WR 36 % (95 TP / 169 SL / 2 TIME), hai nửa −0,018 / +0,048, vào ngẫu nhiên sau CF −0,013** ⇒ hơn vào ngẫu nhiên nhưng nhỏ, chưa đủ chắc (hậu kiểm nhiều tổ hợp). Luật 2 gần như không đổi số (1 ca trong TRAIN: nến 36957, 01/09 07:29 UTC, SL 4477,8 thay vì 4479,9).
+
+Ca thật: 09/11 07:43 VN (buy 4107,9 mốc stacked) và 06/11 23:08 VN (buy 4072,9 mốc stacked 4070,8–4071,0) không còn; 09/11 11:26 VN (buy 4132,3 · SL 4129,1 · TP 4138,7) vẫn còn — Python và C# khớp.

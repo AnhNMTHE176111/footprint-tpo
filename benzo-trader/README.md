@@ -1,9 +1,9 @@
-# Benzo Trader — setup CORVEN (corven-4) trên nến M1 đã đóng
+# Benzo Trader — setup CORVEN (corven-5) trên nến M1 đã đóng
 
 **Setup là gì:** một setup "follow theo footprint" của CORVEN, cơ khí hoá theo `plans/BENZO-CORVEN-plan.md` — có range (Range Box)
 ⇒ chờ giá về mốc gần (**Fail Break** = thế A: fail break cạnh range; **Break** = thế B: phá range rồi giữ được) ⇒ cần **≥ 2 loại dấu hiệu** order flow
 (Δ, bóng, kiệt sức, stacked, trap) ⇒ vào ở giá đóng nến xác nhận, SL sau cực trị cú thủng/mốc, TP 2R.
-**Số backtest (35 phiên TRAIN, file 90 ngày GCZ26) — corven-4:** 374 lệnh (thế A 38, thế B 336), **−0,02R/lệnh**, WR 35 %, hai nửa −0,05 / +0,01; vào ngẫu nhiên sau CF −0,05R ⇒ **ngang vào ngẫu nhiên** (hậu kiểm). (corven-3: 399 lệnh +0,02R; (corven-2: 333 lệnh −0,07R; corven-1: 97 lệnh −0,29R.) Chi tiết: `research/report/VARIANTS-NGUOI-HOC-2026-11-09.md`.
+**Số backtest (35 phiên TRAIN, file 90 ngày GCZ26) — corven-5:** 266 lệnh (Fail Break 37, Break 229), **+0,02R/lệnh**, WR 36 %, hai nửa −0,02 / +0,05; vào ngẫu nhiên sau CF −0,01R ⇒ **hơn vào ngẫu nhiên nhưng chưa đủ chắc** (hậu kiểm). (corven-4: 374 lệnh −0,02R; corven-3: 399 lệnh +0,02R; corven-2: 333 lệnh −0,07R; corven-1: 97 lệnh −0,29R.) Chi tiết: `research/report/VARIANTS-NGUOI-HOC-2026-11-09.md`.
 
 Bốn setup A/B/C/D cũ đã bỏ (không setup nào có lợi thế đo được) — kết quả cũ: `research/report/TONG-KET-VONG-1-2.md`.
 
@@ -34,7 +34,7 @@ PYTHONIOENCODING=utf-8 python research/parity_corven.py   # parity Python ↔ C#
 | `research/` | Python chuẩn: `setup_corven.py`, `of_signals.py`, `kernel.py`, `results_corven.py`, `controls_corven.py`, `sweep_corven.py`, `parity_corven.py`; file setup cũ ở `research/_old/` (không build, không test) |
 
 ## Settings (plan 10.2 — CHỈ công tắc, không có ngưỡng số)
-Lệch giờ · Telegram: bật / bot token / chat id / gửi thử · **Bật setup CORVEN (chạy thử — backtest −0,02R/lệnh, ngang vào ngẫu nhiên)** [BẬT] ·
+Lệch giờ · Telegram: bật / bot token / chat id / gửi thử · **Bật setup CORVEN (chạy thử — backtest +0,02R/lệnh, chưa đủ chắc)** [BẬT] ·
 **Chặn 19:20–20:30 VN (mốc neo Mỹ)** [BẬT] · **Hiện range** [BẬT] · **Hiện dấu hiệu đã đếm** [BẬT] · Đặt lại thống kê · Hiện lại toàn bộ thống kê · Hiện bảng [BẬT].
 - **TẮT setup = tạm ngừng dò; lịch sử đã có vẫn hiện; nến lúc tắt được dò bù khi bật lại / nạp lại chart.** (Nến chạy lúc tắt không được
   niêm phong; lệnh đã niêm phong vẫn vẽ, vẫn đếm, không gửi Telegram. Công tắc không nằm trong khoá cache — đổi khoá cũng là xoá lịch sử.)
@@ -56,6 +56,7 @@ và mỗi bộ tham số là một chuỗi forward test riêng (n live ≈ 3 l�
 - **⛔:** kiệt sức chống hướng chưa bị quét (5 nến) · range chồng range (thế A, chỉ từ FailBreak thứ 2). (corven-3 đã bỏ "nhịp đẩy do quét stop".)
 - **corven-3 (người học chốt 2026-11-09):** thế B không cần nhịp hồi chạm cạnh (đủ ≥ 1 nến hồi, mọi nến đóng ngoài range, CF đóng vượt nến hồi) · thế B bỏ luật R sẵn ≥ 1,7 (TP 2R) · thêm dấu hiệu "trap trong nhịp hồi" (ô ngược phe ≥ 3× nền và ≥ 10 ở nến hồi, CF đóng vượt ô đó).
 - **corven-3:** SL thế B mốc cạnh = ngay sau cạnh vừa phá: min(đáy cửa sổ, cạnh) − đệm (buy), bỏ phần trừ dung sai cạnh.
+- **corven-5 (Opus quyết 2026-11-09):** Break bỏ nhánh "vùng stacked làm mốc" (chỉ còn mốc cạnh vừa phá; stacked vẫn là dấu hiệu) · nhiều Break cùng nến xác nhận ⇒ gán range có nến đóng ngoài muộn nhất trước.
 - **Tên hiển thị (2026-11-09):** thế A → "Fail Break", thế B → "Break" (bảng chart, nhãn mũi tên, Telegram, caption) — định nghĩa một chỗ `BenzoCore.TheName`. Mã nội bộ 'A'/'B' giữ nguyên trong cache/CSV/khoá (không đổi định dạng ⇒ cache cũ vẫn nạp; nhãn cũ "A buy · …" trong cache được đổi tiền tố lúc vẽ).
 - **corven-4 (Opus quyết 2026-11-09):** nhịp hồi không chạm cạnh phải thuộc cú phá — nến hồi đầu tiên cách nến phá (CloseOutside) ≤ 5 nến, nếu không thì không tính là mốc cạnh.
 - Lệnh còn mở qua khoảng trống > 30′ đóng `TIME` tại giá đóng nến cuối phiên.
@@ -76,7 +77,7 @@ và mỗi bộ tham số là một chuỗi forward test riêng (n live ≈ 3 l�
 - Δ "thẳng" (`max_delta`) không dùng ở cả Python lẫn C# (export lịch sử ghi `max_delta = delta`).
 
 ## Cách đề xuất sửa tín hiệu (vòng "review → update")
-1. Xem `candidates_<mã>_1m_corven-4.csv` (ứng viên bị loại + cổng chặn) và `signals_…csv` (cột `mfe_r/mae_r`) để tìm chỗ "thấy đẹp mà máy không vào" hoặc ngược lại.
+1. Xem `candidates_<mã>_1m_corven-5.csv` (ứng viên bị loại + cổng chặn) và `signals_…csv` (cột `mfe_r/mae_r`) để tìm chỗ "thấy đẹp mà máy không vào" hoặc ngược lại.
 2. Viết đề xuất thành **luật có số** (không phải "nhìn thấy"), sửa `research/setup_corven.py` trước.
 3. Đo lại trên TRAIN cùng 2 đối chứng C1/C2 (`results_corven.py`, `controls_corven.py`) — đề xuất phải hơn đối chứng, không chỉ hơn số cũ.
 4. Đạt mới sửa C#, tăng `LogicVersion` (`corven-4`…) ⇒ cache cũ tự bỏ; chạy unit test + `parity_corven.py` phải 100 %.
@@ -85,7 +86,7 @@ và mỗi bộ tham số là một chuỗi forward test riêng (n live ≈ 3 l�
 ## Vòng đời, cache, chống tính lại
 - Chỉ xử lý nến **đã đóng** (`Count−2`), mỗi nến dò **một lần**; `ClosedBars` chặn nhìn nến sau `closedIdx`.
 - **Niêm phong** `%LOCALAPPDATA%\BenzoTrader\cache_<mã>_<aggName>_<phút>m.jsonl` (tên có khung — sửa bug cũ dùng `Aggregation.Title`).
-  Khoá phiên bản = `corven-4-us<0|1>` (theo công tắc chặn giờ); "Hiện range"/"Hiện dấu hiệu" chỉ vẽ nên không vào khoá.
+  Khoá phiên bản = `corven-5-us<0|1>` (theo công tắc chặn giờ); "Hiện range"/"Hiện dấu hiệu" chỉ vẽ nên không vào khoá.
   **Guard khớp nến:** mỗi dòng `sig` lưu H/L nến CF; khi gắn lại, giá vào lệch > nửa tick hoặc H/L lệch > 1 tick ⇒ **bỏ toàn bộ cache**,
   dò lại từ đầu, ghi 1 dòng `error_log.txt`. File cache cũ `cache_<mã>_<Title>.jsonl` của A/B/C/D tự xoá khi gặp.
 - 1 lệnh mở cùng lúc; chạm cả SL lẫn TP cùng nến ⇒ SL; chi phí 0,2 giá/lệnh.
@@ -95,10 +96,10 @@ và mỗi bộ tham số là một chuỗi forward test riêng (n live ≈ 3 l�
 
 ## Bảng trên chart (4 dòng, dòng 4 luôn hiện)
 ```
-BENZO CORVEN corven-4 · N lệnh · WR x % · ΣR
+BENZO CORVEN corven-5 · N lệnh · WR x % · ΣR
 Fail Break · n · WR x % · ΣR
 Break · n · WR x % · ΣR
-Backtest 35 phiên: −0,02R/lệnh, ngang vào ngẫu nhiên (−0,05R) · chạy thử, không phải khuyến nghị
+Backtest 35 phiên: +0,02R/lệnh, hơn vào ngẫu nhiên (−0,01R) chưa đủ chắc · chạy thử, không phải khuyến nghị
 ```
 Trên chart: hộp range (xanh lơ = ACTIVE, chấm = PENDING, xám đứt = BROKEN), đường đứt tại cạnh vừa phá của thế B đang sống,
 mũi tên + hộp SL/TP tại nến CF, nhãn ngắn `Fail Break sell · Δ ngược + bóng đỏ 18` (tắt bằng "Hiện dấu hiệu đã đếm").
@@ -109,7 +110,7 @@ mũi tên + hộp SL/TP tại nến CF, nhãn ngắn `Fail Break sell · Δ ngư
 Mốc: cạnh dưới 4127,4 vừa phá (range 4127,3–4132,5)
 Dấu hiệu (2): Δ ngược giá ΣΔ -62/2 nến · bóng đỏ 18 @4127,3 (3,6× nền)
 CF 00:23 thân 0,6 giá · Vào 4126,6 · SL 4129,1 (2,5) · TP 4121,6 (2R, R sẵn 1,9)
-⚠ Chưa có lợi thế đo được (−0,02R/lệnh, 35 phiên)
+⚠ Chưa có lợi thế đo được (+0,02R/lệnh, 35 phiên)
 
 ✅ CORVEN Break +1,9R · 00:23→00:32          (R đã trừ chi phí 0,2; TIME ghi thêm "(hết phiên)")
 ⚪ CORVEN Fail Break 03:59 huỷ — nến xác nhận là nến cuối phiên
@@ -119,10 +120,10 @@ Chống trùng: lần quét đầu sau reload chỉ nạp id; chỉ bắn tín h
 Ảnh chụp vùng chart (cửa sổ Optimus Flow phải đang hiện, không thu nhỏ). Log `tele_log.txt` (che token), lỗi code `error_log.txt`.
 
 ## CSV (thư mục `%LOCALAPPDATA%\BenzoTrader\`)
-- **Lệnh** `signals_<mã>_1m_corven-4.csv`:
+- **Lệnh** `signals_<mã>_1m_corven-5.csv`:
   `time_utc,time_vn,the,side,range_lo,range_hi,b_from_exhausted,moc,n_signs,signs,entry,sl,tp,risk,r_avail,outcome,exit_time,r,mfe_r,mae_r,phien`
   — `signs` đúng **từng byte** cột `dau_hieu` của Python (kể cả dấu trừ ASCII `-` trong "Δ to -36", "ΣΔ -62" — để parity so thẳng chuỗi); `mfe_r/mae_r` = chạy xa nhất thuận/nghịch (theo R) từ vào tới đóng; `phien` = Á/Âu/Mỹ.
-- **Ứng viên bị loại** `candidates_<mã>_1m_corven-4.csv` (chỉ live, nến vừa đóng): `time_utc,the,side,moc,gate,detail` —
+- **Ứng viên bị loại** `candidates_<mã>_1m_corven-5.csv` (chỉ live, nến vừa đóng): `time_utc,the,side,moc,gate,detail` —
   `gate` ∈ `③ 0 loại`, `③ 1 loại`, `④ CF`, `④ R<1,7`, `④ trần SL`, `⛔ veto kiệt sức`, `⛔ quét stop`, `⛔ chồng range`, `chặn giờ`,
   `cuối phiên`, `tin USD`, `thế đã có lệnh`, `đang có lệnh`.
   (`thế đã có lệnh` = luật 4d "1 lệnh/thế, 1 lệnh/(range, cạnh, thế)"; `đang có lệnh` = đang có lệnh mở. Danh sách này có unit test so với mã.)

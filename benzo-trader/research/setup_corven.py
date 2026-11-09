@@ -93,14 +93,17 @@ class CP:
     sl_b_canh_sat: bool = False    # corven-3: thế B mốc cạnh — SL = min(đáy cửa sổ, cạnh) − đệm (bỏ trừ dung sai cạnh)
     hoi_trong_n_nen: bool = False  # corven-4: nhịp hồi (không chạm cạnh) phải thuộc cú phá — nến hồi đầu tiên cách nến phá (b.ref) ≤ hoi_max_nen (=5) nến
     hoi_max_nen: int = 5
+    b_bo_moc_stacked: bool = False  # corven-5: Break bỏ nhánh 'vùng stacked làm mốc' (chỉ còn mốc cạnh vừa phá); stacked làm DẤU HIỆU giữ nguyên
+    gan_range_gan_nhat: bool = False  # corven-5: nhiều Break cùng nến xác nhận ⇒ xét range có nến đóng ngoài (ref) MUỘN nhất trước
 
 
-LIVE_VERSION = 'corven-4'
+LIVE_VERSION = 'corven-5'
 
 
 def cp_live() -> 'CP':
-    """Bộ tham số đang chạy trong indicator (LogicVersion corven-4)."""
-    return CP(hoi_khong_cham=True, bo_quet_stop=True, b_bo_rmin=True, trap_hoi=True, sl_b_canh_sat=True, hoi_trong_n_nen=True)
+    """Bộ tham số đang chạy trong indicator (LogicVersion corven-5)."""
+    return CP(hoi_khong_cham=True, bo_quet_stop=True, b_bo_rmin=True, trap_hoi=True, sl_b_canh_sat=True, hoi_trong_n_nen=True,
+              b_bo_moc_stacked=True, gan_range_gan_nhat=True)
 
 
 # =====================================================================================================
@@ -509,7 +512,7 @@ class Step2Machine:
         tz = self.tol_now(j)
         pz = False
         why = []
-        for z in b.zones:
+        for z in ([] if self.cp.b_bo_moc_stacked else b.zones):
             if j - z['bar'] > self.cp.age_b or z['bar'] >= j:
                 continue
             if z['first_ct'] is not None and z['first_ct'] <= j:
@@ -839,7 +842,10 @@ def build_candidates(m: Step2Machine, feat: Feat, cp: CP) -> List[Cand]:
             tl = [b.E] + ([b.piv_at[j]] if b.piv_at.get(j) is not None else [])
             out.append(Cand(j, 'B', b.D, b.rid, b, (b.rid, b.D, 'B'), b.ref, max(j - m.cp.win_b + 1, b.ref + 1), mocs, tl,
                             exhausted=b.exhausted))
-    out.sort(key=lambda c: (c.cf, THE_ORDER[c.the], c.rid))
+    if cp.gan_range_gan_nhat:   # corven-5: Break — range có nến đóng ngoài muộn nhất trước; Fail Break giữ thứ tự cũ (rid)
+        out.sort(key=lambda c: (c.cf, THE_ORDER[c.the], -c.ref if c.the == 'B' else c.rid))
+    else:
+        out.sort(key=lambda c: (c.cf, THE_ORDER[c.the], c.rid))
     return out
 
 

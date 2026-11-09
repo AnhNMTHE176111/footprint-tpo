@@ -434,3 +434,12 @@ Python: `CP.hoi_trong_n_nen` / `hoi_max_nen = 5`, bật trong `cp_live()`, `LIVE
 Đo TRAIN 35 phiên: 399 lệnh +0,02R → 374 lệnh (A 38, B 336) −0,023R, hai nửa −0,054 / +0,007, vào ngẫu nhiên sau CF −0,047R ⇒ ngang ngẫu nhiên, chưa có lợi thế; hậu kiểm.
 Ca 09/11: sell 10:11 biến mất, buy 11:26 (4132,3 · SL 4129,1 · TP 4138,7) vào; Python = C#.
 Kiểm: C# 164/164, pytest 114, parity TRAIN 374/374, Gd4 99/99, build + deploy. Số liệu + bảng quét N: `research/report/VARIANTS-NGUOI-HOC-2026-11-09.md`.
+
+## 15. corven-5 (2026-11-09) — Opus quyết, Sonnet implement
+
+Người học duyệt "triển khai luôn" sau khi Opus đo nhánh vùng stacked của Break (116 lệnh, −0,06R, hai ca thật 06/11 23:08 và 09/11 07:43 đều từ nhánh này).
+(1) Break bỏ nhánh "vùng stacked làm mốc": chỉ còn mốc cạnh vừa phá (chạm cạnh, hoặc hồi không chạm trong ≤ 5 nến); stacked vẫn là dấu hiệu. Cờ `b_bo_moc_stacked` / `BBoMocStacked`.
+(2) Gán lệnh cho range gần nhất: cùng nến xác nhận, Break xét range có ref muộn nhất trước; Fail Break giữ thứ tự cũ. Cờ `gan_range_gan_nhat` / `GanRangeGanNhat`.
+Đo TRAIN: 374 lệnh −0,023R → 266 lệnh (Fail Break 37, Break 229) +0,016R, hai nửa −0,018 / +0,048, vào ngẫu nhiên sau CF −0,013R ⇒ hơn nhưng chưa đủ chắc; hậu kiểm. `LogicVersion = "corven-5"`.
+Kiểm: C# 172/172 (thêm V5-2 ca thật 36957, test luật 1 trong C8, 2 ca thật 06/11 + 09/11), pytest 114, parity TRAIN 266/266, Gd4 90/90 (mất 9 kiểm vì không còn lệnh mốc stacked làm mẫu caption).
+Số liệu + bảng quét: `research/report/VARIANTS-NGUOI-HOC-2026-11-09.md`.

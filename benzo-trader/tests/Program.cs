@@ -86,6 +86,9 @@ static partial class Program
         var empty = BenzoCore.TableLines(BenzoCore.ComputeStats(new Signal[0]));
         Check(empty.Count == 4 && empty[3] == CorvenParams.BacktestLine, "dòng 4 LUÔN hiện kể cả khi chưa có lệnh");
         Check(CorvenParams.TeleWarn == "⚠ Chưa có lợi thế đo được (−0,07R/lệnh, 35 phiên)", "dòng cảnh báo Telegram đúng chữ");
+        Check(CorvenParams.Backtest(true) == "Backtest 35 phiên: +0,02R/lệnh, hơn vào ngẫu nhiên (−0,01R) chưa đủ chắc · chạy thử, không phải khuyến nghị" && CorvenParams.Warn(true) == "⚠ Chưa có lợi thế đo được (+0,02R/lệnh, 35 phiên)"
+              && CorvenParams.Backtest(false) == CorvenParams.BacktestLine && CorvenParams.Warn(false) == CorvenParams.TeleWarn, "nhãn theo chế độ SL kiểu cũ (bật = số corven-5) / tắt = nhãn corven-6");
+        Check(BenzoCore.TableLines(BenzoCore.ComputeStats(new Signal[0]), true)[3] == CorvenParams.BacktestLineOld && BenzoCore.TableLines(BenzoCore.ComputeStats(new Signal[0]))[3] == CorvenParams.BacktestLine, "bảng dòng 4 theo chế độ");
         // lint thuật ngữ (plan 4e): buy/sell giữ tiếng Anh, không "mua/bán", không "volatility"
         var all = new[] { CorvenParams.BacktestLine, CorvenParams.TeleWarn, ls[0], ls[1], ls[2] };
         Check(!all.Any(x => x.Contains(" mua") || x.Contains(" bán") || x.ToLower().Contains("volatility")), "lint thuật ngữ nhãn");
@@ -159,7 +162,7 @@ static partial class Program
               && !SignalCache.FitsBar(s, Bar(5, 99.5, 101, 99, 100.1), 0.1), "FitsBar: H lệch > 1 tick hoặc giá vào lệch > nửa tick ⇒ không khớp");
         Check(BenzoCore.CacheFileName("GCZ26", "Time", 1) == "cache_GCZ26_Time_1m.jsonl" && BenzoCore.CacheFileName("GCZ26", "Time", 15) != BenzoCore.CacheFileName("GCZ26", "Time", 1),
               "tên cache có số phút (M1 ≠ M15)");
-        Check(BenzoCore.CacheVersion() == "corven-6-sl5.0-f1-b1" && BenzoCore.CacheVersion(3.0, false, true) == "corven-6-sl3.0-f0-b1" && BenzoCore.CacheVersion(5.0, true, false) == "corven-6-sl5.0-f1-b0" && BenzoCore.CacheVersion(5.1) != BenzoCore.CacheVersion(), "khoá cache = LogicVersion + SL tối đa + công tắc Fail Break + công tắc Break (không còn hậu tố chặn giờ)");
+        Check(BenzoCore.CacheVersion() == "corven-6-sl5.0-f1-b1-old0" && BenzoCore.CacheVersion(3.0, false, true) == "corven-6-sl3.0-f0-b1-old0" && BenzoCore.CacheVersion(5.0, true, false) == "corven-6-sl5.0-f1-b0-old0" && BenzoCore.CacheVersion(5.0, true, true, true) == "corven-6-sl5.0-f1-b1-old1" && BenzoCore.CacheVersion(5.1) != BenzoCore.CacheVersion(), "khoá cache = LogicVersion + SL tối đa + công tắc Fail Break + công tắc Break + SL kiểu cũ (không còn hậu tố chặn giờ)");
         // plan 12.1-7c: RangeT0/RangeT1 round-trip; dòng cache cũ thiếu 2 trường vẫn nạp được (= 0 ⇒ không vẽ), guard không đổi
         string p7 = Tmp("cache7c.jsonl");
         var c7 = new SignalCache(p7, "v1");

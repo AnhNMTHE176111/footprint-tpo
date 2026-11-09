@@ -184,7 +184,9 @@ namespace BenzoTraderNs
         [InputParameter("Bật Break", 33)]
         public bool EnableBreak { get; set; } = true;
         [InputParameter("SL tối đa (giá)", 34, 0.5, 1000, 0.1, 1)]
-        public double SlMaxGia { get; set; } = CorvenParams.SlMaxGia;      // lệnh có SL (entry↔SL) > mức này ⇒ bỏ; đổi ⇒ tính lại
+        public double SlMaxGia { get; set; } = CorvenParams.SlMaxGia;
+        [InputParameter("SL kiểu cũ", 35)]
+        public bool SlKieuCu { get; set; } = false;       // BẬT = SL Break + trần SL như corven-5 (ghi đè corven-6; bỏ qua "SL tối đa")      // lệnh có SL (entry↔SL) > mức này ⇒ bỏ; đổi ⇒ tính lại
 
         // ======= trạng thái =======
         private sealed class BoxV { public DateTime T0, T1; public double Top, Bot; public int State; }   // 0 active, 1 pending, 2 broken
@@ -223,7 +225,7 @@ namespace BenzoTraderNs
         {
             Name = "Benzo Trader";
             Description = "Benzo Trader — setup CORVEN (corven-6) trên nến M1 đã đóng: range + mốc + ≥ 2 dấu hiệu order flow + nến xác nhận. "
-                        + "Chạy thử: backtest 35 phiên −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,09R) — không phải khuyến nghị. Cần Volume Analysis.";
+                        + "Chạy thử: backtest 35 phiên −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,09R) — không phải khuyến nghị. Bật \"SL kiểu cũ\" = SL + trần như corven-5 (+0,02R/lệnh). Cần Volume Analysis.";
             SeparateWindow = false;
         }
 
@@ -359,7 +361,7 @@ namespace BenzoTraderNs
                 ConfigTele();
                 if (_minutes != 1)
                 {   // plan 10.2: chỉ chạy trên nến 1 phút — không dựng engine, không tạo cache
-                    lock (_sync) _render = new RenderState { Lines = new List<string> { "Benzo CORVEN chỉ chạy trên chart M1", CorvenParams.BacktestLine } };
+                    lock (_sync) _render = new RenderState { Lines = new List<string> { "Benzo CORVEN chỉ chạy trên chart M1", CorvenParams.Backtest(SlKieuCu) } };
                     _lastN = n;
                     return;
                 }
@@ -367,14 +369,14 @@ namespace BenzoTraderNs
 
                 for (int attempt = 0; attempt < 2; attempt++)
                 {
-                    string key = BenzoCore.CacheVersion(SlMaxGia, EnableFailBreak, EnableBreak);
+                    string key = BenzoCore.CacheVersion(SlMaxGia, EnableFailBreak, EnableBreak, SlKieuCu);
                     if (_engine == null || _engine.Bars.Count > n - 1 || _builtKey != key)
                     {
                         _builtKey = key;
                         DeleteLegacyCache();
                         _cache = new SignalCache(Path.Combine(_dir, BenzoCore.CacheFileName(_symbol, _aggName, _minutes)), key);
                         _cache.Load();
-                        _det = new DetectorCorven(new CorvenCfg { SlMaxGia = SlMaxGia, BatFailBreak = EnableFailBreak, BatBreak = EnableBreak });   // chặn 19:20–20:30 VN luôn BẬT
+                        _det = new DetectorCorven(CorvenCfg.KieuCu_(SlKieuCu, new CorvenCfg { SlMaxGia = SlMaxGia, BatFailBreak = EnableFailBreak, BatBreak = EnableBreak }));   // chặn 19:20–20:30 VN luôn BẬT
                         _engine = new BenzoEngine(_symbol, tick, _cache, new ISetupDetector[] { _det })
                         {
                             IsNewsBlocked = IsNewsBlocked,
@@ -500,7 +502,7 @@ namespace BenzoTraderNs
             var rs = new RenderState
             {
                 Sigs = shown.Select(s => s.Clone()).ToList(),
-                Lines = BenzoCore.TableLines(st),
+                Lines = BenzoCore.TableLines(st, SlKieuCu),
                 Digits = _digits,
                 Warn = TeleEnabled && !string.IsNullOrEmpty(_tele.LastError) ? "Telegram: " + _tele.LastError : null,
             };
@@ -538,7 +540,7 @@ namespace BenzoTraderNs
                     if (age > BenzoCore.TeleMaxAgeSec || age < -BenzoCore.TeleMaxAgeSec) continue;
                     _openSent.Add(s.Id);
                     if (!TryClaim("open", s.Id)) continue;                    // chart/instance khác đã gửi
-                    SendOpenAsync(BenzoCore.ComposeOpen(s, _symbol, TzOffset, bm, _digits));
+                    SendOpenAsync(BenzoCore.ComposeOpen(s, _symbol, TzOffset, bm, _digits, SlKieuCu));
                 }
                 foreach (var s in res.Closed)
                 {

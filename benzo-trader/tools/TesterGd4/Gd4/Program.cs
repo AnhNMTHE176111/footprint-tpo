@@ -80,6 +80,7 @@ static class Program
             ("Bật Fail Break", "Boolean", true),
             ("Bật Break", "Boolean", true),
             ("SL tối đa (giá)", "Double", 5.0),
+            ("SL kiểu cũ", "Boolean", false),
         };
         Check(props.Count == expect.Length, $"đúng {expect.Length} mục Settings (plan 10.2)", props.Count.ToString());
         for (int i = 0; i < Math.Min(props.Count, expect.Length); i++)
@@ -140,6 +141,8 @@ static class Program
             Check(lines[2].StartsWith($"Dấu hiệu ({s.NSigns}): ") && s.NSigns >= 2 && lines[2].Split(" · ").Length == s.NSigns, "dòng 3: Dấu hiệu (N) liệt kê đủ N dấu hiệu, có số", lines[2]);
             Check(lines[3].StartsWith("CF ") && lines[3].Contains(" · Vào ") && lines[3].Contains(" · SL ") && lines[3].Contains(" · TP ") && lines[3].Contains("(2R, R sẵn "), "dòng 4: CF · Vào · SL · TP (2R, R sẵn)");
             Check(lines[4] == "⚠ Chưa có lợi thế đo được (−0,07R/lệnh, 35 phiên)", "dòng 5 = nhãn ⚠ đúng chữ plan 10.3");
+            var capOld = BenzoCore.ComposeOpen(s, "GCZ26", 7, 1, 1, true).Split('\n');
+            Check(capOld.Length == 5 && capOld[4] == "⚠ Chưa có lợi thế đo được (+0,02R/lệnh, 35 phiên)", "SL kiểu cũ BẬT: dòng ⚠ caption = số corven-5 (+0,02R)");
             Check(cap.Length <= 1024, "≤ 1024 ký tự (giới hạn caption ảnh)", cap.Length.ToString());
             // dòng 4: giờ CF hiển thị = giờ MỞ nến theo VN (plan 12.1 #6: = time_vn CSV = nhãn nến Quantower) — kiểm khớp dòng 1
             string tVn = s.Time.AddHours(7).ToString("HH:mm");
@@ -171,7 +174,7 @@ static class Program
         Check(BenzoCore.CacheFileName("GCZ26", "Time", 1) != BenzoCore.CacheFileName("GCZ26", "Time", 5), "M1 và M5 ra 2 file khác nhau");
         Check(BenzoCore.SignalsCsvName("MGCZ6", 1) == "signals_MGCZ6_1m_corven-6.csv" && BenzoCore.CandidatesCsvName("MGCZ6", 1) == "candidates_MGCZ6_1m_corven-6.csv", "2 CSV có khung + phiên bản");
         Check(BenzoCore.CacheFileName("GC/Z26:XCEC", "Time", 1).IndexOfAny(Path.GetInvalidFileNameChars()) < 0, "mã có ký tự lạ (/ :) được làm sạch");
-        Check(BenzoCore.CacheVersion() == "corven-6-sl5.0-f1-b1" && BenzoCore.CacheVersion(3.0, true, true) == "corven-6-sl3.0-f1-b1" && BenzoCore.CacheVersion(5.0, false, true) == "corven-6-sl5.0-f0-b1" && BenzoCore.CacheVersion(5.0, true, false) == "corven-6-sl5.0-f1-b0", "khoá cache = corven-6-sl{SL tối đa}-f{Fail Break}-b{Break}");
+        Check(BenzoCore.CacheVersion() == "corven-6-sl5.0-f1-b1-old0" && BenzoCore.CacheVersion(3.0, true, true) == "corven-6-sl3.0-f1-b1-old0" && BenzoCore.CacheVersion(5.0, false, true) == "corven-6-sl5.0-f0-b1-old0" && BenzoCore.CacheVersion(5.0, true, false) == "corven-6-sl5.0-f1-b0-old0" && BenzoCore.CacheVersion(5.0, true, true, true) == "corven-6-sl5.0-f1-b1-old1", "khoá cache = corven-6-sl{SL tối đa}-f{Fail Break}-b{Break}-old{SL kiểu cũ}");
 
         var (tb, tl) = Train();
         int n = 24000;
@@ -416,6 +419,7 @@ static class Program
             Check(lines.Count == 4, "bảng 4 dòng", lines.Count.ToString());
             Check(lines[0].StartsWith("BENZO CORVEN corven-6 · ") && lines[0].Contains(" lệnh · WR ") && lines[1].StartsWith("Fail Break · ") && lines[2].StartsWith("Break · "), "dòng 1–3 đúng mẫu");
             Check(lines[3] == "Backtest 35 phiên: −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,09R) · chạy thử, không phải khuyến nghị", "dòng 4 = nhãn trung thực đúng chữ");
+            Check(BenzoCore.TableLines(BenzoCore.ComputeStats(eng.Signals), true)[3] == "Backtest 35 phiên: +0,02R/lệnh, hơn vào ngẫu nhiên (−0,01R) chưa đủ chắc · chạy thử, không phải khuyến nghị", "SL kiểu cũ BẬT: dòng 4 bảng = nhãn corven-5");
             // dòng 4 thật sự hiện trên ảnh: có pixel màu cam (255,170,120) ở vùng đáy trái
             int orange = 0;
             for (int y = conv.Rc.Bottom - 40; y < conv.Rc.Bottom; y++) for (int x = 0; x < 700; x++) if (ColNear(bmp.GetPixel(x, y), Color.FromArgb(255, 170, 120), 90)) orange++;

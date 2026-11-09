@@ -139,3 +139,11 @@ Người học yêu cầu SL sát cạnh + trần 5 giá. Trên TRAIN cả hai l
 Mã thật (`cp_live()` = SL cạnh ∓ 3 tick + chỉ trần 5 giá): **232 lệnh (Fail Break 41, Break 191), R TB −0,068, WR 34 % (77 TP / 153 SL / 2 TIME), hai nửa +0,025 / −0,177, vào ngẫu nhiên sau CF −0,094** — khớp dòng "… + bỏ trần 4 biên độ (chỉ trần 5 giá)" đến chữ số cuối. Công tắc: tắt Break ⇒ 43 lệnh Fail Break (−0,399R); tắt Fail Break ⇒ 192 lệnh Break (−0,011R).
 
 Ca thật (Python và C# khớp): 06/11 10:33 VN Break sell 4055,3 · SL 4058,8 · TP 4048,3 ⇒ TP; 06/11 12:07 VN Break buy 4058,6 · SL 4055,5; 09/11 11:26 VN Break buy 4132,3 · SL 4129,1 · TP 4138,7 vẫn còn.
+
+
+### Settings "SL kiểu cũ" (tuỳ chọn, mặc định TẮT) và vì sao SL sát cạnh làm kết quả xấu
+
+"SL kiểu cũ" BẬT = SL Break mốc cạnh + trần SL như corven-5 (Python `cp_live(sl_kieu_cu=True)` = `sl_b_canh_3tick` tắt, `sl_cap_gia` None; C# `CorvenCfg.KieuCu_`). LogicVersion vẫn `corven-6`; khoá cache thêm `-old<0|1>`; nhãn bảng + Telegram theo chế độ đang chạy (bật: "+0,02R/lệnh, hơn vào ngẫu nhiên (−0,01R) chưa đủ chắc"). Chế độ bật bỏ qua "SL tối đa (giá)".
+TRAIN chế độ bật = đúng corven-5: 266 lệnh (Fail Break 37, Break 229), +0,016R, nửa −0,018 / +0,048, C2' −0,013 (95 TP / 169 SL / 2 TIME) — không lệch do luật 2. Chế độ tắt = corven-6, 232 lệnh. Parity C# ↔ Python đạt 100 % cho cả hai chế độ (`parity_corven.py` và `parity_corven.py --sl-kieu-cu`).
+
+Vì sao SL sát cạnh làm kết quả xấu (Opus đo trên cùng 229 lệnh Break mốc cạnh của bản SL cũ): R TB +0,091 → +0,048, WR 38 % → 37 %; 5 lệnh TP → SL, 2 lệnh SL → TP. Toàn bộ chênh lệch nằm ở 43/229 lệnh mà râu nhịp hồi đã chọc qua mức SL mới trước khi vào (+0,27R → +0,05R); 186 lệnh còn lại gần như y hệt (+0,050 / +0,049).

@@ -35,10 +35,11 @@ PYTHONIOENCODING=utf-8 python research/parity_corven.py   # parity Python ↔ C#
 
 ## Settings (corven-6)
 Lệch giờ · Telegram: bật / bot token / chat id / gửi thử · **Hiện range** [BẬT] · **Hiện bảng thống kê** [BẬT] · **Bật Fail Break** [BẬT] · **Bật Break** [BẬT] ·
-**SL tối đa (giá)** [5,0; bước 0,1; tối thiểu 0,5].
+**SL tối đa (giá)** [5,0; bước 0,1; tối thiểu 0,5] · **SL kiểu cũ** [TẮT].
 - Tắt Fail Break hoặc Break ⇒ ứng viên kiểu đó không được vào và **không chiếm chỗ "1 lệnh mở"** (kiểu còn lại vào được như bình thường).
 - **SL tối đa (giá):** lệnh có rủi ro (entry↔SL) lớn hơn mức này bị bỏ (cổng `SL > X giá`), cho cả Fail Break và Break; thay trần 4 biên độ cũ.
-- Đổi **SL tối đa** hoặc một công tắc ⇒ khoá cache đổi ⇒ tính lại toàn bộ. Chặn 19:20–20:30 VN **luôn BẬT**; nhãn dấu hiệu **luôn hiện**; thống kê tính lại mỗi lần nạp dữ liệu (không còn "đặt lại").
+- **SL kiểu cũ** (mặc định TẮT): BẬT = SL Break mốc cạnh + trần SL như corven-5 (SL theo râu nhịp hồi + dung sai cạnh + đệm max(3 tick, 0,2 biên độ); trần 4 × biên độ, **bỏ qua** "SL tối đa"). Backtest chế độ này: 266 lệnh, +0,02R, vào ngẫu nhiên −0,01R — nhãn bảng + Telegram đổi theo chế độ.
+- Đổi **SL tối đa**, **SL kiểu cũ** hoặc một công tắc ⇒ khoá cache đổi ⇒ tính lại toàn bộ. Chặn 19:20–20:30 VN **luôn BẬT**; nhãn dấu hiệu **luôn hiện**; thống kê tính lại mỗi lần nạp dữ liệu (không còn "đặt lại").
 - **"Lệch giờ" chỉ đổi cách HIỂN THỊ giờ** (bảng, CSV `time_vn`, caption, lịch tin). Mọi luật giờ (chặn 19:20–20:30, 15 nến đầu phiên,
   cuối phiên, phiên Á/Âu/Mỹ) tính theo `sm` = phút kể từ 05:00 giờ VN cố định UTC+7, bù giờ mùa đông Mỹ — chỉ phụ thuộc UTC.
 Không đưa `win_b / bubble_mult / need_signs / đệm SL / "gần" / lọc phiên` ra Settings: đổi tham số sống mà không đo lại = đúng lỗi A/B/C/D,
@@ -88,7 +89,7 @@ và mỗi bộ tham số là một chuỗi forward test riêng (n live ≈ 3 l�
 ## Vòng đời, cache, chống tính lại
 - Chỉ xử lý nến **đã đóng** (`Count−2`), mỗi nến dò **một lần**; `ClosedBars` chặn nhìn nến sau `closedIdx`.
 - **Niêm phong** `%LOCALAPPDATA%\BenzoTrader\cache_<mã>_<aggName>_<phút>m.jsonl` (tên có khung — sửa bug cũ dùng `Aggregation.Title`).
-  Khoá phiên bản = `corven-6-sl<SL tối đa>-f<0|1>-b<0|1>` (SL tối đa + công tắc Fail Break + công tắc Break); "Hiện range"/"Hiện bảng" chỉ vẽ nên không vào khoá.
+  Khoá phiên bản = `corven-6-sl<SL tối đa>-f<0|1>-b<0|1>-old<0|1>` (SL tối đa + công tắc Fail Break + công tắc Break + SL kiểu cũ); "Hiện range"/"Hiện bảng" chỉ vẽ nên không vào khoá.
   **Guard khớp nến:** mỗi dòng `sig` lưu H/L nến CF; khi gắn lại, giá vào lệch > nửa tick hoặc H/L lệch > 1 tick ⇒ **bỏ toàn bộ cache**,
   dò lại từ đầu, ghi 1 dòng `error_log.txt`. File cache cũ `cache_<mã>_<Title>.jsonl` của A/B/C/D tự xoá khi gặp.
 - 1 lệnh mở cùng lúc; chạm cả SL lẫn TP cùng nến ⇒ SL; chi phí 0,2 giá/lệnh.

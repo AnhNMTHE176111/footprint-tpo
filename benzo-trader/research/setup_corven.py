@@ -104,10 +104,10 @@ class CP:
 LIVE_VERSION = 'corven-6'
 
 
-def cp_live() -> 'CP':
-    """Bộ tham số đang chạy trong indicator (LogicVersion corven-6)."""
+def cp_live(sl_kieu_cu: bool = False) -> 'CP':
+    """Bộ tham số đang chạy trong indicator (LogicVersion corven-6). sl_kieu_cu=True (Settings "SL kiểu cũ"): SL Break + trần SL như corven-5."""
     return CP(hoi_khong_cham=True, bo_quet_stop=True, b_bo_rmin=True, trap_hoi=True, sl_b_canh_sat=True, hoi_trong_n_nen=True,
-              b_bo_moc_stacked=True, gan_range_gan_nhat=True, sl_b_canh_3tick=True, sl_cap_gia=5.0)
+              b_bo_moc_stacked=True, gan_range_gan_nhat=True, sl_b_canh_3tick=not sl_kieu_cu, sl_cap_gia=None if sl_kieu_cu else 5.0)
 
 
 # =====================================================================================================

@@ -25,14 +25,15 @@ static class Program
 
     static int Main(string[] a)
     {
-        if (a.Length < 2) { Console.Error.WriteLine("args: prefix outdir [--maxbar N] [--deny-below K] [--no-block-us]"); return 2; }
+        if (a.Length < 2) { Console.Error.WriteLine("args: prefix outdir [--maxbar N] [--deny-below K] [--no-block-us] [--sl-kieu-cu]"); return 2; }
         string prefix = a[0], outDir = a[1];
-        int maxBar = -1, deny = 0, hideAfter = int.MaxValue; bool blockUs = true;
+        int maxBar = -1, deny = 0, hideAfter = int.MaxValue; bool blockUs = true, slKieuCu = false;
         for (int k = 2; k < a.Length; k++)
         {
             if (a[k] == "--maxbar") maxBar = int.Parse(a[++k], Ci);
             else if (a[k] == "--deny-below") deny = int.Parse(a[++k], Ci);
             else if (a[k] == "--no-block-us") blockUs = false;
+            else if (a[k] == "--sl-kieu-cu") slKieuCu = true;       // Settings "SL kiểu cũ" = SL Break + trần SL như corven-5
             else if (a[k] == "--hide-after") hideAfter = int.Parse(a[++k], Ci);
         }
         Directory.CreateDirectory(outDir);
@@ -44,7 +45,7 @@ static class Program
 
         var cs = new StringBuilder("cf,t_utc,the,side,rid,b_from_exhausted,n,loai,dau_hieu,gates,entry,sl,tp,r_san,moc\n");
         int nc = 0;
-        var (eng, det) = CorvenData.Run(bars, levels, 0.1, deny, blockUs, null, (i, d) =>
+        var (eng, det) = CorvenData.Run(bars, levels, 0.1, deny, blockUs, null, cfg: CorvenCfg.KieuCu_(slKieuCu, new CorvenCfg()), onBar: (i, d) =>
         {
             if (i < deny) return;
             foreach (var c in d.LastCandidates)

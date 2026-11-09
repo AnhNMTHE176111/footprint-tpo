@@ -160,8 +160,8 @@ namespace BenzoTraderNs
         public const int TeleMaxAgeSec = 90;
 
         /// <summary>Khoá cache theo cấu hình ảnh hưởng tín hiệu: phiên bản logic + SL tối đa (giá) + 2 công tắc Fail Break / Break (đổi một trong ba ⇒ tính lại).</summary>
-        public static string CacheVersion(double slMaxGia = CorvenParams.SlMaxGia, bool failBreak = true, bool brk = true) =>
-            LogicVersion + "-sl" + slMaxGia.ToString("0.0", CultureInfo.InvariantCulture) + "-f" + (failBreak ? 1 : 0) + "-b" + (brk ? 1 : 0);
+        public static string CacheVersion(double slMaxGia = CorvenParams.SlMaxGia, bool failBreak = true, bool brk = true, bool slKieuCu = false) =>
+            LogicVersion + "-sl" + slMaxGia.ToString("0.0", CultureInfo.InvariantCulture) + "-f" + (failBreak ? 1 : 0) + "-b" + (brk ? 1 : 0) + "-old" + (slKieuCu ? 1 : 0);
 
         /// <summary>Tên file cache/CSV có KHUNG (plan 10.5): cache_&lt;sym&gt;_&lt;aggName&gt;_&lt;minutes&gt;m.jsonl.</summary>
         public static string CacheFileName(string symbol, string aggName, int minutes) =>
@@ -294,7 +294,7 @@ namespace BenzoTraderNs
 
         /// <summary>Bảng chart 4 dòng (plan 10.3) — dòng 4 LUÔN hiện:
         /// "BENZO CORVEN corven-6 · N lệnh · WR x % · ΣR" / "Fail Break · n · WR · ΣR" / "Break · n · WR · ΣR" / nhãn backtest.</summary>
-        public static List<string> TableLines(StatsResult st)
+        public static List<string> TableLines(StatsResult st, bool slKieuCu = false)
         {
             string open = st.Total.Open > 0 ? $" · {st.Total.Open} đang mở" : "";
             return new List<string>
@@ -302,7 +302,7 @@ namespace BenzoTraderNs
                 $"BENZO CORVEN {LogicVersion} · {st.Total.N} lệnh · WR {Num(st.Total.WinRate, "0")} % · {SignedR(st.Total.SumR)}{open}",
                 $"{TheName('A')} · {st.A.N} · WR {Num(st.A.WinRate, "0")} % · {SignedR(st.A.SumR)}",
                 $"{TheName('B')} · {st.B.N} · WR {Num(st.B.WinRate, "0")} % · {SignedR(st.B.SumR)}",
-                CorvenParams.BacktestLine,
+                CorvenParams.Backtest(slKieuCu),
             };
         }
 
@@ -322,7 +322,7 @@ namespace BenzoTraderNs
         }
 
         /// <summary>Caption tin MỞ lệnh (plan mục 2 + 10.3): 4 dòng + cảnh báo chưa có lợi thế.</summary>
-        public static string ComposeOpen(Signal s, string symbol, int tzOffset, int barMinutes, int digits)
+        public static string ComposeOpen(Signal s, string symbol, int tzOffset, int barMinutes, int digits, bool slKieuCu = false)
         {
             double risk = s.Risk;
             string icon = s.Side > 0 ? "🟢 BUY" : "🔴 SELL";
@@ -335,7 +335,7 @@ namespace BenzoTraderNs
             sb.Append("CF ").Append(tVn).Append(" thân ").Append(Num(s.CfBody, "0.0#")).Append(" giá · Vào ").Append(FmtPrice(s.Entry, digits))
               .Append(" · SL ").Append(FmtPrice(s.Sl, digits)).Append(" (").Append(Num(risk, "0.0")).Append(')')
               .Append(" · TP ").Append(FmtPrice(s.Tp, digits)).Append(" (2R, R sẵn ").Append(Num(s.RAvail, "0.0")).Append(")\n");
-            sb.Append(CorvenParams.TeleWarn);
+            sb.Append(CorvenParams.Warn(slKieuCu));
             return Truncate(sb.ToString(), 1000);   // giới hạn caption ảnh Telegram = 1024
         }
 

@@ -124,10 +124,26 @@ static partial class Program
                 var (eNo, _) = CorvenData.Run(tb, tl, 0.1, 3697, cfg: new CorvenCfg { BatBreak = false });
                 Check(eNo.Signals.Count == 43 && eNo.Signals.All(x => x.Setup == 'A') && eNo.Signals.Count(x => x.Outcome == "TP") == 10 && eNo.Signals.Count(x => x.Outcome == "SL") == 33,
                       "tắt Break: 43 lệnh, toàn Fail Break (= Python; mặc định có 41 Fail Break ⇒ thêm 2 vì không còn bị lệnh Break chiếm chỗ)", $"{eNo.Signals.Count}");
+                var (eKc, _) = CorvenData.Run(tb, tl, 0.1, 3697, cfg: CorvenCfg.KieuCu_(true, new CorvenCfg()));
+                Check(eKc.Signals.Count == 266 && eKc.Signals.Count(x => x.Setup == 'A') == 37 && eKc.Signals.Count(x => x.Setup == 'B') == 229 && eKc.Signals.Count(x => x.Outcome == "TP") == 95 && eKc.Signals.Count(x => x.Outcome == "SL") == 169,
+                      "SL kiểu cũ BẬT: 266 lệnh (37/229, 95 TP · 169 SL) = Python cp_live(sl_kieu_cu=True) = corven-5", $"{eKc.Signals.Count}");
                 var (eNoF, _) = CorvenData.Run(tb, tl, 0.1, 3697, cfg: new CorvenCfg { BatFailBreak = false });
                 Check(eNoF.Signals.Count == 192 && eNoF.Signals.All(x => x.Setup == 'B') && eNoF.Signals.Count(x => x.Outcome == "TP") == 67 && eNoF.Signals.Count(x => x.Outcome == "SL") == 123,
                       "tắt Fail Break: 192 lệnh, toàn Break (= Python; mặc định có 191 Break ⇒ thêm 1)", $"{eNoF.Signals.Count}");
             }
+        }
+        Console.WriteLine("[V6-4] corven-6: Settings \"SL kiểu cũ\" — bật ⇒ SL Break + trần SL như corven-5, bỏ qua SL tối đa");
+        {
+            var (f, _) = World(Ex2Rows());
+            CorvenCand Mk() => Ex2Cand(new List<CorvenMoc> { Canh(41280) });
+            var cOld = Eval(Mk(), f, CorvenCfg.KieuCu_(true, new CorvenCfg()));
+            Check(cOld.Sl == 41287, "kiểu cũ: SL Break = râu 4128,4 + 3 tick = 4128,7 (corven-5)", cOld.Sl.ToString());
+            Check(Eval(Mk(), f, CorvenCfg.KieuCu_(false, new CorvenCfg())).Sl == 41283, "tắt: SL = cạnh + 3 tick = 4128,3 (corven-6)");
+            var (f51, _) = GeoWorld(41404, mbr: 15);          // rủi ro 5,1 giá ≤ 4 × 15 tick = 6,0 giá
+            Check(Eval(GeoCand(41000), f51).Gates.Contains("tran_sl") && !Eval(GeoCand(41000), f51, CorvenCfg.KieuCu_(true, new CorvenCfg { SlMaxGia = 3.0 })).Gates.Contains("tran_sl"),
+                  "rủi ro 5,1 giá: bỏ ở chế độ mặc định, vào ở kiểu cũ (trần 4 biên độ) dù SL tối đa đặt 3,0");
+            var (f77, _) = GeoWorld(41430, mbr: 15);          // rủi ro 7,7 giá > 6,0 giá
+            Check(Eval(GeoCand(41000), f77, CorvenCfg.KieuCu_(true, new CorvenCfg())).Gates.Contains("tran_sl"), "kiểu cũ: rủi ro 7,7 giá > 4 biên độ ⇒ vẫn bỏ");
         }
         Console.WriteLine("[V2-4] Ca thật 09/11 11:26 VN (buy, nhịp hồi không chạm cạnh + trap hồi) — file 3 tháng mới");
         {
@@ -139,6 +155,9 @@ static partial class Program
             var s63 = eng.Signals.FirstOrDefault(x => x.Time == new DateTime(2026, 11, 6, 3, 33, 0, DateTimeKind.Utc));
             Check(s63 != null && s63.Setup == 'B' && s63.Side == -1 && Near(s63.Entry, 4055.3, 1e-6) && Near(s63.Sl, 4058.8, 1e-6) && Near(s63.Tp, 4048.3, 1e-6) && s63.Outcome == "TP",
                   "corven-6 (= Python): 06/11 10:33 VN Break sell 4055,3 · SL 4058,8 · TP 4048,3 ⇒ TP", s63 == null ? "không có" : $"{s63.Entry} {s63.Sl} {s63.Tp} {s63.Outcome}");
+            var (engOld, _) = CorvenData.Run(b, l, 0.1, cfg: CorvenCfg.KieuCu_(true, new CorvenCfg()));
+            var s63o = engOld.Signals.FirstOrDefault(x => x.Time == new DateTime(2026, 11, 6, 3, 33, 0, DateTimeKind.Utc));
+            Check(s63o != null && Near(s63o.Sl, 4060.3, 1e-6) && Near(s63o.Entry, 4055.3, 1e-6) && s63o.Outcome == "SL", "SL kiểu cũ BẬT: 06/11 03:33 UTC sell SL 4060,3 (= corven-5) ⇒ SL", s63o == null ? "không có" : $"{s63o.Sl} {s63o.Outcome}");
             var s65 = eng.Signals.FirstOrDefault(x => x.Time == new DateTime(2026, 11, 6, 5, 7, 0, DateTimeKind.Utc));
             Check(s65 != null && s65.Setup == 'B' && s65.Side == 1 && Near(s65.Entry, 4058.6, 1e-6) && Near(s65.Sl, 4055.5, 1e-6), "06/11 12:07 VN Break buy 4058,6 · SL 4055,5", s65 == null ? "không có" : $"{s65.Entry} {s65.Sl}");
             var day = eng.Signals.Where(x => x.Time.Date == new DateTime(2026, 11, 9)).ToList();

@@ -450,3 +450,5 @@ Người học yêu cầu trực tiếp: (1) SL Break mốc cạnh = cạnh vừ
 Opus đo TRAIN: +0,02R → −0,07R/lệnh (232 lệnh; hai nửa +0,025 / −0,177; vào ngẫu nhiên −0,094R). Đã báo người học; triển khai theo yêu cầu vì là luật quản lý rủi ro của người giao dịch. Số liệu + bảng: `research/report/VARIANTS-NGUOI-HOC-2026-11-09.md`.
 Cài đặt: Python `sl_b_canh_3tick`, `sl_cap_gia` (cổng `tran_sl`), `bat_fail_break`, `bat_break`; C# `CorvenParams.SlBCanh3Tick/SlMaxGia`, `CorvenCfg.BatFailBreak/BatBreak`; khoá cache `corven-6-sl<X>-f<0|1>-b<0|1>`; bỏ mốc đặt lại thống kê. `LogicVersion = "corven-6"`.
 Kiểm: C# 179/179 (V6-1…3 + ca thật 06/11), pytest 114, parity TRAIN 232/232, Gd4 90/90 (Settings đúng 5 mục mới), build + deploy.
+
+**16b. "SL kiểu cũ" (2026-11-09, người học yêu cầu):** thêm Settings bool "SL kiểu cũ" (mặc định TẮT, dưới "SL tối đa") — bật = SL Break + trần SL như corven-5 (trần 4 biên độ, bỏ qua SL tối đa). Python `cp_live(sl_kieu_cu)`. TRAIN bật = corven-5 (266 lệnh +0,016R, C2' −0,013); tắt = corven-6 (232 lệnh −0,068R). Khoá cache `-old<0|1>`, nhãn theo chế độ, parity cả hai chế độ. LogicVersion giữ `corven-6`.

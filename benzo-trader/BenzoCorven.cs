@@ -83,6 +83,11 @@ namespace BenzoTraderNs
         // ---- nhãn trung thực (plan 10.3) — test so đúng chữ ----
         public const string BacktestLine = "Backtest 35 phiên: −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,09R) · chạy thử, không phải khuyến nghị";
         public const string TeleWarn = "⚠ Chưa có lợi thế đo được (−0,07R/lệnh, 35 phiên)";
+        // chế độ "SL kiểu cũ" (Settings, mặc định tắt) = SL Break + trần SL của corven-5 ⇒ nhãn theo số backtest của chế độ đó
+        public const string BacktestLineOld = "Backtest 35 phiên: +0,02R/lệnh, hơn vào ngẫu nhiên (−0,01R) chưa đủ chắc · chạy thử, không phải khuyến nghị";
+        public const string TeleWarnOld = "⚠ Chưa có lợi thế đo được (+0,02R/lệnh, 35 phiên)";
+        public static string Backtest(bool kieuCu) => kieuCu ? BacktestLineOld : BacktestLine;
+        public static string Warn(bool kieuCu) => kieuCu ? TeleWarnOld : TeleWarn;
     }
 
     /// <summary>Bản sao tham số theo instance — CHỈ để unit test dựng ca biên (vd cửa sổ W=4); live luôn dùng mặc định = CorvenParams.</summary>
@@ -107,6 +112,8 @@ namespace BenzoTraderNs
         public double SlMaxGia = CorvenParams.SlMaxGia;
         /// <summary>corven-6: công tắc Settings — tắt ⇒ ứng viên kiểu đó không được vào (và không chiếm chỗ lệnh mở).</summary>
         public bool BatFailBreak = true, BatBreak = true;
+        /// <summary>Settings "SL kiểu cũ": SL Break + trần SL như corven-5 (SL cạnh có râu hồi + dung sai, trần 4 biên độ, bỏ qua SL tối đa).</summary>
+        public static CorvenCfg KieuCu_(bool on, CorvenCfg c) { if (on) { c.SlBCanh3Tick = false; c.SlMaxGia = 0; } return c; }
         /// <summary>Bộ corven-1 (mọi cờ corven-2/3/4/5/6 tắt (trần SL về 4 biên độ)) — cho test cũ dựng ca biên của luật đã bỏ.</summary>
         public static CorvenCfg V1() => new CorvenCfg { HoiKhongCham = false, BoQuetStop = false, BBoRMin = false, TrapHoi = false, SlBCanhSat = false, HoiTrongNNen = false, BBoMocStacked = false, GanRangeGanNhat = false, SlBCanh3Tick = false, SlMaxGia = 0 };
     }

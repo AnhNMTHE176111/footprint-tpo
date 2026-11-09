@@ -97,11 +97,15 @@ def check_chong(R, name: str) -> float:
     return rate
 
 
+KIEU_CU = '--sl-kieu-cu' in sys.argv   # chế độ Settings "SL kiểu cũ" (= corven-5): Python cp_live(True) ↔ ReplayCorven --sl-kieu-cu
+SUF = '_kieu_cu' if KIEU_CU else ''
+
+
 def run_cs(prefix: str, out: str, maxbar: int, deny: int, hide_after: int = -1):
     dll = os.path.join(TOOL, 'bin', 'Release', 'net10.0', 'ReplayCorven.dll')
     subprocess.run(['dotnet', 'build', TOOL, '-c', 'Release', '-v', 'q', '-nologo'], check=True, capture_output=True)
     args = ['dotnet', dll, prefix, out, '--deny-below', str(deny)] + (['--maxbar', str(maxbar)] if maxbar >= 0 else []) \
-        + (['--hide-after', str(hide_after)] if hide_after >= 0 else [])
+        + (['--hide-after', str(hide_after)] if hide_after >= 0 else []) + (['--sl-kieu-cu'] if KIEU_CU else [])
     subprocess.run(args, check=True, capture_output=True)
     t = pd.read_csv(os.path.join(out, 'cs_trades.csv'), keep_default_na=False)
     c = pd.read_csv(os.path.join(out, 'cs_cands.csv'), keep_default_na=False)
@@ -159,7 +163,7 @@ def main():
     good = (~df['thin'].to_numpy()) & (~df['splice'].to_numpy()) & (df['split'].to_numpy() == 'TRAIN')
     deny = int(np.flatnonzero(good)[0])
     assert good[deny:].all(), 'mặt nạ phiên dày TRAIN không liền một khối — ReplayCorven --deny-below không đủ'
-    R = SC.run_gd1(bars, df, good, SC.cp_live())
+    R = SC.run_gd1(bars, df, good, SC.cp_live(KIEU_CU))
     check_chong(R, 'TRAIN')
     py_tr, py_c = py_rows(R, 0, cut, True)
     print(f'Python TRAIN: {len(py_tr)} lệnh, {len(py_c)} ứng viên (cut {cut}, phiên dày từ nến {deny})')
@@ -184,7 +188,7 @@ def main():
     bars_f, df_f = SC.load_train(prefix, cut=n_all - 1)
     good_f = (~df_f['thin'].to_numpy()) & (~df_f['splice'].to_numpy())
     assert (good_f[:cut + 1] == good).all() and good_f[deny:].all(), 'mặt nạ phiên dày toàn file khác TRAIN'
-    Rf = SC.run_gd1(bars_f, df_f, good_f, SC.cp_live())
+    Rf = SC.run_gd1(bars_f, df_f, good_f, SC.cp_live(KIEU_CU))
     check_chong(Rf, 'toàn file')
     Rf['trades'] = None                                                            # ⛔ không giữ bảng kết cục của toàn file
     py_test_tr, py_test_c = py_rows(Rf, cut + 1, n_all - 1, False)
@@ -197,9 +201,9 @@ def main():
     # ---------------- báo cáo ----------------
     os.makedirs(REPORT, exist_ok=True)
     m = py_tr.merge(cs_tr, on='idx', how='outer', suffixes=('_py', '_cs'))
-    m.to_csv(os.path.join(REPORT, '_parity_corven_train.csv'), index=False, encoding='utf-8')
+    m.to_csv(os.path.join(REPORT, f'_parity_corven_train{SUF}.csv'), index=False, encoding='utf-8')
     nA = int((py_tr['the'] == 'A').sum()); nB = int((py_tr['the'] == 'B').sum())
-    L = ['# Parity Python ↔ C# — setup CORVEN (corven-6, setup_corven.cp_live())', '',
+    L = ['# Parity Python ↔ C# — setup CORVEN (corven-6' + (', SL kiểu cũ = corven-5' if KIEU_CU else '') + ', setup_corven.cp_live())', '',
          '> Opus, GĐ3 (plan mục 10.6). `research/parity_corven.py` chạy `setup_corven.run_gd1` (chuẩn) và `tools/ReplayCorven` '
          '(mã C# sản phẩm: BenzoEngine + DetectorCorven + RangeLogic/StackedImbalance/ExhaustionLogic nối nguồn) trên '
          '`fp_GCZ26_XCEC_Time_20260723-20261021_90d`. Phiên mỏng đầu file (nến < %d) không vào lệnh ở cả hai bên.' % deny, '',
@@ -228,8 +232,8 @@ def main():
         L.append('')
     if t_diag or tc_diag:
         L += ['## Lệch TEST (chỉ khoá nến + tên cột, không giá trị)', '', ', '.join(f'{k}:{c}' for k, c in t_diag + tc_diag), '']
-    L += ['File đối chiếu TRAIN từng lệnh: `report/_parity_corven_train.csv`.', '']
-    with open(os.path.join(REPORT, 'PARITY-CORVEN.md'), 'w', encoding='utf-8') as fh:
+    L += [f'File đối chiếu TRAIN từng lệnh: `report/_parity_corven_train{SUF}.csv`.', '']
+    with open(os.path.join(REPORT, f'PARITY-CORVEN{SUF}.md'), 'w', encoding='utf-8') as fh:
         fh.write('\n'.join(L) + '\n')
     print(f'TRAIN lệnh {a_ok}/{a_n} · TRAIN ứng viên {c_ok}/{c_n} · C# toàn file TRAIN {f_ok}/{f_n} ({fc_ok}/{fc_n} ứng viên) · '
           f'TEST định danh {t_ok}/{t_n} ({tc_ok}/{tc_n} ứng viên)')
@@ -237,7 +241,7 @@ def main():
         print('  TRAIN lệch:', d)
     if t_diag or tc_diag:
         print('  TEST lệch (khoá, cột):', (t_diag + tc_diag)[:15])
-    ok = a_ok == a_n and c_ok == c_n and f_ok == f_n and fc_ok == fc_n and t_ok == t_n and tc_ok == tc_n and len(py_tr) == 232
+    ok = a_ok == a_n and c_ok == c_n and f_ok == f_n and fc_ok == fc_n and t_ok == t_n and tc_ok == tc_n and len(py_tr) == (266 if KIEU_CU else 232)
     print('PARITY 100 %' if ok else 'PARITY CHƯA ĐẠT')
     return 0 if ok else 1
 

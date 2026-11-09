@@ -52,7 +52,7 @@ Ký hiệu: `tick` = 0,1 (GC/MGC); `mbr` như trên; `tol` = max(2 tick, 0,5 mbr
 
 **2b. Test không quá sâu:**
 - Thế B: không nến nào trong cửa sổ test đóng lại trong range (= engine không phát `ReEntry`; nếu phát ⇒ thế B chết, range sống lại) và không nến nào đóng xuyên mép xa của vùng stacked làm mốc (`CheckEnd` CloseThrough). Râu xuyên **được phép** (ví dụ 2 râu chạm lại cạnh).
-- Thế A: CF phải đóng **trong** range (1:00:02 "phải vào lòng range"). **Ngoại lệ "xác nhận lần 2"** (ví dụ 3, 1:00:09): range đang PENDING/BROKEN hướng −S (S = hướng vào lòng range), **phải có "lần 1"** = một nến y trước đó trong cùng cú thủng có râu phía −S và đóng lùi về phía S ≥ tol so với cực trị của nó (phe S đã thử một lần mà chưa vào được lòng range); rồi nến x quét qua cực trị của y ≥ 1 tick, đóng lùi về phía S ≥ tol so với cực trị mới, cùng ≥ 2 dấu hiệu ⇒ cho vào dù chưa đóng trong range; SL sau râu x. Chỉ 1 lần mỗi cú thủng, trong ≤ 30 nến từ nến đóng ngoài (Q12: bản không đòi lần 1 cho 25 ứng viên/ngày — quá lỏng). Báo nhóm này **tách riêng** trong bảng.
+- Thế A: CF phải đóng **trong** range (1:00:02 "phải vào lòng range"). **Ngoại lệ "xác nhận lần 2"** (ví dụ 3, 1:00:09): range đang PENDING/BROKEN hướng −S (S = hướng vào lòng range), **phải có "lần 1"** = một nến y trước đó trong cùng cú thủng có râu phía −S và đóng lùi về phía S ≥ tol so với cực trị của nó (phe S đã thử một lần mà chưa vào được lòng range); rồi nến x quét qua cực trị của y ≥ 1 tick, đóng lùi về phía S ≥ tol so với cực trị mới, cùng ≥ 2 dấu hiệu ⇒ cho vào dù chưa đóng trong range; SL sau râu x. Chỉ 1 lần mỗi cú thủng, trong ≤ 30 nến từ nến đóng ngoài (Q12: bản không đòi lần 1 cho 25 ứng viên/ngày — quá lỏng). Báo nhóm này **tách riêng** trong bảng. **Sau GĐ1 (G1): ngoại lệ này TẮT mặc định ở v1** — xem mục 7.
 - **FailBreak "whipsaw"** (đóng lại xuyên luôn cạnh đối diện, engine phát FailBreak + CloseOutside cùng nến): **không lập thế A** (Q13) — nến to hơn cả range thì không có mốc để chờ, CORVEN "không đuổi giá".
 
 **2c. Cửa sổ test (cũng là cửa sổ "cùng lúc" của ③):**
@@ -81,7 +81,7 @@ Hướng vào S (+1 buy / −1 sell).
 **4a. Nến xác nhận CF** theo S: đóng theo S (close·S > open·S); thân ≥ **0,4** biên độ; khoảng đóng–cực trị phía S ≤ **0,3** biên độ (= "đóng sát cực trị, không rút râu"); biên độ ≥ 0,5 mbr (loại doji); Δ·S ≥ 0 và |Δ| ≥ 0,5 medΔ (⛔ "delta nhỏ" — không đòi to, to là ③a). Thế A: CF phải là nến FailBreak hoặc 1–2 nến sau nó, đều đóng trong range (0:08:46). Vào ở **giá đóng CF**.
 
 **4b. SL** (0:50:25 "đặt dưới cái đáy mới quét", "đặt gần dễ bị quét"):
-- Thế A: sau cực trị râu của cú thủng (max/min từ nến đóng ngoài tới CF) ∓ **đệm 3 tick** (= max(3 tick, 0,2 mbr)).
+- Thế A: sau cực trị râu của **toàn bộ** cú thủng (max/min từ nến đóng ngoài tới CF, kể cả nến giữa) ∓ **đệm 3 tick** (= max(3 tick, 0,2 mbr)). Biến thể đo ở GĐ2 (mục 7, neo "đáy/đỉnh mới quét" theo CORVEN 0:50:25): sau pivot 1 nến ngược S gần nhất trong [nến đóng ngoài − 10, CF].
 - Thế B mốc cạnh: sau max(cực trị nhịp test, E ± tol) ∓ đệm. Mốc stacked: sau mép xa vùng ∓ đệm (ví dụ 2: SL trên vùng đỏ).
 - Sàn rủi ro **1,0 mbr** (nhỏ hơn ⇒ dời SL ra cho đủ, vì "không đặt sát"); trần **4,0 mbr** (≈ 6 giá) ⇒ bỏ lệnh ("SL xa quá thì thôi" 0:51:16).
 
@@ -185,4 +185,45 @@ GĐ0 đạt: parity stacked + kiệt sức Python↔C# 0 lệch trên 51.319 n�
 
 Nhận định thêm: ② chỉ lọc 10 % thế A / 3 % thế B là **đúng dự kiến** (fail break vốn đóng sát cạnh), không sửa ②. Toàn bộ sức lọc nằm ở ③④. Mức kỳ vọng sau ③④ (không phải mục tiêu để ép): **1–4 lệnh/ngày**; nếu > 8 lệnh/ngày thì ③ đang quá rẻ — xử lý ở GĐ2 bằng đúng các tham số được phép quét (run 4, bóng 4×), không thêm luật mới.
 
-**Việc GĐ1 (Opus):** hoàn thiện ③ (5 dấu hiệu có nến neo, đếm loại, Q1/Q3/Q9/Q10) + ④ (CF, SL sàn/trần/đệm, mục tiêu, R ≥ 1,7, TP 2R, giới hạn 4d) + ⛔ 4 mục code được + Q4/Q5/Q12; chạy `kernel.simulate` trên TRAIN với **bộ mặc định, không tinh chỉnh**; ra `report/RESULTS-CORVEN.md` đủ bảng mục 3.5, thêm **phễu** (thế → qua ③ → qua ④ → lệnh, kèm lý do loại từng cổng), nhóm tách riêng (`b_from_exhausted`, "lần 2"), 3 đối chứng C1/C2/C3, `_corven_trades.csv` (mỗi lệnh có danh sách dấu hiệu + số). Test mới cho ③④⛔ theo mục 4 (ca 1–7, 10). **Không chạm TEST, không đổi tham số.** Dừng để Fable soi 5 thắng/5 thua trên chart.
+**Việc GĐ1 (Opus) — ĐÃ XONG (commit 47a531a):** hoàn thiện ③ (5 dấu hiệu có nến neo, đếm loại, Q1/Q3/Q9/Q10) + ④ (CF, SL sàn/trần/đệm, mục tiêu, R ≥ 1,7, TP 2R, giới hạn 4d) + ⛔ 4 mục code được + Q4/Q5/Q12; chạy `kernel.simulate` trên TRAIN với **bộ mặc định, không tinh chỉnh**; ra `report/RESULTS-CORVEN.md` đủ bảng mục 3.5, thêm **phễu** (thế → qua ③ → qua ④ → lệnh, kèm lý do loại từng cổng), nhóm tách riêng (`b_from_exhausted`, "lần 2"), 3 đối chứng C1/C2/C3, `_corven_trades.csv` (mỗi lệnh có danh sách dấu hiệu + số). Test mới cho ③④⛔ theo mục 4 (ca 1–7, 10). **Không chạm TEST, không đổi tham số.** Dừng để Fable soi 5 thắng/5 thua trên chart.
+
+## 7. QUYẾT ĐỊNH SAU GĐ1 (Fable, 2026-11-09 — đọc `research/report/RESULTS-CORVEN.md`, 10 ảnh, và tự đo lại trên `_corven_trades.csv`)
+
+### 7.1 Đọc kết quả thẳng thắn
+- TRAIN, bộ mặc định: 159 lệnh (4,5/ngày), WR 27 %, **R TB −0,30 [−0,50; −0,09]**, kém C1 bỏ ③ (−0,24) và C2 ngẫu nhiên (−0,16; theo cặp −0,14). ⇒ **Ở bộ mặc định, ③ không thêm lợi thế**, thậm chí âm. Đây đúng là điều MEASURE.md đã cảnh báo cho fail break máy móc (−0,2R), và ③ chưa cứu được.
+- Số tôi tự đo thêm (script trên `_corven_trades.csv` + `_bars.csv`): sau khi dính SL, giá vẫn chạm **TP gốc** trong 30 nến ở **36 %** lệnh SL, trong 60 nến **53 %**; 38 % SL dính trong ≤ 2 nến. **Nhưng** mô phỏng thô nới SL ×1,5 / ×2,0 (TP 2R theo rủi ro mới, bỏ lọc R_sẵn) cho R TB **−0,25 / −0,29** — không cứu. ⇒ Quan sát "hướng đúng, SL sát" của agent chính đúng ở hai ca THUA1/THUA2, nhưng **SL sát không phải nguyên nhân chính**; nguyên nhân chính là điểm vào không có lợi thế. Con số 36 %/53 % chưa có mức nền (giá M1 đi ±3R trong 30–60 nến là chuyện thường) — GĐ2 phải đo nền trước khi diễn giải.
+- Phễu: ③ rẻ (33 % CF qua ②), cổng thật là 4a (81 %) và R ≥ 1,7 (61 %). Stacked có ở 86 % lệnh ⇒ theo plan ③d quét run 4.
+- Theo số dấu hiệu: 2 loại −0,52 (n=100), 3 loại **+0,13** (n=49), 4 loại −0,20 (n=10). Đây là bảng đã lên kế hoạch báo, nhưng đọc nó rồi mới đổi luật là **hậu kiểm**; tôi cho phép quét `need_signs {2,3}` ở GĐ2 với ghi chú rõ "hậu kiểm, TEST quyết".
+- Ảnh THUA1: A2 vào khi CF **đóng ngoài range** (4083,8 > cạnh 4082,7) — đúng theo chữ ngoại lệ Q12, không phải lỗi code, nhưng cho thấy ngoại lệ này đang là 40 % số lệnh (64/159) trong khi nguồn chỉ có **một** ví dụ của CORVEN. SL 4085,3 nằm **dưới** đỉnh cú thử (≈ 4085,8) vì Opus neo theo nến y thay vì toàn bộ cú thủng — sai so với 4b ("max/min từ nến đóng ngoài tới CF").
+- Ảnh THUA2: SL 4393,6 bị đẩy ra bởi sàn 1 mbr, dính râu 4392,7 rồi giá đi 10 giá đúng hướng; "đáy mới quét" theo CORVEN là 4392,0 (20 nến trước) — đây là câu hỏi **neo SL ở đâu**, trả lời bằng biến thể 7.3.
+
+### 7.2 Trả lời G1–G12 (RESULTS mục 13)
+| G | Quyết định | Lý do |
+|---|---|---|
+| G1 lần 2 | **TẮT mặc định ở v1** (A2 chỉ còn là nhóm báo cáo trong Python, không port C#). Định nghĩa báo cáo siết lại: y = nến lập cực trị cú thủng; x quét qua cực trị y ≥ 1 tick **và đóng về phía S ≥ tol so với cực trị của y** | ngoại lệ dựa 1 ví dụ mà chiếm 40 % lệnh và 32 ứng viên/ngày = cơ khí hoá sai tinh thần "ngoại lệ"; R −0,29 không cứu gì. Đây là sửa ĐỊNH NGHĨA, không phải tinh chỉnh |
+| G2 CF lần 2 | CF = x hoặc 1–2 nến sau x (như thế A) — chỉ cho nhóm báo cáo | nhất quán với 0:08:46 |
+| G3 mốc trap thế B | **Giữ** {E, pivot 1c gần nhất ngược S} | cực trị cú đẩy là phía S, không phải chỗ SL phe −S |
+| G4 quét stop | **Giữ** cách hiểu Opus | đúng 1 nghĩa khả dĩ, loại 8,8 % hợp lý |
+| G5 chồng range cho A2 | không còn áp dụng (A2 tắt) | |
+| G6 hai mốc cùng lúc | **SL theo mốc cạnh** (xa hơn) | CORVEN "sau mốc quan trọng" — cạnh quan trọng hơn vùng |
+| G7 chọn lệnh khi bận | **Giữ**; C# port y hệt, ghi vào README | |
+| G8 khoá chung A/A2 | **Giữ** (A2 tắt nên không còn tác dụng ở live) | |
+| G9 ΣΔ = 0 | **Giữ ≤ 0**; mbr tại nến neo | theo chữ |
+| G10 đóng trong vùng | **Giữ** là "gần" | chưa xuyên mép xa = mốc còn |
+| G11 tin USD | **Giữ** lệch có chủ đích | |
+| G12 TIME cuối phiên | **Giữ** | |
+
+### 7.3 Sửa định nghĩa theo nguồn (KHÔNG tính vào 3 vòng tinh chỉnh — là sửa cho đúng plan/CORVEN)
+1. **A2 tắt mặc định** (G1).
+2. **SL thế A = cực trị toàn bộ cú thủng** (nến đóng ngoài → CF) + đệm — Opus đang neo sai ở nến y/CF (THUA1).
+3. **Biến thể neo SL "đáy/đỉnh mới quét"** (CORVEN 0:50:25, 0:51:25): SL sau pivot 1 nến ngược S gần nhất trong [nến đóng ngoài − 10, CF] (thế A) / [nến đóng ngoài − 10, CF] về phía −D (thế B), + đệm; R_sẵn tính lại; trần 4 mbr giữ. **Đo song song** với neo hiện tại, báo cả hai: n, R TB, tỷ lệ bị loại vì R_sẵn, tỷ lệ "SL rồi vẫn chạm TP". Chọn neo **theo nguồn** (cái nào gần lời CORVEN và không tệ hơn), không chọn theo R.
+4. **Mức nền cho "SL rồi vẫn chạm TP"**: với mỗi lệnh SL, lấy 20 nến ngẫu nhiên cùng phiên ±30′, hỏi xác suất giá đi được 3R (theo rủi ro lệnh) đúng hướng trong 30/60 nến. Nếu 36 %/53 % ≈ nền ⇒ gác hẳn câu chuyện SL.
+
+### 7.4 GĐ2 — tối đa 3 vòng trên TRAIN, rồi mở TEST MỘT lần
+- **Vòng 1:** áp 7.3 (A2 tắt, SL cú thủng đúng, 2 neo SL song song, nền 7.3.4) + chạy lại C1/C2. Báo bảng như GĐ1. *Fable review.*
+- **Vòng 2:** quét **từng tham số một** quanh bộ vòng 1: `si_run` {3,4} · `bubble_mult` {3,4} · `delta_mult` {2,3} · `near_mbr` {0,5; 1,0; 1,5} · `win_b` {2,3,4} · `sl_buf_ticks` {2,3,5} · `b_from_exhausted` {bật, tắt} · **`need_signs` {2,3}** (hậu kiểm — ghi rõ trong báo cáo). Báo đủ bảng mọi ô + C1/C2 cho mỗi ô. Không lưới chéo.
+- **Vòng 3:** chốt bộ **đơn giản nhất** mà (a) R TB TRAIN ≥ C1 và C2, (b) hàng xóm trong lưới không đổi dấu, (c) n ≥ 35 trên TRAIN. Nếu không ô nào đạt (a) ⇒ **không mở TEST**, dừng, báo người học: setup CORVEN cơ khí hoá ở mức này không hơn vào bừa tại mốc. Nếu đạt ⇒ mở TEST một lần với đúng bộ đó, kết luận T1/T0, commit "mở TEST".
+- Không được: thêm dấu hiệu mới, đổi định nghĩa range/kiệt sức/250 %, đổi CF 0,4/0,3, đổi 1,7R/2R, bỏ cổng 4a dù nó loại 81 % (đó là cổng CORVEN: "nến xác nhận đã đóng").
+
+### 7.5 Đánh giá thẳng của Fable
+Khả năng cao nhất là **không đạt T1**; đạt **T0** (không kém C1/C2 quá 0,05R) cũng chưa chắc — hiện kém 0,06–0,14R. Nếu vòng 3 không đạt (a) thì theo plan mục 3.6 là **dừng trước khi port** và trình người học hai lựa chọn: (i) vẫn port với nhãn "chưa có lợi thế" để forward test (như A/B/C/D trước đây), hoặc (ii) giữ indicator đọc chart (Range Box + Bubbles) và không bắn tín hiệu. Tôi nghiêng về (ii) nếu còn kém đối chứng, vì bắn tín hiệu kém hơn vào bừa là có hại.

@@ -10,6 +10,32 @@ namespace BenzoTraderNs
     public static class CorvenData
     {
         static readonly CultureInfo Ci = CultureInfo.InvariantCulture;
+        /// <summary>Số lệnh bị engine HUỶ (vào ở nến cuối phiên) trong lần Run gần nhất.</summary>
+        public static int LastCancelled;
+
+        public const string TradesHeader = "idx,t_utc,the,side,range_id,b_from_exhausted,moc,so_dau_hieu,loai,dau_hieu,entry,sl,tp,r_san,ket_cuc,r,exit_idx";
+
+        /// <summary>CSV lệnh cho parity. Lệnh có nến vào &gt; hideAfter (phần TEST) ghi TRỐNG 3 cột ket_cuc / r / exit_idx —
+        /// kết cục TEST không bao giờ rời tiến trình (plan 10.6, sửa lỗi tester #1).</summary>
+        public static string TradesCsv(IEnumerable<Signal> sigs, IReadOnlyDictionary<long, int> timeIdx, int hideAfter = int.MaxValue)
+        {
+            var ts = new System.Text.StringBuilder(TradesHeader).Append('\n');
+            foreach (var s in sigs)
+            {
+                int ex = s.IsClosed && timeIdx != null && timeIdx.TryGetValue(s.ExitTime.Ticks, out int e) ? e : -1;
+                bool hide = s.BarIdx > hideAfter;
+                string outc = hide ? "" : s.Outcome;
+                string rr = hide || !s.IsClosed ? "" : Math.Round(s.R, 3).ToString("R", Ci);
+                string exs = hide ? "" : ex.ToString(Ci);
+                ts.Append(s.BarIdx).Append(',').Append(s.Time.ToString("yyyy-MM-dd HH:mm", Ci)).Append(',').Append(s.Setup).Append(',')
+                  .Append(s.Side > 0 ? "buy" : "sell").Append(',').Append(s.RangeId).Append(',').Append(s.BFromExhausted ? 1 : 0).Append(',')
+                  .Append(SignalCsv.Q(s.Zone)).Append(',').Append(s.NSigns).Append(',').Append(SignalCsv.Q(s.SignTypes)).Append(',').Append(SignalCsv.Q(s.Signs)).Append(',')
+                  .Append(s.Entry.ToString("R", Ci)).Append(',').Append(s.Sl.ToString("R", Ci)).Append(',').Append(s.Tp.ToString("R", Ci)).Append(',')
+                  .Append(Math.Round(s.RAvail, 2).ToString("R", Ci)).Append(',')
+                  .Append(outc).Append(',').Append(rr).Append(',').Append(exs).Append('\n');
+            }
+            return ts.ToString();
+        }
 
         /// <summary>Nạp nến (bar_idx ≤ maxBar; −1 = hết file) + mức giá theo đúng thứ tự trong file.</summary>
         public static (List<BarData> bars, List<LevelVol>[] levels) Load(string prefix, int maxBar = -1)
@@ -61,15 +87,17 @@ namespace BenzoTraderNs
             var det = new DetectorCorven { BlockUsOpen = blockUs, AllowBar = i => i >= denyBelow };
             var eng = new BenzoEngine("GCZ26", tick, cache, new ISetupDetector[] { det }) { GetLevels = i => levels[i] };
             eng.Bars.AddRange(bars);
-            if (oneShot) eng.Advance(bars.Count - 1);
+            LastCancelled = 0;
+            if (oneShot) LastCancelled += eng.Advance(bars.Count - 1).Cancelled.Count;
             else
                 for (int i = 0; i < bars.Count; i++)
                 {
                     var r = eng.Advance(i);
                     if (r.CacheInvalid) throw new Exception(r.CacheWhy);
+                    LastCancelled += r.Cancelled.Count;
                     onBar?.Invoke(i, det);
                 }
-            eng.FinishSession();
+            LastCancelled += eng.FinishSession().Cancelled.Count;
             return (eng, det);
         }
     }

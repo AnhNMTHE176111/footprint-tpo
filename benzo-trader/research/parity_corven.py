@@ -4,12 +4,14 @@ parity_corven.py — đối chiếu setup_corven.py (Python, chuẩn) với Dete
 
 Ranh giới TEST (plan 10.6): TEST chưa "mở" = chưa ai đọc R/WR của lệnh sau 2026-09-15. Parity là kiểm MÃ, không kiểm lợi thế:
   * TRAIN (bar_idx ≤ cut): so ĐỦ — định danh (giờ, thế, hướng, range, mốc, dấu hiệu, entry/SL/TP, R sẵn) + kết cục + R + nến thoát.
-  * TEST  (bar_idx > cut): CHỈ so định danh. Cột ket_cuc / r / exit_idx của phần TEST bị BỎ trước khi so, không in, không ghi file;
-    không liệt kê từng lệnh TEST, chỉ in số đếm "m/m khớp định danh".
+  * TEST  (bar_idx > cut): CHỈ so định danh. Khoá 2 lớp (plan 12.1 #1): (1) ReplayCorven --hide-after ghi TRỐNG ket_cuc / r / exit_idx
+    của mọi lệnh TEST ngay trong tiến trình C#; (2) script này kiểm lại — ô nào không rỗng ⇒ raise + xoá thư mục tạm, không so tiếp.
+    Không in, không ghi file kết cục TEST; không liệt kê từng lệnh TEST, chỉ in số đếm "m/m khớp định danh".
 Ngoài lệnh, so luôn MỌI CF ứng viên đã qua ② (dấu hiệu + cổng + giá) — kiểm chặt hơn nhiều so với chỉ 97 lệnh.
 Lệch có chủ đích: (1) cổng tin USD (C# có, Python không — ReplayCorven không có lịch tin nên không phát sinh);
-(2) cổng 'cuoi_phien' của Python không có trong danh sách cổng C# (C# huỷ lệnh ở BenzoEngine khi thấy khoảng trống) — bỏ khỏi
-cột gates của Python trước khi so ứng viên; lệnh thì so thẳng.
+(2) cổng 'cuoi_phien': Python = nến cuối phiên (nhìn trước), C# = sm ≥ 1379 (nhân quả, plan 12.2-Q2) + huỷ dự phòng ở BenzoEngine
+    ⇒ bỏ 'cuoi_phien' ở CẢ HAI phía trước khi so cột gates; lệnh thì so thẳng.
+(3) luật chồng range: Python chỉ bật khi tỷ lệ loại thế A ≤ 30 % (overlap_max_drop), C# luôn bật ⇒ in chong_rate, raise nếu > 0,30.
 
 Chạy:  PYTHONIOENCODING=utf-8 python parity_corven.py        (≈ 3–5 phút; cần dotnet để build ReplayCorven)
 Ghi:   report/PARITY-CORVEN.md + report/_parity_corven_train.csv (chỉ TRAIN).
@@ -19,6 +21,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import shutil
 import tempfile
 
 import numpy as np
@@ -63,9 +66,35 @@ def py_rows(R, lo: int, hi: int, with_outcome: bool):
         cands.append(dict(cf=c.cf, t_utc=str(df['datetime'].iloc[c.cf])[:16], the=c.the, side='buy' if c.S > 0 else 'sell', rid=c.rid,
                           b_from_exhausted=int(c.exhausted), n=len(c.types), loai='+'.join(TYPE_VN[x] for x in c.types),
                           dau_hieu=' | '.join(f"{TYPE_VN[k]}: {v[0]} (nến {v[1]})" for k, v in c.signs.items()),
-                          gates=';'.join(g for g in c.gates if g != 'cuoi_phien'), entry=int(c.entry), sl=int(c.sl), tp=float(c.tp),
+                          gates=strip_cuoi_phien(';'.join(c.gates)), entry=int(c.entry), sl=int(c.sl), tp=float(c.tp),
                           r_san=round(c.r_avail, 2), moc=c.moc_used))
     return pd.DataFrame(trades), pd.DataFrame(cands)
+
+
+def strip_cuoi_phien(gates: str) -> str:
+    return ';'.join(g for g in str(gates).split(';') if g and g != 'cuoi_phien')
+
+
+def assert_test_hidden(cs_test: pd.DataFrame, tmpdir: str = None) -> None:
+    """Lớp khoá thứ 2 của ranh giới TEST: mọi ô ket_cuc / r / exit_idx của phần TEST từ C# phải RỖNG. Có ô nào ⇒ xoá thư mục tạm
+    (nếu có) rồi raise — không so tiếp, không in giá trị."""
+    bad = 0
+    for col in OUT_COLS:
+        if col in cs_test.columns:
+            v = cs_test[col].astype(str).str.strip()
+            bad += int(((v != '') & (v.str.lower() != 'nan')).sum())
+    if bad:
+        if tmpdir:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+        raise RuntimeError(f'RANH GIỚI TEST HỎNG: {bad} ô kết cục TEST không rỗng trong CSV của ReplayCorven — dừng, đã xoá thư mục tạm')
+
+
+def check_chong(R, name: str) -> float:
+    rate = float(R['chong_rate'])
+    print(f'chong_rate {name}: {rate:.3f} (Python tắt luật chồng range nếu > 0,30; C# luôn bật)')
+    if rate > 0.30:
+        raise RuntimeError(f'chong_rate {name} = {rate:.3f} > 0,30: Python tự tắt luật chồng range còn C# thì không — phải quyết lại')
+    return rate
 
 
 def run_cs(prefix: str, out: str, maxbar: int, deny: int, hide_after: int = -1):
@@ -76,6 +105,7 @@ def run_cs(prefix: str, out: str, maxbar: int, deny: int, hide_after: int = -1):
     subprocess.run(args, check=True, capture_output=True)
     t = pd.read_csv(os.path.join(out, 'cs_trades.csv'), keep_default_na=False)
     c = pd.read_csv(os.path.join(out, 'cs_cands.csv'), keep_default_na=False)
+    c['gates'] = c['gates'].map(strip_cuoi_phien)
     return t, c
 
 
@@ -130,6 +160,7 @@ def main():
     deny = int(np.flatnonzero(good)[0])
     assert good[deny:].all(), 'mặt nạ phiên dày TRAIN không liền một khối — ReplayCorven --deny-below không đủ'
     R = SC.run_gd1(bars, df, good)
+    check_chong(R, 'TRAIN')
     py_tr, py_c = py_rows(R, 0, cut, True)
     print(f'Python TRAIN: {len(py_tr)} lệnh, {len(py_c)} ứng viên (cut {cut}, phiên dày từ nến {deny})')
     del bars
@@ -144,7 +175,8 @@ def main():
         full_c['cf'] = full_c['cf'].astype(int)
         f_ok, f_n, f_d = compare(py_tr, full_tr[full_tr['idx'] <= cut], 'idx', ID_COLS + OUT_COLS)
         fc_ok, fc_n, fc_d = compare(py_c, full_c[full_c['cf'] <= cut], 'cf', CAND_COLS)
-        cs_test_tr = full_tr[full_tr['idx'] > cut].drop(columns=OUT_COLS)          # cột đã trống từ C#; bỏ hẳn
+        assert_test_hidden(full_tr[full_tr['idx'] > cut], tmp)                    # lớp 2: ô kết cục TEST phải rỗng, không thì dừng
+        cs_test_tr = full_tr[full_tr['idx'] > cut].drop(columns=OUT_COLS)
         cs_test_c = full_c[full_c['cf'] > cut]
         del full_tr
     # ---------------- Python toàn file — chỉ định danh phần TEST ----------------
@@ -153,6 +185,7 @@ def main():
     good_f = (~df_f['thin'].to_numpy()) & (~df_f['splice'].to_numpy())
     assert (good_f[:cut + 1] == good).all() and good_f[deny:].all(), 'mặt nạ phiên dày toàn file khác TRAIN'
     Rf = SC.run_gd1(bars_f, df_f, good_f)
+    check_chong(Rf, 'toàn file')
     Rf['trades'] = None                                                            # ⛔ không giữ bảng kết cục của toàn file
     py_test_tr, py_test_c = py_rows(Rf, cut + 1, n_all - 1, False)
     t_ok, t_n, t_d = compare(py_test_tr, cs_test_tr, 'idx', ID_COLS)
@@ -183,8 +216,9 @@ def main():
          f'Hồi quy TRAIN: Python {len(py_tr)} lệnh (thế A {nA}, thế B {nB}) = C# {len(cs_tr)} lệnh.', '',
          '## Lệch có chủ đích', '',
          '- **Tin USD** (`IsNewsBlocked`, ±15′ tin mức cao): chỉ C# có; ReplayCorven không có lịch tin nên không phát sinh trong phép so.',
-         '- **Nến cuối phiên**: Python gắn cổng `cuoi_phien` (biết trước nến cuối). C# không biết trước ⇒ vào lệnh rồi **huỷ** ở BenzoEngine '
-         'khi nến đầu phiên sau tới (trả khoá 4d) — kết quả lệnh giống hệt; cột `gates` của ứng viên Python bỏ `cuoi_phien` trước khi so.',
+         '- **Nến cuối phiên**: Python gắn cổng `cuoi_phien` khi CF là nến cuối phiên (biết trước). C# gắn `cuoi_phien` khi `sm ≥ 1379` '
+         '(nến mở 16:59 ET — cách nhân quả duy nhất) và giữ cơ chế **huỷ** ở BenzoEngine làm lưới dự phòng (ngày đóng sớm / thiếu nến) — '
+         'kết quả lệnh giống hệt; cột `gates` bỏ `cuoi_phien` ở **cả hai phía** trước khi so.',
          '- **Range chồng range / mục tiêu thế B**: Python đọc cạnh range cũ ở CUỐI file (nhìn trước nhẹ), C# đọc tại lúc xét. '
          'Không gây lệch nào trên file này (số khớp ở trên).', '']
     if a_d or c_d or f_d or fc_d:

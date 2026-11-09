@@ -7,7 +7,8 @@
 //   --deny-below: nến < K không được vào lệnh (= phiên mỏng Python lọc bằng `good`)
 //   --hide-after: lệnh có nến vào > N ghi TRỐNG cột ket_cuc/r/exit_idx (phần TEST — kết cục không rời tiến trình)
 // Ra: <outdir>/cs_trades.csv (mọi lệnh, kể cả kết cục) + <outdir>/cs_cands.csv (mọi CF qua ②: dấu hiệu, cổng, giá).
-// ⚠ Tool KHÔNG in thống kê R/WR. Cột kết cục của phần TEST do parity_corven.py bỏ trước khi so (giữ TEST nguyên vẹn).
+// ⚠ Tool KHÔNG in thống kê R/WR. Với --hide-after, 3 cột kết cục (ket_cuc/r/exit_idx) của mọi lệnh sau nến cut được ghi TRỐNG ngay
+//   trong tiến trình (CorvenData.TradesCsv); parity_corven.py còn kiểm lại và raise nếu thấy ô không rỗng (khoá 2 lớp, plan 12.1 #1).
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -58,20 +59,8 @@ static class Program
         });
         File.WriteAllText(Path.Combine(outDir, "cs_cands.csv"), cs.ToString(), new UTF8Encoding(false));
 
-        var ts = new StringBuilder("idx,t_utc,the,side,range_id,b_from_exhausted,moc,so_dau_hieu,loai,dau_hieu,entry,sl,tp,r_san,ket_cuc,r,exit_idx\n");
-        foreach (var s in eng.Signals)
-        {
-            int ex = s.IsClosed && timeIdx.TryGetValue(s.ExitTime.Ticks, out int e) ? e : -1;
-            bool hide = s.BarIdx > hideAfter;     // phần TEST: kết cục không bao giờ rời tiến trình
-            string outc = hide ? "" : s.Outcome, rr = hide || !s.IsClosed ? "" : Math.Round(s.R, 3).ToString("R", Ci), exs = hide ? "" : ex.ToString(Ci);
-            ts.Append(s.BarIdx).Append(',').Append(s.Time.ToString("yyyy-MM-dd HH:mm", Ci)).Append(',').Append(s.Setup).Append(',')
-              .Append(s.Side > 0 ? "buy" : "sell").Append(',').Append(s.RangeId).Append(',').Append(s.BFromExhausted ? 1 : 0).Append(',')
-              .Append(Q(s.Zone)).Append(',').Append(s.NSigns).Append(',').Append(Q(s.SignTypes)).Append(',').Append(Q(s.Signs)).Append(',')
-              .Append(R(s.Entry)).Append(',').Append(R(s.Sl)).Append(',').Append(R(s.Tp)).Append(',').Append(Math.Round(s.RAvail, 2).ToString("R", Ci)).Append(',')
-              .Append(s.Outcome).Append(',').Append(s.IsClosed ? Math.Round(s.R, 3).ToString("R", Ci) : "").Append(',').Append(ex).Append('\n');
-        }
-        File.WriteAllText(Path.Combine(outDir, "cs_trades.csv"), ts.ToString(), new UTF8Encoding(false));
-        Console.WriteLine($"{bars.Count} nến · {nc} ứng viên · {eng.Signals.Count} lệnh → {outDir} ({sw.Elapsed.TotalSeconds:0.0}s)");
+        File.WriteAllText(Path.Combine(outDir, "cs_trades.csv"), CorvenData.TradesCsv(eng.Signals, timeIdx, hideAfter), new UTF8Encoding(false));
+        Console.WriteLine($"{bars.Count} nến · {nc} ứng viên · {eng.Signals.Count} lệnh · huỷ (nến cuối phiên) {CorvenData.LastCancelled} → {outDir} ({sw.Elapsed.TotalSeconds:0.0}s)");
         return 0;
     }
 }

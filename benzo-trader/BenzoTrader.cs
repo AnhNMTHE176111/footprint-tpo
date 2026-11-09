@@ -470,7 +470,6 @@ namespace BenzoTraderNs
                 {
                     if (taken != null && c.InstKey == taken.InstKey) continue;
                     string gate = _det.FirstGate(c, news) ?? "đang có lệnh";
-                    if (!EnableCorven) gate = "setup tắt";
                     SignalCsv.AppendCandidate(_candPath, _engine.Bars[closed].Time, c.The, c.S, c.MocUsed, gate, c.SignsText);
                 }
             }
@@ -559,6 +558,7 @@ namespace BenzoTraderNs
                 int bm = 1;
                 foreach (var s in res.Opened)
                 {
+                    if (!EnableCorven) { _seen.Add(s.Id); continue; }         // đang TẮT: lệnh lấy từ cache chỉ hiện, không gửi (plan 12.1 #2)
                     if (!_seen.Add(s.Id)) continue;
                     if (s.BarIdx != lastClosed) continue;                     // chỉ nến vừa đóng
                     double age = (DateTime.UtcNow - s.Time.AddMinutes(bm)).TotalSeconds;
@@ -671,6 +671,8 @@ namespace BenzoTraderNs
                 var up = Color.FromArgb(38, 190, 120); var dn = Color.FromArgb(235, 80, 80);
                 var act = Color.FromArgb(120, 200, 235); var brk = Color.FromArgb(150, 150, 150);
                 using var fLbl = new Font("Consolas", 8, FontStyle.Bold);
+                float bw2 = 0;
+                try { bw2 = (float)(CurrentChart.BarsWidth / 2.0); } catch { }   // tâm nến = mép trái + BarsWidth/2 (plan 12.1 #4)
                 // hộp range (cách vẽ RangeRenderer: ACTIVE/PENDING tô nhạt viền xanh lơ, BROKEN viền xám đứt)
                 if (ShowRange)
                 {
@@ -692,6 +694,15 @@ namespace BenzoTraderNs
                             gr.DrawRectangle(pen, rect.X, rect.Y, rect.Width, rect.Height);
                         }
                     }
+                    foreach (var s in rs.Sigs)
+                    {   // hộp range của lệnh ĐÃ ĐÓNG (plan 12.1-7c): viền đứt mờ, không nhãn; dòng cache cũ không có RangeT0 ⇒ bỏ qua
+                        if (!s.IsClosed || s.RangeT0 <= 0 || s.RangeT1 <= s.RangeT0 || s.RangeHi <= s.RangeLo) continue;
+                        float x0 = (float)conv.GetChartX(new DateTime(s.RangeT0, DateTimeKind.Utc)), x1 = (float)conv.GetChartX(new DateTime(s.RangeT1, DateTimeKind.Utc)) + bw2;
+                        if (x1 < clip.Left || x0 > clip.Right) continue;
+                        float y0 = (float)conv.GetChartY(s.RangeHi), y1 = (float)conv.GetChartY(s.RangeLo);
+                        using var pen = new Pen(Color.FromArgb(60, act), 1f) { DashStyle = DashStyle.Dash };
+                        gr.DrawRectangle(pen, x0, Math.Min(y0, y1), Math.Max(2f, x1 - x0), Math.Max(1f, Math.Abs(y1 - y0)));
+                    }
                     foreach (var mo in rs.Mocs)
                     {   // thế B đang sống: đường đứt tại cạnh vừa phá (mốc)
                         float x0 = Math.Max((float)conv.GetChartX(mo.T0), clip.Left), y = (float)conv.GetChartY(mo.Price);
@@ -703,7 +714,7 @@ namespace BenzoTraderNs
                 foreach (var s in rs.Sigs)
                 {
                     bool open = !s.IsClosed;
-                    float xE = (float)conv.GetChartX(s.Time);
+                    float xE = (float)conv.GetChartX(s.Time) + bw2;
                     float xEnd = open ? clip.Right : (float)conv.GetChartX(s.ExitTime);
                     if (xEnd > clip.Right) xEnd = clip.Right;
                     if (xEnd < xE + 6) xEnd = xE + 6;
@@ -734,8 +745,9 @@ namespace BenzoTraderNs
                                + (s.IsClosed ? (s.R > 0 ? " ✓" : " ✗") : "");
                     float ly = s.Side > 0 ? yE + sz * 2 + 8 : yE - sz * 2 - 22;
                     var szLbl = gr.MeasureString(lbl, fLbl);
-                    using (var bgLbl = new SolidBrush(Color.FromArgb(open ? 215 : 150, dir))) gr.FillRectangle(bgLbl, xE + 6, ly - 1, szLbl.Width + 4, szLbl.Height + 1);
-                    using (var br = new SolidBrush(Color.White)) gr.DrawString(lbl, fLbl, br, xE + 8, ly);
+                    float lx = BenzoCore.LabelX(xE, szLbl.Width, clip.Left, clip.Right);   // lật sang trái khi tràn mép phải (plan 12.1 #3)
+                    using (var bgLbl = new SolidBrush(Color.FromArgb(open ? 215 : 150, dir))) gr.FillRectangle(bgLbl, lx - 2, ly - 1, szLbl.Width + 4, szLbl.Height + 1);
+                    using (var br = new SolidBrush(Color.White)) gr.DrawString(lbl, fLbl, br, lx, ly);
                 }
 
                 if (ShowTable)

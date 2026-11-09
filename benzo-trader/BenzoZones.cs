@@ -33,10 +33,13 @@ namespace BenzoTraderNs
 
         public static int Mod(int a, int m) => ((a % m) + m) % m;
 
-        /// <summary>Phút kể từ 05:00 VN (đã bù giờ Mỹ).</summary>
-        public static int SmOf(DateTime utc, int tzOffset, bool usShift = true)
+        /// <summary>Giờ VN cố định của mốc neo (= kernel.py: "phút kể từ 05:00 VN"). KHÔNG theo Settings "Lệch giờ" (plan 12.1 #5).</summary>
+        public const int VnOffset = 7;
+
+        /// <summary>Phút kể từ 05:00 VN (đã bù giờ Mỹ) — chỉ phụ thuộc UTC: luật chặn giờ là luật về thị trường Mỹ, không đổi theo cách xem giờ.</summary>
+        public static int SmOf(DateTime utc, bool usShift = true)
         {
-            int vm = Mod(utc.Hour * 60 + utc.Minute + tzOffset * 60, 1440);
+            int vm = Mod(utc.Hour * 60 + utc.Minute + VnOffset * 60, 1440);
             int adj = (usShift && !UsDst(utc)) ? Mod(vm - 60, 1440) : vm;
             return Mod(adj - 300, 1440);
         }
@@ -61,7 +64,7 @@ namespace BenzoTraderNs
     /// <summary>Tách phiên + giờ neo Mỹ theo dòng nến đã đóng.</summary>
     public sealed class BenzoZones
     {
-        public int TzOffset = 7;
+        public int TzOffset = 7;              // chỉ để hiển thị — sm KHÔNG dùng (plan 12.1 #5)
         public bool UsShift = true;
 
         public readonly List<BarData> Bars = new();
@@ -86,7 +89,7 @@ namespace BenzoTraderNs
             double gap = first ? 0 : (bar.Time - Bars[idx - 1].Time).TotalMinutes;
             NewSession = first || gap > BenzoKernel.GapMinutes;
             if (NewSession) { SessionNo++; SessionStartIdx = idx; }
-            Sm = BenzoKernel.SmOf(bar.Time, TzOffset, UsShift);
+            Sm = BenzoKernel.SmOf(bar.Time, UsShift);
             Phase = BenzoKernel.PhaseOf(Sm);
             _sess.Add(SessionNo); _posS.Add(idx - SessionStartIdx); _sm.Add(Sm);
         }

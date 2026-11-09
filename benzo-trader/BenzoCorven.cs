@@ -383,8 +383,23 @@ namespace BenzoTraderNs
             int sm = f.Sm[cf];
             if (BenzoCore.InVirtualOpen(sm)) g.Add("chan_1920");
             if (cf - f.SStart[cf] < cp.BlockFirstBars) g.Add("dau_phien");
+            // nến cuối phiên (plan 12.2-Q2): nến mở 16:59 ET (sm ≥ 1379) = nến M1 cuối của phiên 18:00→17:00 ET — cách NHÂN QUẢ duy nhất
+            // để code luật 4d "nến cuối phiên không vào" (Python nhìn trước). Huỷ ở BenzoEngine.EndSession giữ làm lưới dự phòng.
+            if (sm >= LastBarSm) g.Add("cuoi_phien");
             c.Gates = g;
         }
+
+        /// <summary>sm của nến M1 cuối phiên CME (mở 16:59 ET).</summary>
+        public const int LastBarSm = 1379;
+
+        /// <summary>Danh sách cổng CHÍNH THỨC của CSV ứng viên (plan 10.4.2 + "thế đã có lệnh" + "cuối phiên", 12.1-7a/12.2-Q1-Q2):
+        /// 2 cổng ③ + mọi giá trị GateVn + "tin USD" + "thế đã có lệnh" (DetectorCorven) + "đang có lệnh" (engine). README phải liệt kê đúng tập này.</summary>
+        public static readonly string[] AllGateLabels =
+        {
+            "③ 0 loại", "③ 1 loại", "④ CF", "④ R<1,7", "④ trần SL", "⛔ veto kiệt sức", "⛔ quét stop", "⛔ chồng range",
+            "chặn giờ", "cuối phiên", "tin USD", "thế đã có lệnh", "đang có lệnh",
+        };
+        public static readonly string[] GateCodes = { "g4a_cf", "r_nho", "tran_sl", "v_kiet_suc_chong", "v_quet_stop", "v_chong_range", "chan_1920", "dau_phien", "cuoi_phien", "tin_usd" };
 
         /// <summary>Nhãn cổng cho CSV ứng viên bị loại (plan 10.4).</summary>
         public static string GateVn(string g) => g switch
@@ -397,6 +412,7 @@ namespace BenzoTraderNs
             "v_chong_range" => "⛔ chồng range",
             "chan_1920" => "chặn giờ",
             "dau_phien" => "chặn giờ",
+            "cuoi_phien" => "cuối phiên",
             "tin_usd" => "tin USD",
             _ => g
         };
@@ -732,8 +748,17 @@ namespace BenzoTraderNs
                 RangeLo = Math.Round(c.InstBottom * tick, 6), RangeHi = Math.Round(c.InstTop * tick, 6), Edge = Math.Round(c.InstE * tick, 6),
                 BFromExhausted = c.Exhausted, RAvail = c.RAvail, RangeId = c.Rid,
                 InstKey = c.InstKey, LockKey = c.LockKey,
+                RangeT0 = RangeStartTicks(c.Rid), RangeT1 = f.Bars[c.Cf].Time.Ticks,
                 CfH = f.H[c.Cf] * tick, CfL = f.L[c.Cf] * tick, CfBody = Math.Abs(f.C[c.Cf] - f.O[c.Cf]) * tick,
             };
+        }
+
+        /// <summary>Giờ mở nến bắt đầu range (ticks UTC) — để vẽ lại hộp range của lệnh cũ (plan 12.1-7c); 0 nếu không rõ.</summary>
+        private long RangeStartTicks(int rid)
+        {
+            if (M == null || rid < 0 || rid >= M.Eng.Ranges.Count) return 0;
+            int st = M.Eng.Ranges[rid].Start;
+            return st >= 0 && st < M.F.Bars.Count ? M.F.Bars[st].Time.Ticks : 0;
         }
 
         /// <summary>Nhãn ngắn trên chart: "A sell · Δ ngược + bóng đỏ 18" (loại + số đắt nhất mỗi loại).</summary>

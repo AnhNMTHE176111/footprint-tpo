@@ -15,6 +15,7 @@ Bốn setup A/B/C/D cũ đã bỏ (không setup nào có lợi thế đo đượ
 cd benzo-trader
 bash build.sh                      # nối nguồn → qw-build.sh → dist/BenzoTrader.dll → copy vào C:\OptimusFLOW\Settings\Scripts\Indicators\BenzoTrader\
 dotnet run -c Release --project tests                  # unit test: 12 ca plan mục 4 + cache 10.5 + nhãn 10.3 + hồi quy 97 lệnh TRAIN
+python -m pytest -q research --ignore=research/_old     # pytest: 83 ca CORVEN (kernel 18, of_signals 26, setup_corven 18+18, sweep 3) + 6 ca parity + 17 ca C2'/FOLLOW = 106
 PYTHONIOENCODING=utf-8 python research/parity_corven.py   # parity Python ↔ C# (tools/ReplayCorven) → research/report/PARITY-CORVEN.md
 ```
 - `build.sh` **nối nguồn**, không copy tay: `quantower-range/RangeLogic.cs`, `quantower-orderflow-indicator/StackedImbalance.cs` +
@@ -31,13 +32,17 @@ PYTHONIOENCODING=utf-8 python research/parity_corven.py   # parity Python ↔ C#
 | `BenzoCore.cs` | `Signal`, mô phỏng SL/TP/TIME + MFE/MAE, thống kê thế A/B, bảng + nhãn trung thực, caption Telegram, cache niêm phong + guard, `BenzoEngine`, CSV |
 | `BenzoZones.cs` | tách phiên (khoảng trống > 30′), giờ neo Mỹ (`sm`), phiên Á/Âu/Mỹ |
 | `BenzoTrader.cs` | lớp dán Quantower: Settings, vòng đời, vẽ, Telegram + chụp ảnh |
-| `tools/ReplayCorven` | chạy DetectorCorven trên file Footprint Export → CSV cho parity (phần TEST ghi trống kết cục) |
+| `tools/ReplayCorven` | chạy DetectorCorven trên file Footprint Export → CSV cho parity; `--hide-after <cut>` ghi trống 3 cột kết cục của mọi lệnh sau cut ngay trong tiến trình (`CorvenData.TradesCsv`, có unit test) |
 | `tools/OfSignalsDump` | parity stacked/kiệt sức GĐ0 (giữ) |
 | `research/` | Python chuẩn: `setup_corven.py`, `of_signals.py`, `kernel.py`, `results_corven.py`, `controls_corven.py`, `sweep_corven.py`, `parity_corven.py`; file setup cũ ở `research/_old/` (không build, không test) |
 
 ## Settings (plan 10.2 — CHỈ công tắc, không có ngưỡng số)
 Lệch giờ · Telegram: bật / bot token / chat id / gửi thử · **Bật setup CORVEN (chạy thử — backtest −0,29R/lệnh, kém vào ngẫu nhiên)** [BẬT] ·
 **Chặn 19:20–20:30 VN (mốc neo Mỹ)** [BẬT] · **Hiện range** [BẬT] · **Hiện dấu hiệu đã đếm** [BẬT] · Đặt lại thống kê · Hiện lại toàn bộ thống kê · Hiện bảng [BẬT].
+- **TẮT setup = tạm ngừng dò; lịch sử đã có vẫn hiện; nến lúc tắt được dò bù khi bật lại / nạp lại chart.** (Nến chạy lúc tắt không được
+  niêm phong; lệnh đã niêm phong vẫn vẽ, vẫn đếm, không gửi Telegram. Công tắc không nằm trong khoá cache — đổi khoá cũng là xoá lịch sử.)
+- **"Lệch giờ" chỉ đổi cách HIỂN THỊ giờ** (bảng, CSV `time_vn`, caption, lịch tin). Mọi luật giờ (chặn 19:20–20:30, 15 nến đầu phiên,
+  cuối phiên, phiên Á/Âu/Mỹ) tính theo `sm` = phút kể từ 05:00 giờ VN cố định UTC+7, bù giờ mùa đông Mỹ — chỉ phụ thuộc UTC.
 Không đưa `win_b / bubble_mult / need_signs / đệm SL / "gần" / lọc phiên` ra Settings: đổi tham số sống mà không đo lại = đúng lỗi A/B/C/D,
 và mỗi bộ tham số là một chuỗi forward test riêng (n live ≈ 3 lệnh/ngày — chia nhỏ là vô nghĩa).
 
@@ -57,8 +62,12 @@ và mỗi bộ tham số là một chuỗi forward test riêng (n live ≈ 3 l�
 ## Quyết định khi port (plan 10)
 - Bộ tham số = **bộ gốc vòng 1** (RESULTS-CORVEN.md), `LogicVersion = "corven-1"`. **Không port:** ngoại lệ "xác nhận lần 2" (A2),
   neo SL pivot, `overlap_max_drop`, lọc phiên mỏng/chỗ nối của Python.
-- **Nến cuối phiên:** Python biết trước nến cuối nên không vào; C# không biết trước ⇒ vào rồi **huỷ** khi nến đầu phiên sau tới
-  (Telegram gửi tin huỷ, khoá 4d được trả lại). Kết quả lệnh giống Python 100 %.
+- **Nến cuối phiên:** Python biết trước nến cuối nên không vào. C# chặn bằng cổng `cuối phiên` khi `sm ≥ 1379` (nến mở 16:59 ET = nến M1
+  cuối của phiên 18:00→17:00 ET — cách nhân quả duy nhất, plan 12.2-Q2), và **giữ** cơ chế huỷ ở `BenzoEngine` làm lưới dự phòng cho ngày
+  đóng sớm / thiếu nến (vào rồi huỷ khi nến đầu phiên sau tới, Telegram gửi tin huỷ, khoá 4d được trả lại). Số lệnh bị huỷ của ReplayCorven
+  trên TRAIN: **0 trước khi thêm cổng, 0 sau khi thêm cổng** (toàn file 90d cũng 0). Kết quả lệnh giống Python 100 %.
+- **Luật chồng range:** C# **luôn bật**. Python có thêm luật báo cáo `overlap_max_drop` (tự tắt luật khi nó loại > 30 % thế A — không port);
+  `parity_corven.py` in `chong_rate` (TRAIN 0,018) và **dừng** nếu > 0,30 để không bao giờ "tự khớp" âm thầm khi hai bên tách nhau.
 - **Range chồng range / mục tiêu thế B:** Python đọc cạnh range cũ ở cuối file; C# đọc tại lúc xét (không nhìn trước). Không gây lệch trên file 90d.
 - **Tin USD** ±15′: lệch có chủ đích duy nhất (Python không có lịch tin). Lịch tin chỉ phủ tuần hiện tại.
 - **Chọn lệnh khi bận (G7):** đang có lệnh mở thì mọi CF khác bị bỏ (không xếp hàng); cùng một nến xét thế A trước thế B, rồi theo range.
@@ -79,6 +88,8 @@ và mỗi bộ tham số là một chuỗi forward test riêng (n live ≈ 3 l�
   **Guard khớp nến:** mỗi dòng `sig` lưu H/L nến CF; khi gắn lại, giá vào lệch > nửa tick hoặc H/L lệch > 1 tick ⇒ **bỏ toàn bộ cache**,
   dò lại từ đầu, ghi 1 dòng `error_log.txt`. File cache cũ `cache_<mã>_<Title>.jsonl` của A/B/C/D tự xoá khi gặp.
 - 1 lệnh mở cùng lúc; chạm cả SL lẫn TP cùng nến ⇒ SL; chi phí 0,2 giá/lệnh.
+- Cache giữ **nhiều khoảng** đã dò (dòng `rng` rời nhau): đoạn nến lúc setup TẮT để trống, nạp lại sẽ dò bù đúng đoạn đó.
+- Dòng `sig` lưu thêm `RangeT0/RangeT1` (giờ mở nến đầu range / nến CF) để vẽ lại hộp range mờ của lệnh đã đóng; dòng cũ thiếu 2 trường vẫn nạp (không vẽ hộp).
 - "Đặt lại thống kê" ghi mốc UTC vào `reset_<mã>.txt`; "Hiện lại toàn bộ thống kê" xoá mốc.
 
 ## Bảng trên chart (4 dòng, dòng 4 luôn hiện)
@@ -102,18 +113,21 @@ CF 00:23 thân 0,6 giá · Vào 4126,6 · SL 4129,1 (2,5) · TP 4121,6 (2R, R s�
 ✅ CORVEN thế B +1,9R · 00:23→00:32          (R đã trừ chi phí 0,2; TIME ghi thêm "(hết phiên)")
 ⚪ CORVEN thế A 03:59 huỷ — nến xác nhận là nến cuối phiên
 ```
+**Mọi giờ trong tin = giờ MỞ nến** (nến CF / nến thoát), trùng `time_vn` của CSV, cột `t_vn` Python và nhãn thời gian nến trên Quantower.
 Chống trùng: lần quét đầu sau reload chỉ nạp id; chỉ bắn tín hiệu ở nến vừa đóng, tuổi ≤ 90 giây; khoá file `%LOCALAPPDATA%\BenzoTrader\sent\`.
 Ảnh chụp vùng chart (cửa sổ Optimus Flow phải đang hiện, không thu nhỏ). Log `tele_log.txt` (che token), lỗi code `error_log.txt`.
 
 ## CSV (thư mục `%LOCALAPPDATA%\BenzoTrader\`)
 - **Lệnh** `signals_<mã>_1m_corven-1.csv`:
   `time_utc,time_vn,the,side,range_lo,range_hi,b_from_exhausted,moc,n_signs,signs,entry,sl,tp,risk,r_avail,outcome,exit_time,r,mfe_r,mae_r,phien`
-  — `signs` đúng định dạng cột `dau_hieu` của Python; `mfe_r/mae_r` = chạy xa nhất thuận/nghịch (theo R) từ vào tới đóng; `phien` = Á/Âu/Mỹ.
+  — `signs` đúng **từng byte** cột `dau_hieu` của Python (kể cả dấu trừ ASCII `-` trong "Δ to -36", "ΣΔ -62" — để parity so thẳng chuỗi); `mfe_r/mae_r` = chạy xa nhất thuận/nghịch (theo R) từ vào tới đóng; `phien` = Á/Âu/Mỹ.
 - **Ứng viên bị loại** `candidates_<mã>_1m_corven-1.csv` (chỉ live, nến vừa đóng): `time_utc,the,side,moc,gate,detail` —
   `gate` ∈ `③ 0 loại`, `③ 1 loại`, `④ CF`, `④ R<1,7`, `④ trần SL`, `⛔ veto kiệt sức`, `⛔ quét stop`, `⛔ chồng range`, `chặn giờ`,
-  `tin USD`, `đang có lệnh`, `thế đã có lệnh`.
+  `cuối phiên`, `tin USD`, `thế đã có lệnh`, `đang có lệnh`.
+  (`thế đã có lệnh` = luật 4d "1 lệnh/thế, 1 lệnh/(range, cạnh, thế)"; `đang có lệnh` = đang có lệnh mở. Danh sách này có unit test so với mã.)
 
 ## Parity
 `research/parity_corven.py` → `research/report/PARITY-CORVEN.md`: TRAIN 97/97 lệnh khớp cả kết cục/R, mọi CF ứng viên khớp;
-phần TEST (sau 2026-09-15) **chỉ so định danh** — ReplayCorven ghi trống kết cục TEST ngay trong tiến trình, không in/đọc R hay WR của TEST
+phần TEST (sau 2026-09-15) **chỉ so định danh**, khoá 2 lớp: (1) ReplayCorven `--hide-after` ghi trống kết cục TEST ngay trong tiến trình;
+(2) `parity_corven.py` kiểm lại — ô kết cục TEST nào không rỗng ⇒ dừng + xoá thư mục tạm (pytest `test_parity_corven.py`). Không in/đọc R hay WR của TEST
 (giữ TEST nguyên vẹn cho giả thuyết "chỉ phiên Âu" ở plan mục 9).

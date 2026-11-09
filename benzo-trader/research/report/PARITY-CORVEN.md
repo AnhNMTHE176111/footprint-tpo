@@ -20,7 +20,7 @@ Hồi quy TRAIN: Python 97 lệnh (thế A 43, thế B 54) = C# 97 lệnh.
 ## Lệch có chủ đích
 
 - **Tin USD** (`IsNewsBlocked`, ±15′ tin mức cao): chỉ C# có; ReplayCorven không có lịch tin nên không phát sinh trong phép so.
-- **Nến cuối phiên**: Python gắn cổng `cuoi_phien` (biết trước nến cuối). C# không biết trước ⇒ vào lệnh rồi **huỷ** ở BenzoEngine khi nến đầu phiên sau tới (trả khoá 4d) — kết quả lệnh giống hệt; cột `gates` của ứng viên Python bỏ `cuoi_phien` trước khi so.
+- **Nến cuối phiên**: Python gắn cổng `cuoi_phien` khi CF là nến cuối phiên (biết trước). C# gắn `cuoi_phien` khi `sm ≥ 1379` (nến mở 16:59 ET — cách nhân quả duy nhất) và giữ cơ chế **huỷ** ở BenzoEngine làm lưới dự phòng (ngày đóng sớm / thiếu nến) — kết quả lệnh giống hệt; cột `gates` bỏ `cuoi_phien` ở **cả hai phía** trước khi so.
 - **Range chồng range / mục tiêu thế B**: Python đọc cạnh range cũ ở CUỐI file (nhìn trước nhẹ), C# đọc tại lúc xét. Không gây lệch nào trên file này (số khớp ở trên).
 
 File đối chiếu TRAIN từng lệnh: `report/_parity_corven_train.csv`.

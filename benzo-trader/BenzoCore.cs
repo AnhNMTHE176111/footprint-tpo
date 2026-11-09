@@ -59,6 +59,8 @@ namespace BenzoTraderNs
         public string Phien { get; set; } = "";           // Á / Âu / Mỹ theo neo Mỹ
         public string InstKey { get; set; } = "";         // khoá 4d (1 lệnh/thế)
         public string LockKey { get; set; } = "";         // khoá 4d (1 lệnh/(range, cạnh, thế))
+        public long RangeT0 { get; set; }                 // ticks UTC: giờ mở nến bắt đầu range (0 = dòng cache cũ ⇒ không vẽ hộp)
+        public long RangeT1 { get; set; }                 // ticks UTC: giờ mở nến CF
         public double MfeR { get; set; }                  // chạy xa nhất thuận chiều (R) từ vào tới đóng
         public double MaeR { get; set; }                  // chạy xa nhất ngược chiều (R)
         [JsonIgnore] public int BarIdx { get; set; } = -1; // chỉ số nến vào trong engine (không lưu file)
@@ -339,7 +341,8 @@ namespace BenzoTraderNs
         {
             double risk = s.Risk;
             string icon = s.Side > 0 ? "🟢 BUY" : "🔴 SELL";
-            string tVn = s.Time.AddMinutes(barMinutes).AddHours(tzOffset).ToString("HH:mm", CultureInfo.InvariantCulture);
+            // giờ MỞ nến CF (= time_vn CSV = t_vn Python = nhãn nến trên Quantower) — plan 12.1 #6; barMinutes giữ chữ ký cũ, không dùng
+            string tVn = s.Time.AddHours(tzOffset).ToString("HH:mm", CultureInfo.InvariantCulture);
             var sb = new StringBuilder();
             sb.Append(icon).Append(" · CORVEN ").Append(TheName(s.Setup)).Append(" · ").Append(symbol).Append(" · ").Append(tVn).Append(" VN\n");
             sb.Append(MocLine(s, digits)).Append('\n');
@@ -355,16 +358,25 @@ namespace BenzoTraderNs
         public static string ComposeClose(Signal s, int tzOffset, int barMinutes)
         {
             bool win = s.R > 0;
-            string t0 = s.Time.AddMinutes(barMinutes).AddHours(tzOffset).ToString("HH:mm", CultureInfo.InvariantCulture);
-            string t1 = s.ExitTime.AddMinutes(barMinutes).AddHours(tzOffset).ToString("HH:mm", CultureInfo.InvariantCulture);
+            string t0 = s.Time.AddHours(tzOffset).ToString("HH:mm", CultureInfo.InvariantCulture);
+            string t1 = s.ExitTime.AddHours(tzOffset).ToString("HH:mm", CultureInfo.InvariantCulture);
             return $"{(win ? "✅" : "🛑")} CORVEN {TheName(s.Setup)} {SignedR(s.R)} · {t0}→{t1}" + (s.Outcome == "TIME" ? " (hết phiên)" : "");
         }
 
         /// <summary>Tin HUỶ: lệnh vào ở nến cuối phiên (không có nến nào để vào thật).</summary>
         public static string ComposeCancel(Signal s, int tzOffset, int barMinutes)
         {
-            string t0 = s.Time.AddMinutes(barMinutes).AddHours(tzOffset).ToString("HH:mm", CultureInfo.InvariantCulture);
+            string t0 = s.Time.AddHours(tzOffset).ToString("HH:mm", CultureInfo.InvariantCulture);
             return $"⚪ CORVEN {TheName(s.Setup)} {t0} huỷ — nến xác nhận là nến cuối phiên";
+        }
+
+        /// <summary>x của nhãn lệnh (plan 12.1 #3): mặc định xE + 8; tràn mép phải ⇒ lật sang trái xE − 8 − w; vẫn lọt mép trái ⇒ kẹp clipLeft + 2.</summary>
+        public static float LabelX(float xE, float w, float clipLeft, float clipRight)
+        {
+            float x = xE + 8;
+            if (x + w > clipRight) x = xE - 8 - w;
+            if (x < clipLeft) x = clipLeft + 2;
+            return x;
         }
 
         public static string Truncate(string s, int max) => s.Length <= max ? s : s.Substring(0, max - 1) + "…";
@@ -393,19 +405,31 @@ namespace BenzoTraderNs
 
         private readonly Dictionary<long, Signal> _byTime = new();
         private readonly object _fileLock = new();
-        private long _first = long.MaxValue, _last = long.MinValue;
+        /// <summary>Các khoảng [F,L] đã dò xong (rời nhau, sắp tăng). Nhiều khoảng vì nến lúc setup TẮT không được niêm phong (plan 12.1 #2).</summary>
+        private readonly List<(long F, long L)> _iv = new();
         public string FilePath { get; }
         public string Version { get; }
 
         public SignalCache(string filePath, string version = BenzoCore.LogicVersion) { FilePath = filePath; Version = version; }
         public int Count => _byTime.Count;
         public IEnumerable<Signal> All => _byTime.Values;
-        public bool Covers(long timeTicks) => timeTicks >= _first && timeTicks <= _last;
+        public bool Covers(long timeTicks) { foreach (var x in _iv) if (timeTicks >= x.F && timeTicks <= x.L) return true; return false; }
+        public IReadOnlyList<(long F, long L)> Intervals => _iv;
+
+        /// <summary>Thêm khoảng [f,l], gộp với mọi khoảng chồng lên nó. Trả khoảng sau gộp.</summary>
+        private (long F, long L) AddInterval(long f, long l)
+        {
+            for (int k = _iv.Count - 1; k >= 0; k--)
+                if (_iv[k].F <= l && f <= _iv[k].L) { f = Math.Min(f, _iv[k].F); l = Math.Max(l, _iv[k].L); _iv.RemoveAt(k); }
+            int pos = 0; while (pos < _iv.Count && _iv[pos].F < f) pos++;
+            _iv.Insert(pos, (f, l));
+            return (f, l);
+        }
         public bool TryGet(long timeTicks, out Signal s) => _byTime.TryGetValue(timeTicks, out s);
 
         public void Load()
         {
-            _byTime.Clear(); _first = long.MaxValue; _last = long.MinValue;
+            _byTime.Clear(); _iv.Clear();
             if (string.IsNullOrEmpty(FilePath) || !File.Exists(FilePath)) return;
             int rngLines = 0; bool dirty = false;
             foreach (var raw in File.ReadLines(FilePath))
@@ -419,9 +443,9 @@ namespace BenzoTraderNs
                     rngLines++;
                     if (d.V != Version)
                     {   // logic đã đổi: mọi thứ trước đó là của logic cũ
-                        _byTime.Clear(); _first = long.MaxValue; _last = long.MinValue; dirty = true; continue;
+                        _byTime.Clear(); _iv.Clear(); dirty = true; continue;
                     }
-                    _first = Math.Min(_first, d.F); _last = Math.Max(_last, d.L);
+                    AddInterval(d.F, d.L);
                 }
                 else if (d.K == "sig" && d.S != null) _byTime[d.S.Time.Ticks] = d.S;
             }
@@ -431,7 +455,7 @@ namespace BenzoTraderNs
         /// <summary>Bỏ TOÀN BỘ cache (guard khớp nến trượt): xoá file, quên mọi khoảng đã dò.</summary>
         public void Reset()
         {
-            _byTime.Clear(); _first = long.MaxValue; _last = long.MinValue;
+            _byTime.Clear(); _iv.Clear();
             try { lock (_fileLock) if (!string.IsNullOrEmpty(FilePath) && File.Exists(FilePath)) File.Delete(FilePath); } catch { }
         }
 
@@ -442,8 +466,8 @@ namespace BenzoTraderNs
                 var sb = new StringBuilder();
                 foreach (var s in _byTime.Values.OrderBy(x => x.Time))
                     sb.Append(JsonSerializer.Serialize(new Line { K = "sig", S = s })).Append('\n');
-                if (_first <= _last)
-                    sb.Append(JsonSerializer.Serialize(new Line { K = "rng", V = Version, F = _first, L = _last })).Append('\n');
+                foreach (var x in _iv)
+                    sb.Append(JsonSerializer.Serialize(new Line { K = "rng", V = Version, F = x.F, L = x.L })).Append('\n');
                 lock (_fileLock) File.WriteAllText(FilePath, sb.ToString());
             }
             catch { }
@@ -471,9 +495,9 @@ namespace BenzoTraderNs
         /// <summary>Đánh dấu khoảng nến [first,last] đã dò xong.</summary>
         public void MarkRange(long firstTicks, long lastTicks)
         {
-            if (firstTicks >= _first && lastTicks <= _last) return;
-            _first = Math.Min(_first, firstTicks); _last = Math.Max(_last, lastTicks);
-            Append(new Line { K = "rng", V = Version, F = _first, L = _last });
+            foreach (var x in _iv) if (firstTicks >= x.F && lastTicks <= x.L) return;
+            var m = AddInterval(firstTicks, lastTicks);
+            Append(new Line { K = "rng", V = Version, F = m.F, L = m.L });
         }
 
         /// <summary>Guard (plan 10.5): tín hiệu niêm phong có thuộc ĐÚNG nến này không — giá vào lệch > nửa tick so với close,
@@ -505,6 +529,8 @@ namespace BenzoTraderNs
         private readonly ClosedBars _view;
         private readonly SetupContext _ctx;
         public readonly BenzoZones Zones = new BenzoZones();
+        private long? _segStart;      // đầu đoạn nến liên tiếp đang BẬT (để niêm phong); nến lúc TẮT ngắt đoạn — plan 12.1 #2
+        private long _segLast;
 
         public BenzoEngine(string symbol, double tick, SignalCache cache, IEnumerable<ISetupDetector> detectors)
         {
@@ -558,10 +584,10 @@ namespace BenzoTraderNs
             if (closedIdx < Processed) return res;
             _ctx.TzOffset = TzOffset; _ctx.BarMinutes = BarMinutes; Zones.TzOffset = TzOffset;
             _ctx.GetLevels = GetLevels; _ctx.IsNewsBlocked = IsNewsBlocked;
-            long firstTicks = Bars[Processed].Time.Ticks;
             for (int i = Processed; i <= closedIdx; i++)
             {
                 var bar = Bars[i];
+                bool enabled = Detectors.Any(d => IsEnabled(d.Setup));
                 // 0) phiên + detector quan sát nến này (chỉ nhìn tới nến i)
                 _view.Limit = i + 1;
                 Zones.Push(i, bar);
@@ -572,6 +598,8 @@ namespace BenzoTraderNs
                 // 2) lệnh đang mở gặp nến này (nến SAU nến vào)
                 if (Open != null && i > Open.BarIdx && BenzoCore.StepBar(Open, bar)) { res.Closed.Add(Open); Open = null; }
                 // 3) không còn lệnh mở → dò
+                if (enabled) { _segStart ??= bar.Time.Ticks; _segLast = bar.Time.Ticks; }
+                else if (_segStart.HasValue) { _cache?.MarkRange(_segStart.Value, _segLast); _segStart = null; }   // TẮT: không niêm phong nến này
                 if (Open != null) { Processed = i + 1; continue; }
                 Signal s = null;
                 if (_cache != null && _cache.Covers(bar.Time.Ticks))
@@ -585,15 +613,13 @@ namespace BenzoTraderNs
                             Processed = i;
                             return res;
                         }
-                        if (IsEnabled(sealedSig.Setup))
-                        {
-                            s = sealedSig.Clone();
-                            s.Outcome = "OPEN"; s.ExitTime = DateTime.MinValue; s.R = 0; s.MfeR = 0; s.MaeR = 0;   // kết quả luôn tính lại từ nến
-                            foreach (var d in Detectors) if (d is ITakeAware ta) ta.NotifyTaken(s);
-                        }
+                        // lệnh đã niêm phong luôn được lấy lại, BẤT KỂ công tắc (tắt chỉ chặn dò mới — không xoá lịch sử, plan 12.1 #2)
+                        s = sealedSig.Clone();
+                        s.Outcome = "OPEN"; s.ExitTime = DateTime.MinValue; s.R = 0; s.MfeR = 0; s.MaeR = 0;   // kết quả luôn tính lại từ nến
+                        foreach (var d in Detectors) if (d is ITakeAware ta) ta.NotifyTaken(s);
                     }
                 }
-                else
+                else if (enabled)
                 {
                     _view.Limit = i + 1;
                     foreach (var d in Detectors)
@@ -619,7 +645,7 @@ namespace BenzoTraderNs
             }
             Processed = closedIdx + 1;
             _view.Limit = Bars.Count;
-            _cache?.MarkRange(firstTicks, Bars[closedIdx].Time.Ticks);
+            if (_segStart.HasValue) _cache?.MarkRange(_segStart.Value, _segLast);
             return res;
         }
     }

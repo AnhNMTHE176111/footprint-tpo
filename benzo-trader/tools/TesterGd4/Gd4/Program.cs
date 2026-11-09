@@ -136,9 +136,9 @@ static class Program
             Check(lines[3].StartsWith("CF ") && lines[3].Contains(" · Vào ") && lines[3].Contains(" · SL ") && lines[3].Contains(" · TP ") && lines[3].Contains("(2R, R sẵn "), "dòng 4: CF · Vào · SL · TP (2R, R sẵn)");
             Check(lines[4] == "⚠ Chưa có lợi thế đo được (−0,29R/lệnh, 35 phiên)", "dòng 5 = nhãn ⚠ đúng chữ plan 10.3");
             Check(cap.Length <= 1024, "≤ 1024 ký tự (giới hạn caption ảnh)", cap.Length.ToString());
-            // dòng 4: giờ CF hiển thị = giờ ĐÓNG nến (mở + 1′) theo VN — kiểm khớp dòng 1
-            string tVn = s.Time.AddMinutes(1).AddHours(7).ToString("HH:mm");
-            Check(lines[0].Contains(tVn) && lines[3].StartsWith("CF " + tVn), "giờ ở dòng 1 và dòng 4 = giờ đóng nến CF (VN)", tVn);
+            // dòng 4: giờ CF hiển thị = giờ MỞ nến theo VN (plan 12.1 #6: = time_vn CSV = nhãn nến Quantower) — kiểm khớp dòng 1
+            string tVn = s.Time.AddHours(7).ToString("HH:mm");
+            Check(lines[0].Contains(tVn) && lines[3].StartsWith("CF " + tVn), "giờ ở dòng 1 và dòng 4 = giờ MỞ nến CF (VN)", tVn);
             Check(lines[3].Contains("Vào " + BenzoCore.FmtPrice(s.Entry, 1)) && lines[3].Contains("SL " + BenzoCore.FmtPrice(s.Sl, 1)) && lines[3].Contains("TP " + BenzoCore.FmtPrice(s.Tp, 1)), "giá vào/SL/TP trong caption = giá lệnh");
         }
         var c = sigs.First(x => x.IsClosed);
@@ -316,7 +316,7 @@ static class Program
         typeof(BenzoTrader).GetMethod("BuildRender", NP).Invoke(ind, null);
         var rc = new Rectangle(0, 0, W, Hh);
         int nBars = upto - first + 1 + rightPad;
-        double bwD = (double)W / nBars;
+        double bwD = Math.Max(1, Math.Floor((double)W / nBars));   // như Quantower: khoảng nến = BarsWidth nguyên (sửa harness theo 12.1 #4)
         var vis = b.Skip(first).Take(upto - first + 1).ToList();
         double hi = vis.Max(x => x.H), lo = vis.Min(x => x.L);
         foreach (var s in eng.Signals.Where(s => s.BarIdx >= first)) { hi = Math.Max(hi, Math.Max(s.Sl, s.Tp)); lo = Math.Min(lo, Math.Min(s.Sl, s.Tp)); }
@@ -376,10 +376,15 @@ static class Program
             // mũi tên: tam giác đặc màu hướng ngay trên (sell) / dưới (buy) giá vào, tại x của nến CF
             int yE = (int)conv.GetChartY(sig.Entry);
             int yA = sig.Side > 0 ? yE + 6 + 4 + 3 : yE - 6 - 4 - 3;
-            var colA = bmp.GetPixel(xE, yA);
+            var colA = bmp.GetPixel((int)Math.Round(conv.GetChartX(sig.Time) + conv.Bw / 2), yA);   // tại TÂM nến CF
             Check(sig.Side > 0 ? Greenish(colA) : Reddish(colA), $"mũi tên {(sig.Side > 0 ? "buy" : "sell")} vẽ tại x nến CF", colA.ToString());
             double cfCenter = conv.GetChartX(sig.Time) + conv.Bw / 2;
-            Check(Math.Abs(xE - cfCenter) < 1.5, "mũi tên ở TÂM nến CF (không lệch nửa nến)", $"đỉnh mũi tên x={xE}, tâm nến CF x={cfCenter:0.0}, lệch {cfCenter - xE:0.0}px = nửa nến");
+            // đỉnh mũi tên đo bằng PIXEL (sửa 12.1 #4): hàng ngay dưới/trên đỉnh tam giác, lấy tâm đoạn pixel màu hướng quanh nến CF
+            int yApex = sig.Side > 0 ? yE + 6 + 4 + 2 : yE - 6 - 4 - 2;
+            var xs = Enumerable.Range((int)Math.Round(cfCenter) - 5, 11)   // ±5 px: nửa rộng tam giác ở hàng này = 2 px; nhãn bắt đầu từ xE + 6
+                     .Where(x => x >= 0 && x < bmp.Width && (sig.Side > 0 ? Greenish(bmp.GetPixel(x, yApex)) : Reddish(bmp.GetPixel(x, yApex)))).ToList();
+            double xApex = xs.Count > 0 ? (xs.Min() + xs.Max()) / 2.0 : double.NaN;
+            Check(xs.Count > 0 && Math.Abs(xApex - cfCenter) <= 1.0, "mũi tên ở TÂM nến CF (đo pixel, lệch ≤ 1 px)", $"đỉnh mũi tên x={xApex:0.0}, tâm nến CF x={cfCenter:0.0}"); 
             Check(sig.Entry == tb[sig.BarIdx].C, "giá vào = giá đóng nến CF");
         }
         // ca 2: lệnh ĐANG MỞ ở mép phải (live: CF = nến vừa đóng) — nhãn có tràn ra ngoài khung không?
@@ -390,9 +395,10 @@ static class Program
             var f = new Font("Consolas", 8, FontStyle.Bold);
             using var g = Graphics.FromImage(new Bitmap(10, 10));
             float wLbl = g.MeasureString(sig.Short, f).Width;
-            float xE = (float)conv.GetChartX(sig.Time);
-            Console.WriteLine($"  nhãn dài nhất: \"{sig.Short}\" rộng {wLbl:0}px, bắt đầu x={xE + 8:0}, khung phải x={conv.Rc.Right}");
-            Check(xE + 8 + wLbl <= conv.Rc.Right, "nhãn lệnh mới nhất (mép phải, như live) nằm trọn trong khung chart", $"tràn {xE + 8 + wLbl - conv.Rc.Right:0}px");
+            float xE = (float)conv.GetChartX(sig.Time) + (float)(conv.Bw / 2);   // tâm nến (12.1 #4)
+            float lx = BenzoCore.LabelX(xE, wLbl, conv.Rc.Left, conv.Rc.Right);    // hàm vẽ thật trong DLL (12.1 #3)
+            Console.WriteLine($"  nhãn dài nhất: \"{sig.Short}\" rộng {wLbl:0}px, bắt đầu x={lx:0}, khung phải x={conv.Rc.Right}");
+            Check(lx >= conv.Rc.Left && lx + wLbl <= conv.Rc.Right, "nhãn lệnh mới nhất (mép phải, như live) nằm trọn trong khung chart", $"x={lx:0}, tràn {lx + wLbl - conv.Rc.Right:0}px");
         }
         // ca 3: bảng 4 dòng — đủ dòng nhãn trung thực (plan 10.3, mục i)
         {

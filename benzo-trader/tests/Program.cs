@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using BenzoTraderNs;
 
 static partial class Program
@@ -77,7 +78,8 @@ static partial class Program
         Check(st.A.N == 2 && st.B.N == 2 && Near(st.B.SumR, -0.7), "theo thế A / B");
         var ls = BenzoCore.TableLines(st);
         Check(ls.Count == 4, "bảng đúng 4 dòng", ls.Count.ToString());
-        Check(ls[0] == "BENZO CORVEN corven-1 · 4 lệnh · WR 50 % · +0,1R · 1 đang mở", "dòng 1 có phiên bản corven-1", ls[0]);
+        var rx = new Regex(@"^BENZO CORVEN corven-1 · \d+ lệnh · WR \d+ % · [+−]?\d+,\d+R( · \d+ đang mở)?$");
+        Check(rx.IsMatch(ls[0]) && ls[0].EndsWith(" · 1 đang mở"), "dòng 1 khớp mẫu plan 12.2-Q3 (có '· k đang mở' khi k > 0)", ls[0]);
         Check(ls[1] == "Thế A · 2 · WR 50 % · +0,8R", "dòng thế A", ls[1]);
         Check(ls[2] == "Thế B · 2 · WR 50 % · −0,7R", "dòng thế B", ls[2]);
         Check(ls[3] == "Backtest 35 phiên: −0,29R/lệnh, kém vào ngẫu nhiên (−0,08R) · chạy thử, không phải khuyến nghị", "dòng 4 nhãn backtest đúng chữ", ls[3]);
@@ -115,7 +117,7 @@ static partial class Program
             Setup = 'B', Side = -1, Entry = 4126.6, Sl = 4129.1, Tp = 4121.6, RangeLo = 4127.3, RangeHi = 4132.5, Edge = 4127.4, Zone = "canh",
             NSigns = 2, Reason = "Δ ngược giá ΣΔ -62/2 nến · bóng đỏ 18 @4127,3 (3,6× nền)", RAvail = 1.92, CfBody = 0.6,
         };
-        BenzoCore.Finalize(s, "GCZ26", new DateTime(2026, 11, 5, 17, 22, 0, DateTimeKind.Utc));
+        BenzoCore.Finalize(s, "GCZ26", new DateTime(2026, 11, 5, 17, 23, 0, DateTimeKind.Utc));
         var ls = BenzoCore.ComposeOpen(s, "GCZ26", 7, 1, 1).Split('\n');
         Check(ls.Length == 5, "5 dòng (4 dòng plan mục 2 + cảnh báo)", ls.Length.ToString());
         Check(ls[0] == "🔴 SELL · CORVEN thế B · GCZ26 · 00:23 VN", "dòng 1", ls[0]);
@@ -126,7 +128,20 @@ static partial class Program
         var a = new Signal { Setup = 'A', Side = -1, Entry = 4135.6, Sl = 4138.3, Tp = 4130.2, RangeLo = 4130.9, RangeHi = 4135.8, Edge = 4135.8, Zone = "canh" };
         Check(BenzoCore.MocLine(a, 1) == "Mốc: cạnh trên 4135,8 fail break (range 4130,9–4135,8)", "mốc thế A", BenzoCore.MocLine(a, 1));
         s.Outcome = "TP"; s.R = 1.9; s.ExitTime = s.Time.AddMinutes(9);
-        Check(BenzoCore.ComposeClose(s, 7, 1) == "✅ CORVEN thế B +1,9R · 00:23→00:32", "tin đóng thắng", BenzoCore.ComposeClose(s, 7, 1));
+        Check(BenzoCore.ComposeClose(s, 7, 1) == "✅ CORVEN thế B +1,9R · 00:23→00:32", "tin đóng thắng: giờ MỞ nến vào → giờ MỞ nến thoát", BenzoCore.ComposeClose(s, 7, 1));
+        // plan 12.1 #6: giờ caption = giờ MỞ nến CF = time_vn của CSV (lệnh GCZ26 2026-07-29 15:52 UTC thế A sell ⇒ 22:52 VN)
+        var a1 = new Signal { Setup = 'A', Side = -1, Entry = 4070.3, Sl = 4072.6, Tp = 4065.7, RangeLo = 4065.0, RangeHi = 4070.6, Edge = 4070.6, Zone = "canh", NSigns = 2, Reason = "x · y" };
+        BenzoCore.Finalize(a1, "GCZ26", new DateTime(2026, 7, 29, 15, 52, 0, DateTimeKind.Utc));
+        var capA = BenzoCore.ComposeOpen(a1, "GCZ26", 7, 1, 1).Split('\n');
+        string keyVn = SignalCsv.Key(a1, 7).Split(',')[1].Substring(11);
+        Check(capA[0].EndsWith(" · 22:52 VN") && capA[3].StartsWith("CF 22:52 ") && keyVn == "22:52", "caption ghi 22:52 VN = time_vn của SignalCsv.Key", capA[0] + " | " + keyVn);
+        Check(BenzoCore.ComposeCancel(a1, 7, 1).Contains(" 22:52 huỷ"), "tin huỷ cũng giờ mở nến");
+        // plan 12.2-Q5: TIME thắng/thua theo dấu R (trùng Python wr = (r > 0))
+        var tW = Buy(); tW.Outcome = "TIME"; tW.R = 0.3; var tL = Buy(); tL.Outcome = "TIME"; tL.R = -0.2;
+        var stT = BenzoCore.ComputeStats(new[] { tW, tL }, null);
+        Check(stT.Total.Wins == 1 && stT.Total.Losses == 1, "TIME R +0,3 ⇒ thắng, R −0,2 ⇒ thua");
+        tW.Time = tW.ExitTime = s.Time; tL.Time = tL.ExitTime = s.Time; tW.Setup = tL.Setup = 'A';
+        Check(BenzoCore.ComposeClose(tW, 7, 1).StartsWith("✅") && BenzoCore.ComposeClose(tL, 7, 1).StartsWith("🛑"), "tin đóng TIME ✅/🛑 theo cùng dấu R");
         s.Outcome = "TIME"; s.R = -0.3;
         Check(BenzoCore.ComposeClose(s, 7, 1).StartsWith("🛑 CORVEN thế B −0,3R") && BenzoCore.ComposeClose(s, 7, 1).EndsWith("(hết phiên)"), "tin đóng TIME");
         var mp = TeleClient.BuildPhoto("123", new byte[] { 1, 2, 3 }, "cap");
@@ -158,6 +173,23 @@ static partial class Program
         Check(BenzoCore.CacheFileName("GCZ26", "Time", 1) == "cache_GCZ26_Time_1m.jsonl" && BenzoCore.CacheFileName("GCZ26", "Time", 15) != BenzoCore.CacheFileName("GCZ26", "Time", 1),
               "tên cache có số phút (M1 ≠ M15)");
         Check(BenzoCore.CacheVersion(true) == "corven-1-us1" && BenzoCore.CacheVersion(false) == "corven-1-us0", "khoá cache = LogicVersion + công tắc chặn giờ");
+        // plan 12.1-7c: RangeT0/RangeT1 round-trip; dòng cache cũ thiếu 2 trường vẫn nạp được (= 0 ⇒ không vẽ), guard không đổi
+        string p7 = Tmp("cache7c.jsonl");
+        var c7 = new SignalCache(p7, "v1");
+        var s7 = Buy(); s7.CfH = 101; s7.CfL = 99; s7.RangeT0 = T0.Ticks; s7.RangeT1 = T0.AddMinutes(30).Ticks; BenzoCore.Finalize(s7, "GCZ26", T0.AddMinutes(30));
+        c7.PutSignal(s7); c7.MarkRange(T0.Ticks, T0.AddMinutes(40).Ticks);
+        var c7b = new SignalCache(p7, "v1"); c7b.Load();
+        Check(c7b.TryGet(s7.Time.Ticks, out var r7) && r7.RangeT0 == T0.Ticks && r7.RangeT1 == T0.AddMinutes(30).Ticks, "RangeT0/RangeT1 lưu và nạp lại");
+        var lines7 = File.ReadAllLines(p7).Select(x => x.Contains("\"K\":\"sig\"") ? Regex.Replace(x, @",""RangeT[01]"":\d+", "") : x).ToArray();
+        File.WriteAllLines(p7, lines7);
+        var c7c = new SignalCache(p7, "v1"); c7c.Load();
+        Check(c7c.TryGet(s7.Time.Ticks, out var r7c) && r7c.RangeT0 == 0 && SignalCache.FitsBar(r7c, Bar(30, 99.5, 101, 99, 100), 0.1), "dòng cache cũ (không có RangeT0/T1) vẫn nạp, guard vẫn khớp");
+        // plan 12.1 #2: nhiều khoảng niêm phong rời nhau
+        string p8 = Tmp("cache_iv.jsonl");
+        var c8 = new SignalCache(p8, "v1");
+        c8.MarkRange(T0.Ticks, T0.AddMinutes(9).Ticks); c8.MarkRange(T0.AddMinutes(20).Ticks, T0.AddMinutes(29).Ticks); c8.MarkRange(T0.AddMinutes(25).Ticks, T0.AddMinutes(35).Ticks);
+        var c8b = new SignalCache(p8, "v1"); c8b.Load();
+        Check(c8b.Intervals.Count == 2 && !c8b.Covers(T0.AddMinutes(15).Ticks) && c8b.Covers(T0.AddMinutes(33).Ticks), "cache giữ khoảng rời nhau (không phủ đoạn giữa), gộp khoảng chồng nhau");
     }
 
     sealed class CountDet : ISetupDetector
@@ -227,7 +259,7 @@ static partial class Program
 
     static int Main()
     {
-        TestSimulate(); TestStatsAndLabels(); TestResetMark(); TestCaption(); TestCache(); TestEngine();
+        TestSimulate(); TestStatsAndLabels(); TestResetMark(); TestCaption(); TestCache(); TestEngine(); TestFixes12();
         TestsCorven();
         Console.WriteLine($"\n{_ok} OK, {_fail} FAIL");
         return _fail == 0 ? 0 : 1;

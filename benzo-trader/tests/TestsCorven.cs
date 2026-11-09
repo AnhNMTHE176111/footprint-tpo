@@ -47,7 +47,7 @@ static partial class Program
             if (i > 0 && (t - bars[i - 1].Time).TotalMinutes > 30) { sess++; sstart = i; }
             var b = new CorvenBar { Idx = i, Time = t, O = r.o, H = r.h, L = r.l, C = r.c, Delta = r.d, Levels = r.lv ?? Uni(r.l, r.h) };
             var ex = Of.Exhaustion(b);
-            f.AddRaw(b, mbr, medd, baseV, BenzoKernel.SmOf(t, 7), sstart, sess, ex.top, ex.bot, Of.StackedZones(b, 0.1, 250, 3, 1));
+            f.AddRaw(b, mbr, medd, baseV, BenzoKernel.SmOf(t), sstart, sess, ex.top, ex.bot, Of.StackedZones(b, 0.1, 250, 3, 1));
             bars.Add(new BarData { Idx = i, Time = t, O = r.o * 0.1, H = r.h * 0.1, L = r.l * 0.1, C = r.c * 0.1, Delta = r.d });
         }
         return (f, bars);

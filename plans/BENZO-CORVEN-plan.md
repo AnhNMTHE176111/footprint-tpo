@@ -343,3 +343,72 @@ Khác Thế B đang port: xét **ngay từ `CloseOutside`** (không đợi `Brea
 - **TEST 26 phiên dành cho Follow, mở một lần** nếu có combo ĐẠT; **giả thuyết C mục 9 giữ trên dữ liệu mới ≥ 22/10** (10.6 chỉ là dự phòng, mục 9 thắng). Sau khi mở, TEST coi như đã dùng.
 - Port C# (`corven-2`) chỉ khi qua TEST với T1 — khác quyết định A của Thế A/B.
 - Ý kiến thẳng: hướng hợp lý (Thế B không thể bắt ca ảnh; CORVEN 0:46:13/0:48:07 ủng hộ combo "trap + CF có lực"), nhưng nền F0 nhiều khả năng âm, F1/F4/F5 có thể n < 30, dự đoán ~30 % có combo ĐẠT.
+
+## 12. QUYẾT ĐỊNH SAU GĐ4 (tester) — Fable, 2026-11-09, đọc `research/report/TEST-CORVEN.md` (commit 9f2c71b)
+
+**Trạng thái TEST: vẫn CHƯA mở.** Tester chỉ đếm số ô có dữ liệu trong file tạm rồi xoá, không ai đọc R/kết cục. Nhưng ranh giới trong mã
+đã hỏng (lỗi #1) ⇒ phải vá và khoá hai lớp trước khi ai chạy tay ReplayCorven lần nữa.
+
+**Thứ tự và tương thích:** các việc dưới đây làm **SAU** khi Opus làm xong mục 9.3 của `plans/BENZO-FOLLOW-COMBO-plan.md` (đính chính C2,
+có thể đổi 4 chuỗi nhãn theo nhánh (a)/(b)), **cùng một lần build + deploy**. Opus sửa lỗi **không chạm** 4 chuỗi nhãn; nếu 9.3 đi nhánh (b)
+thì cập nhật chuỗi mong đợi trong `tools/TesterGd4/Gd4/Program.cs` (dòng 77, 406) cho đúng chữ mới của plan — `tests/Program.cs` do Opus 9.3 sửa.
+`LogicVersion` **giữ `corven-1`**: không sửa nào dưới đây đổi tập lệnh TRAIN (parity 97/97 phải giữ nguyên). Không đổi khoá cache.
+Ưu tiên theo lời người học: **không mất lịch sử, nhãn đọc được** (#2, #3 trước; #1 là an toàn dữ liệu, bắt buộc).
+
+### 12.1 Bảy mục của tester
+
+| # | Quyết | Sửa thế nào | Lý do (1 dòng) | Test bắt buộc |
+|---|---|---|---|---|
+| 1 CAO | **SỬA + khoá 2 lớp** | `ReplayCorven/Program.cs` dòng ~71: dùng `outc / rr / exs` ở `Append`. `parity_corven.py`: **trước** `drop(OUT_COLS)` kiểm phần TEST của C# — ô nào trong `ket_cuc/r/exit_idx` không rỗng ⇒ `raise` + xoá thư mục tạm, không so tiếp. Sửa README dòng 33/117, docstring ReplayCorven, ghi chú parity dòng 142/147 cho đúng sự thật. | Ranh giới TEST hiện chỉ đứng nhờ một dòng `drop` — một lớp là quá mỏng cho thứ không được phép xảy ra lần hai. | (i) test C# mới trong `tests/`: chạy hàm ghi CSV của ReplayCorven với `hideAfter` trên 3 `Signal` giả (1 ≤ cut, 2 > cut) ⇒ 2 dòng sau cut có 3 ô rỗng, dòng trước có số; (ii) pytest mới: `parity_corven` nhận DataFrame TEST có 1 ô `r` không rỗng ⇒ `raise`; (iii) chạy lại `parity_corven.py` toàn bộ ⇒ 100 % như cũ, báo cáo không đổi. |
+| 2 TB | **SỬA — không niêm phong nến lúc setup tắt; lệnh đã niêm phong vẫn hiện khi tắt** | `BenzoEngine.Advance`: (a) nến xử lý khi `!IsEnabled` ⇒ **không** đưa vào `MarkRange` (ngắt khoảng niêm phong tại đó, nến bật lại mới niêm phong tiếp); (b) lệnh **đã có trong cache** vẫn lấy ra dù setup đang tắt (bỏ điều kiện `IsEnabled(sealedSig.Setup)` ở nhánh cache) — tắt chỉ chặn **dò mới**. Không đưa công tắc vào khoá cache. Ghi README: *"TẮT = tạm ngừng dò; lịch sử đã có vẫn hiện; nến lúc tắt được dò bù khi bật lại / nạp lại chart."* | Lịch sử là dữ liệu forward test của người học — công tắc chỉ được ngừng tạo tín hiệu mới, không được xoá quá khứ. Đưa công tắc vào khoá cache cũng xoá lịch sử (khoá khác = bỏ cache). | (i) kịch bản của tester: tắt tới nến 15000, bật ⇒ **27/27** lệnh trước 15000 có lại, bảng và CSV lệnh đủ; (ii) test cache: sau đoạn tắt, dòng `rng` **không phủ** các nến đó; (iii) đang tắt, nạp cache có lệnh ⇒ lệnh vẫn vẽ, bảng vẫn đếm, không gửi Telegram; (iv) Gd4 mục (h) chuyển PASS. |
+| 3 TB | **SỬA — lật nhãn sang trái khi tràn** | Tách hàm thuần `static float LabelX(float xE, float w, float clipLeft, float clipRight)`: mặc định `xE + 8`; nếu `xE + 8 + w > clipRight` ⇒ `xE − 8 − w`; nếu vẫn `< clipLeft` ⇒ kẹp `clipLeft + 2`. Nền nhãn đi theo. | Lệnh mới nhất luôn ở mép phải — đúng lệnh cần đọc nhất lại bị cắt. | (i) unit test `LabelX` 3 ca (vừa, tràn phải, chart hẹp); (ii) Gd4 (d) ảnh `corven-live-mep-phai` đọc đủ chuỗi nhãn, không tràn. |
+| 4 THẤP | **SỬA cùng lượt** | `xE = GetChartX(s.Time) + BarsWidth / 2` cho mũi tên, nhãn, mép trái hộp SL/TP; `xEnd` giữ nguyên. Hộp range (`b.T0/T1`) không đổi. | Một dòng, cùng quy ước với RangeBox/OrderFlowBubbles trong repo; với nến footprint rộng 60–100 px lệch nửa nến là đọc nhầm nến. | Gd4 (d): đỉnh mũi tên tại tâm nến CF (lệch ≤ 1 px). |
+| 5 THẤP | **SỬA gốc — `sm` chỉ phụ thuộc UTC** | `BenzoKernel.SmOf` dùng hằng **+7** (như `kernel.py`: "phút kể từ 05:00 VN"), không dùng `TzOffset`. `TzOffset` chỉ còn cho hiển thị giờ, CSV `time_vn`, caption, `NewsCalendar`. Không đưa vào khoá cache. | Luật chặn giờ là luật về **thị trường Mỹ**, không được đổi theo cách người dùng muốn xem giờ. | (i) unit test `SmOf(utc, 7) == SmOf(utc, 8)` (hoặc chữ ký mới không còn tham số); (ii) kịch bản của tester: lệch giờ 7 → 8 ⇒ **0** lệnh khác trên 24.000 nến; (iii) parity 97/97 không đổi. |
+| 6 THẤP | **SỬA — thống nhất giờ MỞ nến** | `ComposeOpen/ComposeClose/ComposeCancel`: bỏ `.AddMinutes(barMinutes)`; giờ trong caption = giờ mở nến CF (= `time_vn` CSV = `t_vn` Python = nhãn thời gian nến trên Quantower). | Người học đối chiếu Telegram ↔ CSV ↔ chart; ba nơi phải cùng một mốc, và chart Quantower ghi nến theo giờ mở. | Unit test: caption lệnh `GCZ26 / 2026-07-29 15:52 UTC / thế A sell` ghi **22:52 VN**, bằng `SignalCsv.Key` cùng lệnh; tin đóng `→` cũng giờ mở nến thoát. |
+| 7a | **GIỮ cổng `thế đã có lệnh`** — bổ sung vào plan 10.4.2 | Là luật 4d "mỗi (range, cạnh E, thế) tối đa 1 lệnh / mỗi FailBreak 1 lệnh" — plan liệt kê thiếu, không phải cổng ngoài plan. Danh sách cổng chính thức = 10.4.2 + `thế đã có lệnh`. Xem thêm Q1. | — | Test chuỗi cổng: `GateVn` phủ đủ danh sách mới, không có cổng nào ngoài danh sách. |
+| 7b | **GIỮ dấu trừ ASCII** trong `signs` | Chuỗi `signs` phải **đúng byte** cột `dau_hieu` Python để parity so thẳng (10.4.1). Ghi 1 dòng README. | — | — (parity đang là test). |
+| 7c | **SỬA nhẹ — vẽ hộp range của lệnh cũ** | Thêm `RangeT0, RangeT1` (ticks UTC) vào `Signal` + dòng `sig` cache (dòng cũ thiếu ⇒ 0 ⇒ không vẽ). Khi "Hiện range" bật: với mỗi lệnh đã đóng vẽ hộp `[range_lo, range_hi] × [T0, T1]` viền đứt mờ (alpha ≈ 60), không nhãn. Range còn sống vẽ như cũ. Không đổi `CacheVersion`. | Soát lại lệnh cũ mà không thấy range là mất ngữ cảnh "mốc" — đúng thứ người học cần khi review. | (i) cache round-trip 2 trường mới + dòng cũ không có trường vẫn nạp được, guard không đổi; (ii) Gd4 ảnh `corven-A-SL-0729-1552` thấy hộp range cạnh lệnh đã đóng. |
+| 7d | Sửa số | Plan/README ghi "pytest 83 ca" thay 65. | — | — |
+
+### 12.2 Trả lời Q1–Q5 của Opus port
+
+- **Q1 — GIỮ `thế đã có lệnh` và `đang có lệnh` là hai cổng riêng; BỎ `setup tắt`.** Hai cổng đầu nói hai điều khác nhau cho người học
+  (khoá 1 lệnh/thế/range vs đang có lệnh mở). `setup tắt` bỏ vì sau sửa #2 nến lúc tắt **không dò** ⇒ không có ứng viên để ghi; nhánh
+  `if (!EnableCorven) gate = "setup tắt"` xoá luôn. Test: danh sách cổng trong README = tập giá trị `GateVn` + 2 cổng engine, so đúng chữ.
+- **Q2 — CÓ, thêm cổng `cuoi_phien` khi `sm ≥ 1379`** (nến mở 16:59 ET = nến M1 cuối của phiên 18:00→17:00 ET; `GateVn` → `cuối phiên`).
+  Đây **không phải luật mới** mà là cách nhân quả duy nhất để code luật 4d "nến cuối phiên không vào" — Python nhìn trước nến cuối, máy sống
+  không thể. **Giữ** cơ chế huỷ ở `BenzoEngine.EndSession` làm lưới dự phòng cho ngày đóng sớm / thiếu nến. Parity: `parity_corven.py` bỏ
+  `cuoi_phien` ở **cả hai phía** trước khi so cột `gates` (hiện chỉ bỏ phía Python). Test: (i) unit: CF tại sm 1379 ⇒ có cổng, sm 1378 ⇒ không;
+  (ii) parity 97/97 + ứng viên 100 % không đổi; (iii) đếm `Cancelled` của ReplayCorven trên TRAIN trước/sau sửa, ghi vào README (kỳ vọng về ≈ 0).
+- **Q3 — ĐƯỢC.** Bảng đúng 4 dòng, không liệt kê từng lệnh; dòng 1 thêm `· k đang mở` **chỉ khi k > 0** (mã hiện đã làm vậy). Sửa 10.3: test
+  dòng 1 so bằng mẫu `^BENZO CORVEN corven-1 · \d+ lệnh · WR \d+ % · [+−]\d+,\d+R( · \d+ đang mở)?$`; dòng 2–4 vẫn so đúng chữ.
+- **Q4 — XÁC NHẬN C# luôn bật luật chồng range.** `overlap_max_drop` là luật **báo cáo** của Python (10.1 đã nói không port). Để không lệch
+  âm thầm về sau: `parity_corven.py` in `chong_rate` và **`raise` nếu > 0,30** (khi đó Python tự tắt luật còn C# thì không — phải quyết lại, không
+  được để parity "tự khớp"). Ghi vào README mục "Quyết định khi port".
+- **Q5 — ĐỒNG Ý.** TIME tính thắng khi R > 0 — **trùng Python** (`results_corven.py` dòng 49: `wr = (r > 0).mean()` trên TP/SL/TIME). Test:
+  1 lệnh TIME R = +0,3 ⇒ `Wins` +1, 1 lệnh TIME R = −0,2 ⇒ `Losses` +1; caption ✅/🛑 theo cùng dấu.
+
+### 12.3 Nghiệm thu lượt sửa
+Build `./build.sh` 0 cảnh báo · `dotnet run --project tests` toàn xanh (≥ 115 + test mới) · pytest toàn xanh · `parity_corven.py` 100 % không đổi,
+`PARITY-CORVEN.md` không chứa R/WR của TEST · `dotnet run --project tools/TesterGd4/Gd4 -- all` **0 FAIL** (5 FAIL cũ = #2–#5 phải hết) · deploy
+`qw-deploy.sh` · README cập nhật (cổng, giờ caption, công tắc, chong_rate, Cancelled) · commit tiếng Việt, chỉ `git add` file của mình, push, báo hash.
+Sau đó tester GĐ4 **chạy lại (g)(h)(d)** trên bản mới, ghi phụ lục vào `TEST-CORVEN.md` — chưa chạy lại thì chưa coi là xong.
+
+### 12.4 Việc giao Opus (một lượt, sau khi 9.3 FOLLOW-COMBO xong; thứ tự như đánh số)
+1. `tools/ReplayCorven/Program.cs`: `Append` dùng `outc/rr/exs`; test C# mới (3 `Signal` giả, 2 sau cut ⇒ 3 ô rỗng). Sửa docstring.
+2. `research/parity_corven.py`: (a) kiểm phần TEST của C# — ô `ket_cuc/r/exit_idx` không rỗng ⇒ `raise` + xoá thư mục tạm; (b) bỏ `cuoi_phien`
+   cả hai phía trước khi so `gates`; (c) in `chong_rate`, `raise` nếu > 0,30. Pytest mới cho (a). Sửa ghi chú dòng 142/147.
+3. `BenzoCore.cs` `BenzoEngine.Advance`: không `MarkRange` nến xử lý khi `!IsEnabled`; nhánh cache lấy lệnh niêm phong **bất kể** công tắc.
+   Test: kịch bản tắt→bật 27/27; `rng` không phủ đoạn tắt; đang tắt vẫn vẽ lệnh cache, không gửi Telegram.
+4. `BenzoTrader.cs` `LogCandidates`: xoá nhánh `setup tắt`. `BenzoCorven.GateVn`: thêm `cuoi_phien → "cuối phiên"`. Test chuỗi cổng = danh sách README.
+5. `BenzoCorven.cs` cổng 4d: `if (sm >= 1379) g.Add("cuoi_phien")`. Unit test sm 1378/1379. Đếm `Cancelled` ReplayCorven TRAIN trước/sau, ghi README.
+6. `BenzoZones.cs`/`BenzoKernel.SmOf`: `sm` theo UTC + 7 cố định, bỏ tham số `TzOffset`. Unit test `SmOf` không đổi theo lệch giờ; kịch bản 7→8 ⇒ 0 lệnh khác.
+7. `BenzoCore.cs` `ComposeOpen/Close/Cancel`: giờ mở nến (bỏ `AddMinutes(barMinutes)`). Unit test caption 22:52 = `SignalCsv.Key`.
+8. `BenzoTrader.cs` vẽ: `xE += BarsWidth/2`; hàm thuần `LabelX` + lật trái khi tràn; unit test 3 ca; Gd4 (d) nhãn đọc đủ, mũi tên tâm nến.
+9. `Signal` + cache: thêm `RangeT0/RangeT1`; vẽ hộp range mờ cho lệnh đã đóng khi "Hiện range" bật; test round-trip + dòng cache cũ nạp được; `CacheVersion` giữ.
+10. `tests/Program.cs` dòng 1 bảng so bằng mẫu regex (12.2-Q3); test TIME thắng/thua theo dấu R (12.2-Q5).
+11. README: cổng (10.4.2 + `thế đã có lệnh`, bỏ `setup tắt`, thêm `cuối phiên`), công tắc = tạm ngừng dò, giờ caption = giờ mở nến, `chong_rate`,
+    số `Cancelled`, dấu trừ ASCII trong `signs`, pytest 83 ca; sửa dòng 33/117 về `--hide-after`. Nếu 9.3 đi nhánh (b): cập nhật chuỗi trong
+    `tools/TesterGd4/Gd4/Program.cs` dòng 77/406 — **không** sửa `tests/Program.cs` (của Opus 9.3).
+12. `./build.sh` 0 cảnh báo → `dotnet run --project tests` → pytest → `parity_corven.py` → `Gd4 -- all` 0 FAIL → `qw-deploy.sh` → commit tiếng Việt
+    (chỉ `git add` file mình sửa) → `git push origin main` → báo hash + số test + số `Cancelled` trước/sau + xác nhận `PARITY-CORVEN.md` không đổi.

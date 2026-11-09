@@ -36,8 +36,11 @@ class Params:
                               # < 0 = không giới hạn. Nguồn: CORVEN chỉ nói "confirm lần 2" (B05); hộp CORVEN dài nhất 73 nến,
                               # không giới hạn thì 26,5 % hộp máy dài hơn và có range 21 lần ReEntry (REVIEW-1, tester mục 11).
 
+    DeadRunMult: float = 0.0  # ≤ 0 = TẮT (Range Box gốc không đổi). > 0: range đang BROKEN mà cực trị High/Low kể từ nến phá vượt cạnh vừa phá
+                              # ≥ DeadRunMult × (top − bottom) ⇒ Dead NGAY, đánh dấu exhausted (không ReEntry, Merge không hồi sinh).
+
     def key(self):
-        return (self.MinBars, self.HminK, self.HmaxK, self.TolK, self.K, self.G, self.PivotRule, self.InsideRatio, self.MaxReEntry)
+        return (self.MinBars, self.HminK, self.HmaxK, self.TolK, self.K, self.G, self.PivotRule, self.InsideRatio, self.MaxReEntry, self.DeadRunMult)
 
 
 def median(vals):
@@ -211,8 +214,12 @@ class RangeEngine:
                     r.state, r.exhausted = DEAD, True
                 elif p.G <= 0 or i - r.break_idx >= p.G:
                     r.state = DEAD
+                elif self._dead_run(r, i):
+                    r.state, r.exhausted = DEAD, True
         elif r.state == BROKEN:
-            if r.bottom <= C <= r.top:
+            if self._dead_run(r, i):
+                r.state, r.exhausted = DEAD, True      # chạy xa khỏi cạnh vừa phá ⇒ range kết thúc, không ReEntry
+            elif r.bottom <= C <= r.top:
                 self._ev(i, "ReEntry", r.break_side, r, r.break_idx)
                 r.state = ACTIVE
                 r.last_idx = i
@@ -220,6 +227,16 @@ class RangeEngine:
                 r.state = DEAD
 
     # ---------- tìm range mới ----------
+    def _dead_run(self, r, i):
+        """DeadRunMult > 0: cực trị High/Low từ nến phá (break_idx) tới nến i vượt cạnh vừa phá ≥ DeadRunMult × (top − bottom)."""
+        m = self.p.DeadRunMult
+        if not (m > 0) or r.break_idx < 0:
+            return False
+        h = r.top - r.bottom
+        if r.break_side > 0:
+            return max(self.H[r.break_idx:i + 1]) - r.top >= m * h - 1e-9
+        return r.bottom - min(self.L[r.break_idx:i + 1]) >= m * h - 1e-9
+
     def _candidate(self, i):
         p = self.p
         if i + 1 < p.MbrLen:

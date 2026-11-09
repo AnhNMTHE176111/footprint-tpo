@@ -98,6 +98,7 @@ class CP:
     sl_cap_gia: float = None       # corven-6: trần SL theo GIÁ (None = trần 4 biên độ cũ); có giá trị ⇒ không xét trần biên độ. Cổng vẫn tên 'tran_sl'
     bat_fail_break: bool = True    # corven-6: công tắc Settings — tắt ⇒ ứng viên Fail Break không được vào và không chiếm chỗ 1 lệnh mở
     bat_break: bool = True
+    dead_run_mult: float = 0.0     # đo (chưa dùng live): range BROKEN mà giá chạy xa cạnh vừa phá ≥ mult × chiều cao range ⇒ Dead, không ReEntry (≤ 0 = TẮT) — truyền vào range_proto.Params.DeadRunMult
     gan_range_gan_nhat: bool = False  # corven-5: nhiều Break cùng nến xác nhận ⇒ xét range có nến đóng ngoài (ref) MUỘN nhất trước
 
 
@@ -222,7 +223,7 @@ class Step2Machine:
                  good: Optional[np.ndarray] = None):
         self.cp = cp or CP()
         self.good = good          # chỉ để ĐẾM (cnt) trên phiên dày; không ảnh hưởng logic
-        self.eng = RangeEngine(rp or Params(), TICK)
+        self.eng = RangeEngine(rp or Params(DeadRunMult=self.cp.dead_run_mult), TICK)
         self.sess = sess
         self.A: List[InstA] = []
         self.B: List[InstB] = []

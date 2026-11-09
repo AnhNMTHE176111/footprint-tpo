@@ -48,6 +48,9 @@ namespace RangeBox
         /// Nguồn: CORVEN chỉ nói "confirm lần 2" (B05); hộp CORVEN dài nhất 73 nến; không giới hạn thì 26,5 % hộp máy dài hơn,
         /// có range 21 lần ReEntry (REVIEW-1, tester mục 11).</summary>
         public int MaxReEntry { get; set; } = 2;
+        /// <summary>≤ 0 = TẮT (Range Box gốc không đổi). &gt; 0: range đang Broken mà cực trị High/Low kể từ nến phá vượt cạnh vừa phá ≥ DeadRunMult × (top − bottom)
+        /// ⇒ Dead NGAY, đánh dấu Exhausted (không ReEntry, Merge không hồi sinh).</summary>
+        public double DeadRunMult { get; set; } = 0.0;
     }
 
     public sealed class RangeInfo
@@ -231,17 +234,28 @@ namespace RangeBox
                     _scanStart = Math.Max(_scanStart, r.PendStart);
                     if (P.MaxReEntry >= 0 && r.NBreak > P.MaxReEntry) { r.State = RangeState.Dead; r.Exhausted = true; }
                     else if (P.G <= 0 || i - r.BreakIdx >= P.G) r.State = RangeState.Dead;
+                    else if (DeadRun(r, i)) { r.State = RangeState.Dead; r.Exhausted = true; }
                 }
             }
             else if (r.State == RangeState.Broken)
             {
-                if (r.Bottom <= C && C <= r.Top)
+                if (DeadRun(r, i)) { r.State = RangeState.Dead; r.Exhausted = true; }   // chạy xa khỏi cạnh vừa phá ⇒ range kết thúc, không ReEntry
+                else if (r.Bottom <= C && C <= r.Top)
                 {
                     Ev(i, RangeEventKind.ReEntry, r.BreakSide, r, r.BreakIdx);
                     r.State = RangeState.Active; r.LastIdx = i;
                 }
                 else if (i - r.BreakIdx >= P.G) r.State = RangeState.Dead;
             }
+        }
+
+        private bool DeadRun(RangeInfo r, int i)
+        {
+            double m = P.DeadRunMult;
+            if (!(m > 0) || r.BreakIdx < 0) return false;
+            double h = r.Top - r.Bottom;
+            if (r.BreakSide > 0) { long mx = long.MinValue; for (int j = r.BreakIdx; j <= i; j++) mx = Math.Max(mx, _h[j]); return mx - r.Top >= m * h - 1e-9; }
+            long mn = long.MaxValue; for (int j = r.BreakIdx; j <= i; j++) mn = Math.Min(mn, _l[j]); return r.Bottom - mn >= m * h - 1e-9;
         }
 
         // ------------------------------------------------------------ tìm range mới

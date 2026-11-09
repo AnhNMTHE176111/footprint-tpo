@@ -248,3 +248,11 @@ V1 giữ (y = nến lập cực trị và là "lần 1") · V2 giữ (nhóm báo
 
 ### 8.5 Điều kiện mở TEST (không đổi so với 7.4) và nhận định
 Vòng 3 chốt bộ **đơn giản nhất** thoả (a) R TB TRAIN ≥ C1 **và** ≥ C2 của chính ô đó, (b) hai hàng xóm trong lưới không đổi dấu, (c) n ≥ 35. Lưu ý thẳng: C2 hiện là −0,08 nên (a) đòi ô ≈ ≥ −0,08; `need_signs` = 3 có n 29 < 35 — nếu nó là ô duy nhất qua (a) thì **vẫn không mở TEST** (điều kiện (c) giữ nguyên, không hạ cho vừa). Khả năng cao nhất vẫn là dừng ở vòng 3 và trình người học hai lựa chọn ở 7.5.
+
+## 9. KẾT LUẬN GĐ2 (Fable, 2026-11-09 — sau vòng 2, commit Opus 1500f62)
+- Đính chính 8.4: lưới đúng là **11 ô** (tôi đếm nhầm thành 14; danh sách in đậm có 11 giá trị). Opus làm đủ 11, không thiếu ô nào.
+- **Không ô nào đạt (a)** (R TB ≥ C1 và ≥ C2 của chính ô). Gần nhất: `sl_buf 5` −0,15 = C1 −0,15 nhưng C2 −0,02; `need_signs 3` +0,01 (n 38) nhưng C2 của nhóm +0,22 ⇒ dương do thời điểm, không do dấu hiệu. C2 dao động −0,17…+0,22 giữa các ô = nhiễu ±0,1R.
+- Theo 7.4 vòng 3 và 3.6: **KHÔNG mở TEST, dừng trước khi port.** Không còn bước hợp lệ nào: 3 vòng đã dùng (vòng 1 sửa định nghĩa, vòng 2 quét, vòng 3 = chốt → không có ô), danh sách tham số đã quét hết, luật cấm thêm dấu hiệu/lọc phiên mới. Nới luật lúc này = lặp lỗi A/B/C/D.
+- Quan sát hậu kiểm ghi lại (không dùng): Á âm 12/12 ô, Mỹ âm 12/12 ô, Âu ≥ 0 ở 10/12 ô; phí không giải thích (0,03–0,04R). Ví dụ CORVEN đều ở phiên Mỹ — chính phiên máy thua đều ⇒ bằng chứng là cơ khí hoá chưa bắt được cái CORVEN nhìn.
+- Bản cho người học: `benzo-trader/research/report/KET-LUAN-CORVEN.md` — 3 lựa chọn (A port gắn nhãn forward test · B không bắn tín hiệu, giữ Range Box + Bubbles · C đăng ký trước giả thuyết "chỉ phiên Âu", chờ ≥ 60 phiên dữ liệu mới rồi chạy một lần). **Khuyến nghị: B ngay + C chạy nền.**
+- Việc còn lại tuỳ người học chọn. Nếu chọn A thì GĐ3 làm theo mục 2 với LogicVersion `corven-1`, bảng phải ghi "−0,29R/lệnh trong 35 phiên, kém vào ngẫu nhiên". Nếu chọn C thì giả thuyết đăng ký ở đây: **bộ gốc vòng 1, chỉ nến CF có giờ VN trong 12:30–19:00 theo mốc neo Mỹ, chạy một lần trên dữ liệu từ 22/10/2026 trở đi khi đủ ≥ 60 phiên dày; tiêu chí = T1 mục 3.6.** Không được đổi gì khác trước khi chạy.

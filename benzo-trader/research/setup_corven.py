@@ -51,8 +51,35 @@ class CP:
     si_ratio: float = 250.0
     si_run: int = 3                # (quét {3,4})
     si_minvol: float = 1.0
-    b_include_exhausted: bool = False   # BreakConfirmed làm range DEAD ngay (hết lượt ReEntry) có tính thế B không — CHỜ FABLE
-    same_session: bool = True      # cửa sổ / CF không vắt qua khoảng trống phiên (> 30′) — CHỜ FABLE
+    b_from_exhausted: bool = True  # Q4: lập thế B cả khi BreakConfirmed làm range DEAD ngay (hết lượt ReEntry); cờ riêng, GĐ2 bật/tắt
+    same_session: bool = True      # cửa sổ / CF không vắt qua khoảng trống phiên (> 30′)
+    exc_max_age: int = 30          # Q12: "lần 2" trong ≤ 30 nến từ nến đóng ngoài
+    # ---- ③ ----
+    delta_mult: float = 2.0        # ③a to (quét {2,3})
+    bubble_mult: float = 3.0       # ③b (quét {3,4}); trap dùng 3 × nền_ô cố định (plan ③e)
+    bubble_min: float = 10.0       # ③b/③e sàn hợp đồng (Q10)
+    div_min_len: int = 2
+    div_max_len: int = 8
+    need_signs: int = 2
+    # ---- ④ ----
+    cf_body: float = 0.4
+    cf_close_ext: float = 0.3
+    cf_min_rng_mbr: float = 0.5
+    cf_min_delta: float = 0.5
+    sl_buf_ticks: float = 3.0      # đệm SL (quét {2,3,5}); đệm = max(đệm, 0,2 mbr)
+    sl_buf_mbr: float = 0.2
+    sl_floor_mbr: float = 1.0
+    sl_cap_mbr: float = 4.0
+    r_min: float = 1.7
+    tp_r: float = 2.0
+    dead_look: int = 300           # 4c: range đã chết trong 300 nến
+    block_us_open: bool = True     # 4d: chặn 19:20–20:30 VN (sm 860–930) — công tắc
+    block_first_bars: int = 15     # 4d: 15 nến đầu phiên
+    veto_window: int = 5           # ⛔ kiệt sức chống hướng: 5 nến tới CF
+    stop_run_k: int = 3            # ⛔ nhịp quét stop: K nến sau cực trị
+    overlap_bars: int = 30         # ⛔ range chồng range
+    overlap_frac: float = 0.5
+    overlap_max_drop: float = 0.30 # nếu luật chồng range loại > 30 % thế A ⇒ bỏ luật (plan)
 
 
 # =====================================================================================================
@@ -143,16 +170,21 @@ class InstB:
     passed_zone: list = field(default_factory=list) # [(cf, zone_bar, lo, hi)]
     zone_ct: int = 0                                # số vùng bị loại vì đóng xuyên (2b)
     zone_touched_before: int = 0                    # số lần vùng bị loại vì đã chạm trước nhịp test
+    piv_at: dict = field(default_factory=dict)      # pivot cấu trúc (1c) tại mỗi CF được xét — mốc trap thế B
 
 
 @dataclass
 class ExcA:
     rid: int
-    p: int                 # hướng cú thủng (−1 thủng xuống ⇒ vào buy)
-    breach_start: int
-    bar: int
-    ext: int
+    p: int                 # hướng cú thủng (−1 thủng xuống ⇒ vào buy, S = −p)
+    breach_start: int      # nến đóng ngoài của cú thủng
+    bar: int               # nến x ("lần 2")
+    ext: int               # cực trị của nến y (lần 1) mà x quét qua
     close: int
+    y: int = -1            # nến "lần 1"
+    top: int = 0
+    bottom: int = 0
+    tol: float = 0.0
 
 
 class Step2Machine:
@@ -177,6 +209,11 @@ class Step2Machine:
         self.mbr: List[float] = []
         self.zones_by_bar: Dict[int, list] = {}
         self._exc_done = set()
+        self.death: Dict[int, int] = {}      # rid → nến range chuyển DEAD
+        self.birth: Dict[int, int] = {}
+        self.fb_count: Dict[int, int] = {}   # rid → số FailBreak đã có (gồm whipsaw)
+        self.fb_bars: Dict[int, list] = {}   # rid → các nến FailBreak
+        self.a_nth: Dict[int, int] = {}      # id(InstA) → FailBreak thứ mấy của range
         self.cnt = dict(b_eval=0, b_pass=0, b_pass_edge=0, b_pass_zone=0, b_edge_khong_cham=0, b_edge_xa=0,
                         b_khong_vung=0, b_vung_dong_xuyen=0, b_vung_da_cham_truoc=0, b_vung_khong_cham_cua_so=0,
                         b_bar_tam_huy_1c=0)
@@ -199,7 +236,11 @@ class Step2Machine:
         pre = [(r.id, r.state, r.pend_side if r.state == PENDING else r.break_side,
                 r.pend_start if r.state == PENDING else r.break_idx) for r in e.live if r.state in (PENDING, BROKEN)]
         n_ev = len(e.events)
+        live_before = list(e.live)
         e.feed_ticks(bar.o, bar.h, bar.l, bar.c)
+        for r in live_before:
+            if r.state == DEAD and r.id not in self.death:
+                self.death[r.id] = i
         self.mbr.append(e.mbr)
         evs = e.events[n_ev:]
         H, L, C = e.H, e.L, e.C
@@ -240,12 +281,19 @@ class Step2Machine:
         # ---------- sự kiện mới ----------
         for ev in evs:
             r = e.ranges[ev.rid]
+            if ev.kind == 'Birth':
+                self.birth[ev.rid] = i
+            if ev.kind == 'BreakConfirmed' and r.state == DEAD and ev.rid not in self.death:
+                self.death[ev.rid] = i
             if ev.kind == 'FailBreak':
+                self.fb_count[ev.rid] = self.fb_count.get(ev.rid, 0) + 1
+                self.fb_bars.setdefault(ev.rid, []).append(i)
                 back_active = r.state == ACTIVE and not any(x.kind == 'CloseOutside' and x.bar == i for x in ev_by_rid[ev.rid])
                 if not back_active:
                     self.a_whipsaw += 1
                     continue
                 a = InstA(rid=ev.rid, E=ev.side, S=-ev.side, ref=ev.ref, fb=i, top=ev.top, bottom=ev.bottom, tol=r.tol)
+                self.a_nth[id(a)] = self.fb_count[ev.rid]
                 self.A.append(a)
                 self._a_candidate(a, i, r.top, r.bottom)
                 if self.cp.cf_after_fb > 0 and i - a.ref < self.cp.win_a_max - 1:
@@ -257,7 +305,7 @@ class Step2Machine:
                 if exhausted:
                     self.b_exhausted_seen += 1
                     self.b_exh_bars.append(i)
-                    if not self.cp.b_include_exhausted:
+                    if not self.cp.b_from_exhausted:
                         continue
                 D = ev.side
                 b = InstB(rid=ev.rid, D=D, ref=ev.ref, bc=i, E=ev.top if D > 0 else ev.bottom, top=ev.top,
@@ -270,25 +318,42 @@ class Step2Machine:
                         self._zone_track(z, k)
                 self.B.append(b)
                 self.liveB.append(b)
+                piv = self.ph if D < 0 else self.pl
+                b.piv_at[i] = piv[-1][1] if piv and piv[-1][0] >= b.ref else None
                 self._b_eval(b, i)
 
-        # ---------- ngoại lệ "xác nhận lần 2" (chỉ ĐẾM ứng viên giá; ≥ 2 dấu hiệu là ③) ----------
+        # ---------- ngoại lệ "xác nhận lần 2" (Q12: phải có lần 1) ----------
         for (rid, st, p, start) in pre:
-            if p == 0 or start < 0 or (rid, start) in self._exc_done:
+            if p == 0 or start < 0 or (rid, start) in self._exc_done or i - start > self.cp.exc_max_age:
                 continue
             r = e.ranges[rid]
             if i - 1 < start:
                 continue
-            if p < 0:
-                ext = min(L[start:i])
-                if bar.l <= ext - 1 and bar.c >= ext + r.tol and bar.c < r.bottom:
-                    self.EXC.append(ExcA(rid, p, start, i, ext, bar.c))
-                    self._exc_done.add((rid, start))
+            S = -p
+            outside = bar.c < r.bottom if p < 0 else bar.c > r.top
+            if not outside:
+                continue
+            # lần 1 = nến y GẦN NHẤT trong cú thủng (start..i-1): râu phía −S ≥ 1 tick, đóng lùi về phía S ≥ tol so với cực trị của nó
+            y = -1
+            for k in range(i - 1, start - 1, -1):
+                if S > 0:
+                    okw = min(e.O[k], C[k]) - L[k] >= 1 and C[k] - L[k] >= r.tol
+                else:
+                    okw = H[k] - max(e.O[k], C[k]) >= 1 and H[k] - C[k] >= r.tol
+                if okw:
+                    y = k
+                    break
+            if y < 0:
+                continue
+            if S > 0:
+                hit = bar.l <= L[y] - 1 and bar.c - bar.l >= r.tol
+                ext = L[y]
             else:
-                ext = max(H[start:i])
-                if bar.h >= ext + 1 and bar.c <= ext - r.tol and bar.c > r.top:
-                    self.EXC.append(ExcA(rid, p, start, i, ext, bar.c))
-                    self._exc_done.add((rid, start))
+                hit = bar.h >= H[y] + 1 and bar.h - bar.c >= r.tol
+                ext = H[y]
+            if hit:
+                self.EXC.append(ExcA(rid, p, start, i, ext, bar.c, y, r.top, r.bottom, r.tol))
+                self._exc_done.add((rid, start))
 
     # ------------------------------------------------------------------ thế A
     def _a_candidate(self, a: InstA, i: int, top: int, bottom: int):
@@ -316,8 +381,7 @@ class Step2Machine:
         for zz in self.zones_by_bar.get(z, []):
             if zz.side != b.D:
                 continue
-            push_wick = OF.POS_UPPER if b.D > 0 else OF.POS_LOWER
-            if zz.position not in (OF.POS_BODY, push_wick):
+            if zz.position != OF.POS_BODY or zz.weak:      # Q3: mốc stacked chỉ Body, không Weak
                 continue
             lo, hi = round(zz.lo / TICK), round(zz.hi / TICK)
             b.zones.append(dict(bar=z, D=b.D, lo=lo, hi=hi, lo_p=zz.lo, hi_p=zz.hi, first_touch=None, first_ct=None,
@@ -342,7 +406,7 @@ class Step2Machine:
 
     def _b_step(self, b: InstB, i: int, evs: list):
         H, L, C = self.eng.H, self.eng.L, self.eng.C
-        if any(x.kind == 'ReEntry' for x in evs):
+        if any(x.kind == 'ReEntry' for x in evs) or (b.exhausted and b.bottom <= C[i] <= b.top):
             return self._b_end(b, 'reentry', i)
         if any(x.kind == 'Merge' for x in evs):
             return self._b_end(b, 'merge', i)
@@ -367,6 +431,7 @@ class Step2Machine:
             new_ext = (H[i] > b.push_ext) if b.D > 0 else (L[i] < b.push_ext)
             if new_ext:
                 b.suspended = False
+                lvl = None
         elif lvl is not None:
             if (b.D < 0 and C[i] > lvl) or (b.D > 0 and C[i] < lvl):
                 b.suspended = True
@@ -374,6 +439,7 @@ class Step2Machine:
                 b.broken_at = i
         b.push_ext = max(b.push_ext, H[i]) if b.D > 0 else min(b.push_ext, L[i])
         if not b.suspended:
+            b.piv_at[i] = lvl
             self._b_eval(b, i)
         elif self.good is None or self.good[i]:
             self.cnt['b_bar_tam_huy_1c'] += 1
@@ -419,8 +485,13 @@ class Step2Machine:
                 why.append('cham_truoc')
                 continue
             if any(H[k] >= z['lo'] - tz and L[k] <= z['hi'] + tz for k in range(ws, j + 1)):
-                b.passed_zone.append((j, z['bar'], z['lo'], z['hi']))
-                pz = True
+                # Q5: CF đóng cách mép gần của vùng ≤ near × mbr về phía D (đóng TRONG vùng cũng tính là gần — chưa xuyên mép xa)
+                dz = (C[j] - z['hi']) if b.D > 0 else (z['lo'] - C[j])
+                if dz <= self.cp.near_mbr * m + 1e-9:
+                    b.passed_zone.append((j, z['bar'], z['lo'], z['hi']))
+                    pz = True
+                else:
+                    why.append('xa')
             else:
                 why.append('khong_cham')
         if pe:
@@ -431,6 +502,8 @@ class Step2Machine:
             cnt['b_pass'] += 1
         elif not why:
             cnt['b_khong_vung'] += 1
+        elif 'xa' in why:
+            cnt['b_vung_cf_xa'] = cnt.get('b_vung_cf_xa', 0) + 1
         elif 'khong_cham' in why:
             cnt['b_vung_khong_cham_cua_so'] += 1
         elif 'cham_truoc' in why:
@@ -623,7 +696,393 @@ def summarize(m: Step2Machine, df: pd.DataFrame, good: np.ndarray) -> dict:
     return s
 
 
-def main():
+# =====================================================================================================
+# GĐ1 — ③ dấu hiệu · ④ lệnh · ⛔ · chọn lệnh (4d) · mô phỏng kernel.simulate
+# =====================================================================================================
+SIGN_TYPES = ('delta', 'bong', 'kiet_suc', 'stacked', 'trap')
+GATES = ('g4a_cf', 'v_kiet_suc_chong', 'v_quet_stop', 'v_chong_range', 'tran_sl', 'r_nho', 'chan_1920', 'dau_phien',
+         'cuoi_phien')
+GATE_VN = dict(g4a_cf='4a nến xác nhận', v_kiet_suc_chong='⛔ kiệt sức chống hướng', v_quet_stop='⛔ nhịp đẩy do quét stop',
+               v_chong_range='⛔ range chồng range', tran_sl='4b trần SL 4 mbr', r_nho='4c R sẵn < 1,7',
+               chan_1920='4d chặn 19:20–20:30 VN', dau_phien='4d 15 nến đầu phiên', cuoi_phien='nến cuối phiên (không vào được)')
+THE_ORDER = {'A': 0, 'A2': 1, 'B': 2}
+
+
+class Feat:
+    """Đặc trưng từng nến, tính một lần, không nhìn trước.
+    Quy ước (Q11): nền_ô tính trên 100 nến TRƯỚC nến hiện tại (như OrderFlowBubbles); mbr (Range Box) và medΔ (kernel,
+    50 nến) GỒM nến hiện tại."""
+
+    def __init__(self, bars: List[OF.FpBar], df: pd.DataFrame, mbr, cp: CP, good: Optional[np.ndarray] = None):
+        n = len(bars)
+        self.bars = bars
+        self.H = np.array([b.h for b in bars], np.int64)
+        self.L = np.array([b.l for b in bars], np.int64)
+        self.O = np.array([b.o for b in bars], np.int64)
+        self.C = np.array([b.c for b in bars], np.int64)
+        self.Dl = np.array([b.delta for b in bars], float)
+        self.mbr = np.asarray(mbr, float)
+        self.medd = K.med_abs_delta(df).to_numpy()
+        base = np.full(n, np.nan)
+        cb = OF.CellBaseline(100)
+        for i, b in enumerate(bars):
+            if cb.ready():
+                base[i] = cb.value()
+            cb.push(b)
+        self.base = base
+        self.exh = [OF.exhaustion(b) for b in bars]
+        self.zones = [OF.stacked_zones(b, cp.si_ratio, cp.si_run, cp.si_minvol) for b in bars]
+        self.sm = df['sm'].to_numpy()
+        sno = df['session_no'].to_numpy()
+        starts = np.r_[0, np.flatnonzero(np.diff(sno)) + 1]
+        ends = np.r_[starts[1:] - 1, n - 1]
+        self.sstart = np.repeat(starts, ends - starts + 1)
+        self.send = np.repeat(ends, ends - starts + 1)
+        self.good = np.ones(n, bool) if good is None else good
+
+
+@dataclass
+class Cand:
+    cf: int
+    the: str                 # 'A' | 'A2' (xác nhận lần 2) | 'B'
+    S: int
+    rid: int
+    inst: object
+    key: tuple               # (range, cạnh, nhóm thế) — 4d "mỗi (range, cạnh E, thế) tối đa 1 lệnh"
+    ref: int
+    w0: int                  # đầu cửa sổ test (2c)
+    mocs: list               # [dict(kind, level, tol, band, zid)]
+    trap_levels: list
+    exhausted: bool = False
+    signs: dict = field(default_factory=dict)    # loại → (mô tả có số, nến neo, giá tick)
+    gates: list = field(default_factory=list)    # mọi cổng ④/⛔ bị trượt (theo thứ tự GATES)
+    entry: int = 0
+    sl: int = 0
+    tp: float = 0.0
+    risk: float = 0.0
+    r_avail: float = 0.0
+    target: float = 0.0
+    moc_used: str = ''
+
+    @property
+    def types(self):
+        return tuple(t for t in SIGN_TYPES if t in self.signs)
+
+
+def build_candidates(m: Step2Machine, feat: Feat, cp: CP) -> List[Cand]:
+    out = []
+    for a in m.A:
+        E = a.top if a.E > 0 else a.bottom
+        for cf in a.passed:
+            out.append(Cand(cf, 'A', a.S, a.rid, a, (a.rid, a.E, 'A'), a.ref, a.ref,
+                            [dict(kind='canh', level=E, tol=a.tol, band=(E - a.tol, E + a.tol), zid=None)], [E]))
+    for x in m.EXC:
+        S = -x.p
+        out.append(Cand(x.bar, 'A2', S, x.rid, x, (x.rid, x.p, 'A'), x.breach_start, max(x.breach_start, x.bar - 4),
+                        [dict(kind='cuc_tri', level=x.ext, tol=x.tol, band=(x.ext - x.tol, x.ext + x.tol), zid=None)],
+                        [x.ext]))
+    for b in m.B:
+        js = sorted(set(b.passed_edge) | {p[0] for p in b.passed_zone})
+        for j in js:
+            mocs = []
+            if j in b.passed_edge:
+                mocs.append(dict(kind='canh', level=b.E, tol=b.tol, band=(b.E - b.tol, b.E + b.tol), zid=None))
+            tz = m.tol_now(j)
+            for (jj, zb, lo, hi) in b.passed_zone:
+                if jj == j:
+                    lvl = lo if b.D < 0 else hi
+                    mocs.append(dict(kind='stacked', level=lvl, tol=tz, band=(lo - tz, hi + tz), zid=(zb, lo, hi)))
+            tl = [b.E] + ([b.piv_at[j]] if b.piv_at.get(j) is not None else [])
+            out.append(Cand(j, 'B', b.D, b.rid, b, (b.rid, b.D, 'B'), b.ref, max(j - m.cp.win_b + 1, b.ref + 1), mocs, tl,
+                            exhausted=b.exhausted))
+    out.sort(key=lambda c: (c.cf, THE_ORDER[c.the], c.rid))
+    return out
+
+
+def _px(t):
+    return f"{t * TICK:.1f}".replace('.', ',')
+
+
+def find_signs(c: Cand, f: Feat, cp: CP) -> dict:
+    """③ — mọi dấu hiệu có nến neo trong cửa sổ [w0, cf], cùng phe S. Trả {loại: (mô tả, nến neo, giá tick)}."""
+    S, cf = c.S, c.cf
+    H, L, O, C, Dl = f.H, f.L, f.O, f.C, f.Dl
+    W = range(c.w0, cf + 1)
+    sg = {}
+    # ③a delta: to (CF hoặc nến trước CF) hoặc ngược giá — tính tối đa 1
+    for k in (cf, cf - 1):
+        if k < c.w0 or not (f.medd[k] > 0):
+            continue
+        if Dl[k] * S > 0 and abs(Dl[k]) >= cp.delta_mult * f.medd[k] - 1e-9 and (C[k] - O[k]) * S > 0:
+            sg['delta'] = (f"Δ to {Dl[k]:+.0f} = {abs(Dl[k]) / f.medd[k]:.1f}× medΔ".replace('.', ','), k, C[k])
+            break
+    if 'delta' not in sg:
+        for x in W:
+            for mo in c.mocs:
+                reach = H[x] >= mo['level'] - mo['tol'] if S < 0 else L[x] <= mo['level'] + mo['tol']
+                if not reach:
+                    continue
+                ok, s0, sd = OF.delta_divergence(H, L, Dl, x, S, f.mbr[x], cp.div_min_len, cp.div_max_len)
+                if ok:
+                    sg['delta'] = (f"Δ ngược giá ΣΔ {sd:+.0f}/{x - s0} nến", x, H[x] if S < 0 else L[x])
+                    break
+            if 'delta' in sg:
+                break
+    # ③b bóng đúng phe: nửa nến phía S hoặc trong dải mốc
+    best = None
+    for k in W:
+        bs = f.base[k]
+        if not np.isfinite(bs) or bs <= 0:
+            continue
+        for (tk, v) in OF.bubbles(f.bars[k], S, bs, cp.bubble_mult, cp.bubble_min):
+            if any(OF.bubble_in_place(f.bars[k], S, tk, mo['band']) for mo in c.mocs) or OF.bubble_in_place(f.bars[k], S, tk):
+                if best is None or v > best[0]:
+                    best = (v, k, tk, bs)
+    if best:
+        v, k, tk, bs = best
+        sg['bong'] = (f"bóng {'xanh' if S > 0 else 'đỏ'} {v:.0f} @{_px(tk)} ({v / bs:.1f}× nền)".replace('.', ','), k, tk)
+    # ③c kiệt sức phe ngược ở râu, chưa bị quét tới CF
+    for k in W:
+        r = f.exh[k][0] if S < 0 else f.exh[k][1]
+        if not r.hit:
+            continue
+        if any(OF.is_swept(r.top, r.tick, H[j], L[j], 1) for j in range(k + 1, cf + 1)):
+            continue
+        side_txt = 'đỉnh (Ask' if r.top else 'đáy (Bid'
+        sg['kiet_suc'] = (f"kiệt sức {side_txt} {r.extreme_vol:.0f}) @{_px(r.tick)}", k, r.tick)
+        break
+    # ③d stacked mới cùng hướng S: Body, không Weak, nến tạo vùng đóng phía S; loại vùng đang làm mốc
+    excl = {mo['zid'] for mo in c.mocs if mo['zid'] is not None}
+    for k in W:
+        for z in f.zones[k]:
+            if z.side != S or z.position != OF.POS_BODY or z.weak:
+                continue
+            lo, hi = round(z.lo / TICK), round(z.hi / TICK)
+            if (k, lo, hi) in excl:
+                continue
+            if (S > 0 and C[k] >= hi) or (S < 0 and C[k] <= lo):
+                sg['stacked'] = (f"stacked {'buy' if S > 0 else 'sell'} {z.levels} mức {_px(lo)}–{_px(hi)}", k, lo if S > 0 else hi)
+                break
+        if 'stacked' in sg:
+            break
+    # ③e trap phe ngược: quét mốc quan trọng ≥ 1 tick, đóng lại phía S, ô −S trong râu ≥ 3 × nền_ô và ≥ 10
+    for k in W:
+        bs = f.base[k]
+        if not np.isfinite(bs) or bs <= 0:
+            continue
+        for lvl in c.trap_levels:
+            ok, tk, v = OF.trap(f.bars[k], S, lvl, bs, 3.0, 1, cp.bubble_min)
+            if ok:
+                sg['trap'] = (f"trap quét {_px(lvl)}, bóng {'đỏ' if S > 0 else 'xanh'} {v:.0f} @{_px(tk)}", k, tk)
+                break
+        if 'trap' in sg:
+            break
+    return sg
+
+
+def eval_order(c: Cand, f: Feat, cp: CP, m: Step2Machine, chong: dict, use_chong: bool = True) -> None:
+    """④ + ⛔ cho một CF ứng viên (độc lập với ③). Ghi c.gates (mọi cổng trượt) + entry/SL/TP/R."""
+    S, cf = c.S, c.cf
+    H, L, O, C, Dl = f.H, f.L, f.O, f.C, f.Dl
+    g = []
+    mbr = f.mbr[cf]
+    # 4a nến xác nhận
+    o, h, l, cc = O[cf], H[cf], L[cf], C[cf]
+    rng = h - l
+    ok = (rng > 0 and (cc - o) * S > 0 and abs(cc - o) >= cp.cf_body * rng - 1e-9
+          and ((h - cc) if S > 0 else (cc - l)) <= cp.cf_close_ext * rng + 1e-9
+          and rng >= cp.cf_min_rng_mbr * mbr - 1e-9
+          and Dl[cf] * S >= 0 and f.medd[cf] == f.medd[cf] and abs(Dl[cf]) >= cp.cf_min_delta * f.medd[cf] - 1e-9)
+    if not ok:
+        g.append('g4a_cf')
+    # ⛔ kiệt sức chống hướng: 5 nến tới CF có kiệt sức phía S (sell: đáy) chưa bị quét tới CF
+    for k in range(max(0, cf - cp.veto_window + 1), cf + 1):
+        r = f.exh[k][1] if S < 0 else f.exh[k][0]
+        if r.hit and not any(OF.is_swept(r.top, r.tick, H[j], L[j], 1) for j in range(k + 1, cf + 1)):
+            g.append('v_kiet_suc_chong')
+            break
+    # ⛔ nhịp đẩy do quét stop (thế B)
+    if c.the == 'B':
+        D = S
+        seg = range(c.ref, cf + 1)
+        e = max(seg, key=lambda j: (H[j], -j)) if D > 0 else min(seg, key=lambda j: (L[j], j))
+        sd = Dl[c.ref:e + 1].sum()
+        bad = sd * D <= 0
+        if not bad and cf >= e + cp.stop_run_k and np.isfinite(f.base[e]) and f.base[e] > 0:
+            cells = OF.bubbles(f.bars[e], -D, f.base[e], cp.bubble_mult, cp.bubble_min)
+            if any(OF.bubble_in_place(f.bars[e], -D, tk) for tk, _ in cells):
+                bad = True
+        if bad:
+            g.append('v_quet_stop')
+    # ⛔ range chồng range (thế A, A2): chỉ đánh từ FailBreak thứ 2 của range mới
+    if use_chong and c.the in ('A', 'A2') and chong.get(c.rid):
+        nfb = sum(1 for x in m.fb_bars.get(c.rid, []) if x <= (c.inst.fb if c.the == 'A' else cf))
+        if nfb < 2:
+            g.append('v_chong_range')
+    # 4b SL
+    buf = max(cp.sl_buf_ticks, cp.sl_buf_mbr * mbr)
+    if c.the == 'A':
+        raw = (min(L[c.ref:cf + 1]) - buf) if S > 0 else (max(H[c.ref:cf + 1]) + buf)
+        c.moc_used = 'canh'
+    elif c.the == 'A2':
+        raw = (L[cf] - buf) if S > 0 else (H[cf] + buf)
+        c.moc_used = 'cuc_tri'
+    else:
+        edge = [mo for mo in c.mocs if mo['kind'] == 'canh']
+        if edge:
+            mo = edge[0]
+            if S > 0:
+                raw = min(min(L[c.w0:cf + 1]), mo['level'] - mo['tol']) - buf
+            else:
+                raw = max(max(H[c.w0:cf + 1]), mo['level'] + mo['tol']) + buf
+            c.moc_used = 'canh'
+        else:
+            mo = max((x for x in c.mocs if x['kind'] == 'stacked'), key=lambda x: x['zid'][0])
+            zb, lo, hi = mo['zid']
+            raw = (lo - buf) if S > 0 else (hi + buf)
+            c.moc_used = f"stacked {_px(lo)}–{_px(hi)}"
+    ent = C[cf]
+    risk = (ent - raw) * S
+    if risk < cp.sl_floor_mbr * mbr:
+        risk = cp.sl_floor_mbr * mbr
+    sl = ent - S * risk
+    sl = int(np.floor(sl + 1e-9)) if S > 0 else int(np.ceil(sl - 1e-9))
+    risk = (ent - sl) * S
+    c.entry, c.sl, c.risk = int(ent), sl, float(risk)
+    if risk > cp.sl_cap_mbr * mbr + 1e-9:
+        g.append('tran_sl')
+    # 4c mục tiêu
+    if c.the in ('A', 'A2'):
+        top, bot = c.inst.top, c.inst.bottom
+        tgt = bot if S < 0 else top
+    else:
+        b = c.inst
+        hgt = b.top - b.bottom
+        t1 = b.E + S * hgt
+        t2 = None
+        best_d = -1
+        for rid2, d in m.death.items():
+            if rid2 == b.rid or d > cf or cf - d > cp.dead_look:
+                continue
+            r2 = m.eng.ranges[rid2]
+            if S > 0 and r2.bottom > ent and d > best_d:
+                best_d, t2 = d, r2.bottom
+            if S < 0 and r2.top < ent and d > best_d:
+                best_d, t2 = d, r2.top
+        tgt = t1 if t2 is None else (max(t1, t2) if S > 0 else min(t1, t2))
+    c.target = float(tgt)
+    c.r_avail = (tgt - ent) * S / risk if risk > 0 else -1
+    if c.r_avail < cp.r_min - 1e-9:
+        g.append('r_nho')
+    c.tp = ent + S * cp.tp_r * risk
+    # 4d giờ
+    if 860 <= f.sm[cf] < 930:
+        g.append('chan_1920')
+    if cf - f.sstart[cf] < cp.block_first_bars:
+        g.append('dau_phien')
+    if cf >= f.send[cf]:
+        g.append('cuoi_phien')
+    c.gates = g
+
+
+def compute_chong(m: Step2Machine, cp: CP) -> dict:
+    """⛔ range chồng range: range sinh trong ≤ 30 nến sau khi một range khác chết và chồng ≥ 50 % chiều cao (range mới)."""
+    out = {}
+    for rid, bi in m.birth.items():
+        r = m.eng.ranges[rid]
+        h = r.top0 - r.bottom0
+        for rid2, d in m.death.items():
+            if rid2 == rid or d > bi or bi - d > cp.overlap_bars:
+                continue
+            r2 = m.eng.ranges[rid2]
+            ov = min(r.top0, r2.top) - max(r.bottom0, r2.bottom)
+            if h > 0 and ov >= cp.overlap_frac * h:
+                out[rid] = True
+                break
+    return out
+
+
+def sign_ok(c: Cand, mode, cp: CP) -> bool:
+    if mode == 'main':
+        return len(c.types) >= cp.need_signs
+    if mode == 'C1':
+        return c.the != 'A2'             # bỏ ③; "lần 2" vốn đòi ≥ 2 dấu hiệu nên không có ở C1
+    if isinstance(mode, tuple) and mode[0] == 'C3':
+        return mode[1] in c.signs and c.the != 'A2'
+    raise ValueError(mode)
+
+
+def sim_one(df: pd.DataFrame, f: Feat, e: dict) -> Optional[pd.Series]:
+    """kernel.simulate cho MỘT lệnh, giới hạn tới nến cuối phiên (4d: lệnh còn mở qua khoảng trống > 30′ đóng TIME)."""
+    i = int(e['idx'])
+    hold = int(f.send[i] - i)
+    if hold <= 0:
+        return None
+    t = K.simulate(df, [e], one_at_a_time=False, max_hold_bars=hold)
+    return t.iloc[0] if len(t) else None
+
+
+def to_entry(c: Cand) -> dict:
+    return dict(idx=c.cf, side=c.S, entry=round(c.entry * TICK, 6), sl=round(c.sl * TICK, 6), tp=round(c.tp * TICK, 6),
+                setup=c.the, zone=c.moc_used, note=' | '.join(v[0] for t, v in c.signs.items()))
+
+
+def select_and_simulate(cands: List[Cand], df: pd.DataFrame, f: Feat, cp: CP, mode='main', block_us: Optional[bool] = None,
+                        keep=None):
+    """4d: 1 lệnh mở; mỗi thế (FailBreak/BreakConfirmed/cú thủng) 1 lệnh; mỗi (range, cạnh, nhóm thế) 1 lệnh.
+    Ứng viên xét theo thời gian; ứng viên đầu tiên không bị chặn của một thế được vào. Trả (trades, lý do bị bỏ)."""
+    block_us = cp.block_us_open if block_us is None else block_us
+    busy = -1
+    used_inst, used_key = set(), set()
+    rows, chosen, why = [], [], {}
+    for c in cands:
+        if not f.good[c.cf] or (keep is not None and not keep(c)):
+            continue
+        if not sign_ok(c, mode, cp):
+            continue
+        gs = [x for x in c.gates if not (x == 'chan_1920' and not block_us)]
+        if gs:
+            continue
+        if c.cf < busy:
+            why['dang_co_lenh'] = why.get('dang_co_lenh', 0) + 1
+            continue
+        if id(c.inst) in used_inst or c.key in used_key:
+            why['the_da_co_lenh'] = why.get('the_da_co_lenh', 0) + 1
+            continue
+        t = sim_one(df, f, to_entry(c))
+        if t is None:
+            continue
+        used_inst.add(id(c.inst))
+        used_key.add(c.key)
+        busy = int(t['exit_idx'])
+        rows.append(t)
+        chosen.append(c)
+    tr = pd.DataFrame(rows).reset_index(drop=True)
+    return tr, chosen, why
+
+
+def run_gd1(bars, df, good, cp: CP = None):
+    """①→④ trên TRAIN. Trả dict(m, feat, cands, chong, use_chong, trades, chosen, why)."""
+    cp = cp or CP()
+    sess = df['session_no'].to_numpy()
+    m = run_step2(bars, sess, cp, good=good)
+    feat = Feat(bars, df, m.mbr, cp, good)
+    cands = build_candidates(m, feat, cp)
+    chong = compute_chong(m, cp)
+    # tỷ lệ thế A bị luật chồng range loại (theo thế, phiên dày) — > 30 % ⇒ bỏ luật (plan)
+    A = [a for a in m.A if good[a.fb]]
+    n_veto = sum(1 for a in A if chong.get(a.rid) and sum(1 for x in m.fb_bars.get(a.rid, []) if x <= a.fb) < 2)
+    chong_rate = n_veto / max(1, len(A))
+    use_chong = chong_rate <= cp.overlap_max_drop
+    for c in cands:
+        c.signs = find_signs(c, feat, cp)
+        eval_order(c, feat, cp, m, chong, use_chong)
+    tr, chosen, why = select_and_simulate(cands, df, feat, cp)
+    return dict(m=m, feat=feat, cands=cands, chong=chong, chong_rate=chong_rate, use_chong=use_chong,
+                trades=tr, chosen=chosen, why=why, cp=cp, df=df, good=good)
+
+
+def main_gd0():
     cut = train_cut()
     bars, df = load_train(cut=cut)
     good = (~df['thin'].to_numpy()) & (~df['splice'].to_numpy()) & (df['split'].to_numpy() == 'TRAIN')
@@ -680,4 +1139,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if '--gd0' in sys.argv:
+        main_gd0()
+    else:
+        import results_corven
+        results_corven.main()

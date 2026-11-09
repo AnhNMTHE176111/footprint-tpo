@@ -296,6 +296,13 @@ def test_trap_sell_sweep_close_back_and_green_bubble_in_wick():
     assert not OF.trap(bar(102, 108, 101, 104, lv2), -1, 105, 6.0)[0]
 
 
+def test_trap_min_contracts_floor_q10():
+    lv = Lv((101, 5, 5), (102, 5, 5), (103, 6, 4), (104, 4, 4), (105, 3, 5), (106, 2, 8), (107, 1, 3), (108, 0, 2))
+    b = bar(104, 108, 101, 103, lv)
+    assert OF.trap(b, -1, 105, 2.0)[0]                                  # 8 ≥ 3 × 2, không sàn
+    assert not OF.trap(b, -1, 105, 2.0, min_contracts=10)[0]            # Q10: sàn 10 hợp đồng
+
+
 def test_trap_buy_and_same_bar_exhaustion_counts_separately():
     # buy: mốc 105, quét xuống 101, đóng 107; râu dưới có bid 40; đáy bid = 0 ⇒ cũng là kiệt sức đáy
     lv = Lv((101, 0, 3), (102, 40, 2), (103, 6, 6), (104, 8, 8), (105, 9, 9), (106, 8, 8), (107, 8, 8), (108, 5, 6))

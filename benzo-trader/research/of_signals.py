@@ -402,10 +402,11 @@ def delta_divergence(H: Sequence[int], L: Sequence[int], D: Sequence[float], x: 
     return ok, s, sd
 
 
-def trap(bar: FpBar, side: int, level_tick: int, base: float, mult: float = 3.0, sweep_ticks: int = 1):
+def trap(bar: FpBar, side: int, level_tick: int, base: float, mult: float = 3.0, sweep_ticks: int = 1,
+         min_contracts: float = 0.0):
     """③e — trap / stop hunt phe ngược tại mốc quan trọng `level_tick`. Hướng vào `side`.
     sell: râu trên quét qua mốc ≥ sweep_ticks (H ≥ mốc + 1) và đóng lại dưới mốc (C < mốc), và trong phần râu
-          TRÊN (tick > max(O, C)) có ô ASK (phía −S) ≥ mult × nền_ô.
+          TRÊN (tick > max(O, C)) có ô ASK (phía −S) ≥ mult × nền_ô và ≥ min_contracts (Q10: setup dùng 10).
     buy : đối xứng (L ≤ mốc − 1, C > mốc, râu dưới có ô BID ≥ mult × nền_ô).
     Trả (ok, tick ô, volume ô lớn nhất trong râu) — ok False ⇒ (False, -1, 0)."""
     if side < 0:
@@ -421,6 +422,6 @@ def trap(bar: FpBar, side: int, level_tick: int, base: float, mult: float = 3.0,
     if not cells or base <= 0:
         return False, -1, 0.0
     k, v = max(cells, key=lambda t: (t[1], -t[0] if side < 0 else t[0]))
-    if v >= mult * base - EPS and v > 0:
+    if v >= mult * base - EPS and v >= min_contracts - EPS and v > 0:
         return True, k, float(v)
     return False, -1, 0.0

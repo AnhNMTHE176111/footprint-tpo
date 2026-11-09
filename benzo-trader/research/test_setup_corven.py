@@ -215,24 +215,43 @@ def test_B_1c_structure_break_suspends_until_new_extreme():
 
 
 def test_B_exhausted_range_flag():
-    """BreakConfirmed làm range DEAD ngay (hết lượt ReEntry) ⇒ mặc định KHÔNG lập thế B (chờ Fable), có đếm."""
-    cp = SC.CP()
-    assert cp.b_include_exhausted is False
+    """Q4: BreakConfirmed làm range DEAD ngay (hết lượt ReEntry) VẪN lập thế B, gắn cờ; tắt được."""
+    assert SC.CP().b_from_exhausted is True
 
 
-# ------------------------------------------------------------------ ngoại lệ "xác nhận lần 2"
-def test_A_exception_second_confirmation_candidate():
+def test_B_zone_moc_body_only():
+    """Q3: mốc stacked chỉ nhận vùng Body không Weak — vùng ở râu phía đẩy (Weak) bị bỏ."""
+    m = SC.Step2Machine()
+    b = SC.InstB(rid=0, D=1, ref=0, bc=3, E=T0, top=T0, bottom=B0, tol=12.5)
+    body = OF.SiZone(1, 0, 2, 4106.9, 4107.1, 3, 10, 30, 3, OF.POS_BODY, False)
+    wick = OF.SiZone(1, 0, 2, 4108.0, 4108.2, 3, 10, 30, 3, OF.POS_UPPER, True)
+    m.zones_by_bar[1] = [body, wick]
+    m._b_add_zones(b, 1)
+    assert len(b.zones) == 1 and b.zones[0]['lo'] == 41069
+
+
+# ------------------------------------------------------------------ ngoại lệ "xác nhận lần 2" (Q12: phải có lần 1)
+def test_A_exception_requires_first_attempt():
     bars = base_bars()
     add(bars, B0 + 22, B0 + 23, B0 - 20, B0 - 15)        # đóng ngoài cạnh dưới
-    add(bars, B0 - 15, B0 - 10, B0 - 25, B0 - 20)        # cực trị cú thủng = B0 − 25
-    x = add(bars, B0 - 20, B0 - 9, B0 - 27, B0 - 10)     # râu quét qua cực trị 2 tick, đóng cao hơn 15 ≥ tol 12,5, vẫn ngoài range
+    y = add(bars, B0 - 15, B0 - 10, B0 - 30, B0 - 14)    # LẦN 1: râu dưới 15 tick, đóng lùi 16 ≥ tol 12,5, vẫn ngoài range
+    x = add(bars, B0 - 20, B0 - 8, B0 - 33, B0 - 12)     # LẦN 2: quét đáy y 3 tick, đóng lùi 21 ≥ tol so với đáy mới
     m = run(bars)
     e = [q for q in m.EXC if q.bar == x]
-    assert len(e) == 1 and e[0].p == -1 and e[0].ext == B0 - 25
+    assert len(e) == 1 and e[0].p == -1 and e[0].y == y and e[0].ext == B0 - 30
     # chỉ 1 lần mỗi cú thủng
-    bars.append(mk(len(bars), B0 - 10, B0 - 9, B0 - 30, B0 - 11))
+    add(bars, B0 - 12, B0 - 8, B0 - 36, B0 - 14)
     m2 = run(bars)
     assert len([q for q in m2.EXC if q.breach_start == e[0].breach_start]) == 1
+
+
+def test_A_exception_without_first_attempt_not_counted():
+    bars = base_bars()
+    add(bars, B0 + 22, B0 + 23, B0 - 20, B0 - 15)        # đóng ngoài: râu dưới 5 tick, đóng lùi 5 < tol ⇒ không phải lần 1
+    add(bars, B0 - 15, B0 - 10, B0 - 25, B0 - 20)        # râu 5, đóng lùi 5 < tol ⇒ không phải lần 1
+    x = add(bars, B0 - 20, B0 - 9, B0 - 27, B0 - 10)     # bản cũ (GĐ0) tính ứng viên; bản Q12 thì không
+    m = run(bars)
+    assert not [q for q in m.EXC if q.bar == x]
 
 
 # ------------------------------------------------------------------ không nhìn tương lai

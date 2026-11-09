@@ -1,0 +1,352 @@
+{
+ "phien_train_day": 35,
+ "range_sinh_moi_ngay": 24.66,
+ "failbreak_su_kien": 1681,
+ "a_whipsaw_bo": 38,
+ "breakconfirmed_su_kien": 1727,
+ "b_breakconfirmed_het_luot_reentry_dead_ngay": 326,
+ "so_ngay_lich_co_nen": 43,
+ "range_sinh_moi_ngay_lich": 20.07,
+ "A": {
+  "n": 1648,
+  "per_day": 47.09,
+  "qua_2": 1489,
+  "qua_2_per_day": 42.54,
+  "loai_2a_xa": 159,
+  "loai_khong_cf": 0,
+  "ty_le_loai_2a_pct": 9.6,
+  "so_cf_ung_vien_qua_2": 2528,
+  "dist_mbr_cf_dau_p50": 0.348
+ },
+ "dem_theo_nen_B_phien_day": {
+  "b_eval": 16285,
+  "b_pass": 10035,
+  "b_pass_edge": 1802,
+  "b_pass_zone": 8929,
+  "b_edge_khong_cham": 12521,
+  "b_edge_xa": 1962,
+  "b_khong_vung": 355,
+  "b_vung_dong_xuyen": 1018,
+  "b_vung_da_cham_truoc": 1673,
+  "b_vung_khong_cham_cua_so": 3204,
+  "b_bar_tam_huy_1c": 5294
+ },
+ "A_ngoai_le_lan2_ung_vien_gia": {
+  "n": 875,
+  "per_day": 25.0
+ },
+ "B": {
+  "n": 1401,
+  "per_day": 40.03,
+  "qua_2": 1353,
+  "qua_2_per_day": 38.66,
+  "qua_2_moc_canh": 745,
+  "qua_2_moc_stacked": 1179,
+  "ket_thuc": {
+   "het_tuoi": 531,
+   "reentry": 860,
+   "het_phien": 9,
+   "het_file": 1
+  },
+  "bi_1c_tam_huy_it_nhat_1_lan": 722,
+  "khong_qua_2": 48,
+  "khong_qua__khong_test_canh": 23,
+  "khong_qua__test_nhung_xa": 25,
+  "khong_qua__chet_vi_reentry_2b": 43,
+  "vung_stacked_lam_moc_tong": 12694,
+  "vung_bi_loai_dong_xuyen_2b": 6742,
+  "so_cf_ung_vien_qua_2": 10035
+ },
+ "theo_ngay": {
+  "2026-07-29": {
+   "A": 41,
+   "A2": 38,
+   "B": 43,
+   "B2": 42
+  },
+  "2026-07-30": {
+   "A": 49,
+   "A2": 43,
+   "B": 32,
+   "B2": 31
+  },
+  "2026-07-31": {
+   "A": 49,
+   "A2": 45,
+   "B": 41,
+   "B2": 37
+  },
+  "2026-08-03": {
+   "A": 67,
+   "A2": 61,
+   "B": 32,
+   "B2": 32
+  },
+  "2026-08-04": {
+   "A": 42,
+   "A2": 40,
+   "B": 41,
+   "B2": 37
+  },
+  "2026-08-05": {
+   "A": 49,
+   "A2": 46,
+   "B": 44,
+   "B2": 44
+  },
+  "2026-08-06": {
+   "A": 51,
+   "A2": 51,
+   "B": 44,
+   "B2": 44
+  },
+  "2026-08-07": {
+   "A": 28,
+   "A2": 25,
+   "B": 34,
+   "B2": 32
+  },
+  "2026-08-10": {
+   "A": 57,
+   "A2": 53,
+   "B": 43,
+   "B2": 41
+  },
+  "2026-08-11": {
+   "A": 47,
+   "A2": 44,
+   "B": 30,
+   "B2": 28
+  },
+  "2026-08-12": {
+   "A": 32,
+   "A2": 27,
+   "B": 43,
+   "B2": 42
+  },
+  "2026-08-13": {
+   "A": 53,
+   "A2": 47,
+   "B": 35,
+   "B2": 34
+  },
+  "2026-08-14": {
+   "A": 50,
+   "A2": 44,
+   "B": 33,
+   "B2": 33
+  },
+  "2026-08-17": {
+   "A": 50,
+   "A2": 46,
+   "B": 44,
+   "B2": 43
+  },
+  "2026-08-18": {
+   "A": 58,
+   "A2": 46,
+   "B": 48,
+   "B2": 45
+  },
+  "2026-08-19": {
+   "A": 62,
+   "A2": 53,
+   "B": 38,
+   "B2": 38
+  },
+  "2026-08-20": {
+   "A": 63,
+   "A2": 62,
+   "B": 45,
+   "B2": 44
+  },
+  "2026-08-21": {
+   "A": 48,
+   "A2": 43,
+   "B": 46,
+   "B2": 46
+  },
+  "2026-08-24": {
+   "A": 42,
+   "A2": 37,
+   "B": 44,
+   "B2": 44
+  },
+  "2026-08-25": {
+   "A": 30,
+   "A2": 28,
+   "B": 40,
+   "B2": 38
+  },
+  "2026-08-26": {
+   "A": 51,
+   "A2": 47,
+   "B": 37,
+   "B2": 36
+  },
+  "2026-08-27": {
+   "A": 37,
+   "A2": 33,
+   "B": 32,
+   "B2": 29
+  },
+  "2026-08-28": {
+   "A": 48,
+   "A2": 40,
+   "B": 40,
+   "B2": 39
+  },
+  "2026-08-31": {
+   "A": 54,
+   "A2": 49,
+   "B": 37,
+   "B2": 37
+  },
+  "2026-09-01": {
+   "A": 50,
+   "A2": 44,
+   "B": 42,
+   "B2": 40
+  },
+  "2026-09-02": {
+   "A": 53,
+   "A2": 45,
+   "B": 36,
+   "B2": 35
+  },
+  "2026-09-03": {
+   "A": 48,
+   "A2": 43,
+   "B": 51,
+   "B2": 50
+  },
+  "2026-09-04": {
+   "A": 45,
+   "A2": 43,
+   "B": 43,
+   "B2": 36
+  },
+  "2026-09-07": {
+   "A": 27,
+   "A2": 25,
+   "B": 33,
+   "B2": 31
+  },
+  "2026-09-08": {
+   "A": 58,
+   "A2": 52,
+   "B": 40,
+   "B2": 40
+  },
+  "2026-09-09": {
+   "A": 26,
+   "A2": 24,
+   "B": 37,
+   "B2": 36
+  },
+  "2026-09-10": {
+   "A": 52,
+   "A2": 46,
+   "B": 41,
+   "B2": 40
+  },
+  "2026-09-11": {
+   "A": 61,
+   "A2": 56,
+   "B": 55,
+   "B2": 52
+  },
+  "2026-09-14": {
+   "A": 29,
+   "A2": 26,
+   "B": 34,
+   "B2": 34
+  },
+  "2026-09-15": {
+   "A": 41,
+   "A2": 37,
+   "B": 43,
+   "B2": 43
+  }
+ },
+ "dau_hieu_ngu_canh_tren_cf_the_A": {
+  "n_cf": 2528,
+  "div": 631,
+  "trap": 75
+ },
+ "tan_suat": {
+  "n_bars": 47622,
+  "mbr_median_price": 1.6,
+  "bar_range_p25_50_75_90": [
+   1.1,
+   1.7,
+   2.5,
+   3.7
+  ],
+  "body_frac_p25_50_75": [
+   0.27,
+   0.5,
+   0.74
+  ],
+  "up_close_to_high_p50_p75": [
+   0.19,
+   0.38
+  ],
+  "delta_ge2x_pct": 26.1,
+  "delta_ge3x_pct": 14.6,
+  "max_delta_eq_delta_pct": 100.0,
+  "cell_sidevol_p90_all_cells": 9.0,
+  "cell_sidevol_p90_nonzero": 9.0,
+  "nen_o_truoc_nen": {
+   "median_base": 6.0,
+   "ge3x": 18.2,
+   "ge4x": 10.9,
+   "bong_3x_va_10": 17.5
+  },
+  "nen_o_gom_nen": {
+   "median_base": 6.0,
+   "ge3x": 18.0,
+   "ge4x": 10.8,
+   "bong_3x_va_10": 17.3
+  },
+  "nen_o_kieu_OFB": {
+   "median_base": 6.0,
+   "ge3x": 18.3,
+   "ge4x": 10.9,
+   "bong_3x_va_10": 17.6
+  },
+  "bong_buy_pct": 10.1,
+  "bong_sell_pct": 10.6,
+  "bong_any_pct": 17.5,
+  "stacked_250_3_mv1_theo_phia_pct": {
+   "buy": 31.8,
+   "sell": 32.9
+  },
+  "stacked_250_4_mv1_theo_phia_pct": {
+   "buy": 15.5,
+   "sell": 15.8
+  },
+  "stacked_250_3_mv1_pct": 55.4,
+  "stacked_250_4_mv1_pct": 29.4,
+  "stacked_250_3_mv5_pct": 10.1,
+  "stacked_3d_hople_pct": 30.7,
+  "stacked_3d_hople_run4_pct": 16.5,
+  "kiet_suc_dinh_pct": 12.0,
+  "kiet_suc_day_pct": 12.0,
+  "max_one_trade_eq0_pct": 100.0
+ },
+ "tham_so": {
+  "near_mbr": 1.0,
+  "win_b": 3,
+  "win_a_max": 5,
+  "cf_after_fb": 2,
+  "age_b": 30,
+  "si_ratio": 250.0,
+  "si_run": 3,
+  "si_minvol": 1.0,
+  "b_include_exhausted": false,
+  "same_session": true
+ },
+ "cut_bar_idx": 51318,
+ "cut_datetime": "2026-09-15 20:59:00"
+}

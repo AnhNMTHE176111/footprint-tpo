@@ -50,3 +50,33 @@ corven-3 kéo SL sát cạnh nên lọt trần. Không phải lỗi mã (Python 
 | trần SL 3 mbr (mọi lệnh) | 317 | −0,023 | −0,13 / +0,09 | −0,11 |
 
 Opus: không giới hạn nào cải thiện rõ; giới hạn khoảng cách làm xấu đi ⇒ giữ corven-3, không thêm luật từ một ca.
+
+## corven-4: nhịp hồi không chạm cạnh phải thuộc cú phá (Opus quyết N = 5, Sonnet implement)
+
+Luật: trong nhánh "hồi không cần chạm cạnh" (thế B), nến hồi đầu tiên phải cách nến phá (nến đóng ngoài range đầu tiên, `b.ref`) ≤ N = 5 nến: `min(pb) − b.ref ≤ 5`. Nhánh chạm cạnh, nhánh vùng stacked và SL: không đổi.
+Cờ Python `hoi_trong_n_nen` (+ `hoi_max_nen = 5`), C# `CorvenParams.HoiTrongNNen / HoiMaxNen`; `CP()` mặc định và `CorvenCfg.V1()` giữ nguyên (cờ tắt).
+
+| | n | R TB | WR | nửa 1 / nửa 2 | vào ngẫu nhiên sau CF (C2') |
+|---|---|---|---|---|---|
+| corven-3 | 399 | +0,020 | 37 % | 0,00 / +0,04 | −0,04 |
+| **corven-4 (N=5)** | **374** (A 38, B 336) | **−0,023** | 35 % (130 TP / 241 SL / 3 TIME) | −0,054 / +0,007 | −0,047 |
+
+Quét N (TRAIN, `research/variants_hoi_max_nen.py`, mã thật):
+
+| N | n | R TB | nửa 1 | nửa 2 | C2' |
+|---|---|---|---|---|---|
+| 1 | 268 | −0,197 | −0,313 | −0,074 | −0,113 |
+| 2 | 314 | −0,071 | −0,171 | +0,037 | −0,035 |
+| 3 | 344 | −0,029 | −0,046 | −0,010 | −0,045 |
+| 4 | 361 | −0,021 | −0,056 | +0,014 | −0,056 |
+| **5** | **374** | **−0,023** | −0,054 | +0,007 | −0,047 |
+| 6 | 383 | 0,000 | −0,047 | +0,047 | −0,060 |
+| 7 | 385 | +0,007 | −0,028 | +0,042 | −0,062 |
+| 8 | 392 | +0,032 | +0,023 | +0,040 | −0,049 |
+| 10 | 395 | −0,005 | −0,017 | +0,006 | −0,072 |
+| không giới hạn | 399 | +0,020 | 0,000 | +0,039 | −0,043 |
+
+Opus chọn N=5: N1–N2 kém rõ; từ N3 trở lên chênh nhau trong mức nhiễu (sai số chuẩn ≈ 0,07R) ⇒ không chọn đỉnh N8 (chọn đỉnh trên TRAIN = tự lừa); N=5 là cận trên khoảng người học mô tả (1–5 nến), giữ được nến hồi ở nến 4–5, vẫn loại hồi muộn kiểu 22 nến.
+
+Kết luận: ngang vào ngẫu nhiên, không có lợi thế đo được (hậu kiểm).
+Ca 09/11: lệnh sell 10:11 VN (nhịp hồi xa cú phá) không còn; lệnh buy 11:26 VN vào: B buy 4132,3 · SL 4129,1 · TP 4138,7 · mốc cạnh · "trap hồi, bóng đỏ 20 @4131,3" (Python và C# khớp).

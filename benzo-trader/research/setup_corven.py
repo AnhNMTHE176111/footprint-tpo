@@ -91,14 +91,16 @@ class CP:
     b_bo_rmin: bool = False        # thế B: bỏ 4c R sẵn ≥ 1,7 (TP vẫn 2R)
     trap_hoi: bool = False         # thế B: thêm dấu hiệu "trap trong nhịp hồi"
     sl_b_canh_sat: bool = False    # corven-3: thế B mốc cạnh — SL = min(đáy cửa sổ, cạnh) − đệm (bỏ trừ dung sai cạnh)
+    hoi_trong_n_nen: bool = False  # corven-4: nhịp hồi (không chạm cạnh) phải thuộc cú phá — nến hồi đầu tiên cách nến phá (b.ref) ≤ hoi_max_nen (=5) nến
+    hoi_max_nen: int = 5
 
 
-LIVE_VERSION = 'corven-3'
+LIVE_VERSION = 'corven-4'
 
 
 def cp_live() -> 'CP':
-    """Bộ tham số đang chạy trong indicator (LogicVersion corven-3)."""
-    return CP(hoi_khong_cham=True, bo_quet_stop=True, b_bo_rmin=True, trap_hoi=True, sl_b_canh_sat=True)
+    """Bộ tham số đang chạy trong indicator (LogicVersion corven-4)."""
+    return CP(hoi_khong_cham=True, bo_quet_stop=True, b_bo_rmin=True, trap_hoi=True, sl_b_canh_sat=True, hoi_trong_n_nen=True)
 
 
 # =====================================================================================================
@@ -471,6 +473,8 @@ class Step2Machine:
             return False
         pb = [k for k in ks if (C[k] - C[k - 1]) * D < 0 or (C[k] - O[k]) * D < 0]
         if not pb:
+            return False
+        if self.cp.hoi_trong_n_nen and min(pb) - b.ref > self.cp.hoi_max_nen:
             return False
         lim = max(C[k] for k in pb) if D > 0 else min(C[k] for k in pb)
         return (C[j] - lim) * D > 0

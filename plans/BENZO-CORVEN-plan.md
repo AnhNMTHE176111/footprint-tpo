@@ -425,3 +425,12 @@ C#: LogicVersion `corven-2`, `CorvenParams.HoiKhongCham/BoQuetStop/BBoRMin/TrapH
 Kiểm: C# 151/151 (thêm `tests/TestsCorven2.cs`), pytest 114, Gd4 99/99 (đã cập nhật hằng), parity TRAIN 333/333 · ứng viên 14803/14803 · TEST định danh 231/231.
 Bước sau: chấm corven-2 trên dữ liệu ≥ 22/10 KHÔNG sửa thêm (tiêu chí như 10.2: R TB > 0 và hơn vào ngẫu nhiên).
 Số liệu: `research/report/VARIANTS-NGUOI-HOC-2026-11-09.md`.
+
+## 14. corven-4 (2026-11-09) — Opus quyết, Sonnet implement
+
+Sau ca sell 10:11 VN 09/11 (nhịp hồi cách xa cú phá, vào ở corven-3): nhánh "hồi không chạm cạnh" của thế B chỉ nhận khi nến hồi đầu tiên cách nến phá (`b.ref`) ≤ N = 5 nến (`min(pb) − b.ref ≤ 5`). Các nhánh khác và SL không đổi.
+Chọn N=5 (không chọn đỉnh N8: chênh giữa N≥3 trong mức nhiễu, sai số chuẩn ≈ 0,07R; N=5 là cận trên khoảng người học mô tả 1–5 nến).
+Python: `CP.hoi_trong_n_nen` / `hoi_max_nen = 5`, bật trong `cp_live()`, `LIVE_VERSION = 'corven-4'`. C#: `CorvenParams.HoiTrongNNen / HoiMaxNen`, `CorvenCfg.V1()` tắt, `LogicVersion = "corven-4"`.
+Đo TRAIN 35 phiên: 399 lệnh +0,02R → 374 lệnh (A 38, B 336) −0,023R, hai nửa −0,054 / +0,007, vào ngẫu nhiên sau CF −0,047R ⇒ ngang ngẫu nhiên, chưa có lợi thế; hậu kiểm.
+Ca 09/11: sell 10:11 biến mất, buy 11:26 (4132,3 · SL 4129,1 · TP 4138,7) vào; Python = C#.
+Kiểm: C# 164/164, pytest 114, parity TRAIN 374/374, Gd4 99/99, build + deploy. Số liệu + bảng quét N: `research/report/VARIANTS-NGUOI-HOC-2026-11-09.md`.

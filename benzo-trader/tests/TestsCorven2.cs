@@ -1,5 +1,5 @@
 // Unit test corven-2 (4 sửa đổi người học 2026-11-09, research/report/VARIANTS-NGUOI-HOC-2026-11-09.md) = setup_corven.cp_live().
-// Mỗi luật: bộ mặc định (corven-3) và CorvenCfg.V1() (corven-1) cho kết quả ngược nhau trên cùng một ca.
+// Mỗi luật: bộ mặc định (corven-4) và CorvenCfg.V1() (corven-1) cho kết quả ngược nhau trên cùng một ca.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,7 +12,7 @@ static partial class Program
     static void TestsCorven2()
     {
         Console.WriteLine("[V2-0] Phiên bản");
-        Check(CorvenParams.LogicVersion == "corven-3", "LogicVersion = corven-3");
+        Check(CorvenParams.LogicVersion == "corven-4", "LogicVersion = corven-4");
 
         Console.WriteLine("[V2-1] Trap trong nhịp hồi (thế B sell): ô Ask 20 ở nến hồi 13 @4126,8, CF đóng 4126,6 dưới ô");
         {
@@ -61,6 +61,35 @@ static partial class Program
             var c1 = Eval(Mk(), f, CorvenCfg.V1());
             Check(c1.Sl == 41291, "corven-1: SL = max(4128,4; 4128,0 + 0,75) + 3 tick, làm tròn ra xa = 4129,1", c1.Sl.ToString());
         }
+        Console.WriteLine("[V4-1] corven-4: nhịp hồi không chạm cạnh phải thuộc cú phá — nến hồi đầu tiên cách nến phá ≤ 5 nến (máy ①② trên hộp đều)");
+        {
+            // cú phá: rf (đóng ngoài đầu tiên) rồi các nến đẩy lên; nến hồi đầu tiên ở rf+pb; 1 nến lên; CF đóng vượt giá đóng nến hồi. Không nến nào chạm cạnh 4104,9 (± dung sai)
+            List<CorvenBar> Seq(int pb, out int bc, out int cf)
+            {
+                var bars = BaseBars();
+                int rf = Add(bars, TT - 8, TT + 12, TT - 10, TT + 8);
+                long c = TT + 8;
+                for (int k = 1; k < pb; k++) { long n = c + 15; Add(bars, c, n + 5, c - 2, n); c = n; }
+                bc = rf + 3;
+                Add(bars, c, c + 2, c - 12, c - 8);                  // nến hồi: đóng thấp hơn nến trước, nến đỏ, vẫn đóng ngoài
+                long d = c - 8; Add(bars, d, d + 20, d - 2, d + 15); d += 15;
+                cf = Add(bars, d, d + 25, d - 2, d + 20);             // đóng vượt giá đóng nến hồi
+                return bars;
+            }
+            foreach (var (pb, ok) in new[] { (3, true), (5, true), (6, false) })
+            {
+                var bs = Seq(pb, out int bc, out int cf);
+                var (_, cs) = RunM(bs);
+                Check(HasB(cs, bc, cf) == ok, $"nến hồi đầu tiên cách nến phá {pb} nến ⇒ " + (ok ? "nhận" : "loại"));
+                var (_, csOff) = RunM(bs, new CorvenCfg { HoiTrongNNen = false });
+                Check(HasB(csOff, bc, cf), $"cờ tắt: ca {pb} nến vẫn nhận (corven-3 cũ)");
+                var (_, csV1) = RunM(bs, CorvenCfg.V1());
+                Check(!HasB(csV1, bc, cf), $"corven-1: ca {pb} nến không nhận (V1 không có nhánh hồi, không bị ảnh hưởng)");
+            }
+            var b6 = Seq(6, out int bc6, out int cf6);
+            var (_, cs6n) = RunM(b6, new CorvenCfg { HoiMaxNen = 6 });
+            Check(HasB(cs6n, bc6, cf6), "ngưỡng 6 nến: ca 6 nến nhận (biên ≤ N)");
+        }
         Console.WriteLine("[V2-4] Ca thật 09/11 11:26 VN (buy, nhịp hồi không chạm cạnh + trap hồi) — file 3 tháng mới");
         {
             string root = RepoRoot();
@@ -69,11 +98,11 @@ static partial class Program
             var (b, l) = CorvenData.Load(prefix);
             var (eng, _) = CorvenData.Run(b, l, 0.1);
             var day = eng.Signals.Where(x => x.Time.Date == new DateTime(2026, 11, 9)).ToList();
-            var sell = day.FirstOrDefault(x => x.Time == new DateTime(2026, 11, 9, 3, 11, 0, DateTimeKind.Utc));
-            Check(sell != null && sell.Side == -1 && Near(sell.Entry, 4126.0, 1e-6) && Near(sell.Sl, 4135.1, 1e-6) && sell.Outcome == "SL"
-                  && sell.ExitTime == new DateTime(2026, 11, 9, 4, 30, 0, DateTimeKind.Utc),
-                  "corven-3 (= Python cp_live): lệnh B sell 10:11 VN, SL 4135,1 (cạnh 4134,6 + 3 tick), dính SL 11:30 VN", sell == null ? "không có" : $"{sell.Entry} {sell.Sl} {sell.Outcome}");
-            Check(!day.Any(x => x.Time == new DateTime(2026, 11, 9, 4, 26, 0, DateTimeKind.Utc)), "⇒ ca 11:26 VN không vào vì đang có lệnh (luật 1 lệnh mở)");
+            Check(!day.Any(x => x.Time == new DateTime(2026, 11, 9, 3, 11, 0, DateTimeKind.Utc)), "corven-4: lệnh B sell 10:11 VN (nhịp hồi xa cú phá) không còn");
+            var s = day.FirstOrDefault(x => x.Time == new DateTime(2026, 11, 9, 4, 26, 0, DateTimeKind.Utc));
+            Check(s != null && s.Setup == 'B' && s.Side == 1 && Near(s.Entry, 4132.3, 1e-6) && Near(s.Sl, 4129.1, 1e-6) && Near(s.Tp, 4138.7, 1e-6) && s.Zone == "canh",
+                  "có lệnh B buy 11:26 VN: 4132,3 · SL 4129,1 · TP 4138,7 · mốc cạnh", s == null ? "không có" : $"{s.Setup} {s.Side} {s.Entry} {s.Sl} {s.Tp} {s.Zone}");
+            Check(s != null && s.Signs.Contains("trap hồi, bóng đỏ 20 @4131,3"), "dấu hiệu gồm trap hồi bóng đỏ 20 @4131,3", s?.Signs);
         }
     }
 }

@@ -159,7 +159,7 @@ def main():
     good = (~df['thin'].to_numpy()) & (~df['splice'].to_numpy()) & (df['split'].to_numpy() == 'TRAIN')
     deny = int(np.flatnonzero(good)[0])
     assert good[deny:].all(), 'mặt nạ phiên dày TRAIN không liền một khối — ReplayCorven --deny-below không đủ'
-    R = SC.run_gd1(bars, df, good)
+    R = SC.run_gd1(bars, df, good, SC.cp_live())
     check_chong(R, 'TRAIN')
     py_tr, py_c = py_rows(R, 0, cut, True)
     print(f'Python TRAIN: {len(py_tr)} lệnh, {len(py_c)} ứng viên (cut {cut}, phiên dày từ nến {deny})')
@@ -184,7 +184,7 @@ def main():
     bars_f, df_f = SC.load_train(prefix, cut=n_all - 1)
     good_f = (~df_f['thin'].to_numpy()) & (~df_f['splice'].to_numpy())
     assert (good_f[:cut + 1] == good).all() and good_f[deny:].all(), 'mặt nạ phiên dày toàn file khác TRAIN'
-    Rf = SC.run_gd1(bars_f, df_f, good_f)
+    Rf = SC.run_gd1(bars_f, df_f, good_f, SC.cp_live())
     check_chong(Rf, 'toàn file')
     Rf['trades'] = None                                                            # ⛔ không giữ bảng kết cục của toàn file
     py_test_tr, py_test_c = py_rows(Rf, cut + 1, n_all - 1, False)
@@ -199,7 +199,7 @@ def main():
     m = py_tr.merge(cs_tr, on='idx', how='outer', suffixes=('_py', '_cs'))
     m.to_csv(os.path.join(REPORT, '_parity_corven_train.csv'), index=False, encoding='utf-8')
     nA = int((py_tr['the'] == 'A').sum()); nB = int((py_tr['the'] == 'B').sum())
-    L = ['# Parity Python ↔ C# — setup CORVEN (corven-1)', '',
+    L = ['# Parity Python ↔ C# — setup CORVEN (corven-2, setup_corven.cp_live())', '',
          '> Opus, GĐ3 (plan mục 10.6). `research/parity_corven.py` chạy `setup_corven.run_gd1` (chuẩn) và `tools/ReplayCorven` '
          '(mã C# sản phẩm: BenzoEngine + DetectorCorven + RangeLogic/StackedImbalance/ExhaustionLogic nối nguồn) trên '
          '`fp_GCZ26_XCEC_Time_20260723-20261021_90d`. Phiên mỏng đầu file (nến < %d) không vào lệnh ở cả hai bên.' % deny, '',
@@ -237,7 +237,7 @@ def main():
         print('  TRAIN lệch:', d)
     if t_diag or tc_diag:
         print('  TEST lệch (khoá, cột):', (t_diag + tc_diag)[:15])
-    ok = a_ok == a_n and c_ok == c_n and f_ok == f_n and fc_ok == fc_n and t_ok == t_n and tc_ok == tc_n and len(py_tr) == 97
+    ok = a_ok == a_n and c_ok == c_n and f_ok == f_n and fc_ok == fc_n and t_ok == t_n and tc_ok == tc_n and len(py_tr) == 333
     print('PARITY 100 %' if ok else 'PARITY CHƯA ĐẠT')
     return 0 if ok else 1
 

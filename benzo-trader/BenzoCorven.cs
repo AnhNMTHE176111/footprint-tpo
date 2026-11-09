@@ -1,7 +1,7 @@
 // ============================================================================
 //  BenzoCorven — setup "follow theo footprint" của CORVEN (plans/BENZO-CORVEN-plan.md, GĐ3 mục 10)
 // ============================================================================
-//  PORT Y CHỮ từ benzo-trader/research/setup_corven.py (bộ gốc vòng 1, LogicVersion "corven-1"):
+//  PORT Y CHỮ từ benzo-trader/research/setup_corven.py (LogicVersion "corven-2" = corven-1 + 4 sửa đổi người học 2026-11-09, setup_corven.cp_live()):
 //    ① bối cảnh = RangeLogic (quantower-range/RangeLogic.cs, nối nguồn lúc build) — thế A (fail break) / thế B (phá giữ được)
 //    ② mốc "gần" + test không quá sâu + cửa sổ test          (Step2Machine.on_bar / _a_candidate / _b_step / _b_eval)
 //    ③ 5 loại dấu hiệu, cần ≥ 2 loại                          (find_signs)
@@ -26,7 +26,7 @@ namespace BenzoTraderNs
     /// muốn đổi phải đo lại bằng Python rồi tăng LogicVersion.</summary>
     public static class CorvenParams
     {
-        public const string LogicVersion = "corven-1";
+        public const string LogicVersion = "corven-2";
         public const double NearMbr = 1.0;
         public const int WinB = 3;
         public const int WinAMax = 5;
@@ -63,11 +63,16 @@ namespace BenzoTraderNs
         public const int CellBaseN = 100;
         public const int MedDeltaN = 50;
         public const int MedDeltaMin = 10;
+        // ---- corven-2: 4 sửa đổi người học chốt 2026-11-09 (research/report/VARIANTS-NGUOI-HOC-2026-11-09.md) = setup_corven.cp_live() ----
+        public const bool HoiKhongCham = true;   // thế B: nhịp hồi không cần chạm cạnh
+        public const bool BoQuetStop = true;     // bỏ ⛔ nhịp đẩy do quét stop
+        public const bool BBoRMin = true;        // thế B: bỏ R sẵn ≥ 1,7 (TP vẫn 2R)
+        public const bool TrapHoi = true;        // thế B: dấu hiệu "trap trong nhịp hồi"
 
         // ---- nhãn trung thực (plan 10.3) — test so đúng chữ ----
-        public const string BacktestLine = "Backtest 35 phiên: −0,29R/lệnh, kém vào ngẫu nhiên (−0,08R) · chạy thử, không phải khuyến nghị";
-        public const string TeleWarn = "⚠ Chưa có lợi thế đo được (−0,29R/lệnh, 35 phiên)";
-        public const string SettingLabel = "Bật setup CORVEN (chạy thử — backtest −0,29R/lệnh, kém vào ngẫu nhiên)";
+        public const string BacktestLine = "Backtest 35 phiên: −0,07R/lệnh, ngang vào ngẫu nhiên (−0,08R) · chạy thử, không phải khuyến nghị";
+        public const string TeleWarn = "⚠ Chưa có lợi thế đo được (−0,07R/lệnh, 35 phiên)";
+        public const string SettingLabel = "Bật setup CORVEN (chạy thử — backtest −0,07R/lệnh, ngang vào ngẫu nhiên)";
     }
 
     /// <summary>Bản sao tham số theo instance — CHỈ để unit test dựng ca biên (vd cửa sổ W=4); live luôn dùng mặc định = CorvenParams.</summary>
@@ -84,6 +89,9 @@ namespace BenzoTraderNs
         public double RMin = CorvenParams.RMin, TpR = CorvenParams.TpR;
         public int DeadLook = CorvenParams.DeadLook, BlockFirstBars = CorvenParams.BlockFirstBars, VetoWindow = CorvenParams.VetoWindow, StopRunK = CorvenParams.StopRunK;
         public int OverlapBars = CorvenParams.OverlapBars; public double OverlapFrac = CorvenParams.OverlapFrac;
+        public bool HoiKhongCham = CorvenParams.HoiKhongCham, BoQuetStop = CorvenParams.BoQuetStop, BBoRMin = CorvenParams.BBoRMin, TrapHoi = CorvenParams.TrapHoi;
+        /// <summary>Bộ corven-1 (4 cờ corven-2 tắt) — cho test cũ dựng ca biên của luật đã bỏ.</summary>
+        public static CorvenCfg V1() => new CorvenCfg { HoiKhongCham = false, BoQuetStop = false, BBoRMin = false, TrapHoi = false };
     }
 
     // ======================================================================== đặc trưng từng nến (Feat)
@@ -271,6 +279,25 @@ namespace BenzoTraderNs
                     }
                 }
             }
+            // ③f (corven-2, chỉ thế B) trap trong nhịp hồi: ô −S ≥ 3 × nền_ô và ≥ 10 ở nến trước CF trong cửa sổ, CF đóng vượt giá ô.
+            // Ô lớn nhất; hoà ⇒ nến sớm hơn, rồi giá xa hướng S hơn (= find_signs ③f).
+            if (cp.TrapHoi && c.The == 'B' && !trp)
+            {
+                bool hb = false; double hv = 0; int hk = 0; long htk = 0;
+                for (int k = c.W0; k < cf; k++)
+                {
+                    double bs = f.Base[k];
+                    if (double.IsNaN(bs) || double.IsInfinity(bs) || bs <= 0) continue;
+                    foreach (var lv in f.Bars[k].Levels)
+                    {
+                        double vol = S > 0 ? lv.Bid : lv.Ask;
+                        if (!(vol >= 3.0 * bs - 1e-9 && vol >= cp.BubbleMin - 1e-9 && (C[cf] - lv.Tick) * S > 0)) continue;
+                        bool better = !hb || vol > hv || (vol == hv && k < hk) || (vol == hv && k == hk && lv.Tick * S > htk * S);
+                        if (better) { hb = true; hv = vol; hk = k; htk = lv.Tick; }
+                    }
+                }
+                if (hb) sg.Add(new CorvenSign { Type = "trap", Desc = $"trap hồi, bóng {(S > 0 ? "đỏ" : "xanh")} {Of.PyFixed(hv, 0)} @{Of.Px(htk, tk)}", Bar = hk });
+            }
             return sg;
         }
 
@@ -301,7 +328,7 @@ namespace BenzoTraderNs
                 if (!swept) { g.Add("v_kiet_suc_chong"); break; }
             }
             // ⛔ nhịp đẩy do quét stop (thế B)
-            if (c.The == 'B')
+            if (c.The == 'B' && !cp.BoQuetStop)
             {
                 int D = S;
                 int e = c.Ref;
@@ -377,7 +404,7 @@ namespace BenzoTraderNs
             }
             c.Target = tgt;
             c.RAvail = risk > 0 ? (tgt - ent) * S / risk : -1;
-            if (c.RAvail < cp.RMin - 1e-9) g.Add("r_nho");
+            if (c.RAvail < cp.RMin - 1e-9 && !(cp.BBoRMin && c.The == 'B')) g.Add("r_nho");
             c.Tp = ent + S * cp.TpR * risk;
             // 4d giờ (nến cuối phiên: BenzoEngine huỷ lệnh khi thấy khoảng trống)
             int sm = f.Sm[cf];
@@ -619,6 +646,24 @@ namespace BenzoTraderNs
             if (!b.Suspended) BEval(b, i, lvl, cands);
         }
 
+        /// <summary>corven-2 (= Step2Machine._hoi_ok): nến [w0, j−1] đều đóng ngoài range phía D, có ≥ 1 nến hồi (đóng ngược D so
+        /// với nến trước, hoặc nến ngược màu), CF đóng ngoài range và vượt giá đóng cực trị của các nến hồi.</summary>
+        private bool HoiOk(InstB b, int j, int w0)
+        {
+            var C = F.C; var O = F.O; int D = b.D; double E = b.E;
+            if (w0 >= j || (C[j] - E) * D <= 0) return false;
+            bool any = false; long lim = 0;
+            for (int k = w0; k < j; k++)
+            {
+                if ((C[k] - E) * D <= 0) return false;
+                bool pb = (C[k] - C[k - 1]) * D < 0 || (C[k] - O[k]) * D < 0;
+                if (!pb) continue;
+                if (!any || (D > 0 ? C[k] > lim : C[k] < lim)) lim = C[k];
+                any = true;
+            }
+            return any && (C[j] - lim) * D > 0;
+        }
+
         private void BEval(InstB b, int j, double? piv, List<CorvenCand> cands)
         {
             var H = F.H; var L = F.L; var C = F.C;
@@ -633,6 +678,7 @@ namespace BenzoTraderNs
                 double dist = b.D < 0 ? E - C[j] : C[j] - E;
                 if (0 < dist && dist <= Cfg.NearMbr * m + 1e-9) pe = true;
             }
+            if (!pe && Cfg.HoiKhongCham && HoiOk(b, j, w0)) pe = true;
             double tz = TolNow(j);
             var zm = new List<CorvenMoc>();
             foreach (var z in b.Zones)

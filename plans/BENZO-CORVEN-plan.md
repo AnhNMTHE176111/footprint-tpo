@@ -412,3 +412,16 @@ Sau đó tester GĐ4 **chạy lại (g)(h)(d)** trên bản mới, ghi phụ l�
     `tools/TesterGd4/Gd4/Program.cs` dòng 77/406 — **không** sửa `tests/Program.cs` (của Opus 9.3).
 12. `./build.sh` 0 cảnh báo → `dotnet run --project tests` → pytest → `parity_corven.py` → `Gd4 -- all` 0 FAIL → `qw-deploy.sh` → commit tiếng Việt
     (chỉ `git add` file mình sửa) → `git push origin main` → báo hash + số test + số `Cancelled` trước/sau + xác nhận `PARITY-CORVEN.md` không đổi.
+
+## 13. corven-2 (2026-11-09) — 4 sửa đổi người học chốt sau ca bỏ lỡ 11:26 VN 09/11
+
+Người học (chủ setup) chốt sau khi mổ ca buy 11:26: (1) thế B không cần nhịp hồi chạm cạnh — hồi không về được cạnh là phe theo hướng phá mạnh;
+(2) bỏ ⛔ "nhịp đẩy do quét stop" — luật do agent diễn giải (mục 3 ghi "gần đúng"), phần ΣΔ ≤ 0 mâu thuẫn trực tiếp với trap (trap sell tạo Δ âm);
+(3) thế B (đã phá range) bỏ R sẵn ≥ 1,7, TP 2R; thế A giữ; (4) agent phát hiện thêm: trap sell ở nhịp hồi (bóng đỏ 20 @4131,3, nến 11:24)
+không được tính vì định nghĩa trap đòi quét mốc ⇒ thêm dấu hiệu "trap trong nhịp hồi" (thế B).
+Đo TRAIN 35 phiên: 97 lệnh −0,29R → 333 lệnh −0,075R; vào ngẫu nhiên sau CF −0,079R ⇒ **ngang ngẫu nhiên, chưa có lợi thế**; 11 tổ hợp thử ⇒ hậu kiểm.
+Python: `setup_corven.cp_live()` (cờ `hoi_khong_cham`, `bo_quet_stop`, `b_bo_rmin`, `trap_hoi`; mặc định CP() vẫn = corven-1).
+C#: LogicVersion `corven-2`, `CorvenParams.HoiKhongCham/BoQuetStop/BBoRMin/TrapHoi`, `CorvenCfg.V1()` cho test luật cũ.
+Kiểm: C# 151/151 (thêm `tests/TestsCorven2.cs`), pytest 114, Gd4 99/99 (đã cập nhật hằng), parity TRAIN 333/333 · ứng viên 14803/14803 · TEST định danh 231/231.
+Bước sau: chấm corven-2 trên dữ liệu ≥ 22/10 KHÔNG sửa thêm (tiêu chí như 10.2: R TB > 0 và hơn vào ngẫu nhiên).
+Số liệu: `research/report/VARIANTS-NGUOI-HOC-2026-11-09.md`.

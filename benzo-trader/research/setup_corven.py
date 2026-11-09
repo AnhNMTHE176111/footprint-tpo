@@ -84,6 +84,20 @@ class CP:
     overlap_bars: int = 30         # ⛔ range chồng range
     overlap_frac: float = 0.5
     overlap_max_drop: float = 0.30 # nếu luật chồng range loại > 30 % thế A ⇒ bỏ luật (plan)
+    # ---- corven-2 (4 sửa đổi người học chốt 2026-11-09, report/VARIANTS-NGUOI-HOC-2026-11-09.md). Mặc định TẮT = corven-1;
+    # bộ chạy live = cp_live(). ----
+    hoi_khong_cham: bool = False   # thế B: nhịp hồi không cần chạm cạnh (≥ 1 nến hồi, mọi nến đóng ngoài, CF đóng vượt nến hồi)
+    bo_quet_stop: bool = False     # bỏ ⛔ nhịp đẩy do quét stop
+    b_bo_rmin: bool = False        # thế B: bỏ 4c R sẵn ≥ 1,7 (TP vẫn 2R)
+    trap_hoi: bool = False         # thế B: thêm dấu hiệu "trap trong nhịp hồi"
+
+
+LIVE_VERSION = 'corven-2'
+
+
+def cp_live() -> 'CP':
+    """Bộ tham số đang chạy trong indicator (LogicVersion corven-2)."""
+    return CP(hoi_khong_cham=True, bo_quet_stop=True, b_bo_rmin=True, trap_hoi=True)
 
 
 # =====================================================================================================
@@ -218,6 +232,7 @@ class Step2Machine:
         self.fb_count: Dict[int, int] = {}   # rid → số FailBreak đã có (gồm whipsaw)
         self.fb_bars: Dict[int, list] = {}   # rid → các nến FailBreak
         self.a_nth: Dict[int, int] = {}      # id(InstA) → FailBreak thứ mấy của range
+        self.O: List[int] = []         # giá mở từng nến (corven-2: nến hồi ngược màu)
         self.cnt = dict(b_eval=0, b_pass=0, b_pass_edge=0, b_pass_zone=0, b_edge_khong_cham=0, b_edge_xa=0,
                         b_khong_vung=0, b_vung_dong_xuyen=0, b_vung_da_cham_truoc=0, b_vung_khong_cham_cua_so=0,
                         b_bar_tam_huy_1c=0)
@@ -236,6 +251,7 @@ class Step2Machine:
         e = self.eng
         i = bar.idx
         assert i == len(e.H)
+        self.O.append(bar.o)
         # trạng thái các range TRƯỚC nến i (cho ngoại lệ "xác nhận lần 2")
         pre = [(r.id, r.state, r.pend_side if r.state == PENDING else r.break_side,
                 r.pend_start if r.state == PENDING else r.break_idx) for r in e.live if r.state in (PENDING, BROKEN)]
@@ -443,6 +459,21 @@ class Step2Machine:
         elif self.good is None or self.good[i]:
             self.cnt['b_bar_tam_huy_1c'] += 1
 
+    def _hoi_ok(self, b: InstB, j: int, w0: int) -> bool:
+        """corven-2: các nến [w0, j−1] đều đóng ngoài range phía D, có ≥ 1 nến hồi (đóng ngược D so với nến trước, hoặc nến
+        ngược màu), CF j đóng ngoài range và vượt giá đóng cực trị của các nến hồi."""
+        C, O, D, E = self.eng.C, self.O, b.D, b.E
+        ks = range(w0, j)
+        if len(ks) == 0 or (C[j] - E) * D <= 0:
+            return False
+        if any((C[k] - E) * D <= 0 for k in ks):
+            return False
+        pb = [k for k in ks if (C[k] - C[k - 1]) * D < 0 or (C[k] - O[k]) * D < 0]
+        if not pb:
+            return False
+        lim = max(C[k] for k in pb) if D > 0 else min(C[k] for k in pb)
+        return (C[j] - lim) * D > 0
+
     def _b_eval(self, b: InstB, j: int):
         """CF ứng viên = nến j: kiểm 2a (cạnh / stacked) + 2b (vùng chưa đóng xuyên)."""
         H, L, C = self.eng.H, self.eng.L, self.eng.C
@@ -466,6 +497,9 @@ class Step2Machine:
                 cnt['b_edge_xa'] += 1
         else:
             cnt['b_edge_khong_cham'] += 1
+        if not pe and self.cp.hoi_khong_cham and self._hoi_ok(b, j, w0):
+            b.passed_edge.append(j)
+            pe = True
         # --- mốc stacked mới cùng hướng D ---
         tz = self.tol_now(j)
         pz = False
@@ -882,6 +916,23 @@ def find_signs(c: Cand, f: Feat, cp: CP) -> dict:
                 break
         if 'trap' in sg:
             break
+    # ③f (corven-2, chỉ thế B) trap trong nhịp hồi: ô −S ≥ 3 × nền_ô và ≥ 10 ở nến trước CF trong cửa sổ, CF đóng vượt giá ô đó.
+    # Chọn ô lớn nhất; hoà ⇒ nến sớm hơn, rồi giá xa hướng S hơn (buy: giá cao hơn).
+    if cp.trap_hoi and c.the == 'B' and 'trap' not in sg:
+        best = None
+        for k in range(c.w0, cf):
+            bs = f.base[k]
+            if not np.isfinite(bs) or bs <= 0:
+                continue
+            for (tk, bv, av, _v) in f.bars[k].levels:
+                vol = bv if S > 0 else av
+                if vol >= 3.0 * bs - 1e-9 and vol >= cp.bubble_min - 1e-9 and (C[cf] - tk) * S > 0:
+                    key = (vol, -k, tk * S)
+                    if best is None or key > best[0]:
+                        best = (key, k, tk, vol)
+        if best:
+            _, k, tk, vol = best
+            sg['trap'] = (f"trap hồi, bóng {'đỏ' if S > 0 else 'xanh'} {vol:.0f} @{_px(tk)}", k, tk)
     return sg
 
 
@@ -907,7 +958,7 @@ def eval_order(c: Cand, f: Feat, cp: CP, m: Step2Machine, chong: dict, use_chong
             g.append('v_kiet_suc_chong')
             break
     # ⛔ nhịp đẩy do quét stop (thế B)
-    if c.the == 'B':
+    if c.the == 'B' and not cp.bo_quet_stop:
         D = S
         seg = range(c.ref, cf + 1)
         e = max(seg, key=lambda j: (H[j], -j)) if D > 0 else min(seg, key=lambda j: (L[j], j))
@@ -999,7 +1050,7 @@ def eval_order(c: Cand, f: Feat, cp: CP, m: Step2Machine, chong: dict, use_chong
         tgt = t1 if t2 is None else (max(t1, t2) if S > 0 else min(t1, t2))
     c.target = float(tgt)
     c.r_avail = (tgt - ent) * S / risk if risk > 0 else -1
-    if c.r_avail < cp.r_min - 1e-9:
+    if c.r_avail < cp.r_min - 1e-9 and not (cp.b_bo_rmin and c.the == 'B'):
         g.append('r_nho')
     c.tp = ent + S * cp.tp_r * risk
     # 4d giờ

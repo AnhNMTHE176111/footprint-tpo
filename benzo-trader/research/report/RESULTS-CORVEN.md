@@ -1,9 +1,381 @@
-# Benzo CORVEN — GĐ1: đủ ①–④ + ⛔ trên TRAIN, bộ mặc định (chưa tinh chỉnh)
+# Benzo CORVEN — kết quả trên TRAIN
+
+> Opus, 2026-11-09. **Chỉ TRAIN**: 35 phiên dày, nến bar_idx 0…51318 (tới 2026-09-15 20:59 UTC). TEST chưa chạy, chưa đọc. `kernel.simulate` (phí 0,2 giá/lệnh, chạm SL+TP cùng nến = SL, vào giá đóng CF, 1 lệnh mở), lệnh còn mở tới nến cuối phiên đóng `TIME`.
+> ⚠️ Mẫu TRAIN, chưa kiểm định ngoài mẫu — không dùng để vào lệnh thật.
+
+# GĐ2 vòng 1 — sửa định nghĩa theo plan mục 7.3 (không tính vào 3 vòng tinh chỉnh)
+
+- **A2 "lần 2" tắt mặc định** (G1); định nghĩa báo cáo siết: y = nến lập cực trị cú thủng (và là "lần 1"), x quét cực trị y ≥ 1 tick và đóng về phía S ≥ tol so với cực trị y; CF = x hoặc 1–2 nến sau (G2).
+- **SL "lần 2" = cực trị toàn bộ cú thủng** (nến đóng ngoài → CF) + đệm (7.3.2). Thế A ở GĐ1 đã neo đúng như vậy (min/max từ nến đóng ngoài tới CF); lỗi neo ở ảnh THUA1 là của nhánh A2 (neo râu x) — nay sửa.
+- **Hai neo SL đo song song** (7.3.3): (1) neo cú thủng / mốc như 4b; (2) neo "đáy/đỉnh mới quét" = pivot 1 nến ngược S gần nhất trong [nến đóng ngoài − 10, CF] nằm phía −S của giá vào, + đệm; R_sẵn tính lại, sàn 1 mbr và trần 4 mbr giữ; không có pivot ⇒ dùng neo (1).
+
+## 1. So sánh hai neo SL
+
+| Neo SL | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD | C1 | C2 | A | B | rủi ro trung vị (mbr) | CF qua ③ bị loại vì R < 1,7 | bị trần SL | không có pivot (dùng neo 1) | SL rồi chạm TP 30/60 | mức nền 30/60 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| neo cú thủng / mốc (4b) | 97 | 2,77 | 26,8 % | **-0,29** | [-0,55; -0,02] | -28,5 | 28,5 | -0,24 | -0,08 | -0,40 (n=43) | -0,21 (n=54) | 1,22 | 66,8 % | 0,5 % | – | 37 % / 51 % | 31 % / 44 % |
+| neo "đáy/đỉnh mới quét" (pivot 1 nến) | 77 | 2,20 | 24,7 % | **-0,36** | [-0,64; -0,07] | -28,0 | 29,3 | -0,19 | -0,12 | -0,29 (n=41) | -0,45 (n=36) | 1,46 | 75,6 % | 16,7 % | 0,7 % | 22 % / 40 % | 20 % / 34 % |
+
+Theo số dấu hiệu khác loại: neo cú thủng / mốc (4b): 2 loại -0,53 (n=63), 3 loại 0,15 (n=29), 4 loại 0,09 (n=5) · neo "đáy/đỉnh mới quét" (pivot 1 nến): 2 loại -0,47 (n=49), 3 loại -0,02 (n=24), 4 loại -1,07 (n=4)
+
+Nhóm báo cáo "lần 2" (bật A2): neo 1 → 40 lệnh "lần 2", R TB -0,24; neo 2 → 40 lệnh, R TB -0,25.
+
+## 2. Bảng đầy đủ — neo cú thủng / mốc (4b)
+
+### 2.1 Tổng — neo cú thủng / mốc (4b)
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| Tất cả | 97 | 2,77 | 26,8 % | **-0,29** | [-0,55; -0,02] | -28,5 | 28,5 | 13 |
+
+Đóng `TIME` cuối phiên: 0 · rủi ro trung vị 2,10 giá (1,22 mbr) · giữ lệnh trung vị 4 nến · hoà vốn ở TP 2R cần WR ≈ 36,5 %.
+
+Lệnh/ngày: trung vị 3, min 0, max 6.
+
+### 2.2 Phễu (hàng "lần 2" = nhóm báo cáo, tắt khi chọn lệnh)
+
+| Thế | số thế | qua ② | qua ③ (≥ 2 loại) | qua ④ + ⛔ + giờ | thành lệnh |
+|---|---|---|---|---|---|
+| A (fail break) | 1648 | 1489 | 625 | 49 | 43 |
+| A "lần 2" | 367 | 367 | 241 | 44 | 0 |
+| B (phá giữ được) | 1727 | 1621 | 986 | 58 | 54 |
+
+Theo **CF ứng viên** (nến): 12177 qua ② → 4229 qua ③ (34,7 %) → 168 qua ④/⛔/giờ → 97 lệnh (bỏ vì đang có lệnh mở 11, vì thế/khoá đã có lệnh 9).
+
+Số dấu hiệu khác loại trên CF qua ②: 0 loại: 3850, 1 loại: 4098, 2 loại: 2634, 3 loại: 1294, 4 loại: 280, 5 loại: 21
+
+Có mặt từng loại trên CF qua ②: Δ 4299 (35,3 %), bóng 2592 (21,3 %), kiệt sức 3019 (24,8 %), stacked 4206 (34,5 %), trap 357 (2,9 %)
+
+**Cổng bị trượt** trên các CF đã qua ③ (cổng ĐẦU TIÊN theo thứ tự kiểm / tỷ lệ trượt độc lập từng cổng):
+
+| Cổng | trượt đầu tiên | % | trượt (độc lập) | % |
+|---|---|---|---|---|
+| 4a nến xác nhận | 3452 | 81,6 | 3452 | 81,6 |
+| ⛔ kiệt sức chống hướng | 167 | 3,9 | 1171 | 27,7 |
+| ⛔ nhịp đẩy do quét stop | 28 | 0,7 | 358 | 8,5 |
+| ⛔ range chồng range | 8 | 0,2 | 34 | 0,8 |
+| 4b trần SL 4 mbr | 22 | 0,5 | 67 | 1,6 |
+| 4c R sẵn < 1,7 | 376 | 8,9 | 2541 | 60,1 |
+| 4d chặn 19:20–20:30 VN | 7 | 0,2 | 320 | 7,6 |
+| 4d 15 nến đầu phiên | 1 | 0,0 | 28 | 0,7 |
+| nến cuối phiên (không vào được) | 0 | 0,0 | 0 | 0,0 |
+| **qua hết** | 168 | 4,0 | | |
+
+### 2.3 Theo thế
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| A (fail break) | 43 | 1,23 | 23,3 % | **-0,40** | [-0,75; 0,02] | -17,2 | 17,6 | 12 |
+| B — tất cả | 54 | 1,54 | 29,6 % | **-0,21** | [-0,55; 0,18] | -11,3 | 15,5 | 8 |
+| B — range còn BROKEN | 39 | 1,11 | 23,1 % | **-0,41** | [-0,80; -0,01] | -16,0 | 16,0 | 7 |
+| B — `b_from_exhausted` | 15 | 0,43 | 46,7 % | **0,31** | [-0,47; 1,10] | 4,7 | 4,3 | 4 |
+
+### 2.4 Theo số dấu hiệu khác loại
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| 2 loại | 63 | 1,80 | 19,0 % | **-0,53** | [-0,81; -0,23] | -33,2 | 33,3 | 17 |
+| 3 loại | 29 | 0,83 | 41,4 % | **0,15** | [-0,37; 0,67] | 4,3 | 9,0 | 8 |
+| 4 loại | 5 | 0,14 | 40,0 % | **0,09** | [-1,12; 1,30] | 0,4 | 2,3 | 2 |
+
+### 2.5 Theo tổ hợp dấu hiệu
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| Δ+stacked | 38 | 1,09 | 21,1 % | **-0,47** | [-0,85; -0,07] | -17,7 | 20,1 | 16 |
+| Δ+bóng+stacked | 13 | 0,37 | 38,5 % | **0,06** | [-0,64; 0,77] | 0,8 | 4,4 | 4 |
+| kiệt sức+stacked | 12 | 0,34 | 0,0 % | **-1,08** | [-1,10; -1,06] | -13,0 | 13,0 | 12 |
+| Δ+kiệt sức+stacked | 11 | 0,31 | 54,5 % | **0,54** | [-0,29; 1,37] | 6,0 | 3,3 | 3 |
+| Δ+bóng | 7 | 0,20 | 28,6 % | **-0,27** | [-1,13; 0,60] | -1,9 | 3,7 | 3 |
+| Δ+bóng+kiệt sức+stacked | 4 | 0,11 | 25,0 % | **-0,36** | [-1,15; 1,16] | -1,4 | 2,3 | 2 |
+| bóng+stacked | 3 | 0,09 | 33,3 % | **-0,11** | [-1,18; 1,94] | -0,3 | 1,2 | 1 |
+| Δ+bóng+kiệt sức | 3 | 0,09 | 33,3 % | **-0,08** | [-1,10; 1,94] | -0,3 | 2,2 | 2 |
+| Δ+kiệt sức | 2 | 0,06 | 50,0 % | **0,38** | [-1,15; 1,92] | 0,8 | 1,2 | 1 |
+| Δ+bóng+stacked+trap | 1 | 0,03 | 100,0 % | **1,86** | [1,86; 1,86] | 1,9 | 0,0 | 0 |
+| bóng+trap | 1 | 0,03 | 0,0 % | **-1,04** | [-1,04; -1,04] | -1,0 | 1,0 | 1 |
+| bóng+kiệt sức+stacked | 1 | 0,03 | 0,0 % | **-1,11** | [-1,11; -1,11] | -1,1 | 1,1 | 1 |
+| Δ+stacked+trap | 1 | 0,03 | 0,0 % | **-1,11** | [-1,11; -1,11] | -1,1 | 1,1 | 1 |
+
+### 2.6 Theo giờ VN (giờ mở nến CF)
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| 00h | 3 | 0,09 | 100,0 % | **1,92** | [1,89; 1,94] | 5,8 | 0,0 | 0 |
+| 01h | 7 | 0,20 | 14,3 % | **-0,68** | [-1,14; 0,20] | -4,8 | 6,7 | 6 |
+| 02h | 2 | 0,06 | 0,0 % | **-1,11** | [-1,13; -1,09] | -2,2 | 2,2 | 2 |
+| 03h | 2 | 0,06 | 0,0 % | **-1,10** | [-1,12; -1,08] | -2,2 | 2,2 | 2 |
+| 05h | 5 | 0,14 | 20,0 % | **-0,56** | [-1,19; 0,66] | -2,8 | 3,5 | 3 |
+| 06h | 4 | 0,11 | 0,0 % | **-1,14** | [-1,22; -1,10] | -4,6 | 4,6 | 4 |
+| 07h | 5 | 0,14 | 60,0 % | **0,70** | [-0,49; 1,89] | 3,5 | 1,1 | 1 |
+| 08h | 7 | 0,20 | 0,0 % | **-1,09** | [-1,12; -1,06] | -7,6 | 7,6 | 7 |
+| 09h | 5 | 0,14 | 40,0 % | **0,12** | [-1,09; 1,33] | 0,6 | 2,2 | 2 |
+| 10h | 2 | 0,06 | 0,0 % | **-1,08** | [-1,10; -1,07] | -2,2 | 2,2 | 2 |
+| 11h | 5 | 0,14 | 0,0 % | **-1,12** | [-1,14; -1,11] | -5,6 | 5,6 | 5 |
+| 12h | 3 | 0,09 | 0,0 % | **-1,10** | [-1,11; -1,09] | -3,3 | 3,3 | 3 |
+| 13h | 4 | 0,11 | 25,0 % | **-0,36** | [-1,15; 1,17] | -1,5 | 2,3 | 2 |
+| 14h | 5 | 0,14 | 40,0 % | **0,11** | [-1,09; 1,32] | 0,6 | 2,1 | 2 |
+| 15h | 5 | 0,14 | 60,0 % | **0,69** | [-0,52; 1,88] | 3,4 | 2,2 | 2 |
+| 16h | 5 | 0,14 | 40,0 % | **0,11** | [-1,12; 1,33] | 0,5 | 3,3 | 3 |
+| 17h | 9 | 0,26 | 33,3 % | **-0,11** | [-1,08; 0,89] | -1,0 | 4,4 | 4 |
+| 18h | 1 | 0,03 | 100,0 % | **1,90** | [1,90; 1,90] | 1,9 | 0,0 | 0 |
+| 20h | 3 | 0,09 | 33,3 % | **-0,05** | [-1,06; 1,94] | -0,2 | 1,1 | 1 |
+| 21h | 3 | 0,09 | 33,3 % | **-0,05** | [-1,05; 1,93] | -0,1 | 2,1 | 2 |
+| 22h | 8 | 0,23 | 25,0 % | **-0,32** | [-1,07; 0,80] | -2,5 | 3,2 | 3 |
+| 23h | 4 | 0,11 | 0,0 % | **-1,06** | [-1,07; -1,06] | -4,2 | 4,2 | 4 |
+
+### 2.7 Theo phiên (A 05:00–12:30 · EU 12:30–19:00 · US 19:00–04:00 VN, neo Mỹ)
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| A | 35 | 1,00 | 17,1 % | **-0,60** | [-0,94; -0,17] | -20,9 | 23,1 | 11 |
+| EU | 30 | 0,86 | 40,0 % | **0,10** | [-0,41; 0,60] | 2,9 | 5,6 | 5 |
+| US | 32 | 0,91 | 25,0 % | **-0,33** | [-0,72; 0,14] | -10,5 | 11,9 | 8 |
+
+### 2.8 Theo tháng
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| 2026-07 | 10 | 0,29 | 30,0 % | **-0,21** | [-0,86; 0,70] | -2,1 | 4,8 | 3 |
+| 2026-08 | 53 | 1,51 | 28,3 % | **-0,25** | [-0,59; 0,14] | -13,3 | 20,6 | 13 |
+| 2026-09 | 34 | 0,97 | 23,5 % | **-0,38** | [-0,82; 0,06] | -13,1 | 15,0 | 10 |
+
+### 2.9 Nhóm tách riêng
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| Mặc định (A2 tắt, chặn 19:20–20:30 bật, có `b_from_exhausted`) | 97 | 2,77 | 26,8 % | **-0,29** | [-0,55; -0,02] | -28,5 | 28,5 | 13 |
+| Chặn 19:20–20:30 TẮT | 99 | 2,83 | 26,3 % | **-0,31** | [-0,56; -0,06] | -30,6 | 30,6 | 14 |
+| Bỏ `b_from_exhausted` | 84 | 2,40 | 23,8 % | **-0,39** | [-0,64; -0,10] | -32,4 | 32,4 | 15 |
+| BẬT "lần 2" (định nghĩa siết G1/G2) — tất cả lệnh | 136 | 3,89 | 27,2 % | **-0,27** | [-0,50; -0,05] | -37,0 | 42,4 | 18 |
+| … trong đó riêng lệnh "lần 2" | 40 | 1,14 | 27,5 % | **-0,24** | [-0,62; 0,21] | -9,6 | 14,1 | 7 |
+
+### 2.10 Đối chứng (cùng SL/TP/chi phí, cùng neo)
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| **CORVEN (≥ 2 dấu hiệu)** | 97 | 2,77 | 26,8 % | **-0,29** | [-0,55; -0,02] | -28,5 | 28,5 | 13 |
+| C1 — bỏ ③ | 194 | 5,54 | 29,4 % | **-0,24** | [-0,43; -0,04] | -46,0 | 46,2 | 8 |
+| C2 — ngẫu nhiên cùng phiên/giờ ±30′/hướng/rủi ro mbr (1940 lệnh giả) | 97 | – | 34,1 % | **-0,08** | [-0,20; 0,03] | – | – | – |
+| C3 — chỉ đòi Δ | 99 | 2,83 | 34,3 % | **-0,10** | [-0,38; 0,17] | -10,3 | 13,8 | 9 |
+| C3 — chỉ đòi bóng | 40 | 1,14 | 27,5 % | **-0,28** | [-0,66; 0,17] | -11,2 | 13,4 | 7 |
+| C3 — chỉ đòi kiệt sức | 49 | 1,40 | 26,5 % | **-0,30** | [-0,67; 0,07] | -14,7 | 15,9 | 13 |
+| C3 — chỉ đòi stacked | 123 | 3,51 | 26,8 % | **-0,29** | [-0,52; -0,05] | -35,8 | 35,8 | 13 |
+| C3 — chỉ đòi trap | 3 | 0,09 | 33,3 % | **-0,10** | [-1,11; 1,86] | -0,3 | 2,2 | 2 |
+
+C2 theo cặp: R thật − R đối chứng = -0,21 trên 97 lệnh. Stacked có mặt ở 86,6 % số lệnh.
+
+### 2.11 "SL rồi vẫn chạm TP" so với mức nền (plan 7.3.4)
+
+| | 30 nến | 60 nến |
+|---|---|---|
+| lệnh SL thật: sau nến dính SL, giá chạm TP gốc (n = 71) | 36,6 % | 50,7 % |
+| mức nền: nến ngẫu nhiên cùng phiên ±30′ quanh nến dính SL, giá đi 3R đúng hướng (n = 1420) | 31,3 % | 43,6 % |
+
+### 2.12 5 thắng + 5 thua (rải đều theo thời gian)
+
+| | UTC | VN | thế | side | mốc / neo SL | dấu hiệu | vào | SL | TP | R sẵn | kết cục | R | ảnh |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| thang 1 | 2026-07-30 09:28 | 16:28 | A | sell | canh / cu_thung | Δ to -28 = 3,5× medΔ; kiệt sức đỉnh (Ask 0) @4130,3; stacked sell 3 mức 4129,6–4129,8 | 4127.4 | 4130.8 | 4120.6 | 1,85 | TP | 1,94 | [ảnh](corven_gd2v1_shots/NEO1-CUTHUNG_THANG1_20260730_0928_A_SELL.png) |
+| thang 2 | 2026-08-05 00:26 | 07:26 | B | buy | stacked 4133,3–4133,6 / cu_thung | Δ to +12 = 4,0× medΔ; kiệt sức đáy (Bid 0) @4132,3; stacked buy 5 mức 4133,7–4134,1 | 4134.1 | 4132.8 | 4136.7 | 2,69 | TP | 1,85 | [ảnh](corven_gd2v1_shots/NEO1-CUTHUNG_THANG2_20260805_0026_B_BUY.png) |
+| thang 3 | 2026-08-19 17:02 | 00:02 | A | sell | canh / cu_thung | Δ to -59 = 4,4× medΔ; kiệt sức đỉnh (Ask 0) @4556,8 | 4554.9 | 4557.4 | 4549.9 | 2,20 | TP | 1,92 | [ảnh](corven_gd2v1_shots/NEO1-CUTHUNG_THANG3_20260819_1702_A_SELL.png) |
+| thang 4 | 2026-09-02 06:27 | 13:27 | A | sell | canh / cu_thung | bóng đỏ 21 @4372,5 (3,5× nền); stacked sell 3 mức 4372,3–4372,5 | 4371.4 | 4374.5 | 4365.2 | 2,32 | TP | 1,94 | [ảnh](corven_gd2v1_shots/NEO1-CUTHUNG_THANG4_20260902_0627_A_SELL.png) |
+| thang 5 | 2026-09-11 07:24 | 14:24 | B | sell | canh / cu_thung | Δ ngược giá ΣΔ -12/2 nến; stacked sell 3 mức 4391,5–4391,7 | 4390.9 | 4393.7 | 4385.3 | 2,29 | TP | 1,93 | [ảnh](corven_gd2v1_shots/NEO1-CUTHUNG_THANG5_20260911_0724_B_SELL.png) |
+| thua 1 | 2026-07-29 15:52 | 22:52 | A | sell | canh / cu_thung | Δ to -36 = 3,8× medΔ; stacked sell 5 mức 4070,3–4070,7 | 4070.3 | 4072.6 | 4065.7 | 2,07 | SL | -1,09 | [ảnh](corven_gd2v1_shots/NEO1-CUTHUNG_THUA1_20260729_1552_A_SELL.png) |
+| thua 2 | 2026-08-10 05:15 | 12:15 | A | buy | canh / cu_thung | bóng xanh 10 @4395,8 (3,3× nền); stacked buy 3 mức 4394,5–4394,7 | 4395.7 | 4393.6 | 4399.9 | 1,95 | SL | -1,10 | [ảnh](corven_gd2v1_shots/NEO1-CUTHUNG_THUA2_20260810_0515_A_BUY.png) |
+| thua 3 | 2026-08-20 10:47 | 17:47 | A | buy | canh / cu_thung | Δ to +22 = 2,3× medΔ; stacked buy 4 mức 4545,9–4546,2 | 4547.1 | 4544.7 | 4551.9 | 1,71 | SL | -1,08 | [ảnh](corven_gd2v1_shots/NEO1-CUTHUNG_THUA3_20260820_1047_A_BUY.png) |
+| thua 4 | 2026-09-03 23:47 | 06:47 | A | sell | canh / cu_thung | Δ to -36 = 6,0× medΔ; stacked sell 4 mức 4522,7–4523,0 | 4522.5 | 4524.1 | 4519.3 | 2,12 | SL | -1,12 | [ảnh](corven_gd2v1_shots/NEO1-CUTHUNG_THUA4_20260903_2347_A_SELL.png) |
+| thua 5 | 2026-09-15 19:55 | 02:55 | B | sell | stacked 4335,7–4336,0 / cu_thung | Δ to -93 = 10,3× medΔ; kiệt sức đỉnh (Ask 1) @4336,3; stacked sell 3 mức 4334,8–4335,0 | 4334.8 | 4336.3 | 4331.8 | 5,60 | SL | -1,13 | [ảnh](corven_gd2v1_shots/NEO1-CUTHUNG_THUA5_20260915_1955_B_SELL.png) |
+
+## 3. Bảng đầy đủ — neo "đáy/đỉnh mới quét" (pivot 1 nến)
+
+### 3.1 Tổng — neo "đáy/đỉnh mới quét" (pivot 1 nến)
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| Tất cả | 77 | 2,20 | 24,7 % | **-0,36** | [-0,64; -0,07] | -28,0 | 29,3 | 10 |
+
+Đóng `TIME` cuối phiên: 1 · rủi ro trung vị 2,50 giá (1,46 mbr) · giữ lệnh trung vị 5 nến · hoà vốn ở TP 2R cần WR ≈ 36,0 %.
+
+Lệnh/ngày: trung vị 2, min 0, max 5.
+
+### 3.2 Phễu (hàng "lần 2" = nhóm báo cáo, tắt khi chọn lệnh)
+
+| Thế | số thế | qua ② | qua ③ (≥ 2 loại) | qua ④ + ⛔ + giờ | thành lệnh |
+|---|---|---|---|---|---|
+| A (fail break) | 1648 | 1489 | 625 | 48 | 41 |
+| A "lần 2" | 367 | 367 | 241 | 45 | 0 |
+| B (phá giữ được) | 1727 | 1621 | 986 | 40 | 36 |
+
+Theo **CF ứng viên** (nến): 12177 qua ② → 4229 qua ③ (34,7 %) → 148 qua ④/⛔/giờ → 77 lệnh (bỏ vì đang có lệnh mở 13, vì thế/khoá đã có lệnh 6).
+
+Số dấu hiệu khác loại trên CF qua ②: 0 loại: 3850, 1 loại: 4098, 2 loại: 2634, 3 loại: 1294, 4 loại: 280, 5 loại: 21
+
+Có mặt từng loại trên CF qua ②: Δ 4299 (35,3 %), bóng 2592 (21,3 %), kiệt sức 3019 (24,8 %), stacked 4206 (34,5 %), trap 357 (2,9 %)
+
+**Cổng bị trượt** trên các CF đã qua ③ (cổng ĐẦU TIÊN theo thứ tự kiểm / tỷ lệ trượt độc lập từng cổng):
+
+| Cổng | trượt đầu tiên | % | trượt (độc lập) | % |
+|---|---|---|---|---|
+| 4a nến xác nhận | 3452 | 81,6 | 3452 | 81,6 |
+| ⛔ kiệt sức chống hướng | 167 | 3,9 | 1171 | 27,7 |
+| ⛔ nhịp đẩy do quét stop | 28 | 0,7 | 358 | 8,5 |
+| ⛔ range chồng range | 8 | 0,2 | 34 | 0,8 |
+| 4b trần SL 4 mbr | 68 | 1,6 | 654 | 15,5 |
+| 4c R sẵn < 1,7 | 352 | 8,3 | 2853 | 67,5 |
+| 4d chặn 19:20–20:30 VN | 6 | 0,1 | 320 | 7,6 |
+| 4d 15 nến đầu phiên | 0 | 0,0 | 28 | 0,7 |
+| nến cuối phiên (không vào được) | 0 | 0,0 | 0 | 0,0 |
+| **qua hết** | 148 | 3,5 | | |
+
+### 3.3 Theo thế
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| A (fail break) | 41 | 1,17 | 26,8 % | **-0,29** | [-0,66; 0,15] | -11,9 | 12,4 | 9 |
+| B — tất cả | 36 | 1,03 | 22,2 % | **-0,45** | [-0,81; -0,03] | -16,0 | 16,9 | 8 |
+| B — range còn BROKEN | 23 | 0,66 | 21,7 % | **-0,49** | [-0,93; -0,01] | -11,3 | 11,3 | 9 |
+| B — `b_from_exhausted` | 13 | 0,37 | 23,1 % | **-0,37** | [-1,06; 0,33] | -4,8 | 8,6 | 8 |
+
+### 3.4 Theo số dấu hiệu khác loại
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| 2 loại | 49 | 1,40 | 20,4 % | **-0,47** | [-0,78; -0,11] | -23,2 | 23,2 | 9 |
+| 3 loại | 24 | 0,69 | 37,5 % | **-0,02** | [-0,57; 0,56] | -0,5 | 7,6 | 6 |
+| 4 loại | 4 | 0,11 | 0,0 % | **-1,07** | [-1,10; -1,04] | -4,3 | 4,3 | 4 |
+
+### 3.5 Theo tổ hợp dấu hiệu
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| Δ+stacked | 28 | 0,80 | 21,4 % | **-0,44** | [-0,87; -0,00] | -12,4 | 16,6 | 13 |
+| Δ+bóng+stacked | 12 | 0,34 | 33,3 % | **-0,23** | [-0,86; 0,52] | -2,7 | 3,5 | 3 |
+| kiệt sức+stacked | 10 | 0,29 | 0,0 % | **-1,07** | [-1,09; -1,06] | -10,7 | 10,7 | 10 |
+| Δ+kiệt sức+stacked | 8 | 0,23 | 50,0 % | **0,44** | [-0,68; 1,57] | 3,5 | 3,2 | 3 |
+| Δ+bóng | 6 | 0,17 | 33,3 % | **-0,11** | [-1,13; 0,92] | -0,7 | 2,5 | 2 |
+| Δ+bóng+kiệt sức | 3 | 0,09 | 33,3 % | **-0,08** | [-1,10; 1,94] | -0,3 | 2,2 | 2 |
+| Δ+kiệt sức | 2 | 0,06 | 50,0 % | **0,40** | [-1,12; 1,92] | 0,8 | 1,1 | 1 |
+| Δ+bóng+stacked+trap | 2 | 0,06 | 0,0 % | **-1,06** | [-1,06; -1,06] | -2,1 | 2,1 | 2 |
+| bóng+stacked | 2 | 0,06 | 50,0 % | **0,42** | [-1,10; 1,94] | 0,8 | 1,1 | 1 |
+| Δ+bóng+kiệt sức+stacked | 2 | 0,06 | 0,0 % | **-1,07** | [-1,11; -1,04] | -2,1 | 2,1 | 2 |
+| bóng+trap | 1 | 0,03 | 0,0 % | **-1,04** | [-1,04; -1,04] | -1,0 | 1,0 | 1 |
+| Δ+stacked+trap | 1 | 0,03 | 0,0 % | **-1,04** | [-1,04; -1,04] | -1,0 | 1,0 | 1 |
+
+### 3.6 Theo giờ VN (giờ mở nến CF)
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| 00h | 3 | 0,09 | 100,0 % | **1,92** | [1,89; 1,94] | 5,8 | 0,0 | 0 |
+| 01h | 5 | 0,14 | 0,0 % | **-1,12** | [-1,14; -1,10] | -5,6 | 5,6 | 5 |
+| 02h | 2 | 0,06 | 0,0 % | **-1,10** | [-1,11; -1,09] | -2,2 | 2,2 | 2 |
+| 03h | 2 | 0,06 | 50,0 % | **-0,46** | [-1,11; 0,19] | -0,9 | 1,1 | 1 |
+| 05h | 3 | 0,09 | 0,0 % | **-1,06** | [-1,06; -1,05] | -3,2 | 3,2 | 3 |
+| 06h | 3 | 0,09 | 0,0 % | **-1,11** | [-1,14; -1,09] | -3,3 | 3,3 | 3 |
+| 07h | 3 | 0,09 | 33,3 % | **-0,05** | [-1,06; 1,94] | -0,2 | 1,1 | 1 |
+| 08h | 3 | 0,09 | 0,0 % | **-1,04** | [-1,06; -1,02] | -3,1 | 3,1 | 3 |
+| 09h | 3 | 0,09 | 0,0 % | **-1,07** | [-1,10; -1,04] | -3,2 | 3,2 | 3 |
+| 10h | 2 | 0,06 | 0,0 % | **-1,09** | [-1,10; -1,08] | -2,2 | 2,2 | 2 |
+| 11h | 4 | 0,11 | 0,0 % | **-1,11** | [-1,14; -1,09] | -4,5 | 4,5 | 4 |
+| 12h | 3 | 0,09 | 33,3 % | **-0,11** | [-1,10; 1,83] | -0,3 | 2,2 | 2 |
+| 13h | 2 | 0,06 | 50,0 % | **0,45** | [-1,04; 1,94] | 0,9 | 1,0 | 1 |
+| 14h | 4 | 0,11 | 25,0 % | **-0,33** | [-1,09; 1,16] | -1,3 | 3,2 | 3 |
+| 15h | 4 | 0,11 | 75,0 % | **1,16** | [-0,37; 1,95] | 4,7 | 1,1 | 1 |
+| 16h | 4 | 0,11 | 50,0 % | **0,41** | [-1,11; 1,93] | 1,6 | 2,2 | 2 |
+| 17h | 8 | 0,23 | 25,0 % | **-0,34** | [-1,11; 0,76] | -2,8 | 5,4 | 5 |
+| 18h | 1 | 0,03 | 100,0 % | **1,90** | [1,90; 1,90] | 1,9 | 0,0 | 0 |
+| 20h | 4 | 0,11 | 25,0 % | **-0,30** | [-1,06; 1,21] | -1,2 | 2,1 | 2 |
+| 21h | 3 | 0,09 | 33,3 % | **-0,03** | [-1,03; 1,96] | -0,1 | 2,0 | 2 |
+| 22h | 8 | 0,23 | 12,5 % | **-0,69** | [-1,08; 0,06] | -5,5 | 5,5 | 5 |
+| 23h | 3 | 0,09 | 0,0 % | **-1,07** | [-1,08; -1,05] | -3,2 | 3,2 | 3 |
+
+### 3.7 Theo phiên (A 05:00–12:30 · EU 12:30–19:00 · US 19:00–04:00 VN, neo Mỹ)
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| A | 23 | 0,66 | 8,7 % | **-0,82** | [-1,09; -0,43] | -18,9 | 18,9 | 10 |
+| EU | 24 | 0,69 | 41,7 % | **0,16** | [-0,35; 0,79] | 3,9 | 4,4 | 4 |
+| US | 30 | 0,86 | 23,3 % | **-0,43** | [-0,84; 0,02] | -13,0 | 13,6 | 7 |
+
+### 3.8 Theo tháng
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| 2026-07 | 8 | 0,23 | 37,5 % | **0,03** | [-0,75; 1,15] | 0,2 | 2,5 | 2 |
+| 2026-08 | 38 | 1,09 | 15,8 % | **-0,61** | [-0,93; -0,21] | -23,1 | 23,9 | 10 |
+| 2026-09 | 31 | 0,89 | 32,3 % | **-0,17** | [-0,61; 0,32] | -5,1 | 11,8 | 10 |
+
+### 3.9 Nhóm tách riêng
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| Mặc định (A2 tắt, chặn 19:20–20:30 bật, có `b_from_exhausted`) | 77 | 2,20 | 24,7 % | **-0,36** | [-0,64; -0,07] | -28,0 | 29,3 | 10 |
+| Chặn 19:20–20:30 TẮT | 79 | 2,26 | 25,3 % | **-0,34** | [-0,61; -0,05] | -27,1 | 28,4 | 11 |
+| Bỏ `b_from_exhausted` | 67 | 1,91 | 25,4 % | **-0,35** | [-0,64; -0,03] | -23,4 | 23,4 | 10 |
+| BẬT "lần 2" (định nghĩa siết G1/G2) — tất cả lệnh | 116 | 3,31 | 25,9 % | **-0,32** | [-0,55; -0,07] | -36,8 | 40,0 | 13 |
+| … trong đó riêng lệnh "lần 2" | 40 | 1,14 | 27,5 % | **-0,25** | [-0,63; 0,20] | -9,9 | 15,4 | 7 |
+
+### 3.10 Đối chứng (cùng SL/TP/chi phí, cùng neo)
+
+| | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
+|---|---|---|---|---|---|---|---|---|
+| **CORVEN (≥ 2 dấu hiệu)** | 77 | 2,20 | 24,7 % | **-0,36** | [-0,64; -0,07] | -28,0 | 29,3 | 10 |
+| C1 — bỏ ③ | 158 | 4,51 | 31,0 % | **-0,19** | [-0,40; 0,02] | -30,6 | 35,6 | 6 |
+| C2 — ngẫu nhiên cùng phiên/giờ ±30′/hướng/rủi ro mbr (1540 lệnh giả) | 77 | – | 32,9 % | **-0,12** | [-0,25; 0,02] | – | – | – |
+| C3 — chỉ đòi Δ | 80 | 2,29 | 32,5 % | **-0,17** | [-0,47; 0,14] | -13,9 | 17,9 | 10 |
+| C3 — chỉ đòi bóng | 35 | 1,00 | 25,7 % | **-0,36** | [-0,75; 0,07] | -12,7 | 14,7 | 7 |
+| C3 — chỉ đòi kiệt sức | 38 | 1,09 | 26,3 % | **-0,29** | [-0,69; 0,17] | -11,2 | 14,0 | 12 |
+| C3 — chỉ đòi stacked | 95 | 2,71 | 27,4 % | **-0,28** | [-0,54; -0,01] | -26,8 | 30,1 | 15 |
+| C3 — chỉ đòi trap | 5 | 0,14 | 0,0 % | **-1,07** | [-1,10; -1,05] | -5,3 | 5,3 | 5 |
+
+C2 theo cặp: R thật − R đối chứng = -0,24 trên 77 lệnh. Stacked có mặt ở 84,4 % số lệnh.
+
+### 3.11 "SL rồi vẫn chạm TP" so với mức nền (plan 7.3.4)
+
+| | 30 nến | 60 nến |
+|---|---|---|
+| lệnh SL thật: sau nến dính SL, giá chạm TP gốc (n = 58) | 22,4 % | 39,7 % |
+| mức nền: nến ngẫu nhiên cùng phiên ±30′ quanh nến dính SL, giá đi 3R đúng hướng (n = 1160) | 20,2 % | 33,5 % |
+
+### 3.12 5 thắng + 5 thua (rải đều theo thời gian)
+
+| | UTC | VN | thế | side | mốc / neo SL | dấu hiệu | vào | SL | TP | R sẵn | kết cục | R | ảnh |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| thang 1 | 2026-07-30 09:28 | 16:28 | A | sell | canh / pivot | Δ to -28 = 3,5× medΔ; kiệt sức đỉnh (Ask 0) @4130,3; stacked sell 3 mức 4129,6–4129,8 | 4127.4 | 4130.8 | 4120.6 | 1,85 | TP | 1,94 | [ảnh](corven_gd2v1_shots/NEO2-PIVOT_THANG1_20260730_0928_A_SELL.png) |
+| thang 2 | 2026-08-06 10:07 | 17:07 | B | sell | stacked 4329,8–4330,0 / pivot | Δ ngược giá ΣΔ -17/2 nến; bóng đỏ 16 @4329,6 (3,2× nền) | 4329.3 | 4333.5 | 4320.9 | 2,46 | TP | 1,95 | [ảnh](corven_gd2v1_shots/NEO2-PIVOT_THANG2_20260806_1007_B_SELL.png) |
+| thang 3 | 2026-09-01 11:49 | 18:49 | A | sell | canh / pivot | Δ ngược giá ΣΔ -11/8 nến; stacked sell 3 mức 4434,3–4434,5 | 4434.0 | 4436.1 | 4429.8 | 2,38 | TP | 1,90 | [ảnh](corven_gd2v1_shots/NEO2-PIVOT_THANG3_20260901_1149_A_SELL.png) |
+| thang 4 | 2026-09-07 08:44 | 15:44 | B | sell | stacked 4461,6–4461,8 / pivot | Δ ngược giá ΣΔ -13/2 nến; stacked sell 3 mức 4460,4–4460,6 | 4460.4 | 4462.4 | 4456.4 | 6,45 | TP | 1,90 | [ảnh](corven_gd2v1_shots/NEO2-PIVOT_THANG4_20260907_0844_B_SELL.png) |
+| thang 5 | 2026-09-11 07:24 | 14:24 | B | sell | canh / pivot | Δ ngược giá ΣΔ -12/2 nến; stacked sell 3 mức 4391,5–4391,7 | 4390.9 | 4393.1 | 4386.5 | 2,91 | TP | 1,91 | [ảnh](corven_gd2v1_shots/NEO2-PIVOT_THANG5_20260911_0724_B_SELL.png) |
+| thua 1 | 2026-07-29 15:52 | 22:52 | A | sell | canh / pivot | Δ to -36 = 3,8× medΔ; stacked sell 5 mức 4070,3–4070,7 | 4070.3 | 4072.6 | 4065.7 | 2,07 | SL | -1,09 | [ảnh](corven_gd2v1_shots/NEO2-PIVOT_THUA1_20260729_1552_A_SELL.png) |
+| thua 2 | 2026-08-06 01:21 | 08:21 | B | sell | stacked 4338,5–4338,8 / pivot | Δ to -119 = 5,4× medΔ; stacked sell 10 mức 4339,0–4339,9 | 4335.1 | 4346.9 | 4311.5 | 2,28 | SL | -1,02 | [ảnh](corven_gd2v1_shots/NEO2-PIVOT_THUA2_20260806_0121_B_SELL.png) |
+| thua 3 | 2026-08-20 13:55 | 20:55 | A | sell | canh / pivot | Δ to -34 = 2,0× medΔ; stacked sell 4 mức 4538,5–4538,8 | 4539.0 | 4542.3 | 4532.4 | 3,12 | SL | -1,06 | [ảnh](corven_gd2v1_shots/NEO2-PIVOT_THUA3_20260820_1355_A_SELL.png) |
+| thua 4 | 2026-09-04 14:18 | 21:18 | B | buy | stacked 4475,4–4475,8 / pivot | kiệt sức đáy (Bid 0) @4476,5; stacked buy 5 mức 4477,5–4477,9 | 4481.0 | 4465.2 | 4512.6 | 1,89 | SL | -1,01 | [ảnh](corven_gd2v1_shots/NEO2-PIVOT_THUA4_20260904_1418_B_BUY.png) |
+| thua 5 | 2026-09-15 19:55 | 02:55 | B | sell | stacked 4335,7–4336,0 / pivot | Δ to -93 = 10,3× medΔ; kiệt sức đỉnh (Ask 1) @4336,3; stacked sell 3 mức 4334,8–4335,0 | 4334.8 | 4336.7 | 4331.0 | 4,42 | SL | -1,11 | [ảnh](corven_gd2v1_shots/NEO2-PIVOT_THUA5_20260915_1955_B_SELL.png) |
+
+## 4. Nhận định vòng 1 (Opus) — số đo trên TRAIN, chưa phải kết luận
+
+- **Tắt "lần 2" không đổi bản chất:** neo cú thủng 97 lệnh (2,8/ngày), R TB −0,29 [−0,55; −0,02] — trùng nhóm "bỏ lần 2" của GĐ1 (đúng như phải thế: SL thế A/B không đổi, ứng viên A/B không đổi). Vẫn **kém C1 (−0,24) và kém C2 (−0,08; theo cặp −0,21)**.
+- **Neo "đáy/đỉnh mới quét" không tốt hơn:** 77 lệnh, −0,36 [−0,64; −0,07]; SL xa hơn (trung vị 1,46 so với 1,22 mbr) nên nhiều CF bị loại hơn vì R < 1,7 (75,6 % so với 66,8 %) và trần 4 mbr (16,7 % so với 0,5 %). Thế A khá hơn chút (−0,29 so với −0,40), thế B tệ đi (−0,45 so với −0,21). Kém C1 (−0,19) và C2 (−0,12).
+- **"SL rồi vẫn chạm TP" gần mức nền:** neo cú thủng 36,6 % / 50,7 % (30 / 60 nến, n = 71 lệnh SL) so với nền 31,3 % / 43,6 %; neo pivot 22,4 % / 39,7 % so với nền 20,2 % / 33,5 %. Chênh 2–7 điểm % — có, nhưng nhỏ; phần lớn con số 36 % / 53 % là chuyện thường của giá M1 trong 30–60 nến.
+- **Theo số dấu hiệu (hậu kiểm):** neo cú thủng 2 loại −0,53 (n = 63), 3 loại +0,15 (n = 29), 4 loại +0,09 (n = 5); neo pivot 2 loại −0,47, 3 loại −0,02 (n = 24). Dấu hiệu "3 loại tốt hơn" yếu đi ở neo pivot.
+- Nhóm báo cáo "lần 2" (định nghĩa siết): 367 thế trên TRAIN (10,5/ngày, so với 1.128 ở GĐ1), bật lên thì có 40 lệnh "lần 2", R TB −0,24 (neo cú thủng) / −0,25 (neo pivot).
+- Gợi ý chọn neo **theo nguồn và luật "không tệ hơn" của Fable**: neo pivot gần lời CORVEN hơn nhưng **tệ hơn** (n ít hơn, R TB thấp hơn, thế B −0,45) ⇒ đề xuất giữ **neo cú thủng / mốc** làm bộ vòng 1 cho vòng 2. Fable quyết.
+
+## 5. Điểm mơ hồ vòng 1 — CẦN FABLE QUYẾT (đang chạy theo lựa chọn in đậm)
+1. **V1 — y của "lần 2":** G1 nói "y = nến lập cực trị cú thủng". **Đang đòi thêm y phải là "lần 1"** (râu phía −S ≥ 1 tick và đóng lùi ≥ tol so với cực trị của nó, như mục 2b). Hoà cực trị ⇒ lấy nến sớm nhất. Vẫn còn 367 thế (10,5/ngày).
+2. **V2 — CF x+1, x+2 của "lần 2":** **không đòi thêm điều kiện** (đóng trong hay ngoài range đều được, chỉ cần cùng phiên và qua ③④); cửa sổ ③ = [max(nến đóng ngoài, x − 4), CF] nên có thể dài tới 7 nến.
+3. **V3 — neo pivot:** "pivot gần nhất" = **gần nhất về thời gian** trong [nến đóng ngoài − 10, CF − 1] (pivot ở CF − 1 đã xác nhận tại CF) **và nằm phía −S của giá vào** (sell: đỉnh pivot > giá vào; pivot nằm dưới giá vào bị bỏ qua, xét pivot cũ hơn). Không có ⇒ dùng neo cú thủng (0,7 % CF). **Sàn 1 mbr vẫn áp** cho neo pivot.
+4. **V4 — mức nền 7.3.4:** cửa sổ ±30′ **quanh nến dính SL** (không phải nến vào); giá xuất phát = giá đóng nến ngẫu nhiên; 3R = 3 × rủi ro của chính lệnh đó; tỷ lệ thật đếm từ nến SAU nến dính SL; cả hai đếm theo chỉ số nến, được vắt qua khoảng trống phiên (để so được với cách Fable đo 36 % / 53 %).
+5. **V5 — C1/C3 ở neo cú thủng trùng hệt GĐ1** (194 lệnh, −0,24): đúng, vì C1/C3 vốn đã bỏ "lần 2" và SL thế A/B không đổi.
+
+---
+
+# (Lưu để so) GĐ1 — bản đầy đủ ở `RESULTS-CORVEN-GD1.md` (commit 47a531a): A2 bật, neo SL A2 theo râu x
+
 
 > Opus, 2026-11-09, theo `plans/BENZO-CORVEN-plan.md` (bản sau quyết định Q1–Q15). **Chỉ TRAIN**: 35 phiên dày, nến bar_idx 0…51318 (tới 2026-09-15 20:59 UTC). TEST chưa chạy, chưa đọc. Mô phỏng `kernel.simulate` (phí 0,2 giá/lệnh, chạm SL+TP cùng nến = SL, vào giá đóng CF, 1 lệnh mở), lệnh còn mở tới nến cuối phiên đóng `TIME`.
 > ⚠️ Kết quả trên một mẫu TRAIN, chưa kiểm định ngoài mẫu — không dùng để vào lệnh thật.
 
-## 1. Tổng
+### 1. Tổng
 
 | | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
 |---|---|---|---|---|---|---|---|---|
@@ -13,7 +385,7 @@ Lệnh còn mở cuối file: 0 · đóng `TIME` cuối phiên: 2 · hoà vốn 
 
 Lệnh/ngày: trung vị 5, min 1, max 8; phân bố {1: 2, 2: 3, 3: 4, 4: 7, 5: 10, 6: 4, 7: 3, 8: 2}.
 
-## 2. Phễu thế → ② → ③ → ④ → lệnh
+### 2. Phễu thế → ② → ③ → ④ → lệnh
 
 | Thế | số thế | qua ② | qua ③ (≥ 2 loại) | qua ④ + ⛔ + giờ | thành lệnh |
 |---|---|---|---|---|---|
@@ -42,7 +414,7 @@ Có mặt từng loại trên CF qua ②: Δ 4246 (34,8 %), bóng 2506 (20,5 %),
 | nến cuối phiên (không vào được) | 0 | 0,0 | 0 | 0,0 |
 | **qua hết** | 186 | 4,6 | | |
 
-## 3. Theo thế
+### 3. Theo thế
 
 | | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
 |---|---|---|---|---|---|---|---|---|
@@ -52,7 +424,7 @@ Có mặt từng loại trên CF qua ②: Δ 4246 (34,8 %), bóng 2506 (20,5 %),
 | B — range còn BROKEN | 38 | 1,09 | 23,7 % | **-0,39** | [-0,79; 0,01] | -14,9 | 14,9 | 6 |
 | B — `b_from_exhausted` (range DEAD ngay) | 15 | 0,43 | 46,7 % | **0,31** | [-0,47; 1,10] | 4,7 | 4,3 | 4 |
 
-## 4. Theo tổ hợp dấu hiệu
+### 4. Theo tổ hợp dấu hiệu
 
 | | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
 |---|---|---|---|---|---|---|---|---|
@@ -71,7 +443,7 @@ Có mặt từng loại trên CF qua ②: Δ 4246 (34,8 %), bóng 2506 (20,5 %),
 | bóng+kiệt sức+stacked | 1 | 0,03 | 0,0 % | **-1,11** | [-1,11; -1,11] | -1,1 | 1,1 | 1 |
 | Δ+stacked+trap | 1 | 0,03 | 0,0 % | **-1,11** | [-1,11; -1,11] | -1,1 | 1,1 | 1 |
 
-## 5. Theo giờ VN (giờ mở nến CF)
+### 5. Theo giờ VN (giờ mở nến CF)
 
 | | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
 |---|---|---|---|---|---|---|---|---|
@@ -99,7 +471,7 @@ Có mặt từng loại trên CF qua ②: Δ 4246 (34,8 %), bóng 2506 (20,5 %),
 | 22h | 12 | 0,34 | 16,7 % | **-0,56** | [-1,07; 0,18] | -6,8 | 7,4 | 7 |
 | 23h | 5 | 0,14 | 20,0 % | **-0,47** | [-1,07; 0,73] | -2,3 | 3,2 | 3 |
 
-## 6. Theo phiên (A 05:00–12:30 · EU 12:30–19:00 · US 19:00–04:00 VN, neo Mỹ)
+### 6. Theo phiên (A 05:00–12:30 · EU 12:30–19:00 · US 19:00–04:00 VN, neo Mỹ)
 
 | | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
 |---|---|---|---|---|---|---|---|---|
@@ -107,7 +479,7 @@ Có mặt từng loại trên CF qua ②: Δ 4246 (34,8 %), bóng 2506 (20,5 %),
 | EU | 47 | 1,34 | 31,9 % | **-0,14** | [-0,53; 0,29] | -6,7 | 10,2 | 6 |
 | US | 56 | 1,60 | 28,6 % | **-0,28** | [-0,61; 0,08] | -15,5 | 15,9 | 6 |
 
-## 7. Theo tháng
+### 7. Theo tháng
 
 | | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
 |---|---|---|---|---|---|---|---|---|
@@ -115,7 +487,7 @@ Có mặt từng loại trên CF qua ②: Δ 4246 (34,8 %), bóng 2506 (20,5 %),
 | 2026-08 | 87 | 2,49 | 25,3 % | **-0,34** | [-0,61; -0,06] | -29,6 | 37,7 | 15 |
 | 2026-09 | 58 | 1,66 | 31,0 % | **-0,21** | [-0,54; 0,15] | -12,0 | 14,8 | 9 |
 
-## 8. Nhóm tách riêng (chạy lại chọn lệnh, cùng ứng viên)
+### 8. Nhóm tách riêng (chạy lại chọn lệnh, cùng ứng viên)
 
 | | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
 |---|---|---|---|---|---|---|---|---|
@@ -126,7 +498,7 @@ Có mặt từng loại trên CF qua ②: Δ 4246 (34,8 %), bóng 2506 (20,5 %),
 
 Luật ⛔ range chồng range loại 1,8 % thế A (≤ 30 % ⇒ **giữ luật**).
 
-## 9. Đối chứng (cùng SL/TP/chi phí)
+### 9. Đối chứng (cùng SL/TP/chi phí)
 
 | | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD (R) | chuỗi thua |
 |---|---|---|---|---|---|---|---|---|
@@ -143,7 +515,7 @@ C2 theo cặp: R thật − R đối chứng trung bình = -0,14 trên 159 lện
 
 Dấu hiệu stacked có mặt ở 86,2 % số lệnh (> 50 % ⇒ GĐ2 quét run 4 theo plan ③d).
 
-## 10. 5 thắng + 5 thua (rải đều theo thời gian) — ảnh ở `corven_gd1_shots/`
+### 10. 5 thắng + 5 thua (rải đều theo thời gian) — ảnh ở `corven_gd1_shots/`
 
 | | UTC | VN | thế | side | mốc | dấu hiệu | vào | SL | TP | R sẵn | kết cục | R | ảnh |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -158,13 +530,13 @@ Dấu hiệu stacked có mặt ở 86,2 % số lệnh (> 50 % ⇒ GĐ2 quét run
 | thua 4 | 2026-09-03 23:47 | 06:47 | A | sell | canh | Δ to -36 = 6,0× medΔ; stacked sell 4 mức 4522,7–4523,0 | 4522.5 | 4524.1 | 4519.3 | 2,12 | SL | -1,12 | [ảnh](corven_gd1_shots/THUA4_20260903_2347_A_SELL.png) |
 | thua 5 | 2026-09-15 19:58 | 02:58 | A2 | buy | cuc_tri | Δ to +61 = 6,4× medΔ; bóng xanh 30 @4334,2 (5,0× nền) | 4336.4 | 4333.4 | 4342.4 | 1,77 | SL | -1,07 | [ảnh](corven_gd1_shots/THUA5_20260915_1958_A2_BUY.png) |
 
-## 11. Tham số (bộ mặc định, chưa tinh chỉnh)
+### 11. Tham số (bộ mặc định, chưa tinh chỉnh)
 
 ```
 {'near_mbr': 1.0, 'win_b': 3, 'win_a_max': 5, 'cf_after_fb': 2, 'age_b': 30, 'si_ratio': 250.0, 'si_run': 3, 'si_minvol': 1.0, 'b_from_exhausted': True, 'same_session': True, 'exc_max_age': 30, 'delta_mult': 2.0, 'bubble_mult': 3.0, 'bubble_min': 10.0, 'div_min_len': 2, 'div_max_len': 8, 'need_signs': 2, 'cf_body': 0.4, 'cf_close_ext': 0.3, 'cf_min_rng_mbr': 0.5, 'cf_min_delta': 0.5, 'sl_buf_ticks': 3.0, 'sl_buf_mbr': 0.2, 'sl_floor_mbr': 1.0, 'sl_cap_mbr': 4.0, 'r_min': 1.7, 'tp_r': 2.0, 'dead_look': 300, 'block_us_open': True, 'block_first_bars': 15, 'veto_window': 5, 'stop_run_k': 3, 'overlap_bars': 30, 'overlap_frac': 0.5, 'overlap_max_drop': 0.3}
 ```
 
-## 12. Nhận định (Opus) — số đo, chưa phải kết luận
+### 12. Nhận định (Opus) — số đo, chưa phải kết luận
 
 - **Chưa thấy lợi thế trên TRAIN:** R TB −0,30 [−0,50; −0,09] — KTC nằm hẳn dưới 0. **Kém cả hai đối chứng**: C1 (bỏ ③) −0,24, C2 (ngẫu nhiên cùng giờ/hướng/rủi ro) −0,16; theo cặp R thật − R C2 = −0,14. Như vậy, ở bộ mặc định, ③ không cải thiện so với vào bừa tại mốc. C3: chỉ đòi Δ (−0,10, 99 lệnh) là loại đơn lẻ đỡ tệ nhất; chỉ đòi stacked −0,29.
 - **Lệnh rất ngắn, SL sát:** giữ lệnh trung vị 5 nến; rủi ro trung vị 1,29 mbr (≈ 2,2 giá); 18 % lệnh bị sàn 1 mbr đẩy SL ra. WR 27 % so với mức hoà vốn ≈ 36 % ở TP 2R.
@@ -173,7 +545,7 @@ Dấu hiệu stacked có mặt ở 86,2 % số lệnh (> 50 % ⇒ GĐ2 quét run
 - Nhóm `b_from_exhausted` (15 lệnh) +0,31 nhưng KTC [−0,47; 1,10] — mẫu quá nhỏ, không đọc được gì.
 - Chặn 19:20–20:30 gần như không đổi gì (bật −0,30 / tắt −0,29; chỉ khác 5 lệnh).
 
-## 13. Điểm vẫn mơ hồ — CẦN FABLE QUYẾT (đang chạy theo lựa chọn in đậm)
+### 13. Điểm vẫn mơ hồ — CẦN FABLE QUYẾT (đang chạy theo lựa chọn in đậm)
 1. **G1 — "Lần 2" (Q12) vẫn lỏng và là nhóm đông nhất:** 1.128 ứng viên (32/ngày, còn nhiều hơn bản GĐ0 25/ngày) và **64/159 lệnh (40 %)**. Lý do: "đóng lùi ≥ tol so với cực trị **mới**" (đáy của chính x) dễ hơn bản cũ (so với cực trị cú thủng), và "lần 1" (râu ≥ 1 tick + đóng lùi ≥ tol) xuất hiện ở hầu hết nến trong cú thủng. Plan coi đây là ngoại lệ. Có siết không (vd y phải là nến lập cực trị cú thủng; hoặc x đóng lại ≥ tol so với cực trị của y)? **Đang: theo chữ plan, y = nến thoả gần nhất trước x.**
 2. **G2 — CF của "lần 2":** **đang lấy CF = chính nến x** (phải qua 4a), cửa sổ ③ = [max(nến đóng ngoài, x−4), x], mốc (dải ±tol, mức trap, mức "tới mốc" của Δ ngược giá) = cực trị của y. Plan không nói CF có được là 1–2 nến sau x không.
 3. **G3 — Mốc trap thế B "cực trị của cú đẩy":** với thế B sell, cực trị cú đẩy là một đáy; quét đáy rồi đóng lên là ngược phe S ⇒ không dùng được làm mốc trap. **Đang dùng {cạnh vừa phá E, pivot 1c gần nhất ngược S}.** Có thể Fable muốn "đỉnh của nến đóng ngoài"?

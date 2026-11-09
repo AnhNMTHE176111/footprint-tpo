@@ -342,3 +342,46 @@ def test_modes_C1_and_C3():
     assert not SC.sign_ok(c, 'main', CP) and SC.sign_ok(c, 'C1', CP)
     c.signs = {'bong': ('x', 17, 0)}
     assert SC.sign_ok(c, ('C3', 'bong'), CP) and not SC.sign_ok(c, ('C3', 'trap'), CP)
+
+
+# =============================================================== GĐ2 vòng 1 (plan 7.3)
+def test_a2_off_by_default_and_report_switch():
+    df, f = ex3_world()
+    c = evaluate(ex3_cand(18), f)
+    c.gates = []                                                                 # giả sử qua hết cổng
+    assert SC.CP().a2_on is False
+    tr, _, _ = SC.select_and_simulate([c], df, f, CP)
+    assert len(tr) == 0                                                          # G1: "lần 2" tắt mặc định
+    from dataclasses import replace
+    tr, _, _ = SC.select_and_simulate([c], df, f, replace(CP, a2_on=True))
+    assert len(tr) == 1                                                          # vẫn chạy được khi bật để báo cáo
+
+
+def test_a2_sl_is_whole_breach_extreme_even_when_cf_after_x():
+    df, f = ex3_world()
+    rows_low = f.L.copy()
+    c = evaluate(ex3_cand(19), f)                                                # G2: CF = x + 1
+    assert c.sl == min(rows_low[16:20]) - 3                                      # 7.3.2: cực trị toàn bộ cú thủng + đệm
+
+
+def test_sl_anchor_pivot_swept_high():
+    from dataclasses import replace
+    df, f = world(ex1_rows())
+    cpp = replace(CP, sl_anchor='pivot')
+    m = SimpleNamespace(fb_bars={}, death={}, eng=SimpleNamespace(ranges=[]),
+                        ph=[(3, 41400), (14, 41370), (16, 41350)], pl=[])
+    c = ex1_cand()
+    c.signs = SC.find_signs(c, f, cpp)
+    SC.eval_order(c, f, cpp, m, {}, True)
+    # pivot gần nhất trong [ref−10, CF−1] NẰM TRÊN giá vào 41356: (14, 41370) — (16, 41350) dưới giá vào nên bỏ qua
+    assert c.anchor == 'pivot' and c.piv == (14, 41370) and c.sl == 41373 and c.risk == 17
+    assert abs(c.r_avail - 47 / 17) < 1e-9
+    # không có pivot trong cửa sổ ⇒ dùng neo cú thủng
+    m.ph = [(3, 41400)]
+    c = ex1_cand()
+    SC.eval_order(c, f, cpp, m, {}, True)
+    assert c.anchor == 'pivot_fallback' and c.sl == 41383
+    # neo mặc định không đụng pivot
+    c = ex1_cand()
+    SC.eval_order(c, f, CP, m, {}, True)
+    assert c.anchor == 'cu_thung' and c.sl == 41383

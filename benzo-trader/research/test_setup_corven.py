@@ -245,6 +245,25 @@ def test_A_exception_requires_first_attempt():
     assert len([q for q in m2.EXC if q.breach_start == e[0].breach_start]) == 1
 
 
+def test_A_exception_y_must_be_breach_extreme_bar():
+    """G1: y = nến lập cực trị cú thủng. Cực trị nằm ở nến KHÔNG phải "lần 1" ⇒ không có ứng viên, dù có nến khác là lần 1."""
+    bars = base_bars()
+    add(bars, B0 + 22, B0 + 23, B0 - 40, B0 - 38)        # đóng ngoài, lập đáy B0−40 nhưng đóng lùi chỉ 2 tick (không phải lần 1)
+    add(bars, B0 - 38, B0 - 10, B0 - 30, B0 - 14)        # lần 1 "đẹp" nhưng KHÔNG phải nến lập cực trị
+    x = add(bars, B0 - 20, B0 - 8, B0 - 33, B0 - 12)     # quét đáy nến trước, nhưng không quét cực trị cú thủng
+    m = run(bars)
+    assert not [q for q in m.EXC if q.bar == x]
+
+
+def test_A_exception_x_must_close_tol_beyond_y_extreme():
+    bars = base_bars()
+    add(bars, B0 + 22, B0 + 23, B0 - 20, B0 - 15)
+    add(bars, B0 - 15, B0 - 10, B0 - 30, B0 - 14)        # y: đáy B0−30, lần 1
+    x = add(bars, B0 - 20, B0 - 8, B0 - 50, B0 - 25)     # quét sâu, đóng cách ĐÁY MỚI 25 ≥ tol nhưng chỉ cao hơn đáy y 5 < tol
+    m = run(bars)
+    assert not [q for q in m.EXC if q.bar == x]
+
+
 def test_A_exception_without_first_attempt_not_counted():
     bars = base_bars()
     add(bars, B0 + 22, B0 + 23, B0 - 20, B0 - 15)        # đóng ngoài: râu dưới 5 tick, đóng lùi 5 < tol ⇒ không phải lần 1

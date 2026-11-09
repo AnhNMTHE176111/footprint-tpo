@@ -54,6 +54,10 @@ class CP:
     b_from_exhausted: bool = True  # Q4: lập thế B cả khi BreakConfirmed làm range DEAD ngay (hết lượt ReEntry); cờ riêng, GĐ2 bật/tắt
     same_session: bool = True      # cửa sổ / CF không vắt qua khoảng trống phiên (> 30′)
     exc_max_age: int = 30          # Q12: "lần 2" trong ≤ 30 nến từ nến đóng ngoài
+    a2_on: bool = False            # GĐ2 v1 (G1): ngoại lệ "lần 2" TẮT mặc định — chỉ còn là nhóm báo cáo trong Python
+    a2_cf_after: int = 2           # G2: CF "lần 2" = x hoặc 1–2 nến sau x
+    sl_anchor: str = 'cu_thung'    # GĐ2 v1 (7.3): 'cu_thung' = cực trị cú thủng / mốc (4b) ; 'pivot' = sau pivot 1 nến ngược S gần nhất
+    piv_back: int = 10             # 7.3.3: tìm pivot trong [nến đóng ngoài − 10, CF]
     # ---- ③ ----
     delta_mult: float = 2.0        # ③a to (quét {2,3})
     bubble_mult: float = 3.0       # ③b (quét {3,4}); trap dùng 3 × nền_ô cố định (plan ③e)
@@ -322,7 +326,10 @@ class Step2Machine:
                 b.piv_at[i] = piv[-1][1] if piv and piv[-1][0] >= b.ref else None
                 self._b_eval(b, i)
 
-        # ---------- ngoại lệ "xác nhận lần 2" (Q12: phải có lần 1) ----------
+        # ---------- ngoại lệ "xác nhận lần 2" — định nghĩa siết G1 (GĐ2 v1) ----------
+        # y = nến lập cực trị cú thủng (start..i−1; hoà ⇒ nến SỚM nhất) và y phải là "lần 1" (râu phía −S ≥ 1 tick, đóng lùi
+        # về phía S ≥ tol so với cực trị của nó); x = nến i quét qua cực trị y ≥ 1 tick và ĐÓNG về phía S ≥ tol so với cực trị
+        # của y, vẫn ngoài range. Chỉ 1 lần mỗi cú thủng, ≤ 30 nến từ nến đóng ngoài.
         for (rid, st, p, start) in pre:
             if p == 0 or start < 0 or (rid, start) in self._exc_done or i - start > self.cp.exc_max_age:
                 continue
@@ -333,23 +340,15 @@ class Step2Machine:
             outside = bar.c < r.bottom if p < 0 else bar.c > r.top
             if not outside:
                 continue
-            # lần 1 = nến y GẦN NHẤT trong cú thủng (start..i-1): râu phía −S ≥ 1 tick, đóng lùi về phía S ≥ tol so với cực trị của nó
-            y = -1
-            for k in range(i - 1, start - 1, -1):
-                if S > 0:
-                    okw = min(e.O[k], C[k]) - L[k] >= 1 and C[k] - L[k] >= r.tol
-                else:
-                    okw = H[k] - max(e.O[k], C[k]) >= 1 and H[k] - C[k] >= r.tol
-                if okw:
-                    y = k
-                    break
-            if y < 0:
-                continue
+            seg = range(start, i)
+            y = min(seg, key=lambda k: (L[k], k)) if S > 0 else min(seg, key=lambda k: (-H[k], k))
             if S > 0:
-                hit = bar.l <= L[y] - 1 and bar.c - bar.l >= r.tol
+                first = min(e.O[y], C[y]) - L[y] >= 1 and C[y] - L[y] >= r.tol
+                hit = first and bar.l <= L[y] - 1 and bar.c >= L[y] + r.tol
                 ext = L[y]
             else:
-                hit = bar.h >= H[y] + 1 and bar.h - bar.c >= r.tol
+                first = H[y] - max(e.O[y], C[y]) >= 1 and H[y] - C[y] >= r.tol
+                hit = first and bar.h >= H[y] + 1 and bar.c <= H[y] - r.tol
                 ext = H[y]
             if hit:
                 self.EXC.append(ExcA(rid, p, start, i, ext, bar.c, y, r.top, r.bottom, r.tol))
@@ -763,6 +762,8 @@ class Cand:
     r_avail: float = 0.0
     target: float = 0.0
     moc_used: str = ''
+    anchor: str = ''
+    piv: tuple = ()
 
     @property
     def types(self):
@@ -776,11 +777,15 @@ def build_candidates(m: Step2Machine, feat: Feat, cp: CP) -> List[Cand]:
         for cf in a.passed:
             out.append(Cand(cf, 'A', a.S, a.rid, a, (a.rid, a.E, 'A'), a.ref, a.ref,
                             [dict(kind='canh', level=E, tol=a.tol, band=(E - a.tol, E + a.tol), zid=None)], [E]))
+    n = len(feat.C)
     for x in m.EXC:
         S = -x.p
-        out.append(Cand(x.bar, 'A2', S, x.rid, x, (x.rid, x.p, 'A'), x.breach_start, max(x.breach_start, x.bar - 4),
-                        [dict(kind='cuc_tri', level=x.ext, tol=x.tol, band=(x.ext - x.tol, x.ext + x.tol), zid=None)],
-                        [x.ext]))
+        for cf in range(x.bar, min(n, x.bar + cp.a2_cf_after + 1)):
+            if feat.sstart[cf] != feat.sstart[x.bar]:
+                break
+            out.append(Cand(cf, 'A2', S, x.rid, x, (x.rid, x.p, 'A'), x.breach_start, max(x.breach_start, x.bar - 4),
+                            [dict(kind='cuc_tri', level=x.ext, tol=x.tol, band=(x.ext - x.tol, x.ext + x.tol), zid=None)],
+                            [x.ext]))
     for b in m.B:
         js = sorted(set(b.passed_edge) | {p[0] for p in b.passed_zone})
         for j in js:
@@ -925,7 +930,8 @@ def eval_order(c: Cand, f: Feat, cp: CP, m: Step2Machine, chong: dict, use_chong
         raw = (min(L[c.ref:cf + 1]) - buf) if S > 0 else (max(H[c.ref:cf + 1]) + buf)
         c.moc_used = 'canh'
     elif c.the == 'A2':
-        raw = (L[cf] - buf) if S > 0 else (H[cf] + buf)
+        # 7.3.2: cực trị TOÀN BỘ cú thủng (nến đóng ngoài → CF) — bản GĐ1 neo ở râu x (sai với 4b)
+        raw = (min(L[c.ref:cf + 1]) - buf) if S > 0 else (max(H[c.ref:cf + 1]) + buf)
         c.moc_used = 'cuc_tri'
     else:
         edge = [mo for mo in c.mocs if mo['kind'] == 'canh']
@@ -942,6 +948,27 @@ def eval_order(c: Cand, f: Feat, cp: CP, m: Step2Machine, chong: dict, use_chong
             raw = (lo - buf) if S > 0 else (hi + buf)
             c.moc_used = f"stacked {_px(lo)}–{_px(hi)}"
     ent = C[cf]
+    c.anchor = 'cu_thung'
+    if cp.sl_anchor == 'pivot':
+        # 7.3.3 "đặt dưới cái đáy mới quét" (CORVEN 0:50:25): pivot 1 nến ngược S gần nhất trong [ref − 10, CF], nằm phía −S
+        # của giá vào (sell: đỉnh pivot > giá vào). Không có ⇒ giữ neo cú thủng (ghi c.anchor = 'pivot_fallback').
+        piv = m.ph if S < 0 else m.pl
+        lo_i = c.ref - cp.piv_back
+        pv = None
+        for (j, pp) in reversed(piv):
+            if j > cf - 1:
+                continue
+            if j < lo_i:
+                break
+            if (S < 0 and pp > ent) or (S > 0 and pp < ent):
+                pv = (j, pp)
+                break
+        if pv is not None:
+            raw = pv[1] + buf if S < 0 else pv[1] - buf
+            c.anchor = 'pivot'
+            c.piv = pv
+        else:
+            c.anchor = 'pivot_fallback'
     risk = (ent - raw) * S
     if risk < cp.sl_floor_mbr * mbr:
         risk = cp.sl_floor_mbr * mbr
@@ -1037,6 +1064,8 @@ def select_and_simulate(cands: List[Cand], df: pd.DataFrame, f: Feat, cp: CP, mo
     rows, chosen, why = [], [], {}
     for c in cands:
         if not f.good[c.cf] or (keep is not None and not keep(c)):
+            continue
+        if c.the == 'A2' and not cp.a2_on:
             continue
         if not sign_ok(c, mode, cp):
             continue

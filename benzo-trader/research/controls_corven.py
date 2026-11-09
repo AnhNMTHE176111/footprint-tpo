@@ -61,3 +61,40 @@ def c2(R: dict, n_random: int = 20, seed: int = 0, minutes: int = 30):
             rows.append(dict(idx=i, r_that=float(t['r']), r_c2_tb=float(np.mean(rs)), n_c2=len(rs)))
             allr += rs
     return pd.DataFrame(rows), np.array(allr)
+
+
+def sl_then_tp(R: dict, horizons=(30, 60), n_random: int = 20, seed: int = 0, minutes: int = 30) -> dict:
+    """Plan 7.3.4 — "SL rồi vẫn chạm TP":
+    · tỷ lệ THẬT: trong các lệnh SL, sau nến dính SL (exit_idx+1 … exit_idx+h) giá có chạm TP gốc không;
+    · MỨC NỀN: mỗi lệnh SL lấy 20 nến ngẫu nhiên cùng phiên, giờ ±30′ quanh nến dính SL; từ giá đóng nến đó, giá có đi được
+      3R (R = rủi ro của lệnh, = khoảng SL→TP) đúng hướng lệnh trong h nến không.
+    Đếm theo chỉ số nến (có thể vắt qua khoảng trống phiên, như cách Fable đo 36 %/53 %)."""
+    f = R['feat']
+    rng = np.random.default_rng(seed)
+    t, ch = R['trades'], R['chosen']
+    n = len(f.C)
+    H, L, C = f.H, f.L, f.C
+    real = {h: [] for h in horizons}
+    base = {h: [] for h in horizons}
+    for c, (_, x) in zip(ch, t.iterrows()):
+        if x['outcome'] != 'SL':
+            continue
+        S, ex = c.S, int(x['exit_idx'])
+        tp = c.tp
+        for h in horizons:
+            seg = range(ex + 1, min(n, ex + h + 1))
+            real[h].append(any((H[j] >= tp - 1e-9) if S > 0 else (L[j] <= tp + 1e-9) for j in seg))
+        s0, s1 = int(f.sstart[ex]), int(f.send[ex])
+        pool = [j for j in range(s0, s1 + 1) if abs(int(f.sm[j]) - int(f.sm[ex])) <= minutes and j != ex]
+        if not pool:
+            continue
+        for j in rng.choice(pool, size=min(n_random, len(pool)), replace=False):
+            j = int(j)
+            goal = C[j] + S * 3 * c.risk
+            for h in horizons:
+                seg = range(j + 1, min(n, j + h + 1))
+                base[h].append(any((H[k] >= goal - 1e-9) if S > 0 else (L[k] <= goal + 1e-9) for k in seg))
+    return dict(n_sl=len(real[horizons[0]]),
+                real={h: float(np.mean(v)) if v else float('nan') for h, v in real.items()},
+                base={h: float(np.mean(v)) if v else float('nan') for h, v in base.items()},
+                n_base=len(base[horizons[0]]))

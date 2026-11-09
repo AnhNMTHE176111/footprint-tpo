@@ -648,6 +648,9 @@ namespace BenzoTraderNs
 
         /// <summary>Range đang sống để vẽ (ACTIVE/PENDING/BROKEN) — chỉ đọc.</summary>
         public IEnumerable<RangeInfo> LiveRanges() => Eng.Ranges.Where(r => r.State != RangeState.Dead);
+
+        /// <summary>Thế B đang sống (để vẽ đường đứt tại mốc cạnh vừa phá): (cạnh tick, hướng D, nến đóng ngoài, đang tạm huỷ 1c).</summary>
+        public IEnumerable<(double edge, int dir, int refBar, bool suspended)> LiveB() => _liveB.Select(b => (b.E, b.D, b.Ref, b.Suspended));
     }
 
     // ======================================================================== detector (cắm vào BenzoEngine)

@@ -1,15 +1,27 @@
 #!/bin/bash
-# Build BenzoTrader: concat ProfileEngine.cs (tpo-suite) + VclCore.cs (vung-canh-lenh) + BenzoCore.cs + BenzoSr.cs + BenzoLayers.cs + BenzoZones.cs + BenzoDetectors.cs + BenzoSetupA5.cs + BenzoTrader.cs -> qw-build.sh -> dist/BenzoTrader.dll
-# VCLCORE=<file> (tuỳ chọn): dùng bản VclCore.cs khác (vd `git show HEAD:vung-canh-lenh/VclCore.cs`) khi bản trong cây làm việc đang sửa dở.
-# Moi `using` nam BEN TRONG namespace nen noi file hop le. Sau do copy TRUC TIEP vao
-# C:\OptimusFLOW\Settings\Scripts\Indicators\BenzoTrader (TAO thu muc neu chua co — khac qw-deploy.sh mac dinh).
+# Build BenzoTrader (setup CORVEN, corven-1) -> dist/BenzoTrader.dll, rồi copy vào Optimus Flow.
+# NỐI NGUỒN (một nguồn, không copy tay — plan BENZO-CORVEN mục 2/10):
+#   quantower-tpo-suite/ProfileEngine.cs          (chỉ vì NewsCalendar — tách sau)
+#   quantower-orderflow-indicator/StackedImbalance.cs + ExhaustionLogic.cs   (namespace OrderFlowBubbles → BenzoOfLib)
+#   quantower-range/RangeLogic.cs                  (namespace RangeBox → BenzoRangeLib)
+#   BenzoCore.cs + BenzoZones.cs + BenzoOrderFlow.cs + BenzoCorven.cs + BenzoTrader.cs
+# Đổi namespace bằng sed để DLL này không trùng tên kiểu với OrderFlowBubbles.dll / RangeBox.dll cùng nạp trong Optimus Flow.
+# Hai file order flow có `using` ở đầu file (ngoài namespace) ⇒ bỏ các dòng đó và đặt 1 khối `using` ở đầu file nối.
+# Sau build: copy TRỰC TIẾP vào C:\OptimusFLOW\Settings\Scripts\Indicators\BenzoTrader (tạo thư mục nếu chưa có).
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
-ENGINE="$HERE/../quantower-tpo-suite/ProfileEngine.cs"
+ROOT="$HERE/.."
 QW="$HOME/quantower-libs/qw-build.sh"
 TMP="$(mktemp -d)"
-VCL="${VCLCORE:-$HERE/../vung-canh-lenh/VclCore.cs}"
-cat "$ENGINE" "$VCL" "$HERE/BenzoCore.cs" "$HERE/BenzoSr.cs" "$HERE/BenzoLayers.cs" "$HERE/BenzoZones.cs" "$HERE/BenzoDetectors.cs" "$HERE/BenzoSetupA5.cs" "$HERE/BenzoTrader.cs" > "$TMP/BenzoTrader.cs"
+{
+  echo "using System;"
+  echo "using System.Collections.Generic;"
+  cat "$ROOT/quantower-tpo-suite/ProfileEngine.cs"
+  sed -E '/^using [A-Za-z.]+;[[:space:]]*$/d' "$ROOT/quantower-orderflow-indicator/StackedImbalance.cs"
+  sed -E '/^using [A-Za-z.]+;[[:space:]]*$/d' "$ROOT/quantower-orderflow-indicator/ExhaustionLogic.cs"
+  cat "$ROOT/quantower-range/RangeLogic.cs"
+  cat "$HERE/BenzoCore.cs" "$HERE/BenzoZones.cs" "$HERE/BenzoOrderFlow.cs" "$HERE/BenzoCorven.cs" "$HERE/BenzoTrader.cs"
+} | sed -E 's/\bOrderFlowBubbles\b/BenzoOfLib/g; s/\bRangeBox\b/BenzoRangeLib/g' > "$TMP/BenzoTrader.cs"
 LOG="$TMP/build.log"
 bash "$QW" "$TMP/BenzoTrader.cs" BenzoTrader | tee "$LOG"
 # 2 cảnh báo CS0649 (TeleReport.Enabled / TestNow) nằm sẵn trong ProfileEngine.cs của tpo-suite (không phải file của Benzo) — chỉ chặn cảnh báo MỚI và lỗi

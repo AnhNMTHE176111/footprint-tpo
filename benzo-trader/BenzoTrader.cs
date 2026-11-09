@@ -1,11 +1,13 @@
 // ============================================================================
-//  BenzoTrader — indicator signal cho Quantower / Optimus Flow (KHUNG, chưa có logic 4 setup)
+//  BenzoTrader — indicator signal cho Quantower / Optimus Flow: MỘT setup CORVEN (corven-1)
 // ============================================================================
-//  Add vào chart M1 có Volume Analysis. Chỉ xử lý nến ĐÃ ĐÓNG, đúng 1 lần/nến, niêm phong theo
-//  thời gian mở nến (sống qua reload). Logic thuần nằm ở BenzoCore.cs (test được). File này chỉ
-//  là lớp dán: Settings, vòng đời, vẽ (bảng + mũi tên + SL/TP), Telegram + chụp ảnh Win32.
-//  4 detector A/B/D/C (BenzoDetectors.cs) được cắm trong CreateDetectors() theo ưu tiên A > B > D > C.
-//  Build: concat ProfileEngine.cs + BenzoCore.cs + file này (build.sh). Mọi `using` nằm trong namespace.
+//  Add vào chart M1 có Volume Analysis. Chỉ xử lý nến ĐÃ ĐÓNG, đúng 1 lần/nến, niêm phong theo thời gian mở nến
+//  (sống qua reload, guard khớp nến). Logic thuần ở BenzoCore.cs + BenzoCorven.cs (test được). File này chỉ là lớp dán:
+//  Settings (chỉ công tắc — plan BENZO-CORVEN 10.2), vòng đời, vẽ (hộp range, mốc thế B, mũi tên + SL/TP, nhãn dấu hiệu,
+//  bảng 4 dòng có nhãn trung thực), Telegram + chụp ảnh Win32, CSV lệnh + CSV ứng viên bị loại.
+//  ⚠ Setup CHƯA có lợi thế đo được (backtest 35 phiên −0,29R/lệnh, kém vào ngẫu nhiên) — chạy thử để người học review.
+//  Build: build.sh nối ProfileEngine.cs (chỉ vì NewsCalendar) + StackedImbalance.cs + ExhaustionLogic.cs + RangeLogic.cs +
+//  BenzoCore/Zones/OrderFlow/Corven + file này. Mọi `using` nằm trong namespace.
 // ============================================================================
 namespace BenzoTraderNs
 {
@@ -22,7 +24,7 @@ namespace BenzoTraderNs
     using System.Threading.Tasks;
     using TradingPlatform.BusinessLayer;
     using TpoSuite;   // ProfileEngine.cs (concat) — dùng NewsCalendar (lịch tin Forex Factory)
-    using ChartConv = TradingPlatform.BusinessLayer.Chart.IChartWindowCoordinatesConverter;   // bộ đổi toạ độ giá/thời gian ⇄ pixel (vùng A đang canh)
+    using RangeBox;
 
     // ---------------------------------------------------------------- chụp ảnh cửa sổ (Win32)
     internal static class WinShot
@@ -162,7 +164,7 @@ namespace BenzoTraderNs
     // ---------------------------------------------------------------- indicator
     public class BenzoTrader : Indicator, IVolumeAnalysisIndicator
     {
-        // ======= Settings (plan 2.3 — KHÔNG có ngưỡng số nào khác) =======
+        // ======= Settings (plan 10.2 — CHỈ công tắc, không có ngưỡng số nào) =======
         [InputParameter("Lệch giờ (UTC → VN)", 10, -12, 14, 1, 0)]
         public int TzOffset { get; set; } = 7;
         [InputParameter("Telegram: bật", 20)]
@@ -173,46 +175,32 @@ namespace BenzoTraderNs
         public string TeleChatId { get; set; } = "";
         [InputParameter("Telegram: gửi thử (bật lên để gửi)", 23)]
         public bool TeleTestNow { get; set; } = false;
-        [InputParameter("Bật setup A · Phá hồi v5 (chạy thử — chưa có lợi thế đo được)", 30)]
-        public bool EnableA { get; set; } = true;
-        [InputParameter("Bật setup B · Hấp thụ", 31)]
-        public bool EnableB { get; set; } = true;
-        [InputParameter("Bật setup C · Fade cạnh", 32)]
-        public bool EnableC { get; set; } = true;
-        [InputParameter("Bật setup D · Trap", 33)]
-        public bool EnableD { get; set; } = true;
-        [InputParameter("B · thêm vùng v2 (HVN/VA/POC)", 34)]
-        public bool BZonesV2 { get; set; } = true;       // POC/VAH/VAL ngày, HVN ngày, POC tuần, HVN tuần (backtest 90 ngày: 25 lệnh, WR 32,0%)
-        [InputParameter("B · thêm vùng S/R (VCL, PDH/PDL)", 35)]
-        public bool BZonesSr { get; set; } = true;       // vùng Canh Lệnh + đỉnh/đáy phiên trước (backtest 90 ngày: 58 lệnh, WR 24,1% < hoà vốn ~27%)
-        // ---- setup C: các lớp vùng mới (backtest 90 ngày: C0 103 lệnh WR 12,6% R TB −0,43 → C4 191 lệnh −0,31 → C6 555 lệnh −0,09; CHƯA có lợi thế đo được)
-        [InputParameter("C · cổng hình D (Á/Âu: chỉ fade VA hôm qua khi profile TPO hôm qua hình D)", 36)]
-        public bool CGateD { get; set; } = true;
-        [InputParameter("C · vùng dày P/b (ngày hình P hoặc b: fade cạnh vùng dày TPO hôm qua)", 37)]
-        public bool CThickPb { get; set; } = true;
-        [InputParameter("C · VA nhỏ từ 3 lần đổi hành vi (CHoCH)", 38)]
-        public bool CChoch { get; set; } = true;
-        [InputParameter("C · hành lang hỗ trợ/kháng cự (vùng Canh Lệnh)", 39)]
-        public bool CSr { get; set; } = true;
-        [InputParameter("C · TP về cạnh đối diện / POC (≥ 2R); tắt (mặc định) = 2R cố định", 39)]
-        public bool CTpEdge { get; set; } = false;
+        [InputParameter(CorvenParams.SettingLabel, 30)]
+        public bool EnableCorven { get; set; } = true;
+        [InputParameter("Chặn 19:20–20:30 VN (mốc neo Mỹ)", 31)]
+        public bool BlockUsOpen { get; set; } = true;
+        [InputParameter("Hiện range", 32)]
+        public bool ShowRange { get; set; } = true;
+        [InputParameter("Hiện dấu hiệu đã đếm", 33)]
+        public bool ShowSigns { get; set; } = true;
         [InputParameter("Đặt lại thống kê (bật lên để đặt)", 40)]
         public bool ResetStatsNow { get; set; } = false;
         [InputParameter("Hiện lại toàn bộ thống kê (bật lên để xoá mốc đặt lại)", 41)]
         public bool ClearResetNow { get; set; } = false;
         [InputParameter("Hiện bảng", 50)]
         public bool ShowTable { get; set; } = true;
-        [InputParameter("Hiện vùng A đang canh", 51)]
-        public bool ShowA5Watch { get; set; } = true;     // vùng/nhãn "A chờ MUA/BÁN …" của setup A v5 (tối đa 3, chỉ trạng thái đã trang bị)
 
         // ======= trạng thái =======
+        private sealed class BoxV { public DateTime T0, T1; public double Top, Bot; public int State; }   // 0 active, 1 pending, 2 broken
+        private sealed class MocV { public DateTime T0; public double Price; public int Dir; public bool Suspended; }
         private sealed class RenderState
         {
             public List<Signal> Sigs = new();
             public List<string> Lines = new();
             public string Warn;
             public int Digits = 1;
-            public List<A5Watch> Watch = new();     // vùng A v5 đang canh (tính 1 lần mỗi nến đóng; lúc vẽ chỉ đổi toạ độ)
+            public List<BoxV> Boxes = new();
+            public List<MocV> Mocs = new();
         }
 
         private readonly object _calc = new();
@@ -222,45 +210,30 @@ namespace BenzoTraderNs
         private int _lastN = -1;
         private int _digits = 1;
         private BenzoEngine _engine;
+        private DetectorCorven _det;
         private SignalCache _cache;
         private readonly List<int> _hdOfBar = new();   // chỉ số HistoricalData của từng nến trong engine
         private DateTime? _resetUtc;
-        private string _dir, _symbol, _tf, _resetPath, _csvPath, _logPath;
+        private string _dir, _symbol, _aggName, _resetPath, _csvPath, _candPath, _logPath;
+        private int _minutes = -1;
         private readonly TeleClient _tele = new();
         private bool _armed;
         private readonly HashSet<string> _seen = new(), _openSent = new(), _closedSent = new();
         private bool _lastTest, _lastReset, _lastClear;
-        private string _teleStatus;
-        private string _builtBKey;
-        private string _builtCKey;
-        private int _lvMemoIdx = -1;                           // memo 1 nến của ReadLevels: Zones.Push và DetectorA5 cùng đọc nến i ⇒ platform chỉ bị đọc 1 lần/nến
+        private string _builtKey;
+        private int _lvMemoIdx = -1;                   // memo 1 nến của ReadLevels
         private IReadOnlyList<LevelVol> _lvMemo;
 
         public BenzoTrader() : base()
         {
             Name = "Benzo Trader";
-            Description = "Benzo Trader: 4 setup A/B/C/D trên nến M1 đã đóng, thống kê, Telegram kèm ảnh. Cần Volume Analysis. Add vào chart M1. A Phá hồi v5 chạy thử — chưa có lợi thế đo được.";
+            Description = "Benzo Trader — setup CORVEN (corven-1) trên nến M1 đã đóng: range + mốc + ≥ 2 dấu hiệu order flow + nến xác nhận. "
+                        + "Chạy thử: backtest 35 phiên −0,29R/lệnh, kém vào ngẫu nhiên — không phải khuyến nghị. Cần Volume Analysis.";
             SeparateWindow = false;
         }
 
-        /// <summary>Danh sách detector THEO THỨ TỰ ƯU TIÊN A > B > D > C. Agent port setup cắm vào đây.</summary>
-        private List<ISetupDetector> CreateDetectors()
-        {
-            return new List<ISetupDetector> { new DetectorA5(), new DetectorB(BZonesV2, BZonesSr), new DetectorD(), new DetectorC(COptions()) };
-        }
-
-        /// <summary>Khoá cấu hình vùng của B: đổi công tắc ⇒ cache niêm phong cũ bị bỏ (tín hiệu B cũ sinh từ bộ vùng khác) và engine dựng lại.</summary>
-        private string BModeKey => "b" + (BZonesV2 ? "1" : "0") + (BZonesSr ? "1" : "0");
-
-        private CLayerOptions COptions() => new CLayerOptions { GateD = CGateD, ThickPb = CThickPb, Choch = CChoch, Sr = CSr, TpToEdge = CTpEdge };
-
-        /// <summary>Khoá cấu hình các lớp của C: đổi lựa chọn (hoặc bật/tắt C) ⇒ cache niêm phong cũ bị bỏ và engine dựng lại (lớp vùng chỉ được bật trước nến đầu tiên).</summary>
-        private string CModeKey => EnableC ? "c" + COptions().Key : "c-off";
-
-        /// <summary>Tin USD mức cao trong ±15 phút (expose cho detector; cần lịch tin đã tải — chỉ phủ tuần hiện tại).</summary>
+        /// <summary>Tin USD mức cao trong ±15 phút (cần lịch tin đã tải — chỉ phủ tuần hiện tại).</summary>
         public bool IsNewsBlocked(DateTime utc) => NewsCalendar.IsBlocked(utc, TzOffset, BenzoCore.NewsBlockMinutes);
-
-        private bool Enabled(char s) => s == 'A' ? EnableA : s == 'B' ? EnableB : s == 'C' ? EnableC : EnableD;
 
         public bool IsRequirePriceLevelsCalculation => true;
         public void VolumeAnalysisData_Loaded()
@@ -281,8 +254,8 @@ namespace BenzoTraderNs
         {
             lock (_calc)
             {
-                _vaLoaded = false; _lastN = -1; _engine = null; _cache = null; _hdOfBar.Clear(); _lvMemoIdx = -1; _lvMemo = null;
-                _armed = false; _seen.Clear(); _openSent.Clear(); _closedSent.Clear(); _teleStatus = null;
+                _vaLoaded = false; _lastN = -1; _engine = null; _det = null; _cache = null; _hdOfBar.Clear(); _lvMemoIdx = -1; _lvMemo = null;
+                _armed = false; _seen.Clear(); _openSent.Clear(); _closedSent.Clear(); _minutes = -1;
                 lock (_sync) _render = null;
             }
         }
@@ -292,7 +265,7 @@ namespace BenzoTraderNs
             PollButtons();
             var p = HistoricalData?.VolumeAnalysisCalculationProgress;
             if (p == null || p.State != VolumeAnalysisCalculationState.Finished) return;
-            if (!_vaLoaded) lock (_calc) { _vaLoaded = true; }   // callback không bắn nếu VA đã tính sẵn (xem EntrySignal)
+            if (!_vaLoaded) lock (_calc) { _vaLoaded = true; }
             SafeProcess("OnUpdate");
         }
 
@@ -301,18 +274,17 @@ namespace BenzoTraderNs
             try { Process(); }
             catch (Exception ex)
             {
-                LogErr(ex, where);
+                LogErr(ex.ToString(), where);
                 lock (_sync) _render ??= new RenderState { Warn = "LỖI: " + ex.Message };
             }
         }
 
-        private void LogErr(Exception ex, string where)
+        private void LogErr(string text, string where)
         {
             try
             {
                 Directory.CreateDirectory(_dir ?? Path.GetTempPath());
-                File.AppendAllText(Path.Combine(_dir ?? Path.GetTempPath(), "error_log.txt"),
-                    $"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}Z [{Name}] {where}: {ex}\n");
+                File.AppendAllText(Path.Combine(_dir ?? Path.GetTempPath(), "error_log.txt"), $"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}Z [{Name}] {where}: {text}\n");
             }
             catch { }
         }
@@ -324,36 +296,20 @@ namespace BenzoTraderNs
             bool resetEdge = ResetStatsNow && !_lastReset; _lastReset = ResetStatsNow;
             bool clearEdge = ClearResetNow && !_lastClear; _lastClear = ClearResetNow;
             if (testEdge) SendTest();
-            if (clearEdge)
+            if (clearEdge || resetEdge)
             {
                 try
                 {
                     lock (_calc)
                     {
                         EnsurePaths();
-                        _resetUtc = null;
-                        BenzoCore.ClearResetMark(_resetPath);
+                        if (clearEdge) { _resetUtc = null; BenzoCore.ClearResetMark(_resetPath); }
+                        if (resetEdge) { var now = DateTime.UtcNow; _resetUtc = now; BenzoCore.SaveResetMark(_resetPath, now); }
                         BuildRender();
                     }
                     CurrentChart?.RedrawBuffer();
                 }
-                catch (Exception ex) { LogErr(ex, "clear-reset"); }
-            }
-            if (resetEdge)
-            {
-                try
-                {
-                    var now = DateTime.UtcNow;
-                    lock (_calc)
-                    {
-                        EnsurePaths();
-                        _resetUtc = now;
-                        BenzoCore.SaveResetMark(_resetPath, now);
-                        BuildRender();
-                    }
-                    CurrentChart?.RedrawBuffer();
-                }
-                catch (Exception ex) { LogErr(ex, "reset"); }
+                catch (Exception ex) { LogErr(ex.ToString(), "reset"); }
             }
         }
 
@@ -364,14 +320,50 @@ namespace BenzoTraderNs
             _tele.LogPath = _logPath ?? Path.Combine(Path.GetTempPath(), "benzo_tele_log.txt");
         }
 
+        /// <summary>Số phút của khung (plan 10.5: lấy từ Aggregation, không dùng Title). −1 = không phải nến thời gian.</summary>
+        private int AggMinutes(out string aggName)
+        {
+            var agg = HistoricalData?.Aggregation;
+            aggName = agg?.Name ?? "agg";
+            if (agg is HistoryAggregationTime at)
+            {
+                int mul = at.Period.PeriodMultiplier;
+                return at.Period.BasePeriod switch
+                {
+                    BasePeriod.Minute => mul,
+                    BasePeriod.Hour => mul * 60,
+                    BasePeriod.Day => mul * 1440,
+                    _ => 0,
+                };
+            }
+            return -1;
+        }
+
         private void EnsurePaths()
         {
             if (_dir == null) OnInit();
             _symbol = Symbol?.Name ?? "X";
-            if (_tf == null) _tf = BenzoCore.Sanitize(HistoricalData?.Aggregation?.Title ?? HistoricalData?.Aggregation?.Name ?? "tf");
+            if (_minutes < 0) _minutes = AggMinutes(out _aggName);
             string sym = BenzoCore.Sanitize(_symbol);
             _resetPath = Path.Combine(_dir, $"reset_{sym}.txt");
-            _csvPath = Path.Combine(_dir, $"signals_{sym}_{BenzoCore.LogicVersion}.csv");   // tách file theo phiên bản logic (không trộn dòng của logic cũ)
+            _csvPath = Path.Combine(_dir, BenzoCore.SignalsCsvName(_symbol, Math.Max(0, _minutes)));
+            _candPath = Path.Combine(_dir, BenzoCore.CandidatesCsvName(_symbol, Math.Max(0, _minutes)));
+        }
+
+        /// <summary>Cache cũ của logic A/B/C/D (tên theo Aggregation.Title/Name, không có khung) — vô dụng, xoá khi gặp (plan 10.5).</summary>
+        private void DeleteLegacyCache()
+        {
+            try
+            {
+                string sym = BenzoCore.Sanitize(_symbol);
+                foreach (var t in new[] { HistoricalData?.Aggregation?.Title, HistoricalData?.Aggregation?.Name })
+                {
+                    if (string.IsNullOrEmpty(t)) continue;
+                    string p = Path.Combine(_dir, $"cache_{sym}_{BenzoCore.Sanitize(t)}.jsonl");
+                    if (File.Exists(p)) File.Delete(p);
+                }
+            }
+            catch { }
         }
 
         // ---------------------------------------------------------------- xử lý nến đóng
@@ -388,66 +380,101 @@ namespace BenzoTraderNs
                 _digits = Math.Max(0, (int)Math.Round(-Math.Log10(tick)));
                 EnsurePaths();
                 ConfigTele();
+                if (_minutes != 1)
+                {   // plan 10.2: chỉ chạy trên nến 1 phút — không dựng engine, không tạo cache
+                    lock (_sync) _render = new RenderState { Lines = new List<string> { "Benzo CORVEN chỉ chạy trên chart M1", CorvenParams.BacktestLine } };
+                    _lastN = n;
+                    return;
+                }
                 NewsCalendar.Refresh(_dir, TzOffset, t => BenzoLog.Write(_logPath, t));   // tải nền, cache 1h
 
-                if (_engine == null || _engine.Bars.Count > n - 1 || _builtBKey != BModeKey || _builtCKey != CModeKey)   // lần đầu, lịch sử bị cắt ngắn, hoặc đổi công tắc vùng B / lớp vùng C → dựng lại
+                for (int attempt = 0; attempt < 2; attempt++)
                 {
-                    _builtBKey = BModeKey; _builtCKey = CModeKey;
-                    _cache = new SignalCache(Path.Combine(_dir, $"cache_{BenzoCore.Sanitize(_symbol)}_{_tf}.jsonl"), BenzoCore.LogicVersion + "-" + BModeKey + "-" + CModeKey);
-                    _cache.Load();
-                    _resetUtc = BenzoCore.LoadResetMark(_resetPath);
-                    _engine = new BenzoEngine(_symbol, tick, _cache, CreateDetectors())
+                    string key = BenzoCore.CacheVersion(BlockUsOpen);
+                    if (_engine == null || _engine.Bars.Count > n - 1 || _builtKey != key)
                     {
-                        IsEnabled = Enabled,
-                        IsNewsBlocked = IsNewsBlocked,
-                        GetLevels = ReadLevels,
-                    };
-                    _hdOfBar.Clear(); _lvMemoIdx = -1; _lvMemo = null;
-                    _armed = false; _seen.Clear(); _openSent.Clear(); _closedSent.Clear();
-                }
-                _engine.TzOffset = TzOffset;
-
-                int closed = n - 2;                     // nến cuối đang chạy → chỉ xử lý tới Count−2
-                for (int i = _engine.Bars.Count; i <= closed; i++)
-                {
-                    if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b) { _engine.Bars.Add(PlaceholderBar(i)); _hdOfBar.Add(i); continue; }
-                    var t = b.VolumeAnalysisData?.Total;
-                    _engine.Bars.Add(new BarData
-                    {
-                        Idx = i, Time = b.TimeLeft, O = b.Open, H = b.High, L = b.Low, C = b.Close,
-                        Vol = t?.Volume ?? b.Volume, BuyVol = t?.BuyVolume ?? 0, SellVol = t?.SellVolume ?? 0, Delta = t?.Delta ?? 0,
-                    });
-                    _hdOfBar.Add(i);
-                }
-                if (_engine.Bars.Count >= 2)
-                {
-                    double bm = (_engine.Bars[_engine.Bars.Count - 1].Time - _engine.Bars[_engine.Bars.Count - 2].Time).TotalMinutes;
-                    _engine.BarMinutes = bm > 0 && bm <= 60 ? (int)Math.Round(bm) : 1;
-                }
-
-                var res = _engine.Advance(closed);
-                bool first = !_armed;
-                if (first)
-                {
-                    // lần quét đầu sau attach/reload: chỉ NẠP id, không bắn
-                    foreach (var s in _engine.Signals)
-                    {
-                        _seen.Add(s.Id);
-                        if (s.IsClosed) _closedSent.Add(s.Id); else _openSent.Add(s.Id);   // lệnh đang chạy vẫn được báo ĐÓNG
+                        _builtKey = key;
+                        DeleteLegacyCache();
+                        _cache = new SignalCache(Path.Combine(_dir, BenzoCore.CacheFileName(_symbol, _aggName, _minutes)), key);
+                        _cache.Load();
+                        _resetUtc = BenzoCore.LoadResetMark(_resetPath);
+                        _det = new DetectorCorven { BlockUsOpen = BlockUsOpen };
+                        _engine = new BenzoEngine(_symbol, tick, _cache, new ISetupDetector[] { _det })
+                        {
+                            IsEnabled = _ => EnableCorven,
+                            IsNewsBlocked = IsNewsBlocked,
+                            GetLevels = ReadLevels,
+                            BarMinutes = 1,
+                        };
+                        _hdOfBar.Clear(); _lvMemoIdx = -1; _lvMemo = null;
+                        _armed = false; _seen.Clear(); _openSent.Clear(); _closedSent.Clear();
                     }
-                    _armed = true;
-                    _teleStatus = $"nạp {_seen.Count} lệnh cũ (không báo) · sẵn sàng";
-                }
-                else EmitTele(res, closed);
+                    _engine.TzOffset = TzOffset;
+                    int closed = n - 2;                     // nến cuối đang chạy → chỉ xử lý tới Count−2
+                    for (int i = _engine.Bars.Count; i <= closed; i++)
+                    {
+                        if (hd[i, SeekOriginHistory.Begin] is not HistoryItemBar b) { _engine.Bars.Add(PlaceholderBar(i)); _hdOfBar.Add(i); continue; }
+                        var t = b.VolumeAnalysisData?.Total;
+                        _engine.Bars.Add(new BarData
+                        {
+                            Idx = i, Time = b.TimeLeft, O = b.Open, H = b.High, L = b.Low, C = b.Close,
+                            Vol = t?.Volume ?? b.Volume, BuyVol = t?.BuyVolume ?? 0, SellVol = t?.SellVolume ?? 0, Delta = t?.Delta ?? 0,
+                        });
+                        _hdOfBar.Add(i);
+                    }
 
-                if (first || res.Opened.Count > 0 || res.Closed.Count > 0)
-                {
-                    try { SignalCsv.Merge(_csvPath, _engine.Signals); } catch (Exception ex) { LogErr(ex, "csv"); }
+                    var res = _engine.Advance(closed);
+                    if (res.CacheInvalid)
+                    {   // plan 10.5: guard trượt ⇒ bỏ TOÀN BỘ cache, dò lại từ đầu (không vá từng dòng)
+                        LogErr(res.CacheWhy + " ⇒ bỏ toàn bộ cache, dò lại từ đầu", "cache-guard");
+                        _cache.Reset();
+                        _engine = null;
+                        continue;
+                    }
+                    bool first = !_armed;
+                    if (first)
+                    {   // lần quét đầu sau attach/reload: chỉ NẠP id, không bắn
+                        foreach (var s in _engine.Signals)
+                        {
+                            _seen.Add(s.Id);
+                            if (s.IsClosed) _closedSent.Add(s.Id); else _openSent.Add(s.Id);
+                        }
+                        _armed = true;
+                    }
+                    else
+                    {
+                        EmitTele(res, closed);
+                        LogCandidates(res, closed);
+                    }
+                    if (first || res.Opened.Count > 0 || res.Closed.Count > 0 || res.Cancelled.Count > 0)
+                    {
+                        try { SignalCsv.Merge(_csvPath, _engine.Signals, TzOffset, res.Cancelled); } catch (Exception ex) { LogErr(ex.ToString(), "csv"); }
+                    }
+                    break;
                 }
                 BuildRender();
                 _lastN = n;
             }
             CurrentChart?.RedrawBuffer();
+        }
+
+        /// <summary>CSV ứng viên bị loại — CHỈ nến vừa đóng, live (plan 10.4.2): mỗi CF qua ② một dòng, kèm cổng chặn.</summary>
+        private void LogCandidates(BenzoEngine.AdvanceResult res, int closed)
+        {
+            if (_det == null || _det.LastIdx != closed || _det.LastCandidates.Count == 0) return;
+            try
+            {
+                var taken = res.Opened.FirstOrDefault(s => s.BarIdx == closed);
+                bool news = IsNewsBlocked(_engine.Bars[closed].Time.AddMinutes(1));
+                foreach (var c in _det.LastCandidates)
+                {
+                    if (taken != null && c.InstKey == taken.InstKey) continue;
+                    string gate = _det.FirstGate(c, news) ?? "đang có lệnh";
+                    if (!EnableCorven) gate = "setup tắt";
+                    SignalCsv.AppendCandidate(_candPath, _engine.Bars[closed].Time, c.The, c.S, c.MocUsed, gate, c.SignsText);
+                }
+            }
+            catch (Exception ex) { LogErr(ex.ToString(), "candidates"); }
         }
 
         private BarData PlaceholderBar(int i)
@@ -481,7 +508,7 @@ namespace BenzoTraderNs
                         if (pl == null) return Array.Empty<LevelVol>();
                         var list = new List<LevelVol>(pl.Count);
                         foreach (var kv in pl) list.Add(new LevelVol(kv.Key, kv.Value.SellVolume, kv.Value.BuyVolume, kv.Value.Volume));
-                        list.Sort((x, y) => x.Price.CompareTo(y.Price));
+                        list.Sort((x, y) => x.Price.CompareTo(y.Price));    // giá tăng dần = thứ tự file Footprint Export (parity)
                         return list;
                     }
                     catch (InvalidOperationException) { }   // collection modified → thử lại
@@ -494,20 +521,32 @@ namespace BenzoTraderNs
         private void BuildRender()
         {
             if (_engine == null) return;
-            var en = new[] { EnableA, EnableB, EnableC, EnableD };
-            var shown = _engine.Signals.Where(x => Enabled(x.Setup)).ToList();   // setup tắt: không tính, không hiện
+            var shown = _engine.Signals.ToList();
             var st = BenzoCore.ComputeStats(shown, _resetUtc);
             var rs = new RenderState
             {
-                Sigs = _engine.Signals.Select(s => s.Clone()).ToList(),
-                Lines = BenzoCore.TableLines(st, en, shown, TzOffset, _engine.BarMinutes, _resetUtc),
+                Sigs = shown.Select(s => s.Clone()).ToList(),
+                Lines = BenzoCore.TableLines(st),
                 Digits = _digits,
                 Warn = TeleEnabled && !string.IsNullOrEmpty(_tele.LastError) ? "Telegram: " + _tele.LastError : null,
             };
-            var a5 = _engine.Detectors.OfType<DetectorA5>().FirstOrDefault();
+            if (!EnableCorven) rs.Lines.Insert(1, "(setup CORVEN đang TẮT — không phát tín hiệu mới)");
+            var m = _det?.M;
             int last = _engine.Processed - 1;
-            if (EnableA && a5 != null && last >= 0 && last < _engine.Bars.Count)   // luôn tính (rẻ); bật/tắt "Hiện vùng A đang canh" chỉ đổi phần vẽ
-                rs.Watch = a5.Watch(last, _engine.Bars[last], _engine.Open != null);
+            if (m != null && last >= 0 && last < _engine.Bars.Count)
+            {
+                double tk = _engine.Tick;
+                DateTime tl = _engine.Bars[last].Time.AddMinutes(1);
+                foreach (var r in m.LiveRanges())
+                {
+                    if (r.Start < 0 || r.Start >= _engine.Bars.Count) continue;
+                    int st0 = r.State == RangeState.Active ? 0 : r.State == RangeState.Pending ? 1 : 2;
+                    rs.Boxes.Add(new BoxV { T0 = _engine.Bars[r.Start].Time, T1 = tl, Top = r.Top * tk, Bot = r.Bottom * tk, State = st0 });
+                }
+                foreach (var (edge, dir, refBar, susp) in m.LiveB())
+                    if (refBar >= 0 && refBar < _engine.Bars.Count)
+                        rs.Mocs.Add(new MocV { T0 = _engine.Bars[refBar].Time, Price = edge * tk, Dir = dir, Suspended = susp });
+            }
             lock (_sync) _render = rs;
         }
 
@@ -517,37 +556,44 @@ namespace BenzoTraderNs
             if (!TeleEnabled || !_tele.Ready) return;
             try
             {
-                int bm = _engine.BarMinutes;
+                int bm = 1;
                 foreach (var s in res.Opened)
                 {
                     if (!_seen.Add(s.Id)) continue;
                     if (s.BarIdx != lastClosed) continue;                     // chỉ nến vừa đóng
                     double age = (DateTime.UtcNow - s.Time.AddMinutes(bm)).TotalSeconds;
-                    if (age > BenzoCore.TeleMaxAgeSec || age < -BenzoCore.TeleMaxAgeSec) { _teleStatus = $"BỎ {s.Id} — lệch đồng hồ {age:0}s"; continue; }
+                    if (age > BenzoCore.TeleMaxAgeSec || age < -BenzoCore.TeleMaxAgeSec) continue;
                     _openSent.Add(s.Id);
                     if (!TryClaim("open", s.Id)) continue;                    // chart/instance khác đã gửi
-                    string cap = BenzoCore.ComposeOpen(s, _symbol, TzOffset, bm, _digits);
-                    _teleStatus = $"MỞ {s.Id}";
-                    SendOpenAsync(cap);
+                    SendOpenAsync(BenzoCore.ComposeOpen(s, _symbol, TzOffset, bm, _digits));
                 }
                 foreach (var s in res.Closed)
                 {
                     if (!_openSent.Contains(s.Id) || !_closedSent.Add(s.Id)) continue;
                     if (!TryClaim("close", s.Id)) continue;
-                    string msg = BenzoCore.ComposeClose(s, TzOffset, bm);
-                    _teleStatus = $"ĐÓNG {s.Id}";
-                    var snapshot = CloneTele();
-                    Task.Run(async () =>
-                    {
-                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                        await snapshot.SendMessageAsync(msg, cts.Token).ConfigureAwait(false);
-                    });
+                    SendTextAsync(BenzoCore.ComposeClose(s, TzOffset, bm));
+                }
+                foreach (var s in res.Cancelled)
+                {
+                    if (!_openSent.Contains(s.Id) || !_closedSent.Add(s.Id)) continue;
+                    if (!TryClaim("cancel", s.Id)) continue;
+                    SendTextAsync(BenzoCore.ComposeCancel(s, TzOffset, bm));
                 }
             }
-            catch (Exception ex) { _teleStatus = "LỖI Telegram: " + ex.Message; LogErr(ex, "EmitTele"); }
+            catch (Exception ex) { LogErr(ex.ToString(), "EmitTele"); }
         }
 
         private TeleClient CloneTele() => new TeleClient { Token = _tele.Token, ChatId = _tele.ChatId, LogPath = _tele.LogPath };
+
+        private void SendTextAsync(string msg)
+        {
+            var snapshot = CloneTele();
+            Task.Run(async () =>
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                await snapshot.SendMessageAsync(msg, cts.Token).ConfigureAwait(false);
+            });
+        }
 
         /// <summary>Khoá tạo nguyên tử: nhiều chart/instance cùng symbol chỉ 1 cái gửi tin cho mỗi id.</summary>
         private bool TryClaim(string kind, string id)
@@ -597,51 +643,11 @@ namespace BenzoTraderNs
         {
             ConfigTele();
             if (!_tele.Ready) { BenzoLog.Write(_logPath ?? Path.Combine(Path.GetTempPath(), "benzo_tele_log.txt"), "gửi thử: thiếu bot token / chat id"); _tele.LastError = "thiếu bot token / chat id"; return; }
-            string cap = $"🔔 TEST — Benzo Trader ({Symbol?.Name ?? "?"}) bot chạy OK\n(mẫu: 🟢 BUY · A Phá hồi v5 · ... kèm ảnh chụp Optimus Flow)";
+            string cap = $"🔔 TEST — Benzo Trader CORVEN {BenzoCore.LogicVersion} ({Symbol?.Name ?? "?"}) bot chạy OK\n(mẫu: 🔴 SELL · CORVEN thế B · ... kèm ảnh chụp Optimus Flow)\n{CorvenParams.TeleWarn}";
             SendOpenAsync(cap);
         }
 
         // ---------------------------------------------------------------- vẽ
-        /// <summary>Vùng A v5 đang canh (≤ 3, chỉ trạng thái đã trang bị): dải vùng (S/R, HVN tuần) từ nến phá tới mép phải, đường E đứt nét,
-        /// vòng tròn ở cực trị, 1 nhãn tiếng Việt ở mép phải. Không tính toán — chỉ đổi toạ độ.</summary>
-        private void DrawA5Watch(Graphics gr, ChartConv conv, Rectangle clip, List<A5Watch> watch)
-        {
-            var up = Color.FromArgb(38, 190, 120); var dn = Color.FromArgb(235, 80, 80);
-            using var fLbl = new Font("Consolas", 8, FontStyle.Regular);
-            using var fLblB = new Font("Consolas", 8, FontStyle.Bold);
-            float lastLabelY = float.NegativeInfinity;
-            foreach (var w in watch)
-            {
-                float yE = (float)conv.GetChartY(w.E);
-                if (yE < clip.Top - 20 || yE > clip.Bottom + 20) continue;      // cull ngoài vùng vẽ
-                float x0 = Math.Max((float)conv.GetChartX(w.P0Time), clip.Left), x1 = clip.Right;
-                if (x0 >= x1) x0 = clip.Left;
-                Color dir = w.Side > 0 ? up : dn;
-                if (w.IsBand)
-                {
-                    float yA = (float)conv.GetChartY(w.Hi), yB = (float)conv.GetChartY(w.Lo);
-                    Color fill = w.IsVcl ? Color.FromArgb(150, 110, 220) : Color.FromArgb(230, 150, 60);
-                    using (var br = new SolidBrush(Color.FromArgb(40, fill)))
-                        gr.FillRectangle(br, x0, Math.Min(yA, yB), x1 - x0, Math.Max(1f, Math.Abs(yB - yA)));
-                }
-                using (var pe = new Pen(dir, 1.4f) { DashStyle = DashStyle.Dash }) gr.DrawLine(pe, x0, yE, x1, yE);
-                float xp = (float)conv.GetChartX(w.PkTime), yp = (float)conv.GetChartY(w.PkVal);
-                if (xp >= clip.Left && xp <= clip.Right && yp >= clip.Top && yp <= clip.Bottom)
-                    using (var pc = new Pen(dir, 1.4f)) gr.DrawEllipse(pc, xp - 4, yp - 4, 8, 8);
-                string t = w.Label;
-                bool inZone = w.Status == 4;
-                var f = inZone ? fLblB : fLbl;
-                Color tc = inZone ? Color.FromArgb(230, 200, 120) : (w.Side > 0 ? Color.FromArgb(120, 220, 150) : Color.FromArgb(255, 125, 125));
-                var sz = gr.MeasureString(t, f);
-                float ty = yE - sz.Height / 2;
-                if (Math.Abs(ty - lastLabelY) < 14) ty = lastLabelY + 14;       // nhãn chồng nhau: đẩy xuống 14 px
-                lastLabelY = ty;
-                float tx = clip.Right - sz.Width - 6;
-                using (var bg = new SolidBrush(Color.FromArgb(170, 14, 16, 22))) gr.FillRectangle(bg, tx - 2, ty - 1, sz.Width + 4, sz.Height + 1);
-                using (var bt = new SolidBrush(tc)) gr.DrawString(t, f, bt, tx, ty);
-            }
-        }
-
         public override void OnPaintChart(PaintChartEventArgs args)
         {
             base.OnPaintChart(args);
@@ -652,7 +658,7 @@ namespace BenzoTraderNs
             if (rs == null) return;
             var gr = args.Graphics; var conv = win.CoordinatesConverter; var clip = win.ClientRectangle;
             try
-            {   // kích thước cả vùng chart (mọi cửa sổ con: nến + volume + delta) để chụp đúng vùng chart
+            {   // kích thước cả vùng chart (mọi cửa sổ con) để chụp đúng vùng chart
                 int minL = int.MaxValue, minT = int.MaxValue, maxR = 0, maxB = 0;
                 foreach (var w in CurrentChart.Windows) { var rc = w.ClientRectangle; minL = Math.Min(minL, rc.Left); minT = Math.Min(minT, rc.Top); maxR = Math.Max(maxR, rc.Right); maxB = Math.Max(maxB, rc.Bottom); }
                 if (maxR > minL && maxB > minT) WinShot.NoteChart(gr, maxR - minL, maxB - minT);
@@ -663,8 +669,37 @@ namespace BenzoTraderNs
             {
                 gr.SmoothingMode = SmoothingMode.AntiAlias;
                 var up = Color.FromArgb(38, 190, 120); var dn = Color.FromArgb(235, 80, 80);
+                var act = Color.FromArgb(120, 200, 235); var brk = Color.FromArgb(150, 150, 150);
                 using var fLbl = new Font("Consolas", 8, FontStyle.Bold);
-                if (EnableA && ShowA5Watch && rs.Watch.Count > 0) DrawA5Watch(gr, conv, clip, rs.Watch);
+                // hộp range (cách vẽ RangeRenderer: ACTIVE/PENDING tô nhạt viền xanh lơ, BROKEN viền xám đứt)
+                if (ShowRange)
+                {
+                    foreach (var b in rs.Boxes)
+                    {
+                        float x0 = (float)conv.GetChartX(b.T0), x1 = Math.Min((float)conv.GetChartX(b.T1), clip.Right);
+                        if (x1 < clip.Left || x0 > clip.Right) continue;
+                        float y0 = (float)conv.GetChartY(b.Top), y1 = (float)conv.GetChartY(b.Bot);
+                        var rect = new RectangleF(Math.Max(x0, clip.Left), Math.Min(y0, y1), Math.Max(2f, x1 - Math.Max(x0, clip.Left)), Math.Max(1f, Math.Abs(y1 - y0)));
+                        if (b.State == 2)
+                        {
+                            using var pen = new Pen(Color.FromArgb(170, brk), 1f) { DashStyle = DashStyle.Dash };
+                            gr.DrawRectangle(pen, rect.X, rect.Y, rect.Width, rect.Height);
+                        }
+                        else
+                        {
+                            using (var fill = new SolidBrush(Color.FromArgb(b.State == 1 ? 18 : 28, act))) gr.FillRectangle(fill, rect);
+                            using var pen = new Pen(Color.FromArgb(200, act), 1f) { DashStyle = b.State == 1 ? DashStyle.Dot : DashStyle.Solid };
+                            gr.DrawRectangle(pen, rect.X, rect.Y, rect.Width, rect.Height);
+                        }
+                    }
+                    foreach (var mo in rs.Mocs)
+                    {   // thế B đang sống: đường đứt tại cạnh vừa phá (mốc)
+                        float x0 = Math.Max((float)conv.GetChartX(mo.T0), clip.Left), y = (float)conv.GetChartY(mo.Price);
+                        if (y < clip.Top || y > clip.Bottom || x0 >= clip.Right) continue;
+                        using var pe = new Pen(Color.FromArgb(mo.Suspended ? 90 : 200, mo.Dir > 0 ? up : dn), 1.4f) { DashStyle = DashStyle.Dash };
+                        gr.DrawLine(pe, x0, y, clip.Right, y);
+                    }
+                }
                 foreach (var s in rs.Sigs)
                 {
                     bool open = !s.IsClosed;
@@ -678,34 +713,29 @@ namespace BenzoTraderNs
                     Color dir = s.Side > 0 ? up : dn;
                     int a = open ? 255 : 150;
                     float xb = Math.Max(xE, clip.Left);
-                    // vùng tô nền: xanh = từ giá vào tới TP, đỏ = từ giá vào tới SL (đậm hơn ở phía đã xảy ra khi lệnh đóng)
-                    int aTp = open ? 55 : (s.Outcome == "TP" ? 95 : 28);
-                    int aSl = open ? 55 : (s.Outcome == "SL" ? 95 : 28);
+                    int aTp = open ? 55 : (s.R > 0 ? 95 : 28);
+                    int aSl = open ? 55 : (s.R > 0 ? 28 : 95);
                     float wBox = xEnd - xb;
                     if (wBox > 0)
                     {
-                        using (var bTp = new SolidBrush(Color.FromArgb(aTp, up)))
-                            gr.FillRectangle(bTp, xb, Math.Min(yE, yTp), wBox, Math.Max(1f, Math.Abs(yTp - yE)));
-                        using (var bSl = new SolidBrush(Color.FromArgb(aSl, dn)))
-                            gr.FillRectangle(bSl, xb, Math.Min(yE, ySl), wBox, Math.Max(1f, Math.Abs(ySl - yE)));
+                        using (var bTp = new SolidBrush(Color.FromArgb(aTp, up))) gr.FillRectangle(bTp, xb, Math.Min(yE, yTp), wBox, Math.Max(1f, Math.Abs(yTp - yE)));
+                        using (var bSl = new SolidBrush(Color.FromArgb(aSl, dn))) gr.FillRectangle(bSl, xb, Math.Min(yE, ySl), wBox, Math.Max(1f, Math.Abs(ySl - yE)));
                     }
                     using (var pTp = new Pen(Color.FromArgb(a, up), 1.6f)) gr.DrawLine(pTp, xb, yTp, xEnd, yTp);
                     using (var pSl = new Pen(Color.FromArgb(a, dn), 1.6f)) gr.DrawLine(pSl, xb, ySl, xEnd, ySl);
-                    using (var pE = new Pen(Color.FromArgb(Math.Min(255, a), dir), 1.2f) { DashStyle = DashStyle.Dash }) gr.DrawLine(pE, xb, yE, xEnd, yE);
-                    // mũi tên tại nến vào (BUY chỉ lên bên dưới giá vào, SELL chỉ xuống bên trên)
+                    using (var pE = new Pen(Color.FromArgb(a, dir), 1.2f) { DashStyle = DashStyle.Dash }) gr.DrawLine(pE, xb, yE, xEnd, yE);
                     float sz = 6f;
                     var tri = s.Side > 0
                         ? new[] { new PointF(xE, yE + sz + 4), new PointF(xE - sz, yE + sz * 2 + 4), new PointF(xE + sz, yE + sz * 2 + 4) }
                         : new[] { new PointF(xE, yE - sz - 4), new PointF(xE - sz, yE - sz * 2 - 4), new PointF(xE + sz, yE - sz * 2 - 4) };
                     using (var br = new SolidBrush(Color.FromArgb(a, dir))) gr.FillPolygon(br, tri);
-                    string lbl = s.Setup + " " + BenzoCore.SetupName(s.Setup) + (s.Setup == 'B' && !string.IsNullOrEmpty(s.Zone) ? " · " + BenzoZoneNames.Label(s.Zone) : "")
-                               + (s.Setup == 'A' && !string.IsNullOrEmpty(s.Zone) ? " · " + A5Text.ZoneVn(s.Zone) : "")
-                               + (s.IsClosed ? (s.Outcome == "TP" ? " ✓" : " ✗") : "");
+                    if (!ShowSigns) continue;
+                    string lbl = (string.IsNullOrEmpty(s.Short) ? $"{s.Setup} {(s.Side > 0 ? "buy" : "sell")}" : s.Short)
+                               + (s.IsClosed ? (s.R > 0 ? " ✓" : " ✗") : "");
                     float ly = s.Side > 0 ? yE + sz * 2 + 8 : yE - sz * 2 - 22;
                     var szLbl = gr.MeasureString(lbl, fLbl);
-                    using (var bgLbl = new SolidBrush(Color.FromArgb(open ? 215 : 150, dir)))
-                        gr.FillRectangle(bgLbl, xE + 6, ly - 1, szLbl.Width + 4, szLbl.Height + 1);
-                    using (var br = new SolidBrush(Color.FromArgb(255, 255, 255, 255))) gr.DrawString(lbl, fLbl, br, xE + 8, ly);
+                    using (var bgLbl = new SolidBrush(Color.FromArgb(open ? 215 : 150, dir))) gr.FillRectangle(bgLbl, xE + 6, ly - 1, szLbl.Width + 4, szLbl.Height + 1);
+                    using (var br = new SolidBrush(Color.White)) gr.DrawString(lbl, fLbl, br, xE + 8, ly);
                 }
 
                 if (ShowTable)
@@ -714,34 +744,22 @@ namespace BenzoTraderNs
                     var lines = new List<string>(rs.Lines);
                     if (!string.IsNullOrEmpty(rs.Warn)) lines.Add("⚠ " + rs.Warn);
                     float lh = fTab.GetHeight(gr) + 1;
-                    int rows = Math.Max(5, (int)((clip.Height - 16) / lh));          // số dòng vừa chiều cao chart
-                    int ncol = (lines.Count + rows - 1) / rows;
-                    int per = ncol > 1 ? rows : lines.Count;
-                    float x0 = clip.Left + 6, y0 = clip.Bottom - lh * per - 8;      // góc dưới bên trái
-                    for (int c = 0; c < ncol; c++)
+                    float w = 0;
+                    foreach (var ln in lines) w = Math.Max(w, gr.MeasureString(ln, fTab).Width);
+                    float x0 = clip.Left + 6, y0 = clip.Bottom - lh * lines.Count - 8;      // góc dưới bên trái
+                    using (var bg = new SolidBrush(Color.FromArgb(170, 14, 16, 22))) gr.FillRectangle(bg, x0 - 3, y0 - 2, w + 8, lh * lines.Count + 4);
+                    for (int i = 0; i < lines.Count; i++)
                     {
-                        int from = c * per, cnt = Math.Min(per, lines.Count - from);
-                        float w = 0;
-                        for (int i = 0; i < cnt; i++) w = Math.Max(w, gr.MeasureString(lines[from + i], fTab).Width);
-                        using (var bg = new SolidBrush(Color.FromArgb(170, 14, 16, 22)))
-                            gr.FillRectangle(bg, x0 - 3, y0 - 2, w + 8, lh * cnt + 4);
-                        for (int i = 0; i < cnt; i++)
-                        {
-                            string ln = lines[from + i];
-                            Color col = ln.StartsWith("BENZO") ? Color.White
-                                      : ln.StartsWith("⚠") ? Color.FromArgb(255, 150, 120)
-                                      : ln.Contains("  TP  ") ? Color.FromArgb(120, 220, 150)
-                                      : ln.Contains("  SL  ") ? Color.FromArgb(255, 125, 125)
-                                      : ln.StartsWith("    ") ? Color.FromArgb(230, 200, 120)
-                                      : Color.FromArgb(200, 205, 215);
-                            using var br = new SolidBrush(col);
-                            gr.DrawString(ln, fTab, br, x0, y0 + i * lh);
-                        }
-                        x0 += w + 14;
+                        string ln = lines[i];
+                        Color col = ln.StartsWith("BENZO") ? Color.White
+                                  : ln.StartsWith("Backtest") || ln.StartsWith("⚠") ? Color.FromArgb(255, 170, 120)
+                                  : Color.FromArgb(200, 205, 215);
+                        using var br = new SolidBrush(col);
+                        gr.DrawString(ln, fTab, br, x0, y0 + i * lh);
                     }
                 }
             }
-            catch (Exception ex) { LogErr(ex, "OnPaintChart"); }
+            catch (Exception ex) { LogErr(ex.ToString(), "OnPaintChart"); }
             finally { gr.SetClip(prevClip); }
         }
     }

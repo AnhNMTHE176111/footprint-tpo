@@ -443,3 +443,10 @@ Người học duyệt "triển khai luôn" sau khi Opus đo nhánh vùng stacke
 Đo TRAIN: 374 lệnh −0,023R → 266 lệnh (Fail Break 37, Break 229) +0,016R, hai nửa −0,018 / +0,048, vào ngẫu nhiên sau CF −0,013R ⇒ hơn nhưng chưa đủ chắc; hậu kiểm. `LogicVersion = "corven-5"`.
 Kiểm: C# 172/172 (thêm V5-2 ca thật 36957, test luật 1 trong C8, 2 ca thật 06/11 + 09/11), pytest 114, parity TRAIN 266/266, Gd4 90/90 (mất 9 kiểm vì không còn lệnh mốc stacked làm mẫu caption).
 Số liệu + bảng quét: `research/report/VARIANTS-NGUOI-HOC-2026-11-09.md`.
+
+## 16. corven-6 (2026-11-09) — người học yêu cầu, Opus đo, Sonnet implement
+
+Người học yêu cầu trực tiếp: (1) SL Break mốc cạnh = cạnh vừa phá ∓ 3 tick; (2) trần SL theo giá (mặc định 5,0, chỉnh được); (3) Settings gọn: Hiện range · Hiện bảng thống kê · Bật Fail Break · Bật Break · SL tối đa (giá); bỏ công tắc tổng, chặn giờ (luôn bật), hiện dấu hiệu (luôn hiện), đặt lại thống kê.
+Opus đo TRAIN: +0,02R → −0,07R/lệnh (232 lệnh; hai nửa +0,025 / −0,177; vào ngẫu nhiên −0,094R). Đã báo người học; triển khai theo yêu cầu vì là luật quản lý rủi ro của người giao dịch. Số liệu + bảng: `research/report/VARIANTS-NGUOI-HOC-2026-11-09.md`.
+Cài đặt: Python `sl_b_canh_3tick`, `sl_cap_gia` (cổng `tran_sl`), `bat_fail_break`, `bat_break`; C# `CorvenParams.SlBCanh3Tick/SlMaxGia`, `CorvenCfg.BatFailBreak/BatBreak`; khoá cache `corven-6-sl<X>-f<0|1>-b<0|1>`; bỏ mốc đặt lại thống kê. `LogicVersion = "corven-6"`.
+Kiểm: C# 179/179 (V6-1…3 + ca thật 06/11), pytest 114, parity TRAIN 232/232, Gd4 90/90 (Settings đúng 5 mục mới), build + deploy.

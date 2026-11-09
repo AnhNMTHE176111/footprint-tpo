@@ -1,4 +1,4 @@
-// GĐ4 — tester độc lập cho Benzo CORVEN (cập nhật corven-5 2026-11-09) (plan BENZO-CORVEN mục 4 + 10.6). KHÔNG sửa mã sản phẩm.
+// GĐ4 — tester độc lập cho Benzo CORVEN (cập nhật corven-6 2026-11-09) (plan BENZO-CORVEN mục 4 + 10.6). KHÔNG sửa mã sản phẩm.
 // Nạp dist/BenzoTrader.dll đã build. Chạy:  dotnet run --project benzo-trader/tools/TesterGd4/Gd4 -c Release -- <reflect|ui|caption|cache|all>
 // CHỈ dùng phần TRAIN của file 90d (bar_idx ≤ 51318) — không nạp TEST.
 using System;
@@ -75,13 +75,11 @@ static class Program
             ("Telegram: bot token", "String", ""),
             ("Telegram: chat id", "String", ""),
             ("Telegram: gửi thử (bật lên để gửi)", "Boolean", false),
-            ("Bật setup CORVEN (chạy thử — backtest +0,02R/lệnh, chưa đủ chắc)", "Boolean", true),
-            ("Chặn 19:20–20:30 VN (mốc neo Mỹ)", "Boolean", true),
             ("Hiện range", "Boolean", true),
-            ("Hiện dấu hiệu đã đếm", "Boolean", true),
-            ("Đặt lại thống kê (bật lên để đặt)", "Boolean", false),
-            ("Hiện lại toàn bộ thống kê (bật lên để xoá mốc đặt lại)", "Boolean", false),
-            ("Hiện bảng", "Boolean", true),
+            ("Hiện bảng thống kê", "Boolean", true),
+            ("Bật Fail Break", "Boolean", true),
+            ("Bật Break", "Boolean", true),
+            ("SL tối đa (giá)", "Double", 5.0),
         };
         Check(props.Count == expect.Length, $"đúng {expect.Length} mục Settings (plan 10.2)", props.Count.ToString());
         for (int i = 0; i < Math.Min(props.Count, expect.Length); i++)
@@ -91,22 +89,27 @@ static class Program
             bool okDef = inst == null || Equals(p.GetValue(inst), expect[i].def);
             Check(okName && okType && okDef, $"Settings #{i + 1}: {expect[i].name} = {FormatVal(expect[i].def)}", $"thấy: {name} / {p.PropertyType.Name} / {(inst == null ? "?" : FormatVal(p.GetValue(inst)))}");
         }
-        var numeric = props.Where(x => x.p.PropertyType != typeof(bool) && x.p.PropertyType != typeof(string) && x.name != "Lệch giờ (UTC → VN)").ToList();
-        Check(numeric.Count == 0, "không có ngưỡng số nào trong Settings (ngoài Lệch giờ)", string.Join(", ", numeric.Select(x => x.name)));
+        var numeric = props.Where(x => x.p.PropertyType != typeof(bool) && x.p.PropertyType != typeof(string) && x.name != "Lệch giờ (UTC → VN)" && x.name != "SL tối đa (giá)").ToList();
+        Check(numeric.Count == 0, "không có ngưỡng số nào trong Settings (ngoài Lệch giờ và SL tối đa)", string.Join(", ", numeric.Select(x => x.name)));
+        var old = new[] { "Bật setup CORVEN", "Chặn 19:20", "Hiện dấu hiệu", "Đặt lại thống kê", "Hiện lại toàn bộ thống kê" };
+        Check(!props.Any(x => old.Any(o => x.name.StartsWith(o))), "các mục cũ (công tắc tổng, chặn giờ, hiện dấu hiệu, đặt lại / hiện lại thống kê) không còn");
+        var slp = props.First(x => x.name == "SL tối đa (giá)");
+        var args = slp.p.GetCustomAttributesData().First(x => x.AttributeType.Name == "InputParameterAttribute").ConstructorArguments.Select(x => x.Value).ToArray();
+        Check(args.Length >= 6 && Convert.ToDouble(args[2]) == 0.5 && Convert.ToDouble(args[4]) == 0.1, "SL tối đa (giá): tối thiểu 0,5 · bước 0,1", string.Join(",", args));
         // tham số đóng cứng = bộ gốc vòng 1 (plan 10.1)
         var cp = typeof(CorvenParams);
         object V(string f) => cp.GetField(f).GetRawConstantValue();
         var want = new Dictionary<string, object>
         {
-            ["LogicVersion"] = "corven-5", ["NearMbr"] = 1.0, ["WinB"] = 3, ["WinAMax"] = 5, ["CfAfterFb"] = 2, ["AgeB"] = 30, ["SiRatio"] = 250.0,
+            ["LogicVersion"] = "corven-6", ["NearMbr"] = 1.0, ["WinB"] = 3, ["WinAMax"] = 5, ["CfAfterFb"] = 2, ["AgeB"] = 30, ["SiRatio"] = 250.0,
             ["SiRun"] = 3, ["SiMinVol"] = 1.0, ["BFromExhausted"] = true, ["SameSession"] = true, ["DeltaMult"] = 2.0, ["BubbleMult"] = 3.0,
             ["BubbleMin"] = 10.0, ["DivMinLen"] = 2, ["DivMaxLen"] = 8, ["NeedSigns"] = 2, ["CfBody"] = 0.4, ["CfCloseExt"] = 0.3, ["CfMinRngMbr"] = 0.5,
             ["CfMinDelta"] = 0.5, ["SlBufTicks"] = 3.0, ["SlBufMbr"] = 0.2, ["SlFloorMbr"] = 1.0, ["SlCapMbr"] = 4.0, ["RMin"] = 1.7, ["TpR"] = 2.0,
             ["DeadLook"] = 300, ["BlockFirstBars"] = 15, ["VetoWindow"] = 5, ["StopRunK"] = 3, ["OverlapBars"] = 30, ["OverlapFrac"] = 0.5,
-            ["HoiKhongCham"] = true, ["BoQuetStop"] = true, ["BBoRMin"] = true, ["TrapHoi"] = true, ["SlBCanhSat"] = true, ["HoiTrongNNen"] = true, ["HoiMaxNen"] = 5, ["BBoMocStacked"] = true, ["GanRangeGanNhat"] = true,
+            ["HoiKhongCham"] = true, ["BoQuetStop"] = true, ["BBoRMin"] = true, ["TrapHoi"] = true, ["SlBCanhSat"] = true, ["HoiTrongNNen"] = true, ["HoiMaxNen"] = 5, ["BBoMocStacked"] = true, ["GanRangeGanNhat"] = true, ["SlBCanh3Tick"] = true, ["SlMaxGia"] = 5.0,
         };
         var bad = want.Where(kv => !Equals(V(kv.Key), kv.Value)).Select(kv => $"{kv.Key}={V(kv.Key)}≠{kv.Value}").ToList();
-        Check(bad.Count == 0, $"CorvenParams trong DLL = bộ gốc vòng 1 + 8 cờ corven-2/3/4/5 ({want.Count} hằng)", string.Join("; ", bad));
+        Check(bad.Count == 0, $"CorvenParams trong DLL = bộ gốc vòng 1 + 10 cờ corven-2/3/4/5/6 ({want.Count} hằng)", string.Join("; ", bad));
         var extra = cp.GetFields().Where(f => f.IsLiteral && !want.ContainsKey(f.Name)).Select(f => $"{f.Name}={f.GetRawConstantValue()}");
         Console.WriteLine("  hằng khác trong CorvenParams: " + string.Join(" · ", extra));
         Check(!cp.GetFields().Any(f => f.Name.StartsWith("A2") || f.Name.Contains("Pivot") || f.Name.Contains("OverlapMaxDrop") || f.Name.Contains("ExcMaxAge")),
@@ -136,7 +139,7 @@ static class Program
             Check(lines[1].StartsWith("Mốc: "), "dòng 2: Mốc");
             Check(lines[2].StartsWith($"Dấu hiệu ({s.NSigns}): ") && s.NSigns >= 2 && lines[2].Split(" · ").Length == s.NSigns, "dòng 3: Dấu hiệu (N) liệt kê đủ N dấu hiệu, có số", lines[2]);
             Check(lines[3].StartsWith("CF ") && lines[3].Contains(" · Vào ") && lines[3].Contains(" · SL ") && lines[3].Contains(" · TP ") && lines[3].Contains("(2R, R sẵn "), "dòng 4: CF · Vào · SL · TP (2R, R sẵn)");
-            Check(lines[4] == "⚠ Chưa có lợi thế đo được (+0,02R/lệnh, 35 phiên)", "dòng 5 = nhãn ⚠ đúng chữ plan 10.3");
+            Check(lines[4] == "⚠ Chưa có lợi thế đo được (−0,07R/lệnh, 35 phiên)", "dòng 5 = nhãn ⚠ đúng chữ plan 10.3");
             Check(cap.Length <= 1024, "≤ 1024 ký tự (giới hạn caption ảnh)", cap.Length.ToString());
             // dòng 4: giờ CF hiển thị = giờ MỞ nến theo VN (plan 12.1 #6: = time_vn CSV = nhãn nến Quantower) — kiểm khớp dòng 1
             string tVn = s.Time.AddHours(7).ToString("HH:mm");
@@ -166,26 +169,26 @@ static class Program
         Console.WriteLine("  thư mục: " + dir);
         Check(BenzoCore.CacheFileName("GCZ26", "Time", 1) == "cache_GCZ26_Time_1m.jsonl", "tên cache gồm khung: cache_GCZ26_Time_1m.jsonl");
         Check(BenzoCore.CacheFileName("GCZ26", "Time", 1) != BenzoCore.CacheFileName("GCZ26", "Time", 5), "M1 và M5 ra 2 file khác nhau");
-        Check(BenzoCore.SignalsCsvName("MGCZ6", 1) == "signals_MGCZ6_1m_corven-5.csv" && BenzoCore.CandidatesCsvName("MGCZ6", 1) == "candidates_MGCZ6_1m_corven-5.csv", "2 CSV có khung + phiên bản");
+        Check(BenzoCore.SignalsCsvName("MGCZ6", 1) == "signals_MGCZ6_1m_corven-6.csv" && BenzoCore.CandidatesCsvName("MGCZ6", 1) == "candidates_MGCZ6_1m_corven-6.csv", "2 CSV có khung + phiên bản");
         Check(BenzoCore.CacheFileName("GC/Z26:XCEC", "Time", 1).IndexOfAny(Path.GetInvalidFileNameChars()) < 0, "mã có ký tự lạ (/ :) được làm sạch");
-        Check(BenzoCore.CacheVersion(true) == "corven-5-us1" && BenzoCore.CacheVersion(false) == "corven-5-us0", "khoá cache = corven-5-us{0|1}");
+        Check(BenzoCore.CacheVersion() == "corven-6-sl5.0-f1-b1" && BenzoCore.CacheVersion(3.0, true, true) == "corven-6-sl3.0-f1-b1" && BenzoCore.CacheVersion(5.0, false, true) == "corven-6-sl5.0-f0-b1" && BenzoCore.CacheVersion(5.0, true, false) == "corven-6-sl5.0-f1-b0", "khoá cache = corven-6-sl{SL tối đa}-f{Fail Break}-b{Break}");
 
         var (tb, tl) = Train();
         int n = 24000;
         var b = tb.Take(n).ToList(); var l = tl.Take(n).ToArray();
         string cp = Path.Combine(dir, BenzoCore.CacheFileName("GCZ26", "Time", 1));
         var (e0, _) = CorvenData.Run(b, l, 0.1, Deny);                                          // không cache = chuẩn
-        var c1 = new SignalCache(cp, BenzoCore.CacheVersion(true)); c1.Load();
+        var c1 = new SignalCache(cp, BenzoCore.CacheVersion()); c1.Load();
         var (e1, _) = CorvenData.Run(b, l, 0.1, Deny, cache: c1);
         Check(Sig(e0).SequenceEqual(Sig(e1)), "chạy có cache (lần đầu, ghi) = không cache", $"{e0.Signals.Count}/{e1.Signals.Count}");
-        var c2 = new SignalCache(cp, BenzoCore.CacheVersion(true)); c2.Load();
+        var c2 = new SignalCache(cp, BenzoCore.CacheVersion()); c2.Load();
         Check(c2.Count == e1.Signals.Count(x => true) || c2.Count >= e1.Signals.Count, "nạp lại cache: đủ tín hiệu niêm phong", $"{c2.Count}/{e1.Signals.Count}");
         var (e2, _) = CorvenData.Run(b, l, 0.1, Deny, cache: c2);
         Check(Sig(e0).SequenceEqual(Sig(e2)), "chạy lại từ cache (reload) = chuẩn, kể cả kết cục tính lại", $"{e2.Signals.Count}");
         // (i) History range ngắn hơn: bắt đầu từ nến 9000
         int from = 9000;
         var b3 = b.Skip(from).Select((x, i) => new BarData { Idx = i, Time = x.Time, O = x.O, H = x.H, L = x.L, C = x.C, Delta = x.Delta, Vol = x.Vol }).ToList();
-        var c3 = new SignalCache(cp, BenzoCore.CacheVersion(true)); c3.Load();
+        var c3 = new SignalCache(cp, BenzoCore.CacheVersion()); c3.Load();
         var (e3, _) = CorvenData.Run(b3, l.Skip(from).ToArray(), 0.1, 0, cache: c3);
         var full = e0.Signals.Select(x => (x.Time, x.Side, x.Entry, x.Sl, x.Tp)).ToHashSet();
         var strange = e3.Signals.Where(x => !full.Contains((x.Time, x.Side, x.Entry, x.Sl, x.Tp))).ToList();
@@ -196,7 +199,7 @@ static class Program
         Console.WriteLine($"  lịch sử ngắn: chuẩn {expected.Count} lệnh trong khoảng, lấy lại {got.Count}, thiếu {missing} (thiếu được phép khi 1 lệnh mở lâu chặn nến niêm phong sau — chỉ cấm tín hiệu LẠ)");
         // (ii) cache của khung KHÁC (giả lập: file cache M1 của một lịch sử khác — dịch giá 1 tick) ⇒ guard phải bắt
         var bShift = b.Select(x => new BarData { Idx = x.Idx, Time = x.Time, O = x.O + 0.1, H = x.H + 0.1, L = x.L + 0.1, C = x.C + 0.1, Delta = x.Delta, Vol = x.Vol }).ToList();
-        var c4 = new SignalCache(cp, BenzoCore.CacheVersion(true)); c4.Load();
+        var c4 = new SignalCache(cp, BenzoCore.CacheVersion()); c4.Load();
         var det4 = new DetectorCorven { AllowBar = i => i >= Deny };
         var eng4 = new BenzoEngine("GCZ26", 0.1, c4, new ISetupDetector[] { det4 }) { GetLevels = i => l[i] };
         eng4.Bars.AddRange(bShift);
@@ -205,14 +208,14 @@ static class Program
         // (iii) sửa tay L của một dòng ⇒ bỏ cache
         foreach (var field in new[] { "CfL", "CfH", "Entry" })
         {
-            var cA = new SignalCache(cp, BenzoCore.CacheVersion(true)); cA.Load();
+            var cA = new SignalCache(cp, BenzoCore.CacheVersion()); cA.Load();
             CorvenData.Run(b, l, 0.1, Deny, cache: cA);   // đảm bảo file đủ
             var lines = File.ReadAllLines(cp).ToList();
             int idx = lines.FindLastIndex(x => x.Contains("\"K\":\"sig\""));
             var node = JsonNode.Parse(lines[idx]);
             node["S"][field] = node["S"][field].GetValue<double>() + (field == "Entry" ? 0.1 : 0.2);
             lines[idx] = node.ToJsonString(); File.WriteAllLines(cp, lines);
-            var cB = new SignalCache(cp, BenzoCore.CacheVersion(true)); cB.Load();
+            var cB = new SignalCache(cp, BenzoCore.CacheVersion()); cB.Load();
             var eng = new BenzoEngine("GCZ26", 0.1, cB, new ISetupDetector[] { new DetectorCorven { AllowBar = i => i >= Deny } }) { GetLevels = i => l[i] };
             eng.Bars.AddRange(b);
             var rr = eng.Advance(b.Count - 1);
@@ -220,26 +223,27 @@ static class Program
             cB.Reset();
             Check(!File.Exists(cp), "Reset xoá file cache");
         }
-        // (iv) đổi công tắc chặn giờ Mỹ ⇒ khoá khác ⇒ cache cũ bỏ
+        // (iv) đổi SL tối đa (giá) ⇒ khoá khác ⇒ cache cũ bỏ
         {
-            var cA = new SignalCache(cp, BenzoCore.CacheVersion(true)); cA.Load();
+            var cA = new SignalCache(cp, BenzoCore.CacheVersion()); cA.Load();
             CorvenData.Run(b, l, 0.1, Deny, cache: cA);
-            var cB = new SignalCache(cp, BenzoCore.CacheVersion(false)); cB.Load();
-            Check(cB.Count == 0 && !cB.Covers(b[5000].Time.Ticks), "đổi 'Chặn 19:20–20:30' ⇒ khoá cache khác ⇒ bỏ cache cũ");
-            var (eOff, _) = CorvenData.Run(b, l, 0.1, Deny, blockUs: false, cache: cB);
-            var (eOff0, _) = CorvenData.Run(b, l, 0.1, Deny, blockUs: false);
-            Check(Sig(eOff).SequenceEqual(Sig(eOff0)), "sau khi đổi khoá: kết quả = chạy mới với công tắc tắt");
+            var cB = new SignalCache(cp, BenzoCore.CacheVersion(3.0)); cB.Load();
+            Check(cB.Count == 0 && !cB.Covers(b[5000].Time.Ticks), "đổi 'SL tối đa (giá)' 5,0 → 3,0 ⇒ khoá cache khác ⇒ bỏ cache cũ");
+            var cfg3 = new CorvenCfg { SlMaxGia = 3.0 };
+            var (eOff, _) = CorvenData.Run(b, l, 0.1, Deny, cache: cB, cfg: cfg3);
+            var (eOff0, _) = CorvenData.Run(b, l, 0.1, Deny, cfg: cfg3);
+            Check(Sig(eOff).SequenceEqual(Sig(eOff0)), "sau khi đổi khoá: kết quả = chạy mới với SL tối đa 3,0");
         }
-        // (v) TẮT setup rồi BẬT lại (Settings "Bật setup CORVEN" KHÔNG nằm trong khoá cache) — nến chạy lúc tắt có bị niêm phong "không tín hiệu"?
+        // (v) TẮT setup rồi BẬT lại (cờ IsEnabled của engine KHÔNG nằm trong khoá cache) — nến chạy lúc tắt có bị niêm phong "không tín hiệu"?
         {
             File.Delete(cp);
             int mid = 15000;
-            var cA = new SignalCache(cp, BenzoCore.CacheVersion(true)); cA.Load();
+            var cA = new SignalCache(cp, BenzoCore.CacheVersion()); cA.Load();
             var detA = new DetectorCorven { AllowBar = i => i >= Deny };
             var engA = new BenzoEngine("GCZ26", 0.1, cA, new ISetupDetector[] { detA }) { GetLevels = i => l[i], IsEnabled = _ => false };
             engA.Bars.AddRange(b.Take(mid));
             for (int i = 0; i < mid; i++) engA.Advance(i);           // người dùng để TẮT tới nến mid
-            var cB = new SignalCache(cp, BenzoCore.CacheVersion(true)); cB.Load();   // bật lại ⇒ indicator dựng lại, nạp cache
+            var cB = new SignalCache(cp, BenzoCore.CacheVersion()); cB.Load();   // bật lại ⇒ indicator dựng lại, nạp cache
             var (eOn, _) = CorvenData.Run(b, l, 0.1, Deny, cache: cB);
             int lostBefore = e0.Signals.Count(x => x.BarIdx < mid) - eOn.Signals.Count(x => x.BarIdx < mid);
             Console.WriteLine($"  tắt setup tới nến {mid} rồi bật: chuẩn {e0.Signals.Count(x => x.BarIdx < mid)} lệnh trước nến {mid}, sau khi bật hiện {eOn.Signals.Count(x => x.BarIdx < mid)}");
@@ -252,7 +256,7 @@ static class Program
             eng8.Bars.AddRange(b);
             for (int i = 0; i < b.Count; i++) eng8.Advance(i);
             int diff = e0.Signals.Select(x => x.Id).Except(eng8.Signals.Select(x => x.Id)).Count() + eng8.Signals.Select(x => x.Id).Except(e0.Signals.Select(x => x.Id)).Count();
-            Console.WriteLine($"  Lệch giờ 7 → 8: {diff} lệnh khác nhau (trên {e0.Signals.Count}); khoá cache = {BenzoCore.CacheVersion(true)} cho cả hai");
+            Console.WriteLine($"  Lệch giờ 7 → 8: {diff} lệnh khác nhau (trên {e0.Signals.Count}); khoá cache = {BenzoCore.CacheVersion()} cho cả hai");
             Check(diff == 0, "đổi 'Lệch giờ' không đổi tín hiệu (nếu đổi thì phải nằm trong khoá cache)", $"{diff} lệnh khác");
         }
         try { Directory.Delete(Path.GetDirectoryName(dir), true); } catch { }
@@ -410,19 +414,19 @@ static class Program
             var lines = (List<string>)rs.GetType().GetField("Lines").GetValue(rs);
             foreach (var ln in lines) Console.WriteLine("  | " + ln);
             Check(lines.Count == 4, "bảng 4 dòng", lines.Count.ToString());
-            Check(lines[0].StartsWith("BENZO CORVEN corven-5 · ") && lines[0].Contains(" lệnh · WR ") && lines[1].StartsWith("Fail Break · ") && lines[2].StartsWith("Break · "), "dòng 1–3 đúng mẫu");
-            Check(lines[3] == "Backtest 35 phiên: +0,02R/lệnh, hơn vào ngẫu nhiên (−0,01R) chưa đủ chắc · chạy thử, không phải khuyến nghị", "dòng 4 = nhãn trung thực đúng chữ");
+            Check(lines[0].StartsWith("BENZO CORVEN corven-6 · ") && lines[0].Contains(" lệnh · WR ") && lines[1].StartsWith("Fail Break · ") && lines[2].StartsWith("Break · "), "dòng 1–3 đúng mẫu");
+            Check(lines[3] == "Backtest 35 phiên: −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,09R) · chạy thử, không phải khuyến nghị", "dòng 4 = nhãn trung thực đúng chữ");
             // dòng 4 thật sự hiện trên ảnh: có pixel màu cam (255,170,120) ở vùng đáy trái
             int orange = 0;
             for (int y = conv.Rc.Bottom - 40; y < conv.Rc.Bottom; y++) for (int x = 0; x < 700; x++) if (ColNear(bmp.GetPixel(x, y), Color.FromArgb(255, 170, 120), 90)) orange++;
             Check(orange > 50, "dòng 4 (chữ cam) có trên ảnh", orange.ToString());
         }
-        // ca 4: setup TẮT + cảnh báo Telegram + ẩn range/dấu hiệu
+        // ca 4: cảnh báo Telegram + ẩn range
         {
             int upto = 29000;
             Render("corven-setup-tat-canh-bao.png", tb, tl, upto, upto - 110, 10, tweak: (ind, eng) =>
             {
-                ind.EnableCorven = false; ind.ShowSigns = false; ind.ShowRange = false; ind.TeleEnabled = true;
+                ind.ShowRange = false; ind.TeleEnabled = true;
                 var tele = typeof(BenzoTrader).GetField("_tele", NP).GetValue(ind);
                 tele.GetType().GetField("LastError").SetValue(tele, "sendPhoto HTTP 401");
             });
@@ -534,11 +538,11 @@ static class Program
             int n = 24000; var b = tb.Take(n).ToList(); var l = tl.Take(n).ToArray();
             var (eStd, _) = CorvenData.Run(b, l, 0.1, Deny);
             bool on = true;
-            var c1 = new SignalCache(cp, BenzoCore.CacheVersion(true)); c1.Load();
+            var c1 = new SignalCache(cp, BenzoCore.CacheVersion()); c1.Load();
             var eng = new BenzoEngine("GCZ26", 0.1, c1, new ISetupDetector[] { new DetectorCorven { AllowBar = i => i >= Deny } }) { GetLevels = i => l[i], IsEnabled = _ => on };
             eng.Bars.AddRange(b);
             for (int i = 0; i < n; i++) { on = i < 8000 || i >= 15000; eng.Advance(i); }
-            var c2 = new SignalCache(cp, BenzoCore.CacheVersion(true)); c2.Load();
+            var c2 = new SignalCache(cp, BenzoCore.CacheVersion()); c2.Load();
             Console.WriteLine("  #2 khoảng niêm phong: " + string.Join(" ", c2.Intervals.Select(x => $"[{tb.FindIndex(y => y.Time.Ticks == x.F)}..{tb.FindIndex(y => y.Time.Ticks == x.L)}]")));
             Check(c2.Covers(b[100].Time.Ticks) && !c2.Covers(b[8000].Time.Ticks) && !c2.Covers(b[14999].Time.Ticks) && c2.Covers(b[15000].Time.Ticks) && c2.Covers(b[n - 1].Time.Ticks),
                   "#2: niêm phong phủ đoạn BẬT, chừa đúng đoạn TẮT 8000–14999");

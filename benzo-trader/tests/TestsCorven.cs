@@ -287,9 +287,10 @@ static partial class Program
             c = Eval(GeoCand(41200), f);
             Check(c.Sl == 41384 && c.Risk == 28, "đệm = max(3, 0,2 × 20) = 4", $"{c.Sl} {c.Risk}");
             (f, _) = GeoWorld(41430, mbr: 15);
-            Check(Eval(GeoCand(41000), f).Gates.Contains("tran_sl"), "rủi ro 77 > 60 ⇒ trần SL");
+            var cfgMbr = new CorvenCfg { SlMaxGia = 0 };          // trần 4 biên độ (corven-1…5); corven-6 dùng trần theo giá, test ở [V6-2]
+            Check(Eval(GeoCand(41000), f, cfgMbr).Gates.Contains("tran_sl"), "rủi ro 77 > 60 ⇒ trần SL (trần 4 mbr)");
             (f, _) = GeoWorld(41410, mbr: 15);
-            Check(!Eval(GeoCand(41000), f).Gates.Contains("tran_sl"), "rủi ro 57 ≤ 60 ⇒ giữ");
+            Check(!Eval(GeoCand(41000), f, cfgMbr).Gates.Contains("tran_sl"), "rủi ro 57 ≤ 60 ⇒ giữ (trần 4 mbr)");
         }
         Console.WriteLine("[C7b] Nến xác nhận 4a: thân, đóng sát cực trị, Δ, biên độ");
         {
@@ -404,21 +405,22 @@ static partial class Program
         const int Cut = 51318, Deny = 3697;    // nến cuối TRAIN (2026-09-15) · 4 phiên mỏng đầu file (Python `good`)
         var (tb, tl) = CorvenData.Load(prefix, Cut);
 
-        Console.WriteLine("[C12] Hồi quy TRAIN trên file 90d (corven-5): 266 lệnh = Python cp_live (Fail Break 37, Break 229)");
+        Console.WriteLine("[C12] Hồi quy TRAIN trên file 90d (corven-6): 232 lệnh = Python cp_live (Fail Break 41, Break 191)");
         var (engT, _) = CorvenData.Run(tb, tl, 0.1, Deny);
         var sg = engT.Signals;
-        Check(sg.Count == 266, "266 lệnh TRAIN", sg.Count.ToString());
-        Check(sg.Count(x => x.Setup == 'A') == 37 && sg.Count(x => x.Setup == 'B') == 229, "Fail Break 37 · Break 229", $"{sg.Count(x => x.Setup == 'A')}/{sg.Count(x => x.Setup == 'B')}");
-        Check(sg.Count(x => x.Outcome == "TP") == 95 && sg.Count(x => x.Outcome == "SL") == 169, "95 TP · 169 SL · 2 TIME (= Python cp_live)", $"{sg.Count(x => x.Outcome == "TP")}/{sg.Count(x => x.Outcome == "SL")}");
+        Check(sg.Count == 232, "232 lệnh TRAIN", sg.Count.ToString());
+        Check(sg.Count(x => x.Setup == 'A') == 41 && sg.Count(x => x.Setup == 'B') == 191, "Fail Break 41 · Break 191", $"{sg.Count(x => x.Setup == 'A')}/{sg.Count(x => x.Setup == 'B')}");
+        Check(sg.Count(x => x.Outcome == "TP") == 77 && sg.Count(x => x.Outcome == "SL") == 153, "77 TP · 153 SL · 2 TIME (= Python cp_live)", $"{sg.Count(x => x.Outcome == "TP")}/{sg.Count(x => x.Outcome == "SL")}");
         Check(sg[0].BarIdx == 4050 && sg[0].Signs == "kiệt sức: kiệt sức đỉnh (Ask 0) @4084,2 (nến 4048) | stacked: stacked sell 3 mức 4083,2–4083,4 (nến 4050)", "lệnh đầu: nến 4050, chuỗi dấu hiệu đúng định dạng Python", sg[0].Signs);
 
-        Console.WriteLine("[V5-2] corven-5: nhiều Break cùng nến xác nhận ⇒ gán lệnh cho range có nến đóng ngoài MUỘN nhất (ca thật 2026-09-01 07:29 UTC, nến 36957: range 641 ref 36950 và 642 ref 36951)");
+        Console.WriteLine("[V5-2] corven-5: nhiều ứng viên cùng nến xác nhận ⇒ Break gán range có nến đóng ngoài MUỘN nhất trước (Fail Break giữ thứ tự rid)");
         {
-            var s5 = sg.FirstOrDefault(x => x.BarIdx == 36957);
-            Check(s5 != null && Near(s5.Sl, 4477.8, 1e-6) && Near(s5.Tp, 4467.9, 1e-6), "mặc định: SL 4477,8 · TP 4467,9 (= Python gan_range_gan_nhat, range ref 36951)", s5 == null ? "không có" : $"{s5.Sl} {s5.Tp}");
-            var (eOld, _) = CorvenData.Run(tb, tl, 0.1, Deny, cfg: new CorvenCfg { GanRangeGanNhat = false });
-            var s5o = eOld.Signals.FirstOrDefault(x => x.BarIdx == 36957);
-            Check(s5o != null && Near(s5o.Sl, 4479.9, 1e-6) && Near(s5o.Tp, 4463.7, 1e-6), "cờ tắt (thứ tự rid): SL 4479,9 · TP 4463,7 (range ref 36950) — khác nhau", s5o == null ? "không có" : $"{s5o.Sl} {s5o.Tp}");
+            CorvenCand K(char the, int rid, int rf) => new CorvenCand { The = the, Rid = rid, Ref = rf };
+            var cs = new List<CorvenCand> { K('B', 641, 36950), K('B', 642, 36951), K('A', 700, 10), K('A', 650, 20), K('B', 700, 36951) };
+            string Ord(CorvenCfg cfg) => string.Join(" ", CorvenMachine.OrderCands(cs, cfg).Select(c => $"{c.The}{c.Rid}"));
+            Check(Ord(new CorvenCfg()) == "A650 A700 B642 B700 B641", "corven-5: Fail Break theo rid; Break ref muộn nhất trước (hoà ⇒ giữ thứ tự sinh)", Ord(new CorvenCfg()));
+            Check(Ord(new CorvenCfg { GanRangeGanNhat = false }) == "A650 A700 B641 B642 B700", "cờ tắt / corven-4: Break theo rid", Ord(new CorvenCfg { GanRangeGanNhat = false }));
+            Check(Ord(CorvenCfg.V1()) == "A650 A700 B641 B642 B700", "V1: theo rid");
         }
 
         Console.WriteLine("[C11] Chạy một mạch = chạy từng nến · giá ×10 (bước giá ×10) ra cùng tín hiệu");
@@ -431,7 +433,7 @@ static partial class Program
                   "Advance từng nến = Advance một lần", $"{e1.Signals.Count}/{e2.Signals.Count}");
             var b10 = b.Select(x => new BarData { Idx = x.Idx, Time = x.Time, O = x.O * 10, H = x.H * 10, L = x.L * 10, C = x.C * 10, Delta = x.Delta, Vol = x.Vol }).ToList();
             var l10 = l.Select(x => x.Select(y => new LevelVol(y.Price * 10, y.Bid, y.Ask, y.Vol)).ToList()).ToArray();
-            var (e10, _) = CorvenData.Run(b10, l10, 1.0, Deny);
+            var (e10, _) = CorvenData.Run(b10, l10, 1.0, Deny, cfg: new CorvenCfg { SlMaxGia = CorvenParams.SlMaxGia * 10 });   // trần SL theo GIÁ ⇒ giá ×10 thì trần ×10
             Check(e10.Signals.Select(x => (x.BarIdx, x.Setup, x.Side, x.SignTypes, Math.Round(x.Entry, 3), x.ExitTime)).SequenceEqual(
                   e1.Signals.Select(x => (x.BarIdx, x.Setup, x.Side, x.SignTypes, Math.Round(x.Entry * 10, 3), x.ExitTime))), "giá ×10 + tick ×10 ⇒ cùng nến, thế, hướng, dấu hiệu, giá vào ×10, nến thoát",
                   $"{e10.Signals.Count}/{e1.Signals.Count}");
@@ -440,12 +442,12 @@ static partial class Program
         Console.WriteLine("[C13] Cache (plan 10.5): lịch sử ngắn hơn không sinh tín hiệu lạ · sửa H một dòng ⇒ bỏ cache");
         {
             string cp = Tmp("cache_GCZ26_Time_1m.jsonl");
-            var cache = new SignalCache(cp, BenzoCore.CacheVersion(true)); cache.Load();
+            var cache = new SignalCache(cp, BenzoCore.CacheVersion()); cache.Load();
             var (e1, _) = CorvenData.Run(tb, tl, 0.1, Deny, cache: cache);
             int from = 20000;
             var b2 = tb.Skip(from).Select((x, i) => new BarData { Idx = i, Time = x.Time, O = x.O, H = x.H, L = x.L, C = x.C, Delta = x.Delta, Vol = x.Vol }).ToList();
             var l2 = tl.Skip(from).ToArray();
-            var c2 = new SignalCache(cp, BenzoCore.CacheVersion(true)); c2.Load();
+            var c2 = new SignalCache(cp, BenzoCore.CacheVersion()); c2.Load();
             var (e2, _) = CorvenData.Run(b2, l2, 0.1, 0, cache: c2);
             var set1 = e1.Signals.Where(x => x.Time >= b2[0].Time).Select(x => (x.Time, x.Side, x.Entry, x.Sl)).ToList();
             var set2 = e2.Signals.Select(x => (x.Time, x.Side, x.Entry, x.Sl)).ToList();
@@ -458,7 +460,7 @@ static partial class Program
             node["S"]["CfH"] = node["S"]["CfH"].GetValue<double>() + 1.0;
             lines[idx] = node.ToJsonString();
             File.WriteAllLines(cp, lines);
-            var c3 = new SignalCache(cp, BenzoCore.CacheVersion(true)); c3.Load();
+            var c3 = new SignalCache(cp, BenzoCore.CacheVersion()); c3.Load();
             var det = new DetectorCorven { AllowBar = i => i >= Deny };
             var eng = new BenzoEngine("GCZ26", 0.1, c3, new ISetupDetector[] { det }) { GetLevels = i => tl[i] };
             eng.Bars.AddRange(tb);

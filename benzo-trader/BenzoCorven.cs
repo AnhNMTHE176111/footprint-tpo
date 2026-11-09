@@ -1,7 +1,7 @@
 // ============================================================================
 //  BenzoCorven — setup "follow theo footprint" của CORVEN (plans/BENZO-CORVEN-plan.md, GĐ3 mục 10)
 // ============================================================================
-//  PORT Y CHỮ từ benzo-trader/research/setup_corven.py (LogicVersion "corven-5" = corven-1 + 8 sửa đổi người học 2026-11-09, setup_corven.cp_live()):
+//  PORT Y CHỮ từ benzo-trader/research/setup_corven.py (LogicVersion "corven-6" = corven-1 + 10 sửa đổi người học 2026-11-09, setup_corven.cp_live()):
 //    ① bối cảnh = RangeLogic (quantower-range/RangeLogic.cs, nối nguồn lúc build) — thế A (fail break) / thế B (phá giữ được)
 //    ② mốc "gần" + test không quá sâu + cửa sổ test          (Step2Machine.on_bar / _a_candidate / _b_step / _b_eval)
 //    ③ 5 loại dấu hiệu, cần ≥ 2 loại                          (find_signs)
@@ -26,7 +26,7 @@ namespace BenzoTraderNs
     /// muốn đổi phải đo lại bằng Python rồi tăng LogicVersion.</summary>
     public static class CorvenParams
     {
-        public const string LogicVersion = "corven-5";
+        public const string LogicVersion = "corven-6";
         public const double NearMbr = 1.0;
         public const int WinB = 3;
         public const int WinAMax = 5;
@@ -76,11 +76,13 @@ namespace BenzoTraderNs
         // ---- corven-5 (Opus quyết 2026-11-09): Break bỏ nhánh "vùng stacked làm mốc" (stacked vẫn là dấu hiệu); nhiều Break cùng nến ⇒ range có nến đóng ngoài muộn nhất trước ----
         public const bool BBoMocStacked = true;
         public const bool GanRangeGanNhat = true;
+        // ---- corven-6 (người học yêu cầu 2026-11-09): SL Break mốc cạnh = cạnh vừa phá ∓ 3 tick; trần SL theo GIÁ (Settings "SL tối đa (giá)") thay trần 4 biên độ ----
+        public const bool SlBCanh3Tick = true;
+        public const double SlMaxGia = 5.0;
 
         // ---- nhãn trung thực (plan 10.3) — test so đúng chữ ----
-        public const string BacktestLine = "Backtest 35 phiên: +0,02R/lệnh, hơn vào ngẫu nhiên (−0,01R) chưa đủ chắc · chạy thử, không phải khuyến nghị";
-        public const string TeleWarn = "⚠ Chưa có lợi thế đo được (+0,02R/lệnh, 35 phiên)";
-        public const string SettingLabel = "Bật setup CORVEN (chạy thử — backtest +0,02R/lệnh, chưa đủ chắc)";
+        public const string BacktestLine = "Backtest 35 phiên: −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,09R) · chạy thử, không phải khuyến nghị";
+        public const string TeleWarn = "⚠ Chưa có lợi thế đo được (−0,07R/lệnh, 35 phiên)";
     }
 
     /// <summary>Bản sao tham số theo instance — CHỈ để unit test dựng ca biên (vd cửa sổ W=4); live luôn dùng mặc định = CorvenParams.</summary>
@@ -99,8 +101,14 @@ namespace BenzoTraderNs
         public int OverlapBars = CorvenParams.OverlapBars; public double OverlapFrac = CorvenParams.OverlapFrac;
         public bool HoiKhongCham = CorvenParams.HoiKhongCham, BoQuetStop = CorvenParams.BoQuetStop, BBoRMin = CorvenParams.BBoRMin, TrapHoi = CorvenParams.TrapHoi, SlBCanhSat = CorvenParams.SlBCanhSat, HoiTrongNNen = CorvenParams.HoiTrongNNen, BBoMocStacked = CorvenParams.BBoMocStacked, GanRangeGanNhat = CorvenParams.GanRangeGanNhat;
         public int HoiMaxNen = CorvenParams.HoiMaxNen;
-        /// <summary>Bộ corven-1 (mọi cờ corven-2/3/4/5 tắt) — cho test cũ dựng ca biên của luật đã bỏ.</summary>
-        public static CorvenCfg V1() => new CorvenCfg { HoiKhongCham = false, BoQuetStop = false, BBoRMin = false, TrapHoi = false, SlBCanhSat = false, HoiTrongNNen = false, BBoMocStacked = false, GanRangeGanNhat = false };
+        /// <summary>corven-6: SL Break mốc cạnh = cạnh ∓ 3 tick.</summary>
+        public bool SlBCanh3Tick = CorvenParams.SlBCanh3Tick;
+        /// <summary>corven-6: trần SL theo giá (Settings). 0 = tắt ⇒ dùng trần 4 biên độ cũ (chỉ V1).</summary>
+        public double SlMaxGia = CorvenParams.SlMaxGia;
+        /// <summary>corven-6: công tắc Settings — tắt ⇒ ứng viên kiểu đó không được vào (và không chiếm chỗ lệnh mở).</summary>
+        public bool BatFailBreak = true, BatBreak = true;
+        /// <summary>Bộ corven-1 (mọi cờ corven-2/3/4/5/6 tắt (trần SL về 4 biên độ)) — cho test cũ dựng ca biên của luật đã bỏ.</summary>
+        public static CorvenCfg V1() => new CorvenCfg { HoiKhongCham = false, BoQuetStop = false, BBoRMin = false, TrapHoi = false, SlBCanhSat = false, HoiTrongNNen = false, BBoMocStacked = false, GanRangeGanNhat = false, SlBCanh3Tick = false, SlMaxGia = 0 };
     }
 
     // ======================================================================== đặc trưng từng nến (Feat)
@@ -373,9 +381,12 @@ namespace BenzoTraderNs
                 var edge = c.Mocs.FirstOrDefault(x => x.Kind == "canh");
                 if (edge != null)
                 {
+                    if (cp.SlBCanh3Tick) raw = edge.Level - S * 3;     // corven-6: cạnh vừa phá ∓ 3 tick, bỏ râu hồi + đệm biên độ
+                    else {
                     double tolSl = cp.SlBCanhSat ? 0 : edge.Tol;      // corven-3: SL ngay sau cạnh vừa phá, không trừ dung sai
                     if (S > 0) { long mn = long.MaxValue; for (int j = c.W0; j <= cf; j++) mn = Math.Min(mn, L[j]); raw = Math.Min(mn, edge.Level - tolSl) - buf; }
                     else { long mx = long.MinValue; for (int j = c.W0; j <= cf; j++) mx = Math.Max(mx, H[j]); raw = Math.Max(mx, edge.Level + tolSl) + buf; }
+                    }
                     c.MocUsed = "canh";
                 }
                 else
@@ -393,7 +404,7 @@ namespace BenzoTraderNs
             long sl = S > 0 ? (long)Math.Floor(slRaw + 1e-9) : (long)Math.Ceiling(slRaw - 1e-9);
             risk = (ent - sl) * S;
             c.Entry = ent; c.Sl = sl; c.Risk = risk;
-            if (risk > cp.SlCapMbr * mbr + 1e-9) g.Add("tran_sl");
+            if (cp.SlMaxGia > 0 ? risk > Math.Round(cp.SlMaxGia / f.Tick, 6) + 1e-9 : risk > cp.SlCapMbr * mbr + 1e-9) g.Add("tran_sl");
             // 4c mục tiêu
             double tgt;
             if (c.The == 'A') tgt = S < 0 ? c.InstBottom : c.InstTop;
@@ -433,17 +444,17 @@ namespace BenzoTraderNs
         /// 2 cổng ③ + mọi giá trị GateVn + "tin USD" + "thế đã có lệnh" (DetectorCorven) + "đang có lệnh" (engine). README phải liệt kê đúng tập này.</summary>
         public static readonly string[] AllGateLabels =
         {
-            "③ 0 loại", "③ 1 loại", "④ CF", "④ R<1,7", "④ trần SL", "⛔ veto kiệt sức", "⛔ quét stop", "⛔ chồng range",
-            "chặn giờ", "cuối phiên", "tin USD", "thế đã có lệnh", "đang có lệnh",
+            "③ 0 loại", "③ 1 loại", "④ CF", "④ R<1,7", "SL > X giá", "⛔ veto kiệt sức", "⛔ quét stop", "⛔ chồng range",
+            "chặn giờ", "cuối phiên", "tin USD", "thế đã có lệnh", "đang có lệnh", "Fail Break tắt", "Break tắt",
         };
         public static readonly string[] GateCodes = { "g4a_cf", "r_nho", "tran_sl", "v_kiet_suc_chong", "v_quet_stop", "v_chong_range", "chan_1920", "dau_phien", "cuoi_phien", "tin_usd" };
 
         /// <summary>Nhãn cổng cho CSV ứng viên bị loại (plan 10.4).</summary>
-        public static string GateVn(string g) => g switch
+        public static string GateVn(string g, double slMaxGia = 0) => g switch
         {
             "g4a_cf" => "④ CF",
             "r_nho" => "④ R<1,7",
-            "tran_sl" => "④ trần SL",
+            "tran_sl" => slMaxGia > 0 ? $"SL > {BenzoCore.Num(slMaxGia, "0.0")} giá" : "SL > X giá",
             "v_kiet_suc_chong" => "⛔ veto kiệt sức",
             "v_quet_stop" => "⛔ quét stop",
             "v_chong_range" => "⛔ chồng range",
@@ -586,7 +597,7 @@ namespace BenzoTraderNs
                 }
             }
             // thứ tự Python: sort ổn định theo (cf, A < B, range)
-            var sorted = cands.Select((c, k) => (c, k)).OrderBy(x => x.c.The == 'A' ? 0 : 2).ThenBy(x => Cfg.GanRangeGanNhat && x.c.The == 'B' ? -x.c.Ref : x.c.Rid).ThenBy(x => x.k).Select(x => x.c).ToList();
+            var sorted = OrderCands(cands, Cfg);
             foreach (var c in sorted)
             {
                 c.Signs = CorvenRules.FindSigns(c, F, Cfg);
@@ -675,6 +686,11 @@ namespace BenzoTraderNs
             if (any && Cfg.HoiTrongNNen && firstPb - b.Ref > Cfg.HoiMaxNen) return false;   // corven-4
             return any && (C[j] - lim) * D > 0;
         }
+
+        /// <summary>Thứ tự xét ứng viên CÙNG nến xác nhận (= Python build_candidates): Fail Break trước Break; Fail Break theo range cũ→mới (rid);
+        /// Break (corven-5, GanRangeGanNhat) range có nến đóng ngoài (ref) MUỘN nhất trước, tắt cờ thì theo rid. Sắp ổn định.</summary>
+        public static List<CorvenCand> OrderCands(IEnumerable<CorvenCand> cands, CorvenCfg cfg) =>
+            cands.OrderBy(c => c.The == 'A' ? 0 : 2).ThenBy(c => cfg.GanRangeGanNhat && c.The == 'B' ? -c.Ref : c.Rid).ToList();
 
         private void BEval(InstB b, int j, double? piv, List<CorvenCand> cands)
         {
@@ -765,11 +781,12 @@ namespace BenzoTraderNs
         /// <summary>Cổng cuối cùng của ứng viên (null = vào được) — dùng chung cho TryDetect và CSV ứng viên.</summary>
         public string FirstGate(CorvenCand c, bool newsBlocked)
         {
+            if ((c.The == 'A' && !Cfg.BatFailBreak) || (c.The == 'B' && !Cfg.BatBreak)) return c.The == 'A' ? "Fail Break tắt" : "Break tắt";   // corven-6: công tắc Settings
             if (c.NTypes < Cfg.NeedSigns) return c.NTypes == 0 ? "③ 0 loại" : c.NTypes == 1 ? "③ 1 loại" : $"③ {c.NTypes} loại";
             foreach (var g in c.Gates)
             {
                 if (g == "chan_1920" && !BlockUsOpen) continue;
-                return CorvenRules.GateVn(g);
+                return CorvenRules.GateVn(g, Cfg.SlMaxGia);
             }
             if (newsBlocked) return "tin USD";
             if (_usedInst.Contains(c.InstKey) || _usedKey.Contains(c.LockKey)) return "thế đã có lệnh";

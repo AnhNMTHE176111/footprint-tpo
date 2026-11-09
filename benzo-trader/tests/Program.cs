@@ -73,40 +73,22 @@ static partial class Program
             Closed('A', "TP", 1.9, 0), Closed('A', "SL", -1.1, 10), Closed('B', "SL", -1.1, 20), Closed('B', "TIME", 0.4, 30),
             Closed('B', "OPEN", 0, 40),
         };
-        var st = BenzoCore.ComputeStats(sigs, null);
+        var st = BenzoCore.ComputeStats(sigs);
         Check(st.Total.N == 4 && st.Total.Wins == 2 && st.Total.Open == 1, "tổng: 4 đã đóng (TIME R>0 = thắng), 1 mở");
         Check(st.A.N == 2 && st.B.N == 2 && Near(st.B.SumR, -0.7), "theo thế A / B");
         var ls = BenzoCore.TableLines(st);
         Check(ls.Count == 4, "bảng đúng 4 dòng", ls.Count.ToString());
-        var rx = new Regex(@"^BENZO CORVEN corven-5 · \d+ lệnh · WR \d+ % · [+−]?\d+,\d+R( · \d+ đang mở)?$");
+        var rx = new Regex(@"^BENZO CORVEN corven-6 · \d+ lệnh · WR \d+ % · [+−]?\d+,\d+R( · \d+ đang mở)?$");
         Check(rx.IsMatch(ls[0]) && ls[0].EndsWith(" · 1 đang mở"), "dòng 1 khớp mẫu plan 12.2-Q3 (có '· k đang mở' khi k > 0)", ls[0]);
         Check(ls[1] == "Fail Break · 2 · WR 50 % · +0,8R", "dòng thế A", ls[1]);
         Check(ls[2] == "Break · 2 · WR 50 % · −0,7R", "dòng thế B", ls[2]);
-        Check(ls[3] == "Backtest 35 phiên: +0,02R/lệnh, hơn vào ngẫu nhiên (−0,01R) chưa đủ chắc · chạy thử, không phải khuyến nghị", "dòng 4 nhãn backtest đúng chữ", ls[3]);
-        var empty = BenzoCore.TableLines(BenzoCore.ComputeStats(new Signal[0], null));
+        Check(ls[3] == "Backtest 35 phiên: −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,09R) · chạy thử, không phải khuyến nghị", "dòng 4 nhãn backtest đúng chữ", ls[3]);
+        var empty = BenzoCore.TableLines(BenzoCore.ComputeStats(new Signal[0]));
         Check(empty.Count == 4 && empty[3] == CorvenParams.BacktestLine, "dòng 4 LUÔN hiện kể cả khi chưa có lệnh");
-        var st2 = BenzoCore.ComputeStats(sigs, T0.AddMinutes(15));
-        Check(st2.Total.N == 2 && st2.A.N == 0, "mốc reset: chỉ đếm lệnh sau mốc");
-        Check(CorvenParams.SettingLabel == "Bật setup CORVEN (chạy thử — backtest +0,02R/lệnh, chưa đủ chắc)", "nhãn Settings công tắc setup đúng chữ");
-        Check(CorvenParams.TeleWarn == "⚠ Chưa có lợi thế đo được (+0,02R/lệnh, 35 phiên)", "dòng cảnh báo Telegram đúng chữ");
+        Check(CorvenParams.TeleWarn == "⚠ Chưa có lợi thế đo được (−0,07R/lệnh, 35 phiên)", "dòng cảnh báo Telegram đúng chữ");
         // lint thuật ngữ (plan 4e): buy/sell giữ tiếng Anh, không "mua/bán", không "volatility"
-        var all = new[] { CorvenParams.BacktestLine, CorvenParams.TeleWarn, CorvenParams.SettingLabel, ls[0], ls[1], ls[2] };
+        var all = new[] { CorvenParams.BacktestLine, CorvenParams.TeleWarn, ls[0], ls[1], ls[2] };
         Check(!all.Any(x => x.Contains(" mua") || x.Contains(" bán") || x.ToLower().Contains("volatility")), "lint thuật ngữ nhãn");
-    }
-
-    static void TestResetMark()
-    {
-        Console.WriteLine("[3] Mốc đặt lại thống kê");
-        string p = Tmp("reset.txt");
-        Check(BenzoCore.LoadResetMark(p) == null, "chưa có file => null");
-        var now = new DateTime(2026, 10, 21, 13, 5, 7, DateTimeKind.Utc).AddTicks(1234);
-        BenzoCore.SaveResetMark(p, now);
-        var back = BenzoCore.LoadResetMark(p);
-        Check(back.HasValue && back.Value.Ticks == now.Ticks, "round-trip đúng tick", back?.ToString());
-        File.WriteAllText(p, "rác");
-        Check(BenzoCore.LoadResetMark(p) == null, "file rác => null (không chết)");
-        BenzoCore.ClearResetMark(p);
-        Check(BenzoCore.LoadResetMark(p) == null && !File.Exists(p), "xoá mốc => hiện lại toàn bộ thống kê");
     }
 
     static void TestCaption()
@@ -143,7 +125,7 @@ static partial class Program
         Check(BenzoCore.ComposeCancel(a1, 7, 1).Contains(" 22:52 huỷ"), "tin huỷ cũng giờ mở nến");
         // plan 12.2-Q5: TIME thắng/thua theo dấu R (trùng Python wr = (r > 0))
         var tW = Buy(); tW.Outcome = "TIME"; tW.R = 0.3; var tL = Buy(); tL.Outcome = "TIME"; tL.R = -0.2;
-        var stT = BenzoCore.ComputeStats(new[] { tW, tL }, null);
+        var stT = BenzoCore.ComputeStats(new[] { tW, tL });
         Check(stT.Total.Wins == 1 && stT.Total.Losses == 1, "TIME R +0,3 ⇒ thắng, R −0,2 ⇒ thua");
         tW.Time = tW.ExitTime = s.Time; tL.Time = tL.ExitTime = s.Time; tW.Setup = tL.Setup = 'A';
         Check(BenzoCore.ComposeClose(tW, 7, 1).StartsWith("✅") && BenzoCore.ComposeClose(tL, 7, 1).StartsWith("🛑"), "tin đóng TIME ✅/🛑 theo cùng dấu R");
@@ -177,7 +159,7 @@ static partial class Program
               && !SignalCache.FitsBar(s, Bar(5, 99.5, 101, 99, 100.1), 0.1), "FitsBar: H lệch > 1 tick hoặc giá vào lệch > nửa tick ⇒ không khớp");
         Check(BenzoCore.CacheFileName("GCZ26", "Time", 1) == "cache_GCZ26_Time_1m.jsonl" && BenzoCore.CacheFileName("GCZ26", "Time", 15) != BenzoCore.CacheFileName("GCZ26", "Time", 1),
               "tên cache có số phút (M1 ≠ M15)");
-        Check(BenzoCore.CacheVersion(true) == "corven-5-us1" && BenzoCore.CacheVersion(false) == "corven-5-us0", "khoá cache = LogicVersion + công tắc chặn giờ");
+        Check(BenzoCore.CacheVersion() == "corven-6-sl5.0-f1-b1" && BenzoCore.CacheVersion(3.0, false, true) == "corven-6-sl3.0-f0-b1" && BenzoCore.CacheVersion(5.0, true, false) == "corven-6-sl5.0-f1-b0" && BenzoCore.CacheVersion(5.1) != BenzoCore.CacheVersion(), "khoá cache = LogicVersion + SL tối đa + công tắc Fail Break + công tắc Break (không còn hậu tố chặn giờ)");
         // plan 12.1-7c: RangeT0/RangeT1 round-trip; dòng cache cũ thiếu 2 trường vẫn nạp được (= 0 ⇒ không vẽ), guard không đổi
         string p7 = Tmp("cache7c.jsonl");
         var c7 = new SignalCache(p7, "v1");
@@ -264,7 +246,7 @@ static partial class Program
 
     static int Main()
     {
-        TestSimulate(); TestStatsAndLabels(); TestResetMark(); TestCaption(); TestCache(); TestEngine(); TestFixes12();
+        TestSimulate(); TestStatsAndLabels(); TestCaption(); TestCache(); TestEngine(); TestFixes12();
         TestsCorven();
         TestsCorven2();
         Console.WriteLine($"\n{_ok} OK, {_fail} FAIL");

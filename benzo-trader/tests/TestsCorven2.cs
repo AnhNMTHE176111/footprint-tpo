@@ -1,5 +1,5 @@
 // Unit test corven-2 (4 sửa đổi người học 2026-11-09, research/report/VARIANTS-NGUOI-HOC-2026-11-09.md) = setup_corven.cp_live().
-// Mỗi luật: bộ mặc định (corven-5) và CorvenCfg.V1() (corven-1) cho kết quả ngược nhau trên cùng một ca.
+// Mỗi luật: bộ mặc định (corven-6) và CorvenCfg.V1() (corven-1) cho kết quả ngược nhau trên cùng một ca.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,7 +12,7 @@ static partial class Program
     static void TestsCorven2()
     {
         Console.WriteLine("[V2-0] Phiên bản");
-        Check(CorvenParams.LogicVersion == "corven-5", "LogicVersion = corven-5");
+        Check(CorvenParams.LogicVersion == "corven-6", "LogicVersion = corven-6");
 
         Console.WriteLine("[V2-1] Trap trong nhịp hồi (thế B sell): ô Ask 20 ở nến hồi 13 @4126,8, CF đóng 4126,6 dưới ô");
         {
@@ -56,8 +56,8 @@ static partial class Program
         {
             var (f, _) = World(Ex2Rows());
             CorvenCand Mk() => Ex2Cand(new List<CorvenMoc> { Canh(41280) });     // sell, cạnh 4128,0 ± 0,75; đỉnh cửa sổ 4128,4
-            var c3 = Eval(Mk(), f);
-            Check(c3.Sl == 41287 && c3.MocUsed == "canh", "corven-3: SL = max(4128,4; 4128,0) + 3 tick = 4128,7", c3.Sl.ToString());
+            var c3 = Eval(Mk(), f, new CorvenCfg { SlBCanh3Tick = false });
+            Check(c3.Sl == 41287 && c3.MocUsed == "canh", "corven-3/4/5: SL = max(4128,4; 4128,0) + 3 tick = 4128,7", c3.Sl.ToString());
             var c1 = Eval(Mk(), f, CorvenCfg.V1());
             Check(c1.Sl == 41291, "corven-1: SL = max(4128,4; 4128,0 + 0,75) + 3 tick, làm tròn ra xa = 4129,1", c1.Sl.ToString());
         }
@@ -90,6 +90,45 @@ static partial class Program
             var (_, cs6n) = RunM(b6, new CorvenCfg { HoiMaxNen = 6 });
             Check(HasB(cs6n, bc6, cf6), "ngưỡng 6 nến: ca 6 nến nhận (biên ≤ N)");
         }
+        Console.WriteLine("[V6-1] corven-6: SL Break mốc cạnh = cạnh vừa phá ∓ 3 tick; râu nhịp hồi vượt cạnh không làm SL xa thêm");
+        {
+            var (f, _) = World(Ex2Rows());
+            CorvenCand Mk() => Ex2Cand(new List<CorvenMoc> { Canh(41280) });     // sell, cạnh 4128,0; râu nhịp hồi lên 4128,4 (nến 14); CF đóng 4126,6
+            var c6 = Eval(Mk(), f);
+            Check(c6.Sl == 41283 && c6.Risk == 17 && c6.MocUsed == "canh", "corven-6: SL = 4128,0 + 3 tick = 4128,3 (không theo râu 4128,4)", $"{c6.Sl} {c6.Risk}");
+            var c5 = Eval(Mk(), f, new CorvenCfg { SlBCanh3Tick = false });
+            Check(c5.Sl == 41287, "cờ tắt (corven-3…5): SL = râu 4128,4 + 3 tick = 4128,7 — xa hơn", c5.Sl.ToString());
+            // sàn 1 biên độ vẫn giữ: mbr 30 ⇒ rủi ro tối thiểu 30 tick
+            var (fb, _) = World(Ex2Rows(), mbr: 30);
+            var cf = Eval(Mk(), fb);
+            Check(cf.Risk >= 30 && cf.Sl == 41296, "sàn 1 biên độ giữ: mbr 30 ⇒ SL dời ra 30 tick = 4129,6", $"{cf.Sl} {cf.Risk}");
+        }
+        Console.WriteLine("[V6-2] corven-6: trần SL theo GIÁ (mặc định 5,0): rủi ro 5,0 nhận · 5,1 bỏ · đặt 3,0 ⇒ bỏ ca 3,7");
+        {
+            var (f50, _) = GeoWorld(41403, mbr: 15); var (f51, _) = GeoWorld(41404, mbr: 15); var (f37, _) = GeoWorld(41390, mbr: 15);
+            var c50 = Eval(GeoCand(41000), f50); var c51 = Eval(GeoCand(41000), f51); var c37 = Eval(GeoCand(41000), f37);
+            Check(c50.Risk == 50 && !c50.Gates.Contains("tran_sl"), "rủi ro 5,0 giá ⇒ nhận", $"{c50.Risk} {string.Join(";", c50.Gates)}");
+            Check(c51.Risk == 51 && c51.Gates.Contains("tran_sl"), "rủi ro 5,1 giá ⇒ bỏ (cổng tran_sl)", $"{c51.Risk} {string.Join(";", c51.Gates)}");
+            Check(c37.Risk == 37 && !c37.Gates.Contains("tran_sl") && Eval(GeoCand(41000), f37, new CorvenCfg { SlMaxGia = 3.0 }).Gates.Contains("tran_sl"), "rủi ro 3,7 giá: nhận ở 5,0, bỏ khi SlMaxGia = 3,0");
+            Check(!Eval(GeoCand(41000), f51, new CorvenCfg { SlMaxGia = 6.0 }).Gates.Contains("tran_sl"), "SlMaxGia = 6,0 ⇒ rủi ro 5,1 nhận (trần theo giá, không theo biên độ)");
+            Check(CorvenRules.GateVn("tran_sl", 5.0) == "SL > 5,0 giá" && CorvenRules.GateVn("tran_sl", 3.5) == "SL > 3,5 giá", "nhãn cổng hiển thị 'SL > X giá'");
+        }
+        Console.WriteLine("[V6-3] corven-6: công tắc Fail Break / Break — tắt một kiểu ⇒ kiểu đó không vào và không chiếm chỗ lệnh mở (TRAIN, = Python bat_break / bat_fail_break)");
+        {
+            string root = RepoRoot();
+            string prefix = root == null ? null : Path.Combine(root, "data-export", "data-footprint", "fp_GCZ26_XCEC_Time_20260723-20261021_90d");
+            if (prefix == null || !File.Exists(prefix + "_bars.csv")) { Console.WriteLine("  (bỏ qua: không có file TRAIN 90d)"); }
+            else
+            {
+                var (tb, tl) = CorvenData.Load(prefix, 51318);
+                var (eNo, _) = CorvenData.Run(tb, tl, 0.1, 3697, cfg: new CorvenCfg { BatBreak = false });
+                Check(eNo.Signals.Count == 43 && eNo.Signals.All(x => x.Setup == 'A') && eNo.Signals.Count(x => x.Outcome == "TP") == 10 && eNo.Signals.Count(x => x.Outcome == "SL") == 33,
+                      "tắt Break: 43 lệnh, toàn Fail Break (= Python; mặc định có 41 Fail Break ⇒ thêm 2 vì không còn bị lệnh Break chiếm chỗ)", $"{eNo.Signals.Count}");
+                var (eNoF, _) = CorvenData.Run(tb, tl, 0.1, 3697, cfg: new CorvenCfg { BatFailBreak = false });
+                Check(eNoF.Signals.Count == 192 && eNoF.Signals.All(x => x.Setup == 'B') && eNoF.Signals.Count(x => x.Outcome == "TP") == 67 && eNoF.Signals.Count(x => x.Outcome == "SL") == 123,
+                      "tắt Fail Break: 192 lệnh, toàn Break (= Python; mặc định có 191 Break ⇒ thêm 1)", $"{eNoF.Signals.Count}");
+            }
+        }
         Console.WriteLine("[V2-4] Ca thật 09/11 11:26 VN (buy, nhịp hồi không chạm cạnh + trap hồi) — file 3 tháng mới");
         {
             string root = RepoRoot();
@@ -97,6 +136,11 @@ static partial class Program
             if (prefix == null || !File.Exists(prefix + "_bars.csv")) { Console.WriteLine("  (bỏ qua: không có file 20260811-20261109)"); return; }
             var (b, l) = CorvenData.Load(prefix);
             var (eng, _) = CorvenData.Run(b, l, 0.1);
+            var s63 = eng.Signals.FirstOrDefault(x => x.Time == new DateTime(2026, 11, 6, 3, 33, 0, DateTimeKind.Utc));
+            Check(s63 != null && s63.Setup == 'B' && s63.Side == -1 && Near(s63.Entry, 4055.3, 1e-6) && Near(s63.Sl, 4058.8, 1e-6) && Near(s63.Tp, 4048.3, 1e-6) && s63.Outcome == "TP",
+                  "corven-6 (= Python): 06/11 10:33 VN Break sell 4055,3 · SL 4058,8 · TP 4048,3 ⇒ TP", s63 == null ? "không có" : $"{s63.Entry} {s63.Sl} {s63.Tp} {s63.Outcome}");
+            var s65 = eng.Signals.FirstOrDefault(x => x.Time == new DateTime(2026, 11, 6, 5, 7, 0, DateTimeKind.Utc));
+            Check(s65 != null && s65.Setup == 'B' && s65.Side == 1 && Near(s65.Entry, 4058.6, 1e-6) && Near(s65.Sl, 4055.5, 1e-6), "06/11 12:07 VN Break buy 4058,6 · SL 4055,5", s65 == null ? "không có" : $"{s65.Entry} {s65.Sl}");
             var day = eng.Signals.Where(x => x.Time.Date == new DateTime(2026, 11, 9)).ToList();
             Check(!day.Any(x => x.Time == new DateTime(2026, 11, 9, 0, 43, 0, DateTimeKind.Utc)), "corven-5: lệnh Break buy 07:43 VN 09/11 (mốc vùng stacked, 4107,9) không còn");
             Check(!eng.Signals.Any(x => x.Time == new DateTime(2026, 11, 6, 16, 8, 0, DateTimeKind.Utc)), "corven-5: lệnh Break buy 23:08 VN 06/11 (mốc vùng stacked 4070,8–4071,0, 4072,9) không còn");

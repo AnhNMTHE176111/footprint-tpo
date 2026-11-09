@@ -94,16 +94,20 @@ class CP:
     hoi_trong_n_nen: bool = False  # corven-4: nhịp hồi (không chạm cạnh) phải thuộc cú phá — nến hồi đầu tiên cách nến phá (b.ref) ≤ hoi_max_nen (=5) nến
     hoi_max_nen: int = 5
     b_bo_moc_stacked: bool = False  # corven-5: Break bỏ nhánh 'vùng stacked làm mốc' (chỉ còn mốc cạnh vừa phá); stacked làm DẤU HIỆU giữ nguyên
+    sl_b_canh_3tick: bool = False  # corven-6: SL Break mốc cạnh = cạnh vừa phá ∓ 3 tick cố định (bỏ râu nhịp hồi, bỏ đệm theo biên độ); sàn 1 biên độ giữ
+    sl_cap_gia: float = None       # corven-6: trần SL theo GIÁ (None = trần 4 biên độ cũ); có giá trị ⇒ không xét trần biên độ. Cổng vẫn tên 'tran_sl'
+    bat_fail_break: bool = True    # corven-6: công tắc Settings — tắt ⇒ ứng viên Fail Break không được vào và không chiếm chỗ 1 lệnh mở
+    bat_break: bool = True
     gan_range_gan_nhat: bool = False  # corven-5: nhiều Break cùng nến xác nhận ⇒ xét range có nến đóng ngoài (ref) MUỘN nhất trước
 
 
-LIVE_VERSION = 'corven-5'
+LIVE_VERSION = 'corven-6'
 
 
 def cp_live() -> 'CP':
-    """Bộ tham số đang chạy trong indicator (LogicVersion corven-5)."""
+    """Bộ tham số đang chạy trong indicator (LogicVersion corven-6)."""
     return CP(hoi_khong_cham=True, bo_quet_stop=True, b_bo_rmin=True, trap_hoi=True, sl_b_canh_sat=True, hoi_trong_n_nen=True,
-              b_bo_moc_stacked=True, gan_range_gan_nhat=True)
+              b_bo_moc_stacked=True, gan_range_gan_nhat=True, sl_b_canh_3tick=True, sl_cap_gia=5.0)
 
 
 # =====================================================================================================
@@ -999,7 +1003,9 @@ def eval_order(c: Cand, f: Feat, cp: CP, m: Step2Machine, chong: dict, use_chong
         edge = [mo for mo in c.mocs if mo['kind'] == 'canh']
         if edge:
             mo = edge[0]
-            if cp.sl_b_canh_sat:
+            if cp.sl_b_canh_3tick:
+                raw = mo['level'] - S * 3     # corven-6: ngay sau cạnh vừa phá ∓ 3 tick, bỏ râu hồi + đệm biên độ
+            elif cp.sl_b_canh_sat:
                 raw = (min(min(L[c.w0:cf + 1]), mo['level']) - buf) if S > 0 else (max(max(H[c.w0:cf + 1]), mo['level']) + buf)
             elif S > 0:
                 raw = min(min(L[c.w0:cf + 1]), mo['level'] - mo['tol']) - buf
@@ -1040,7 +1046,10 @@ def eval_order(c: Cand, f: Feat, cp: CP, m: Step2Machine, chong: dict, use_chong
     sl = int(np.floor(sl + 1e-9)) if S > 0 else int(np.ceil(sl - 1e-9))
     risk = (ent - sl) * S
     c.entry, c.sl, c.risk = int(ent), sl, float(risk)
-    if risk > cp.sl_cap_mbr * mbr + 1e-9:
+    if cp.sl_cap_gia is not None:
+        if risk > round(cp.sl_cap_gia / TICK, 6) + 1e-9:
+            g.append('tran_sl')
+    elif risk > cp.sl_cap_mbr * mbr + 1e-9:
         g.append('tran_sl')
     # 4c mục tiêu
     if c.the in ('A', 'A2'):
@@ -1131,6 +1140,8 @@ def select_and_simulate(cands: List[Cand], df: pd.DataFrame, f: Feat, cp: CP, mo
             continue
         if c.the == 'A2' and not cp.a2_on:
             continue
+        if (c.the == 'A' and not cp.bat_fail_break) or (c.the == 'B' and not cp.bat_break):
+            continue      # công tắc tắt: không vào, không chiếm chỗ lệnh mở
         if not sign_ok(c, mode, cp):
             continue
         gs = [x for x in c.gates if not (x == 'chan_1920' and not block_us)]

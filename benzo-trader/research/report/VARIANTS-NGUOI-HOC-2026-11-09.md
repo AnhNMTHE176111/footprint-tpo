@@ -111,3 +111,31 @@ Opus chọn bỏ hẳn nhánh vùng stacked: cả nhánh âm (116 lệnh −0,06
 Mã thật (`cp_live()`): chỉ luật 1 = 266 lệnh, +0,0165R, nửa −0,018 / +0,048, C2' −0,0096 (khớp dòng "bỏ hẳn" ở trên đến chữ số cuối). **Luật 1 + 2 (corven-5): 266 lệnh (Fail Break 37, Break 229), R TB +0,016, WR 36 % (95 TP / 169 SL / 2 TIME), hai nửa −0,018 / +0,048, vào ngẫu nhiên sau CF −0,013** ⇒ hơn vào ngẫu nhiên nhưng nhỏ, chưa đủ chắc (hậu kiểm nhiều tổ hợp). Luật 2 gần như không đổi số (1 ca trong TRAIN: nến 36957, 01/09 07:29 UTC, SL 4477,8 thay vì 4479,9).
 
 Ca thật: 09/11 07:43 VN (buy 4107,9 mốc stacked) và 06/11 23:08 VN (buy 4072,9 mốc stacked 4070,8–4071,0) không còn; 09/11 11:26 VN (buy 4132,3 · SL 4129,1 · TP 4138,7) vẫn còn — Python và C# khớp.
+
+
+## corven-6: SL Break sát cạnh ∓ 3 tick + trần SL theo giá (người học yêu cầu; Opus đo; Sonnet implement)
+
+1. **SL Break mốc cạnh = cạnh vừa phá ∓ 3 tick cố định** (buy: cạnh − 3 tick; sell: cạnh + 3 tick). Bỏ râu nhịp hồi và đệm 0,2 biên độ khỏi SL Break; sàn 1 biên độ giữ; Fail Break giữ SL cũ. Cờ Python `sl_b_canh_3tick`, C# `CorvenParams.SlBCanh3Tick`.
+2. **Trần SL theo GIÁ** thay trần 4 biên độ: rủi ro (entry↔SL) > SlMaxGia giá ⇒ bỏ (cả Fail Break và Break). Mặc định 5,0, người dùng chỉnh trong Settings "SL tối đa (giá)" (≥ 0,5, bước 0,1). Python `sl_cap_gia`; cổng giữ tên `tran_sl`, nhãn hiển thị "SL > X giá".
+3. **Settings** rút còn: Hiện range · Hiện bảng thống kê · Bật Fail Break · Bật Break · SL tối đa (giá) (+ Telegram, lệch giờ). Xoá: công tắc tổng, chặn giờ (luôn BẬT), hiện dấu hiệu (luôn hiện), đặt lại / hiện lại thống kê. Tắt một kiểu ⇒ không vào, không chiếm chỗ lệnh mở (Python `bat_fail_break`, `bat_break`).
+
+Người học yêu cầu SL sát cạnh + trần 5 giá. Trên TRAIN cả hai làm kết quả xấu đi (+0,02 → −0,07R/lệnh, cả hai nửa đều xấu hơn ở SL sát cạnh); Opus đã báo người học, triển khai theo yêu cầu vì đây là luật quản lý rủi ro của người giao dịch.
+
+Đo TRAIN 35 phiên (`research/variants_sl_canh.py`, Opus; hậu xử lý ứng viên corven-5):
+
+| Biến thể | n | R TB | WR | nửa 1 | nửa 2 | C2' | ΣR | rủi ro trung vị (tick) | rủi ro max (tick) |
+|---|---|---|---|---|---|---|---|---|---|
+| corven-5 | 266 | +0,016 | 36 % | −0,018 | +0,048 | −0,013 | +4,372 | 3.6 | 18.8 |
+| trần SL 5 giá | 217 | −0,013 | 35 % | +0,015 | −0,046 | −0,068 | −2,783 | 3.1 | 5.0 |
+| SL = cạnh ± 3 tick | 271 | −0,040 | 34 % | −0,029 | −0,050 | −0,032 | −10,822 | 3.4 | 18.0 |
+| SL = cạnh ± 3 tick + trần 5 giá | 224 | −0,076 | 33 % | +0,003 | −0,165 | −0,085 | −16,960 | 2.9 | 5.0 |
+| … + bỏ sàn 1 biên độ | 224 | −0,077 | 33 % | +0,001 | −0,166 | −0,085 | −17,253 | 2.8 | 5.0 |
+| … + bỏ trần 4 biên độ (chỉ trần 5 giá) | 232 | −0,068 | 34 % | +0,025 | −0,177 | −0,094 | −15,790 | 3.0 | 5.0 |
+| SL cạnh ± 3 tick + trần 3 giá | 126 | −0,144 | 32 % | −0,130 | −0,162 | −0,078 | −18,146 | 2.2 | 3.0 |
+| SL cạnh ± 3 tick + trần 4 giá | 184 | −0,068 | 34 % | −0,029 | −0,116 | −0,074 | −12,429 | 2.6 | 4.0 |
+| SL cạnh ± 3 tick + trần 6 giá | 240 | −0,077 | 33 % | −0,055 | −0,100 | −0,064 | −18,470 | 3.0 | 6.0 |
+| SL cạnh ± 3 tick + trần 8 giá | 260 | −0,033 | 35 % | −0,005 | −0,059 | −0,020 | −8,645 | 3.3 | 7.9 |
+
+Mã thật (`cp_live()` = SL cạnh ∓ 3 tick + chỉ trần 5 giá): **232 lệnh (Fail Break 41, Break 191), R TB −0,068, WR 34 % (77 TP / 153 SL / 2 TIME), hai nửa +0,025 / −0,177, vào ngẫu nhiên sau CF −0,094** — khớp dòng "… + bỏ trần 4 biên độ (chỉ trần 5 giá)" đến chữ số cuối. Công tắc: tắt Break ⇒ 43 lệnh Fail Break (−0,399R); tắt Fail Break ⇒ 192 lệnh Break (−0,011R).
+
+Ca thật (Python và C# khớp): 06/11 10:33 VN Break sell 4055,3 · SL 4058,8 · TP 4048,3 ⇒ TP; 06/11 12:07 VN Break buy 4058,6 · SL 4055,5; 09/11 11:26 VN Break buy 4132,3 · SL 4129,1 · TP 4138,7 vẫn còn.

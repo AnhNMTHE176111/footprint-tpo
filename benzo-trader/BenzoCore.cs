@@ -3,7 +3,7 @@
 // ============================================================================
 //  Tách riêng khỏi lớp Indicator để unit test được (benzo-trader/tests biên dịch chính file này).
 //  Gồm: Signal, BarData, ISetupDetector + SetupContext, mô phỏng kết quả lệnh (StepBar/Simulate, MFE/MAE),
-//  thống kê theo thế A/B, nhãn trung thực (plan BENZO-CORVEN 10.3), mốc "Đặt lại thống kê", niêm phong tín hiệu
+//  thống kê theo thế A/B, nhãn trung thực (plan BENZO-CORVEN 10.3), niêm phong tín hiệu
 //  (SignalCache + guard khớp nến), engine xử lý nến đã đóng (BenzoEngine: 1 lệnh mở, huỷ lệnh ở nến cuối phiên,
 //  đóng TIME qua khoảng trống > 30′), caption Telegram, CSV lệnh + CSV ứng viên bị loại, client Telegram.
 //  GĐ3 (2026-11-09): chỉ còn MỘT setup — CORVEN (BenzoCorven.cs); 4 setup A/B/C/D cũ đã xoá (git giữ lịch sử).
@@ -159,8 +159,9 @@ namespace BenzoTraderNs
         public static bool InVirtualOpen(int sm) => sm >= 860 && sm < 930;
         public const int TeleMaxAgeSec = 90;
 
-        /// <summary>Khoá cache theo cấu hình ảnh hưởng tín hiệu (plan 10.2): phiên bản logic + công tắc chặn giờ Mỹ.</summary>
-        public static string CacheVersion(bool blockUs) => LogicVersion + "-us" + (blockUs ? 1 : 0);
+        /// <summary>Khoá cache theo cấu hình ảnh hưởng tín hiệu: phiên bản logic + SL tối đa (giá) + 2 công tắc Fail Break / Break (đổi một trong ba ⇒ tính lại).</summary>
+        public static string CacheVersion(double slMaxGia = CorvenParams.SlMaxGia, bool failBreak = true, bool brk = true) =>
+            LogicVersion + "-sl" + slMaxGia.ToString("0.0", CultureInfo.InvariantCulture) + "-f" + (failBreak ? 1 : 0) + "-b" + (brk ? 1 : 0);
 
         /// <summary>Tên file cache/CSV có KHUNG (plan 10.5): cache_&lt;sym&gt;_&lt;aggName&gt;_&lt;minutes&gt;m.jsonl.</summary>
         public static string CacheFileName(string symbol, string aggName, int minutes) =>
@@ -263,13 +264,12 @@ namespace BenzoTraderNs
             public SetupStat B = new SetupStat { Setup = 'B' };
         }
 
-        /// <summary>Chỉ đếm lệnh có Time ≥ resetUtc (null = đếm hết lịch sử).</summary>
-        public static StatsResult ComputeStats(IEnumerable<Signal> sigs, DateTime? resetUtc)
+        /// <summary>Thống kê toàn bộ lệnh đang có (tính lại mỗi lần nạp dữ liệu).</summary>
+        public static StatsResult ComputeStats(IEnumerable<Signal> sigs)
         {
             var r = new StatsResult();
             foreach (var s in sigs)
             {
-                if (resetUtc.HasValue && s.Time < resetUtc.Value) continue;
                 var by = s.Setup == 'A' ? r.A : s.Setup == 'B' ? r.B : null;
                 foreach (var st in by == null ? new[] { r.Total } : new[] { by, r.Total })
                 {
@@ -293,7 +293,7 @@ namespace BenzoTraderNs
         }
 
         /// <summary>Bảng chart 4 dòng (plan 10.3) — dòng 4 LUÔN hiện:
-        /// "BENZO CORVEN corven-5 · N lệnh · WR x % · ΣR" / "Fail Break · n · WR · ΣR" / "Break · n · WR · ΣR" / nhãn backtest.</summary>
+        /// "BENZO CORVEN corven-6 · N lệnh · WR x % · ΣR" / "Fail Break · n · WR · ΣR" / "Break · n · WR · ΣR" / nhãn backtest.</summary>
         public static List<string> TableLines(StatsResult st)
         {
             string open = st.Total.Open > 0 ? $" · {st.Total.Open} đang mở" : "";
@@ -304,29 +304,6 @@ namespace BenzoTraderNs
                 $"{TheName('B')} · {st.B.N} · WR {Num(st.B.WinRate, "0")} % · {SignedR(st.B.SumR)}",
                 CorvenParams.BacktestLine,
             };
-        }
-
-        // ---- mốc đặt lại thống kê ----
-        public static DateTime? LoadResetMark(string path)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
-                string t = File.ReadAllText(path).Trim();
-                if (DateTime.TryParse(t, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var d)) return d;
-            }
-            catch { }
-            return null;
-        }
-        public static void ClearResetMark(string path)
-        {
-            try { if (!string.IsNullOrEmpty(path) && File.Exists(path)) File.Delete(path); } catch { }
-        }
-        public static void SaveResetMark(string path, DateTime utc)
-        {
-            string dir = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-            File.WriteAllText(path, utc.ToString("o", CultureInfo.InvariantCulture));
         }
 
         // ---- Telegram caption ----

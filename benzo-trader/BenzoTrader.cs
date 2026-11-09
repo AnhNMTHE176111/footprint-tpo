@@ -1,11 +1,11 @@
 // ============================================================================
-//  BenzoTrader — indicator signal cho Quantower / Optimus Flow: MỘT setup CORVEN (corven-5)
+//  BenzoTrader — indicator signal cho Quantower / Optimus Flow: MỘT setup CORVEN (corven-6)
 // ============================================================================
 //  Add vào chart M1 có Volume Analysis. Chỉ xử lý nến ĐÃ ĐÓNG, đúng 1 lần/nến, niêm phong theo thời gian mở nến
 //  (sống qua reload, guard khớp nến). Logic thuần ở BenzoCore.cs + BenzoCorven.cs (test được). File này chỉ là lớp dán:
 //  Settings (chỉ công tắc — plan BENZO-CORVEN 10.2), vòng đời, vẽ (hộp range, mốc thế B, mũi tên + SL/TP, nhãn dấu hiệu,
 //  bảng 4 dòng có nhãn trung thực), Telegram + chụp ảnh Win32, CSV lệnh + CSV ứng viên bị loại.
-//  ⚠ Setup CHƯA có lợi thế đo được (backtest 35 phiên +0,02R/lệnh, chưa đủ chắc là lợi thế) — chạy thử để người học review.
+//  ⚠ Setup CHƯA có lợi thế đo được (backtest 35 phiên −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,09R)) — chạy thử để người học review.
 //  Build: build.sh nối ProfileEngine.cs (chỉ vì NewsCalendar) + StackedImbalance.cs + ExhaustionLogic.cs + RangeLogic.cs +
 //  BenzoCore/Zones/OrderFlow/Corven + file này. Mọi `using` nằm trong namespace.
 // ============================================================================
@@ -164,7 +164,7 @@ namespace BenzoTraderNs
     // ---------------------------------------------------------------- indicator
     public class BenzoTrader : Indicator, IVolumeAnalysisIndicator
     {
-        // ======= Settings (plan 10.2 — CHỈ công tắc, không có ngưỡng số nào) =======
+        // ======= Settings (corven-6): range · bảng · 2 công tắc Fail Break / Break · SL tối đa (giá) — chặn 19:20–20:30 VN luôn BẬT, dấu hiệu luôn hiện =======
         [InputParameter("Lệch giờ (UTC → VN)", 10, -12, 14, 1, 0)]
         public int TzOffset { get; set; } = 7;
         [InputParameter("Telegram: bật", 20)]
@@ -175,20 +175,16 @@ namespace BenzoTraderNs
         public string TeleChatId { get; set; } = "";
         [InputParameter("Telegram: gửi thử (bật lên để gửi)", 23)]
         public bool TeleTestNow { get; set; } = false;
-        [InputParameter(CorvenParams.SettingLabel, 30)]
-        public bool EnableCorven { get; set; } = true;
-        [InputParameter("Chặn 19:20–20:30 VN (mốc neo Mỹ)", 31)]
-        public bool BlockUsOpen { get; set; } = true;
-        [InputParameter("Hiện range", 32)]
+        [InputParameter("Hiện range", 30)]
         public bool ShowRange { get; set; } = true;
-        [InputParameter("Hiện dấu hiệu đã đếm", 33)]
-        public bool ShowSigns { get; set; } = true;
-        [InputParameter("Đặt lại thống kê (bật lên để đặt)", 40)]
-        public bool ResetStatsNow { get; set; } = false;
-        [InputParameter("Hiện lại toàn bộ thống kê (bật lên để xoá mốc đặt lại)", 41)]
-        public bool ClearResetNow { get; set; } = false;
-        [InputParameter("Hiện bảng", 50)]
+        [InputParameter("Hiện bảng thống kê", 31)]
         public bool ShowTable { get; set; } = true;
+        [InputParameter("Bật Fail Break", 32)]
+        public bool EnableFailBreak { get; set; } = true;
+        [InputParameter("Bật Break", 33)]
+        public bool EnableBreak { get; set; } = true;
+        [InputParameter("SL tối đa (giá)", 34, 0.5, 1000, 0.1, 1)]
+        public double SlMaxGia { get; set; } = CorvenParams.SlMaxGia;      // lệnh có SL (entry↔SL) > mức này ⇒ bỏ; đổi ⇒ tính lại
 
         // ======= trạng thái =======
         private sealed class BoxV { public DateTime T0, T1; public double Top, Bot; public int State; }   // 0 active, 1 pending, 2 broken
@@ -213,13 +209,12 @@ namespace BenzoTraderNs
         private DetectorCorven _det;
         private SignalCache _cache;
         private readonly List<int> _hdOfBar = new();   // chỉ số HistoricalData của từng nến trong engine
-        private DateTime? _resetUtc;
-        private string _dir, _symbol, _aggName, _resetPath, _csvPath, _candPath, _logPath;
+        private string _dir, _symbol, _aggName, _csvPath, _candPath, _logPath;
         private int _minutes = -1;
         private readonly TeleClient _tele = new();
         private bool _armed;
         private readonly HashSet<string> _seen = new(), _openSent = new(), _closedSent = new();
-        private bool _lastTest, _lastReset, _lastClear;
+        private bool _lastTest;
         private string _builtKey;
         private int _lvMemoIdx = -1;                   // memo 1 nến của ReadLevels
         private IReadOnlyList<LevelVol> _lvMemo;
@@ -227,8 +222,8 @@ namespace BenzoTraderNs
         public BenzoTrader() : base()
         {
             Name = "Benzo Trader";
-            Description = "Benzo Trader — setup CORVEN (corven-5) trên nến M1 đã đóng: range + mốc + ≥ 2 dấu hiệu order flow + nến xác nhận. "
-                        + "Chạy thử: backtest 35 phiên +0,02R/lệnh, chưa đủ chắc là lợi thế — không phải khuyến nghị. Cần Volume Analysis.";
+            Description = "Benzo Trader — setup CORVEN (corven-6) trên nến M1 đã đóng: range + mốc + ≥ 2 dấu hiệu order flow + nến xác nhận. "
+                        + "Chạy thử: backtest 35 phiên −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,09R) — không phải khuyến nghị. Cần Volume Analysis.";
             SeparateWindow = false;
         }
 
@@ -293,24 +288,7 @@ namespace BenzoTraderNs
         private void PollButtons()
         {
             bool testEdge = TeleTestNow && !_lastTest; _lastTest = TeleTestNow;
-            bool resetEdge = ResetStatsNow && !_lastReset; _lastReset = ResetStatsNow;
-            bool clearEdge = ClearResetNow && !_lastClear; _lastClear = ClearResetNow;
             if (testEdge) SendTest();
-            if (clearEdge || resetEdge)
-            {
-                try
-                {
-                    lock (_calc)
-                    {
-                        EnsurePaths();
-                        if (clearEdge) { _resetUtc = null; BenzoCore.ClearResetMark(_resetPath); }
-                        if (resetEdge) { var now = DateTime.UtcNow; _resetUtc = now; BenzoCore.SaveResetMark(_resetPath, now); }
-                        BuildRender();
-                    }
-                    CurrentChart?.RedrawBuffer();
-                }
-                catch (Exception ex) { LogErr(ex.ToString(), "reset"); }
-            }
         }
 
         private void ConfigTele()
@@ -345,7 +323,6 @@ namespace BenzoTraderNs
             _symbol = Symbol?.Name ?? "X";
             if (_minutes < 0) _minutes = AggMinutes(out _aggName);
             string sym = BenzoCore.Sanitize(_symbol);
-            _resetPath = Path.Combine(_dir, $"reset_{sym}.txt");
             _csvPath = Path.Combine(_dir, BenzoCore.SignalsCsvName(_symbol, Math.Max(0, _minutes)));
             _candPath = Path.Combine(_dir, BenzoCore.CandidatesCsvName(_symbol, Math.Max(0, _minutes)));
         }
@@ -390,18 +367,16 @@ namespace BenzoTraderNs
 
                 for (int attempt = 0; attempt < 2; attempt++)
                 {
-                    string key = BenzoCore.CacheVersion(BlockUsOpen);
+                    string key = BenzoCore.CacheVersion(SlMaxGia, EnableFailBreak, EnableBreak);
                     if (_engine == null || _engine.Bars.Count > n - 1 || _builtKey != key)
                     {
                         _builtKey = key;
                         DeleteLegacyCache();
                         _cache = new SignalCache(Path.Combine(_dir, BenzoCore.CacheFileName(_symbol, _aggName, _minutes)), key);
                         _cache.Load();
-                        _resetUtc = BenzoCore.LoadResetMark(_resetPath);
-                        _det = new DetectorCorven { BlockUsOpen = BlockUsOpen };
+                        _det = new DetectorCorven(new CorvenCfg { SlMaxGia = SlMaxGia, BatFailBreak = EnableFailBreak, BatBreak = EnableBreak });   // chặn 19:20–20:30 VN luôn BẬT
                         _engine = new BenzoEngine(_symbol, tick, _cache, new ISetupDetector[] { _det })
                         {
-                            IsEnabled = _ => EnableCorven,
                             IsNewsBlocked = IsNewsBlocked,
                             GetLevels = ReadLevels,
                             BarMinutes = 1,
@@ -521,7 +496,7 @@ namespace BenzoTraderNs
         {
             if (_engine == null) return;
             var shown = _engine.Signals.ToList();
-            var st = BenzoCore.ComputeStats(shown, _resetUtc);
+            var st = BenzoCore.ComputeStats(shown);
             var rs = new RenderState
             {
                 Sigs = shown.Select(s => s.Clone()).ToList(),
@@ -529,7 +504,6 @@ namespace BenzoTraderNs
                 Digits = _digits,
                 Warn = TeleEnabled && !string.IsNullOrEmpty(_tele.LastError) ? "Telegram: " + _tele.LastError : null,
             };
-            if (!EnableCorven) rs.Lines.Insert(1, "(setup CORVEN đang TẮT — không phát tín hiệu mới)");
             var m = _det?.M;
             int last = _engine.Processed - 1;
             if (m != null && last >= 0 && last < _engine.Bars.Count)
@@ -558,7 +532,6 @@ namespace BenzoTraderNs
                 int bm = 1;
                 foreach (var s in res.Opened)
                 {
-                    if (!EnableCorven) { _seen.Add(s.Id); continue; }         // đang TẮT: lệnh lấy từ cache chỉ hiện, không gửi (plan 12.1 #2)
                     if (!_seen.Add(s.Id)) continue;
                     if (s.BarIdx != lastClosed) continue;                     // chỉ nến vừa đóng
                     double age = (DateTime.UtcNow - s.Time.AddMinutes(bm)).TotalSeconds;
@@ -740,7 +713,6 @@ namespace BenzoTraderNs
                         ? new[] { new PointF(xE, yE + sz + 4), new PointF(xE - sz, yE + sz * 2 + 4), new PointF(xE + sz, yE + sz * 2 + 4) }
                         : new[] { new PointF(xE, yE - sz - 4), new PointF(xE - sz, yE - sz * 2 - 4), new PointF(xE + sz, yE - sz * 2 - 4) };
                     using (var br = new SolidBrush(Color.FromArgb(a, dir))) gr.FillPolygon(br, tri);
-                    if (!ShowSigns) continue;
                     string lbl = BenzoCore.ShortDisplay(s)
                                + (s.IsClosed ? (s.R > 0 ? " ✓" : " ✗") : "");
                     float ly = s.Side > 0 ? yE + sz * 2 + 8 : yE - sz * 2 - 22;

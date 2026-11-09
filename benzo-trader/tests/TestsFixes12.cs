@@ -30,7 +30,7 @@ static partial class Program
 
         Console.WriteLine("[F2] Cổng: danh sách chính thức = GateVn + ③ + 3 cổng detector/engine; README liệt kê đúng tập đó (12.1-7a, Q1, Q2)");
         {
-            var mapped = CorvenRules.GateCodes.Select(CorvenRules.GateVn).Distinct().ToList();
+            var mapped = CorvenRules.GateCodes.Select(g => CorvenRules.GateVn(g)).Distinct().ToList();
             Check(mapped.All(x => CorvenRules.AllGateLabels.Contains(x)), "mọi giá trị GateVn nằm trong danh sách", string.Join(";", mapped));
             Check(CorvenRules.GateVn("cuoi_phien") == "cuối phiên" && !CorvenRules.AllGateLabels.Contains("setup tắt"), "có 'cuối phiên', bỏ 'setup tắt'");
             string root = RepoRoot();
@@ -94,25 +94,25 @@ static partial class Program
             string cp = Tmp("cache_toggle.jsonl");
             var (e0, _) = CorvenData.Run(b, l, 0.1, Deny);
             int mid = 15000;
-            var cA = new SignalCache(cp, BenzoCore.CacheVersion(true)); cA.Load();
+            var cA = new SignalCache(cp, BenzoCore.CacheVersion()); cA.Load();
             var detA = new DetectorCorven { AllowBar = i => i >= Deny };
             var engA = new BenzoEngine("GCZ26", 0.1, cA, new ISetupDetector[] { detA }) { GetLevels = i => l[i], IsEnabled = _ => false };
             engA.Bars.AddRange(b.Take(mid));
             for (int i = 0; i < mid; i++) engA.Advance(i);
-            var cChk = new SignalCache(cp, BenzoCore.CacheVersion(true)); cChk.Load();
+            var cChk = new SignalCache(cp, BenzoCore.CacheVersion()); cChk.Load();
             Check(!cChk.Covers(b[100].Time.Ticks) && !cChk.Covers(b[mid - 1].Time.Ticks), "nến chạy lúc TẮT không được niêm phong");
-            var cB = new SignalCache(cp, BenzoCore.CacheVersion(true)); cB.Load();
+            var cB = new SignalCache(cp, BenzoCore.CacheVersion()); cB.Load();
             var (eOn, _) = CorvenData.Run(b, l, 0.1, Deny, cache: cB);
             int want = e0.Signals.Count(x => x.BarIdx < mid), got = eOn.Signals.Count(x => x.BarIdx < mid);
-            Check(want == 59 && got == 59 && eOn.Signals.Select(x => x.Id).SequenceEqual(e0.Signals.Select(x => x.Id)), "bật lại: 59/59 lệnh trước nến 15000 có lại, toàn bộ = chạy chuẩn", $"{got}/{want}");
+            Check(want == 58 && got == 58 && eOn.Signals.Select(x => x.Id).SequenceEqual(e0.Signals.Select(x => x.Id)), "bật lại: 58/58 lệnh trước nến 15000 có lại, toàn bộ = chạy chuẩn", $"{got}/{want}");
 
             // đang TẮT nhưng cache đã có lệnh ⇒ lệnh vẫn hiện (bảng đếm được), không dò mới
-            var cC = new SignalCache(cp, BenzoCore.CacheVersion(true)); cC.Load();
+            var cC = new SignalCache(cp, BenzoCore.CacheVersion()); cC.Load();
             var detC = new DetectorCorven { AllowBar = i => i >= Deny };
             var engC = new BenzoEngine("GCZ26", 0.1, cC, new ISetupDetector[] { detC }) { GetLevels = i => l[i], IsEnabled = _ => false };
             engC.Bars.AddRange(b);
             var rC = engC.Advance(b.Count - 1);
-            var st = BenzoCore.ComputeStats(engC.Signals, null);
+            var st = BenzoCore.ComputeStats(engC.Signals);
             Check(!rC.CacheInvalid && engC.Signals.Count == eOn.Signals.Count && st.Total.N + st.Total.Open == eOn.Signals.Count,
                   "đang TẮT: mọi lệnh đã niêm phong vẫn hiện và được đếm", $"{engC.Signals.Count}/{eOn.Signals.Count}");
         }

@@ -34,7 +34,7 @@ tiêu** → cùng cấu hình chạy đúng cho GC, MGC, hay feed proxy. Knob **
 | **Nến delta lớn** | **tô thân nến** | cả thân | **xanh (Δ>0) / đỏ (Δ<0)** |
 | **Số Delta** | chữ dưới nến | — | xanh/đỏ theo dấu |
 | Exhaustion / Divergence / Sweep | ▲ tam giác | vừa | đỉnh→cyan, đáy→đỏ |
-| Stacked Imbalance | ▭ vùng chữ nhật kéo sang phải | số mức | xanh lơ buy / hồng sell (nhạt = bị rút râu hoặc đã xa) |
+| Stacked Imbalance | ▭ vùng chữ nhật kéo sang phải | số mức | xanh lơ buy / hồng sell (nhạt = bị rút râu; vùng còn hiệu lực nhưng đã xa ≥ ImbFarBars nến thì KHÔNG vẽ; hover chỉ ghi "Stacked imbalance buy/sell N mức") |
 | Unfinished / Stop-hunt | ▭ / ⬤ halo | nhỏ / lớn | 2 phía / phe hấp thụ |
 
 Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score, deltaPct…).

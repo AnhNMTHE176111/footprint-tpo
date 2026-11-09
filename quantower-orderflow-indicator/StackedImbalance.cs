@@ -176,6 +176,13 @@ namespace OrderFlowBubbles
             return (-1, SiEnd.Active);
         }
 
+        /// <summary>Chữ rê chuột của vùng: chỉ "Stacked imbalance buy/sell N mức".</summary>
+        public static string ZoneTooltip(int side, int levels) =>
+            $"Stacked imbalance {(side > 0 ? "buy" : "sell")} {levels} mức";
+
+        /// <summary>Vùng còn hiệu lực nhưng đã quá xa (tuổi ≥ farBars) → không vẽ, không hover.</summary>
+        public static bool IsFar(int endIdx, int farBars, int age) => endIdx < 0 && farBars > 0 && age >= farBars;
+
         public static string PositionText(SiPosition p) => p switch
         {
             SiPosition.Body => "giữa thân nến",

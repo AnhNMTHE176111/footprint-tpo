@@ -394,7 +394,7 @@ namespace OrderFlowBubbles
 
         public int ImbMaxBars { get; set; } = 0;
 
-        // CORVEN: "dùng gần thôi, đừng dùng xa" → vùng còn hiệu lực nhưng đã quá N nến thì vẽ mờ đi.
+        // CORVEN: "dùng gần thôi, đừng dùng xa" → vùng còn hiệu lực nhưng đã quá N nến thì KHÔNG vẽ, không hover nữa.
         // 60 nến (~1 giờ M1) > 95% thời gian chờ bị chạm đo được (42 nến).
         public int ImbFarBars { get; set; } = 60;
 
@@ -840,11 +840,7 @@ namespace OrderFlowBubbles
                 foreach (var z in StackedImbalanceCalc.Detect(loIdx * tick, tick, askArr, bidArr, ImbalanceRatioPct, ImbalanceRun, ImbMinVolume))
                 {
                     StackedImbalanceCalc.Classify(z, bar.Open, bar.Close);
-                    string ratioTxt = double.IsPositiveInfinity(z.MinRatio) ? "bên kia = 0" : $"yếu nhất {z.MinRatio * 100:0}%";
-                    string tip = $"Stacked imbalance {(z.Side > 0 ? "BUY" : "SELL")} {z.Levels} mức {z.Lo:0.0}–{z.Hi:0.0}: "
-                               + (z.Side > 0 ? $"buy {z.DomVolume:0} vs sell chéo {z.OppVolume:0}" : $"sell {z.DomVolume:0} vs buy chéo {z.OppVolume:0}")
-                               + $" ({ratioTxt}) · {StackedImbalanceCalc.PositionText(z.Position)}"
-                               + (z.Weak ? " — bị rút râu (CORVEN: không đẹp)" : "");
+                    string tip = StackedImbalanceCalc.ZoneTooltip(z.Side, z.Levels);
                     list.Add(new Bubble
                     {
                         Price = z.Lo, PriceHi = z.Hi, Shape = Shape.Zone, ZoneSide = z.Side, ZoneWeak = z.Weak,
@@ -1149,10 +1145,10 @@ namespace OrderFlowBubbles
                         var rect = new RectangleF(x0, yTop, Math.Max((float)barsW / 2f, x1 - x0), Math.Max(3f, yBot - yTop));
 
                         int age = (endIdx >= 0 ? endIdx : last) - zIdx;
-                        bool far = endIdx < 0 && ImbFarBars > 0 && age >= ImbFarBars;
+                        bool far = StackedImbalanceCalc.IsFar(endIdx, ImbFarBars, age);
+                        if (far) continue;            // "đừng dùng xa" → không vẽ, không hover
                         double op = Math.Clamp(ImbZoneOpacity, 0, 100) / 100.0;
                         if (b.ZoneWeak) op *= 0.5;    // bị rút râu → nhạt
-                        if (far) op *= 0.5;           // "đừng dùng xa" → nhạt
                         var col = b.ZoneSide > 0 ? ImbBuyZoneColor : ImbSellZoneColor;
                         using (var zb = new SolidBrush(Color.FromArgb((int)Math.Round(255 * op), col)))
                             gr.FillRectangle(zb, rect);
@@ -1160,12 +1156,7 @@ namespace OrderFlowBubbles
                             using (var zp = new Pen(Color.FromArgb((int)Math.Round(255 * Math.Min(1.0, op * 2)), col), 1f))
                                 gr.DrawRectangle(zp, rect.X, rect.Y, rect.Width, rect.Height);
 
-                        string status = endIdx < 0
-                            ? (far ? $" · còn hiệu lực {age} nến — đã XA (CORVEN: đừng dùng xa)" : $" · còn hiệu lực {age} nến")
-                            : end == SiEnd.Touched ? $" · giá chạm lại sau {age} nến"
-                            : end == SiEnd.ClosedThrough ? $" · nến đóng xuyên qua sau {age} nến (không giữ được)"
-                            : $" · hết hạn sau {age} nến";
-                        zoneHits.Add((rect, b.Tooltip + status, col));
+                        zoneHits.Add((rect, b.Tooltip, col));
                     }
                 }
 

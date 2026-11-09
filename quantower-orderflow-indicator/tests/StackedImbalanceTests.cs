@@ -152,6 +152,19 @@ static class StackedImbalanceTests
         Check(f4.endOffset == -1 && f4.reason == SiEnd.Active, "Follow chua cham -> con hieu luc");
     }
 
+    // [SI-8b] chữ rê chuột ngắn + vùng xa không vẽ (2026-11-09)
+    static void TooltipAndFar()
+    {
+        Console.WriteLine("[SI-8b] Tooltip ngan + vung xa khong ve");
+        Check(StackedImbalanceCalc.ZoneTooltip(1, 4) == "Stacked imbalance buy 4 mức", "tooltip buy", StackedImbalanceCalc.ZoneTooltip(1, 4));
+        Check(StackedImbalanceCalc.ZoneTooltip(-1, 3) == "Stacked imbalance sell 3 mức", "tooltip sell", StackedImbalanceCalc.ZoneTooltip(-1, 3));
+        Check(StackedImbalanceCalc.IsFar(-1, 60, 60), "con hieu luc, tuoi = 60 -> xa (bo)");
+        Check(StackedImbalanceCalc.IsFar(-1, 60, 2671), "con hieu luc, tuoi 2671 -> xa (bo)");
+        Check(!StackedImbalanceCalc.IsFar(-1, 60, 59), "tuoi 59 -> chua xa (van ve)");
+        Check(!StackedImbalanceCalc.IsFar(5, 60, 500), "da ket thuc -> khong bi coi la xa (van ve)");
+        Check(!StackedImbalanceCalc.IsFar(-1, 0, 500), "ImbFarBars = 0 -> tat che do xa");
+    }
+
     // [SI-9] niêm phong: trường vùng đi qua JSON; bản ghi CŨ (không có trường) vẫn đọc được
     static void CacheFields()
     {
@@ -211,6 +224,6 @@ static class StackedImbalanceTests
     public static void RunAll()
     {
         PureBuy(); RatioThreshold(); OneVsZero(); BrokenChain(); PureSell();
-        BothSidesAndNoHorizontal(); PositionAndWeak(); EndRules(); CacheFields(); RealDataCrossCheck();
+        BothSidesAndNoHorizontal(); PositionAndWeak(); EndRules(); TooltipAndFar(); CacheFields(); RealDataCrossCheck();
     }
 }

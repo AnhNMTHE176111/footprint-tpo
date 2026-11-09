@@ -265,6 +265,13 @@ class FollowMachine:
                  b_from_exhausted=int(b.exhausted), n_hoi=len(pb), move_h=move_h, depth=depth,
                  move_h_mbr=round(move_h / f.mbr[c], 3), depth_frac=round(depth / move_h, 3) if move_h > 0 else np.nan,
                  deep=int(depth > p.deep * move_h + EPS))
+        # ---- Hc (plan 10.2-1 / 10.3-1, hậu kiểm): nhịp hồi x+1…c−1 chạm cạnh E trong tol = max(2 tick, 0,5 mbr) tại c
+        tol_hc = max(2.0, 0.5 * f.mbr[c])
+        r['Hc'] = int((ext_pb - b.E) * D <= tol_hc + EPS)
+        r['hc_ext_mbr'] = round((b.E - ext_pb) * D / f.mbr[c], 3) if f.mbr[c] > 0 else np.nan
+        # ---- cột giả thuyết H1 / H3 (plan 10.3-2; H2 = risk_gia ghi sau phần lệnh)
+        r['cf_body'] = round(abs(int(C[c]) - int(O[c])) / max(int(H[c]) - int(L[c]), 1), 4)
+        r['move_x_rng'] = round(move_h / max(b.top - b.bottom, 1), 4)
         # ---- T: trap phe ngược ở nhịp hồi (ô −D ở nửa phía D của nến hồi, CF đóng vượt ô)
         best = None
         for j in pb:
@@ -370,6 +377,7 @@ class FollowMachine:
             r[f'tp_{nm}'] = ent + D * p.tp_r * risk
             r[f'cap_{nm}'] = int(risk > p.sl_cap_mbr * mbr + EPS)
             r[f'r17_{nm}'] = int(risk > 0 and (tgt - ent) * D / risk >= p.r17 - EPS)
+        r['risk_gia'] = r['risk_S2'] / 10.0
         r['entry'] = ent
         r['mbr_c'] = float(mbr)
         r['chan_1920'] = int(860 <= f.sm[c] < 930)
@@ -384,6 +392,23 @@ def combo_mask(d: pd.DataFrame) -> Dict[str, np.ndarray]:
     n2 = g['T'].astype(int) + g['Bc'] + g['K'] + g['S'] + g['Dh']
     return dict(F0=np.ones(len(d), bool), F1=g['T'], F2=g['Bc'], F3=g['K'], F4=g['T'] & g['Bc'], F5=g['T'] & g['K'], F6=g['S'],
                 F7=g['Dh'], F8=g['Sh'] & (g['Bc'] | g['Dc']), F9=g['Mv'] & (g['T'] | g['Bc'] | g['K'] | g['S']), F10=n2 >= 2)
+
+
+# ---- plan mục 10 (hậu kiểm sau mổ SL vòng 1): F7b = Dh ∧ ¬Hc (có sức chọn ⇒ vào family hoán vị 11); 3 dòng còn lại chỉ báo cáo
+POST_SEL = ('F7b',)
+POST_REP = ('F7Hc', 'F10nHc', 'F0nHc')
+FAM11 = SEL_COMBOS + POST_SEL
+ALL_POST = COMBOS + POST_SEL + POST_REP
+COMBO_NAME.update(F7b='Dh ∧ ¬Hc (hậu kiểm)', F7Hc='F7 ∧ Hc (đối chiếu cơ chế)', F10nHc='F10 ∧ ¬Hc (báo cáo)', F0nHc='F0 ∧ ¬Hc (báo cáo)')
+HYP = (('H1', 'cf_body', '<', 0.4, 'thân CF < 0,4'), ('H2', 'risk_gia', '>=', 7.0, 'rủi ro S2 ≥ 7 giá'),
+       ('H3', 'move_x_rng', '>=', 2.0, 'move_h ≥ 2 × chiều cao range'))
+
+
+def post_mask(d: pd.DataFrame) -> Dict[str, np.ndarray]:
+    m = dict(combo_mask(d))
+    hc = d['Hc'].to_numpy().astype(bool)
+    m.update(F7b=m['F7'] & ~hc, F7Hc=m['F7'] & hc, F10nHc=m['F10'] & ~hc, F0nHc=~hc)
+    return m
 
 
 # =====================================================================================================
@@ -545,6 +570,150 @@ def judge(s: dict, c1: float, c2: Optional[float], half1: float, half2: float, o
     if not (obs == obs and obs > thr):
         why.append('không vượt ngưỡng hoán vị')
     return dict(inner=bool(inner), dat=not why, ly_do='; '.join(why) if why else 'ĐẠT')
+
+
+def add_halves(d: pd.DataFrame, sess_good) -> pd.DataFrame:
+    """Nửa 1 / nửa 2 theo phiên dày (TRAIN 35 phiên ⇒ 18 / 17, đúng như main)."""
+    sess_good = sorted(sess_good)
+    k1 = (len(sess_good) + 1) // 2
+    half_of = {s: (1 if k < k1 else 2) for k, s in enumerate(sess_good)}
+    d = d.copy()
+    d['half'] = d['phien'].map(half_of).fillna(0).astype(int)
+    return d
+
+
+def eval_post(d: pd.DataFrame, f, df, fp: FP, nd: int, n_perm: int = 2000, seed: int = 0) -> dict:
+    """Plan 10.3-1/2 — đúng pipeline bảng chính (S2 · TP 2R · one_at_a_time · 1 lệnh/(range, cạnh, leg) · C1 · C1 F0∖combo · C2' ·
+    nửa 1/2 · hoán vị) cho F0…F10 + F7b (family hoán vị 11 combo) + 3 dòng báo cáo; bảng H1–H3; kiểm F7b theo 10.2-1.
+    Dùng chung cho follow_combo.main (TRAIN) và follow_newdata.py (dữ liệu ≥ 22/10)."""
+    ok = tradeable(d, 'S2')
+    masks = post_mask(d)
+    sub = np.flatnonzero(ok)
+    cols = FAM11 + POST_REP
+    M = np.column_stack([masks[k][sub] for k in cols])
+    rr = d['r_alone'].to_numpy()[sub]
+    grp = d['phien'].to_numpy()[sub]
+    obs, perm, _ = perm_test(M, rr, grp, n_perm=n_perm, seed=seed)
+    nf = len(FAM11)
+    n_alone = M.sum(0)
+    big = n_alone[:nf] >= 30
+    maxs = np.nanmax(perm[:, :nf], axis=1) if len(sub) else np.full(n_perm, np.nan)
+    thr = float(np.nanpercentile(maxs, 95)) if np.isfinite(maxs).any() else np.nan
+    maxs30 = np.nanmax(perm[:, :nf][:, big], axis=1) if big.any() else np.full(n_perm, np.nan)
+    thr30 = float(np.percentile(maxs30, 95)) if big.any() else np.nan
+    p_raw = np.array([float(np.mean(perm[:, k] >= obs[k] - EPS)) if obs[k] == obs[k] else np.nan for k in range(len(cols))])
+    p_max30 = np.array([float(np.mean(maxs30 >= obs[k] - EPS)) if (k < nf and obs[k] == obs[k] and big[k]) else np.nan
+                        for k in range(len(cols))])
+    trades = {k: select(d, ok & masks[k], 'S2') for k in ALL_POST}
+    s_c1 = stats_r(trades['F0']['r_alone'].to_numpy(), nd)
+    c1 = s_c1.get('avg', np.nan)
+    res = {}
+    for k in ALL_POST:
+        t = trades[k]
+        s = stats_r(t['r_alone'].to_numpy(), nd)
+        rest = select(d, ok & ~masks[k], 'S2') if k != 'F0' else t.iloc[0:0]
+        c2p, n2p = c2_for(t, f, df, fp, after_only=True)
+        h1 = t[t['half'] == 1]['r_alone'].mean() if len(t) else np.nan
+        h2 = t[t['half'] == 2]['r_alone'].mean() if len(t) else np.nan
+        if k in cols:
+            j = cols.index(k)
+            o, pr, pm30 = obs[j], p_raw[j], p_max30[j]
+        else:
+            o, pr, pm30 = np.nan, np.nan, np.nan
+        if k in FAM11:
+            jd = judge(s, c1, c2p, h1, h2, o, thr30)
+            jd['ly_do'] = jd['ly_do'].replace('C2+0,15', "C2'+0,15")
+        else:
+            jd = dict(inner=False, dat=False, ly_do='đối chứng' if k == 'F0' else 'báo cáo — không có sức chọn')
+        res[k] = dict(s=s, rest=stats_r(rest['r_alone'].to_numpy(), nd), c2p=c2p, n2p=n2p, h1=h1, h2=h2, obs=o, p_raw=pr,
+                      p_max30=pm30, jd=jd, n_alone=int(masks[k][ok].sum()))
+    # ---- 10.2-1: điều kiện cơ chế R TB(F7 ∧ ¬Hc) − R TB(F7 ∧ Hc) ≥ +0,20 (cả hai theo pipeline); thêm cách lọc của Fable (tách lệnh F7)
+    a, b = res['F7b']['s'].get('avg', np.nan), res['F7Hc']['s'].get('avg', np.nan)
+    t7 = trades['F7']
+    hc7 = t7['Hc'].to_numpy().astype(bool) if len(t7) else np.zeros(0, bool)
+    split7 = dict(nhc=stats_r(t7['r_alone'].to_numpy()[~hc7], nd), hc=stats_r(t7['r_alone'].to_numpy()[hc7], nd))
+    if len(t7):
+        split7['nhc_h1'] = float(t7[~hc7 & (t7['half'].to_numpy() == 1)]['r_alone'].mean())
+        split7['nhc_h2'] = float(t7[~hc7 & (t7['half'].to_numpy() == 2)]['r_alone'].mean())
+        split7['n_nhc_h1'] = int((~hc7 & (t7['half'].to_numpy() == 1)).sum())
+        split7['n_nhc_h2'] = int((~hc7 & (t7['half'].to_numpy() == 2)).sum())
+    mech = dict(diff=a - b if (a == a and b == b) else np.nan, nhc=a, hc=b)
+    jd7 = res['F7b']['jd']
+    s7 = res['F7b']['s']
+    cond = []
+    n7 = s7.get('n', 0)
+    cond.append(('n ≥ 30', n7 >= 30, f'{n7}'))
+    if n7:
+        cond.append(('R TB ≥ C1 + 0,15', s7['avg'] >= c1 + 0.15 - EPS, f"{f2(s7['avg'])} vs {f2(c1 + 0.15)}"))
+        c2p = res['F7b']['c2p']
+        cond.append(("R TB ≥ C2' + 0,15", c2p is not None and s7['avg'] >= c2p + 0.15 - EPS,
+                     f"{f2(s7['avg'])} vs {f2(c2p + 0.15) if c2p is not None else '–'}"))
+        cond.append(('KTC dưới > −0,10', s7['lo'] > -0.10, f2(s7['lo'])))
+        h1, h2 = res['F7b']['h1'], res['F7b']['h2']
+        cond.append(('dương cả hai nửa', bool(h1 > 0 and h2 > 0), f'{f2(h1)} / {f2(h2)}'))
+        o = res['F7b']['obs']
+        cond.append(('vượt ngưỡng hoán vị ≥ 30 (family 11)', bool(o == o and o > thr30), f'Δ {f2(o, 3)} vs ngưỡng {f2(thr30, 3)}'))
+    cond.append(('R TB(F7∧¬Hc) − R TB(F7∧Hc) ≥ +0,20', bool(mech['diff'] == mech['diff'] and mech['diff'] >= 0.20 - EPS),
+                 f"{f2(mech['nhc'])} − {f2(mech['hc'])} = {f2(mech['diff'])}"))
+    f7b_dat = bool(n7 >= 30 and all(c[1] for c in cond))
+    # ---- H1–H3: R TB hai phía trên lệnh pipeline của từng combo
+    hyp = {}
+    for k in ('F0', 'F7', 'F7b', 'F10'):
+        t = trades[k]
+        for hn, col, op, th, _ in HYP:
+            if len(t) == 0:
+                hyp[(k, hn)] = (stats_r(np.zeros(0), nd), stats_r(np.zeros(0), nd))
+                continue
+            x = t[col].to_numpy(float)
+            m_ = x < th if op == '<' else x >= th - EPS
+            r_ = t['r_alone'].to_numpy()
+            hyp[(k, hn)] = (stats_r(r_[m_], nd), stats_r(r_[~m_], nd))
+    return dict(res=res, thr=thr, thr30=thr30, trades=trades, c1=c1, mech=mech, split7=split7, cond=cond, f7b_dat=f7b_dat,
+                hyp=hyp, n_sub=len(sub), n_perm=n_perm, jd7=jd7)
+
+
+def render_post(E: dict, nd: int) -> List[str]:
+    """Bảng chính F0…F10 + F7b + 3 dòng báo cáo, kiểm F7b (10.2-1), bảng H1–H3 — Markdown."""
+    res = E['res']
+    L = [f"Hoán vị thống kê cực đại: {E['n_perm']} lần trên {E['n_sub']} F0 đã qua Vk + cổng; **family 11 combo = F1…F10 + F7b** "
+         f"(F7b hậu kiểm). Ngưỡng phân vị 95: max trên 11 combo = {f2(E['thr'], 3)}R · **max chỉ trên combo có ≥ 30 F0 = "
+         f"{f2(E['thr30'], 3)}R (ngưỡng chấm)**. Ba dòng F7∧Hc / F10∧¬Hc / F0∧¬Hc chỉ báo cáo (có p thô, không vào max).", '',
+         "| Combo | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD | chuỗi thua | C1 toàn F0 | C1 F0∖combo | **C2'** | R nửa 1 / nửa 2 | "
+         "Δ r_alone vs F0 (n F0) | p thô / p cực đại (≥ 30, 11 combo) | vòng trong (C2') | ĐẠT (C2') |",
+         '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|']
+    for k in ALL_POST:
+        u = res[k]
+        s = u['s']
+        nm = f"**{k}** {COMBO_NAME[k]}"
+        if s.get('n', 0) == 0:
+            L.append(f"| {nm} | 0 | – | – | – | – | – | – | – | {f2(E['c1'])} | – | – | – | – | – | – | không đo được |")
+            continue
+        jd = u['jd']
+        inner = '**có**' if jd['inner'] else ('–' if k not in FAM11 else 'không')
+        dat = '**ĐẠT**' if jd['dat'] else jd['ly_do']
+        L.append(f"| {nm} | {s['n']} | {f2(s['per_day'])} | {f2(100 * s['wr'], 1)} % | **{f2(s['avg'])}** | [{f2(s['lo'])}; {f2(s['hi'])}] | "
+                 f"{f2(s['sum'], 1)} | {f2(s['dd'], 1)} | {s['streak']} | {f2(E['c1'])} | "
+                 f"{f2(u['rest'].get('avg')) if k != 'F0' else '–'} | **{f2(u['c2p'])}** | {f2(u['h1'])} / {f2(u['h2'])} | "
+                 f"{f2(u['obs'], 3) if k != 'F0' else '–'} ({u['n_alone']}) | {f2(u['p_raw'], 3)} / {f2(u['p_max30'], 3)} | {inner} | {dat} |")
+    L += ['', '**Kiểm F7b theo 10.2-1** (đủ mọi điều kiện mới ĐẠT):', '', '| điều kiện | đạt? | số |', '|---|---|---|']
+    for name, okc, txt in E['cond']:
+        L.append(f"| {name} | {'có' if okc else '**không**'} | {txt} |")
+    sp = E['split7']
+    L += ['', f"⇒ **F7b: {'ĐẠT' if E['f7b_dat'] else 'KHÔNG ĐẠT'}**.", '',
+          f"Cách lọc của Fable (tách {sp['nhc'].get('n', 0) + sp['hc'].get('n', 0)} lệnh F7 đã chọn theo Hc, KHÔNG chọn lại one_at_a_time): "
+          f"F7 ∧ ¬Hc n {sp['nhc'].get('n', 0)} · R TB {f2(sp['nhc'].get('avg'))} · nửa 1/2 {f2(sp.get('nhc_h1'))} ({sp.get('n_nhc_h1', 0)}) / "
+          f"{f2(sp.get('nhc_h2'))} ({sp.get('n_nhc_h2', 0)}); F7 ∧ Hc n {sp['hc'].get('n', 0)} · R TB {f2(sp['hc'].get('avg'))}.", '',
+          '**Giả thuyết H1–H3 (chỉ đo, không có sức chọn) — R TB (n) hai phía trên lệnh pipeline của từng combo:**', '',
+          '| giả thuyết | ' + ' | '.join(f'{k} đạt | {k} không' for k in ('F0', 'F7', 'F7b', 'F10')) + ' |',
+          '|---|' + '---|' * 8]
+    for hn, _, _, _, lab in HYP:
+        cells = []
+        for k in ('F0', 'F7', 'F7b', 'F10'):
+            a, b = E['hyp'][(k, hn)]
+            cells += [f"{f2(a.get('avg'))} ({a.get('n', 0)})", f"{f2(b.get('avg'))} ({b.get('n', 0)})"]
+        L.append(f'| {hn} {lab} | ' + ' | '.join(cells) + ' |')
+    L.append('')
+    return L
 
 
 # =====================================================================================================
@@ -830,14 +999,52 @@ def main(n_perm: int = 2000):
                            p_raw=None if res[k]['p_raw'] != res[k]['p_raw'] else float(res[k]['p_raw']),
                            p_max=None if res[k]['p_max'] != res[k]['p_max'] else float(res[k]['p_max']))
                    for k in COMBOS} | dict(thr=thr, thr30=thr30, n_f0=n_f0, nd=nd), fh, ensure_ascii=False, indent=1, default=float)
-    return L, res, thr, d
+    # ------------------------------------------------------------ mục 10 plan — hậu kiểm vòng mổ 1: F7b (Dh ∧ ¬Hc)
+    E = eval_post(d, f, df, fp, nd, n_perm=n_perm)
+    for k in COMBOS:          # cùng pipeline ⇒ n / R TB / C1 / C2' của F0…F10 phải trùng bảng chính
+        a, b = E['res'][k], res[k]
+        assert a['s'].get('n', 0) == b['s'].get('n', 0), k
+        if b['s'].get('n', 0):
+            assert abs(a['s']['avg'] - b['s']['avg']) < 1e-12, k
+        assert (a['c2p'] is None and b['c2p'] is None) or abs(a['c2p'] - b['c2p']) < 1e-12, k
+    assert abs(E['c1'] - s_c1['avg']) < 1e-12
+    for k in POST_SEL + POST_REP:
+        E['trades'][k].to_csv(os.path.join(REPORT, f'_follow_trades_{k}.csv'), index=False, encoding='utf-8')
+    L10 = section10(E, nd)
+    return L, res, thr, d, L10
+
+
+def section10(E: dict, nd: int) -> List[str]:
+    s7b = E['res']['F7b']['s']
+    sp = E['split7']
+    dn = (s7b.get('n', 0) - 62)
+    dr = (s7b.get('avg', np.nan) - 0.40)
+    L = ['## 10. Hậu kiểm vòng mổ 1 — F7b (Opus, 2026-11-09, plan mục 10.3; chỉ TRAIN)', '',
+         '> **Hậu kiểm**: F7b = Dh ∧ ¬Hc sinh ra SAU khi đã nhìn R trên TRAIN (mổ SL vòng 1). Số TRAIN dưới đây **chỉ để báo**, không mở TEST; '
+         'F7b chỉ được xác nhận trên dữ liệu ≥ 22/10 bằng `follow_newdata.py` (cấu hình đóng băng, cùng hàm `eval_post`). '
+         '**Hc** (D = +1) = `min(low[x+1 … c−1]) ≤ E + tol`, tol = max(2 tick, 0,5 mbr tại c); cột `Hc`, `hc_ext_mbr` = (E − min low)·D / mbr '
+         'trong `_follow_cands.csv`. Cấu hình chính không đổi; F0…F10 bên dưới trùng bảng mục 2 về n / R TB / C1 / C2\' (script tự assert), '
+         'chỉ p cực đại khác vì family hoán vị giờ là 11 combo.', '']
+    L += render_post(E, nd)
+    L += ['> ⚠️ Chữ "ĐẠT" của F7b ở trên là **trên chính dữ liệu đã sinh ra luật** (Hc chọn sau khi nhìn R TRAIN) ⇒ **không phải bằng chứng**, '
+          'chỉ cho biết F7b không chết ngay trong mẫu. Kết luận ĐẠT / KHÔNG duy nhất được tính là lần chạy `follow_newdata.py` trên dữ liệu ≥ 22/10. '
+          'Bảng H1–H3 tính trên mọi lệnh pipeline (kể cả TIME) nên dòng F0 lệch nhẹ so với `MO-SL-FOLLOW.md` 4.2 (chỉ SL/TP).', '']
+    L += ['**Đối chiếu số lọc của Fable** (`MO-SL-FOLLOW.md` mục 3: F7 ∧ ¬Hc n 62, R TB +0,40, nửa 1/2 +0,45 (36) / +0,33 (26); F7 ∧ Hc n 33, −0,17):', '',
+          f"- Pipeline (chọn lại one_at_a_time trên mask F7b): n **{s7b.get('n', 0)}** (lệch {dn:+d}), R TB **{f2(s7b.get('avg'))}** "
+          f"(lệch {('%+.2f' % dr).replace('.', ',')}R). F7 ∧ Hc pipeline n {E['res']['F7Hc']['s'].get('n', 0)}, R TB {f2(E['mech']['hc'])}.",
+          f"- Cách lọc của Fable tái hiện từ lệnh F7: ¬Hc n {sp['nhc'].get('n', 0)} · {f2(sp['nhc'].get('avg'))}; Hc n {sp['hc'].get('n', 0)} · "
+          f"{f2(sp['hc'].get('avg'))}.",
+          '- ' + ('Lệch vượt ngưỡng 10.3-5 (> 0,10R hoặc n > 10) ⇒ xem `MO-SL-FOLLOW.md` mục 7.' if (abs(dn) > 10 or abs(dr) > 0.10)
+                  else 'Lệch trong ngưỡng 10.3-5 (≤ 0,10R và n ≤ 10) ⇒ không cần mục 7 `MO-SL-FOLLOW.md`.'), '']
+    return L
 
 
 if __name__ == '__main__':
-    L, res, thr, d = main()
+    L, res, thr, d, L10 = main()
     notes = os.path.join(REPORT, '_follow_notes.md')
     if os.path.exists(notes):
         L += open(notes, encoding='utf-8').read().splitlines()
+    L += [''] + L10
     with open(os.path.join(REPORT, 'RESULTS-FOLLOW.md'), 'w', encoding='utf-8') as fh:
         fh.write('\n'.join(L) + '\n')
     print('\n'.join(L[:60]))

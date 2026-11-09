@@ -155,6 +155,8 @@ sai ở hoàn cảnh nào thì mới dám cược tiền theo nó.
 | Follow F8 hồi nông + lực CF (GCZ26 M1, TRAIN 35 phiên, chấm lại C2' 2026-11-09) | ❌ đo TRAIN, chưa có lợi thế (kém nền) | n=49, −0,16R (C2' −0,08) |
 | Follow F9 move mạnh + 1 dấu hiệu (GCZ26 M1, TRAIN 35 phiên, chấm lại C2' 2026-11-09) | ❌ đo TRAIN, chưa có lợi thế (ngang nền) | n=214, −0,07R (C2' −0,05) |
 | Follow F10 ≥ 2 dấu hiệu khác loại (Follow) (GCZ26 M1, TRAIN 35 phiên, chấm lại C2' 2026-11-09) | ❌ đo TRAIN, **chưa có lợi thế** — lọt vòng trong theo C2', không ĐẠT (< C2'+0,15, KTC, hoán vị); đang mổ SL vòng 1 | n=120, +0,12R (C2' +0,01) |
+| Follow F7b = Δ ngược hồi **và nhịp hồi KHÔNG chạm cạnh E** (Dh ∧ ¬Hc) — luật hậu kiểm từ mổ SL vòng 1 (GCZ26 M1) | ⏳ **chưa kiểm** — chỉ dữ liệu ≥ 22/10 mới xác nhận (`follow_newdata.py`, tiêu chí đăng ký trước plan 10.2-1) | TRAIN (đã nhìn, không tính): n=66, +0,33R, F7∧Hc −0,22R |
+| Follow H1 / H2 / H3: CF thân < 0,4 thắng hơn · rủi ro S2 ≥ 7 giá thua · move_h ≥ 2× range thua (GCZ26 M1) | ⏳ giả thuyết hậu kiểm, **chỉ đo**, không có sức chọn | đo lại trên dữ liệu ≥ 22/10 |
 
 > Quy tắc: luật ở trạng thái ⏳ hoặc ❌ thì **được dùng để đọc chart**, nhưng **không được code thành
 > signal** và tôi **không được nói như thể đã kiểm định**.

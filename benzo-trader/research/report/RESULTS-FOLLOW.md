@@ -275,3 +275,60 @@ Ghi chú cột: n/WR/R TB… là lệnh thật (1 lệnh mở, 1 lệnh/(range, 
 - **move_mbr 1,5**: F0 −0,02 (n 297), F7 +0,16 (n 82), F10 +0,03 (n 105). Cả hai biến thể **không có sức chọn**, chỉ báo.
 - C2' bỏ lệnh khi pool < 5 nến sau CF (cuối phiên): F0 còn 6.778/6.800 lệnh giả.
 - Mổ SL vòng 1 (F7, F10; F1 chỉ xem): `report/MO-SL-FOLLOW.md`, ảnh `report/follow_shots/`, nhãn máy `report/_mo_sl_follow.csv`.
+
+## 10. Hậu kiểm vòng mổ 1 — F7b (Opus, 2026-11-09, plan mục 10.3; chỉ TRAIN)
+
+> **Hậu kiểm**: F7b = Dh ∧ ¬Hc sinh ra SAU khi đã nhìn R trên TRAIN (mổ SL vòng 1). Số TRAIN dưới đây **chỉ để báo**, không mở TEST; F7b chỉ được xác nhận trên dữ liệu ≥ 22/10 bằng `follow_newdata.py` (cấu hình đóng băng, cùng hàm `eval_post`). **Hc** (D = +1) = `min(low[x+1 … c−1]) ≤ E + tol`, tol = max(2 tick, 0,5 mbr tại c); cột `Hc`, `hc_ext_mbr` = (E − min low)·D / mbr trong `_follow_cands.csv`. Cấu hình chính không đổi; F0…F10 bên dưới trùng bảng mục 2 về n / R TB / C1 / C2' (script tự assert), chỉ p cực đại khác vì family hoán vị giờ là 11 combo.
+
+Hoán vị thống kê cực đại: 2000 lần trên 451 F0 đã qua Vk + cổng; **family 11 combo = F1…F10 + F7b** (F7b hậu kiểm). Ngưỡng phân vị 95: max trên 11 combo = 1,979R · **max chỉ trên combo có ≥ 30 F0 = 0,326R (ngưỡng chấm)**. Ba dòng F7∧Hc / F10∧¬Hc / F0∧¬Hc chỉ báo cáo (có p thô, không vào max).
+
+| Combo | n | lệnh/ngày | WR | R TB | KTC 95 % | ΣR | max DD | chuỗi thua | C1 toàn F0 | C1 F0∖combo | **C2'** | R nửa 1 / nửa 2 | Δ r_alone vs F0 (n F0) | p thô / p cực đại (≥ 30, 11 combo) | vòng trong (C2') | ĐẠT (C2') |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **F0** nền = C1 | 340 | 9,71 | 34,1 % | **-0,05** | [-0,20; 0,10] | -16,9 | 46,2 | 10 | -0,05 | – | **-0,02** | -0,09 / -0,00 | – (451) | – / – | – | đối chứng |
+| **F1** nguyên thủy (T) | 11 | 0,31 | 45,5 % | **0,31** | [-0,51; 1,13] | 3,4 | 3,2 | 3 | -0,05 | -0,06 | **0,51** | 0,07 / 0,95 | 0,360 (11) | 0,226 / – | không | n < 30 — không đo được |
+| **F2** bóng CF (Bc) | 26 | 0,74 | 23,1 % | **-0,36** | [-0,83; 0,11] | -9,5 | 9,8 | 8 | -0,05 | -0,03 | **-0,34** | -0,50 / -0,15 | -0,312 (26) | 0,889 / – | không | n < 30 — không đo được |
+| **F3** kiệt sức hồi (K) | 82 | 2,34 | 35,4 % | **0,00** | [-0,29; 0,33] | 0,3 | 15,7 | 7 | -0,05 | -0,07 | **-0,06** | 0,28 / -0,21 | 0,102 (84) | 0,205 / 0,637 | **có** | < C1+0,15; < C2'+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị |
+| **F4** trap + bóng CF (T∧Bc) | 0 | – | – | – | – | – | – | – | -0,05 | – | – | – | – | – | – | không đo được |
+| **F5** trap + kiệt sức (T∧K) | 2 | 0,06 | 50,0 % | **0,42** | [-1,04; 1,87] | 0,8 | 1,0 | 1 | -0,05 | -0,05 | **0,12** | 0,42 / – | 0,468 (2) | 0,453 / – | không | n < 30 — không đo được |
+| **F6** stacked giữ (S) | 226 | 6,46 | 34,1 % | **-0,04** | [-0,23; 0,14] | -10,1 | 19,9 | 11 | -0,05 | -0,05 | **-0,04** | -0,08 / -0,01 | 0,011 (272) | 0,469 / 0,944 | không | < C1+0,15; < C2'+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị |
+| **F7** Δ ngược hồi (Dh) | 96 | 2,74 | 42,7 % | **0,20** | [-0,10; 0,51] | 19,2 | 9,1 | 4 | -0,05 | -0,13 | **0,05** | 0,29 / 0,08 | 0,201 (110) | 0,049 / 0,272 | **có** | không vượt ngưỡng hoán vị |
+| **F8** hồi nông + lực CF (Sh∧(Bc∨Dc)) | 49 | 1,40 | 30,6 % | **-0,16** | [-0,53; 0,23] | -7,8 | 10,4 | 6 | -0,05 | -0,07 | **-0,08** | -0,26 / -0,07 | 0,016 (52) | 0,420 / 0,935 | không | < C1+0,15; < C2'+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị |
+| **F9** move mạnh + 1 dấu hiệu (Mv∧(T∨Bc∨K∨S)) | 214 | 6,11 | 33,2 % | **-0,07** | [-0,26; 0,11] | -15,6 | 24,3 | 10 | -0,05 | -0,03 | **-0,05** | -0,09 / -0,05 | -0,015 (258) | 0,611 / 0,981 | không | < C1+0,15; < C2'+0,15; KTC dưới ≤ −0,10; không dương cả 2 nửa; không vượt ngưỡng hoán vị |
+| **F10** ≥ 2 dấu hiệu khác loại {T,Bc,K,S,Dh} | 120 | 3,43 | 39,2 % | **0,12** | [-0,14; 0,37] | 14,0 | 9,7 | 5 | -0,05 | -0,11 | **0,01** | 0,16 / 0,07 | 0,143 (128) | 0,147 / 0,471 | **có** | < C2'+0,15; KTC dưới ≤ −0,10; không vượt ngưỡng hoán vị |
+| **F7b** Dh ∧ ¬Hc (hậu kiểm) | 66 | 1,89 | 47,0 % | **0,33** | [-0,03; 0,69] | 21,8 | 3,4 | 3 | -0,05 | -0,15 | **0,07** | 0,37 / 0,28 | 0,395 (74) | 0,003 / 0,016 | **có** | **ĐẠT** |
+| **F7Hc** F7 ∧ Hc (đối chiếu cơ chế) | 35 | 1,00 | 28,6 % | **-0,22** | [-0,66; 0,21] | -7,9 | 14,3 | 11 | -0,05 | -0,03 | **-0,06** | -0,09 / -0,37 | -0,196 (36) | 0,887 / – | – | báo cáo — không có sức chọn |
+| **F10nHc** F10 ∧ ¬Hc (báo cáo) | 85 | 2,43 | 41,2 % | **0,19** | [-0,13; 0,51] | 16,0 | 6,8 | 5 | -0,05 | -0,12 | **0,08** | 0,12 / 0,26 | 0,225 (91) | 0,070 / – | – | báo cáo — không có sức chọn |
+| **F0nHc** F0 ∧ ¬Hc (báo cáo) | 254 | 7,26 | 36,2 % | **0,02** | [-0,16; 0,19] | 4,9 | 24,9 | 11 | -0,05 | -0,17 | **0,03** | -0,09 / 0,14 | 0,054 (320) | 0,053 / – | – | báo cáo — không có sức chọn |
+
+**Kiểm F7b theo 10.2-1** (đủ mọi điều kiện mới ĐẠT):
+
+| điều kiện | đạt? | số |
+|---|---|---|
+| n ≥ 30 | có | 66 |
+| R TB ≥ C1 + 0,15 | có | 0,33 vs 0,10 |
+| R TB ≥ C2' + 0,15 | có | 0,33 vs 0,22 |
+| KTC dưới > −0,10 | có | -0,03 |
+| dương cả hai nửa | có | 0,37 / 0,28 |
+| vượt ngưỡng hoán vị ≥ 30 (family 11) | có | Δ 0,395 vs ngưỡng 0,326 |
+| R TB(F7∧¬Hc) − R TB(F7∧Hc) ≥ +0,20 | có | 0,33 − -0,22 = 0,56 |
+
+⇒ **F7b: ĐẠT**.
+
+Cách lọc của Fable (tách 96 lệnh F7 đã chọn theo Hc, KHÔNG chọn lại one_at_a_time): F7 ∧ ¬Hc n 63 · R TB 0,40 · nửa 1/2 0,45 (36) / 0,33 (27); F7 ∧ Hc n 33 · R TB -0,17.
+
+**Giả thuyết H1–H3 (chỉ đo, không có sức chọn) — R TB (n) hai phía trên lệnh pipeline của từng combo:**
+
+| giả thuyết | F0 đạt | F0 không | F7 đạt | F7 không | F7b đạt | F7b không | F10 đạt | F10 không |
+|---|---|---|---|---|---|---|---|---|
+| H1 thân CF < 0,4 | 0,12 (77) | -0,10 (263) | 0,64 (30) | 0,00 (66) | 0,67 (26) | 0,11 (40) | 0,39 (35) | 0,00 (85) |
+| H2 rủi ro S2 ≥ 7 giá | -0,19 (36) | -0,03 (304) | -0,27 (8) | 0,24 (88) | -0,27 (8) | 0,41 (58) | -0,27 (16) | 0,18 (104) |
+| H3 move_h ≥ 2 × chiều cao range | -0,07 (32) | -0,05 (308) | -0,55 (6) | 0,25 (90) | -0,55 (6) | 0,42 (60) | -0,40 (14) | 0,19 (106) |
+
+> ⚠️ Chữ "ĐẠT" của F7b ở trên là **trên chính dữ liệu đã sinh ra luật** (Hc chọn sau khi nhìn R TRAIN) ⇒ **không phải bằng chứng**, chỉ cho biết F7b không chết ngay trong mẫu. Kết luận ĐẠT / KHÔNG duy nhất được tính là lần chạy `follow_newdata.py` trên dữ liệu ≥ 22/10. Bảng H1–H3 tính trên mọi lệnh pipeline (kể cả TIME) nên dòng F0 lệch nhẹ so với `MO-SL-FOLLOW.md` 4.2 (chỉ SL/TP).
+
+**Đối chiếu số lọc của Fable** (`MO-SL-FOLLOW.md` mục 3: F7 ∧ ¬Hc n 62, R TB +0,40, nửa 1/2 +0,45 (36) / +0,33 (26); F7 ∧ Hc n 33, −0,17):
+
+- Pipeline (chọn lại one_at_a_time trên mask F7b): n **66** (lệch +4), R TB **0,33** (lệch -0,07R). F7 ∧ Hc pipeline n 35, R TB -0,22.
+- Cách lọc của Fable tái hiện từ lệnh F7: ¬Hc n 63 · 0,40; Hc n 33 · -0,17.
+- Lệch trong ngưỡng 10.3-5 (≤ 0,10R và n ≤ 10) ⇒ không cần mục 7 `MO-SL-FOLLOW.md`.
+

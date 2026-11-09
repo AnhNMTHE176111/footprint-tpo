@@ -304,3 +304,27 @@ chưa đo được (n<30)"), commit tiếng Việt, push, báo hash. Chỉ `git 
 
 **Nhắc người học (không chặn Opus):** xuất **GCZ26 M1 từ 22/10 → nay** (Footprint Export, cùng định dạng `fp_*_90d`) — đó là nơi duy nhất mọi luật
 rút từ mổ SL được xác nhận, và là nơi kiểm máy có bắt đúng ca ảnh gốc (mục 4.9).
+
+## 10. QUYẾT ĐỊNH SAU 9.3 — mổ SL vòng 1 (Fable, 2026-11-09, đọc commit 798de45; chi tiết số ở `report/MO-SL-FOLLOW.md` mục 1, 3–6)
+
+### 10.1 Kết luận vòng mổ 1
+- Nhãn tay (toàn bộ 149 ảnh, gắn trước khi đọc nhãn từng lệnh của máy) khớp máy 77 % (F7) / 68 % (F10); **MOVE_GIA tay = máy 100 %** ⇒ con số 47 % là thật. Lệch chủ yếu ở CF_YEU (vế "đóng cách cực trị" mắt không thấy).
+- Giả thuyết của agent chính "SL sát cạnh bị quét rồi giá đi đúng hướng": **bác**. Sau SL, giá tới mức TP không nhiều hơn nến ngẫu nhiên (F7 24 % vs nền 21 %; F10 11 % vs 17 %). Không nới đệm SL.
+- Giả thuyết "vào xa cạnh / move từ phía đối diện": **không ủng hộ** ở dạng tổng quát (vào − E ≥ 2 mbr lại dương hơn); chỉ đuôi move ≥ 2× range âm, n nhỏ ⇒ ghi thành H3.
+- Điều MOVE_GIA tập trung vào, biết được tại CF: **nhịp hồi chạm cạnh E** (Hc). F7: MOVE_GIA 39 % trong nhóm chạm vs 21 % không chạm; R TB −0,17 (33) vs +0,40 (62).
+- Một phát hiện hậu kiểm ngược trực giác: **CF thân nhỏ thắng hơn** (F7 +0,64 (30) vs 0,00 (65); F10 +0,39 vs 0,00; F0 +0,10 vs −0,10). Đăng ký đo (H1), **không** làm luật.
+- 25–32 % lệnh SL đã đi ≥ 1R rồi quay — chuyện quản lý lệnh, ghi nhận, chưa đụng.
+
+### 10.2 Quyết định (đăng ký trước)
+1. **F7b = Dh ∧ ¬Hc**, Hc (D = +1) = `min(low[x+1 … c−1]) ≤ E + tol`, tol = max(2 tick, 0,5 mbr) tại c. Nhãn **hậu kiểm**; TRAIN chỉ để báo; không mở TEST.
+   **ĐẠT trên dữ liệu ≥ 22/10 khi và chỉ khi:** bộ tiêu chí bảng chính (n ≥ 30; ≥ C1 + 0,15; ≥ C2' + 0,15; KTC dưới > −0,10; dương cả hai nửa; vượt ngưỡng hoán vị ≥ 30) **và** `R TB(F7 ∧ ¬Hc) − R TB(F7 ∧ Hc) ≥ +0,20` trên dữ liệu mới. Dự đoán Fable: F7b rơi về 0,00…+0,30; xác suất ĐẠT < 1/3.
+2. **F10: không rút luật** (không nhãn đạt 5.3). `F10 ∧ ¬Hc`, `F0 ∧ ¬Hc` chỉ là biến thể báo cáo.
+3. **H1 / H2 / H3** (thân CF < 0,4 · rủi ro S2 ≥ 7 giá · move_h ≥ 2× range): cột báo cáo, đo trên dữ liệu mới, không cộng vào F7b, không có sức chọn.
+4. **Không mổ F3. Không chạy lại lưới GĐ2 CORVEN bằng C2'. Không mở vòng mổ 2 trên TRAIN.** Vòng tiếp theo chỉ có trên dữ liệu mới.
+
+### 10.3 Việc giao Opus (một lượt; dừng, Fable review; chỉ `git add` file của mình; không sửa mục 1, 3–6 `MO-SL-FOLLOW.md`)
+1. **Cờ Hc + F7b trong `follow_combo.py`.** Thêm cột `Hc` (0/1) và `hc_ext_mbr = (E − min low[x+1…c−1])·D / mbr` vào `_follow_cands.csv`. Combo hậu kiểm **F7b = Dh ∧ ¬Hc**; biến thể báo cáo `F10 ∧ ¬Hc`, `F0 ∧ ¬Hc`. Chạy **đúng pipeline** (one_at_a_time, 1 lệnh/(range, cạnh, leg), C1 toàn F0, C1 F0∖combo, C2', nửa 1/2, p thô, p cực đại ≥ 30 — family hoán vị thêm F7b thành 11, ghi rõ F7b hậu kiểm). Kết quả vào `RESULTS-FOLLOW.md` mục mới **"10. Hậu kiểm vòng mổ 1 — F7b"** đúng cột bảng chính; đối chiếu với số lọc hậu kiểm của Fable (F7 ∧ ¬Hc n 62, +0,40) và ghi chênh. Không đổi cấu hình chính, không mở TEST. Test mới: (i) Hc đúng trên ca tổng hợp 3 nến (chạm trong tol / ngoài tol / đúng cạnh); (ii) mọi idx_c của F7b ⊆ F7; (iii) bảng chính F0…F10 **bit-giống** cũ.
+2. **Ba cột giả thuyết** vào `_follow_cands.csv`: `cf_body = |close−open|/(high−low)` tại c, `risk_gia = risk_S2/10`, `move_x_rng = move_h/(top−bottom)`. Bảng "R TB hai phía" cho H1 (cf_body < 0,4), H2 (risk_gia ≥ 7), H3 (move_x_rng ≥ 2) trên F0, F7, F7b, F10 — TRAIN để đối chiếu mục 4.2 `MO-SL-FOLLOW.md`, sau này chạy y hệt trên dữ liệu mới.
+3. **`follow_newdata.py` (file mới, cấu hình đóng băng).** Đầu vào duy nhất: đường dẫn file `fp_*.csv` + `_bars.csv` mới (≥ 22/10). Đầu ra: bảng chính F0…F10 + F7b (C1, C2', nửa, hoán vị ≥ 30); bảng H1–H3; kiểm F7b theo 10.2-1 và in **ĐẠT / KHÔNG** kèm từng điều kiện; đối chiếu ca ảnh gốc (4.9). Parity: chạy script trên 2 tuần cuối TRAIN phải ra số giống `follow_combo.py` trên cùng đoạn — viết thành test. Không tham số dòng lệnh nào khác ngoài đường dẫn.
+4. **`tpo/EVIDENCE-DRILLS.md`** bảng cuối: thêm F7b "luật hậu kiểm từ mổ SL vòng 1 — chưa kiểm, chỉ dữ liệu ≥ 22/10"; H1–H3 "giả thuyết hậu kiểm, chỉ đo".
+5. Commit tiếng Việt, push, báo hash. Nếu số pipeline của F7b lệch số lọc của Fable > 0,10R hoặc n lệch > 10, ghi riêng mục "7. Đối chiếu số Opus" trong `MO-SL-FOLLOW.md` và nêu vì sao.

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- GĐ4 tester độc lập: nạp dist/BenzoTrader.dll ĐÃ BUILD (không biên dịch lại nguồn sản phẩm) để phản chiếu Settings,
+       render UI thật (OnPaintChart) với chart giả, in caption Telegram, kiểm cache. CorvenData.cs chỉ là bộ nạp file export. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>disable</Nullable>
+    <NoWarn>CA1416;NU1701;MSB3277</NoWarn>
+    <QwLibs>$(USERPROFILE)\quantower-libs</QwLibs>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="BenzoTrader"><HintPath>..\..\..\dist\BenzoTrader.dll</HintPath></Reference>
+    <Reference Include="TradingPlatform.BusinessLayer"><HintPath>$(QwLibs)\TradingPlatform.BusinessLayer.dll</HintPath></Reference>
+    <Reference Include="System.Drawing.Common"><HintPath>$(QwLibs)\System.Drawing.Common.dll</HintPath></Reference>
+    <Reference Include="System.Private.Windows.Core"><HintPath>$(QwLibs)\System.Private.Windows.Core.dll</HintPath></Reference>
+    <Compile Include="..\..\ReplayCorven\CorvenData.cs" />
+  </ItemGroup>
+</Project>

@@ -147,3 +147,18 @@ Ca thật (Python và C# khớp): 06/11 10:33 VN Break sell 4055,3 · SL 4058,8 
 TRAIN chế độ bật = đúng corven-5: 266 lệnh (Fail Break 37, Break 229), +0,016R, nửa −0,018 / +0,048, C2' −0,013 (95 TP / 169 SL / 2 TIME) — không lệch do luật 2. Chế độ tắt = corven-6, 232 lệnh. Parity C# ↔ Python đạt 100 % cho cả hai chế độ (`parity_corven.py` và `parity_corven.py --sl-kieu-cu`).
 
 Vì sao SL sát cạnh làm kết quả xấu (Opus đo trên cùng 229 lệnh Break mốc cạnh của bản SL cũ): R TB +0,091 → +0,048, WR 38 % → 37 %; 5 lệnh TP → SL, 2 lệnh SL → TP. Toàn bộ chênh lệch nằm ở 43/229 lệnh mà râu nhịp hồi đã chọc qua mức SL mới trước khi vào (+0,27R → +0,05R); 186 lệnh còn lại gần như y hệt (+0,050 / +0,049).
+
+## Đề xuất (chưa triển khai): Break không vào khi entry nằm trong một range khác còn sống
+
+Người học gửi 2 ca 29/10 00:42 và 06:53 VN (cả hai SL, đều bị máy đánh dấu đúng là "entry trong range khác"). `variants_range_chong.py`
+(xấp xỉ: range còn sống = đã sinh ≤ nến xác nhận < nến chết, biên = top/bottom cuối).
+
+| Dữ liệu | SL | lệnh Break bị đánh dấu | WR | R TB | ΣR |
+|---|---|---|---|---|---|
+| TRAIN 35 phiên | mới | 18 | 61 % | +0,77 | +13,8 |
+| TRAIN 35 phiên | cũ | 17 | 77 % | +1,24 | +21,1 |
+| từ 22/10 | mới | 8 | 25 % | −0,50 | −4,0 |
+| từ 22/10 | cũ | 9 | 22 % | −0,56 | −5,0 |
+
+Thêm luật trên TRAIN: SL mới −0,07 → −0,14R/lệnh; SL cũ +0,02 → −0,07. Hai giai đoạn ngược chiều, mẫu nhỏ; gộp 26 lệnh vẫn dương
+(+0,38R mới / +0,62R cũ). Opus: không triển khai, báo người học.

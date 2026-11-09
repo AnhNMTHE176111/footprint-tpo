@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Chạy DetectorCorven (mã C# sản phẩm) trên file export per-level → CSV lệnh + CSV ứng viên
+       để research/parity_corven.py đối chiếu với setup_corven.py (plan BENZO-CORVEN 10.6). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <AssemblyName>ReplayCorven</AssemblyName>
+    <NoWarn>CA1416;NU1701;MSB3277</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../BenzoCore.cs" />
+    <Compile Include="../../BenzoZones.cs" />
+    <Compile Include="../../BenzoOrderFlow.cs" />
+    <Compile Include="../../BenzoCorven.cs" />
+    <Compile Include="../../../quantower-orderflow-indicator/StackedImbalance.cs" />
+    <Compile Include="../../../quantower-orderflow-indicator/ExhaustionLogic.cs" />
+    <Compile Include="../../../quantower-range/RangeLogic.cs" />
+  </ItemGroup>
+</Project>

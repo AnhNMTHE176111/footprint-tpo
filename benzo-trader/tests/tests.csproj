@@ -4,22 +4,17 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>disable</Nullable>
     <AssemblyName>BenzoTraderTests</AssemblyName>
-    <NoWarn>CA1416;NU1701;MSB3277;CS0649</NoWarn>
+    <NoWarn>CA1416;NU1701;MSB3277</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <!-- BenzoCore.cs không cần SDK, nhưng giữ 2 tham chiếu cho đồng bộ với tests của quantower-tpo-suite -->
-    <Reference Include="TradingPlatform.BusinessLayer">
-      <HintPath>$(HOME)/quantower-libs/TradingPlatform.BusinessLayer.dll</HintPath><Private>false</Private>
-    </Reference>
-    <Reference Include="System.Drawing.Common">
-      <HintPath>$(HOME)/quantower-libs/System.Drawing.Common.dll</HintPath><Private>false</Private>
-    </Reference>
+    <!-- Logic thuần không cần SDK Quantower; nguồn nối giống build.sh (RangeLogic + StackedImbalance + ExhaustionLogic) -->
     <Compile Include="../BenzoCore.cs" />
     <Compile Include="../BenzoZones.cs" />
-    <Compile Include="../BenzoDetectors.cs" />
-    <Compile Include="../BenzoSr.cs" />
-    <Compile Include="../BenzoLayers.cs" />
-    <Compile Include="../BenzoSetupA5.cs" />
-    <Compile Include="../../vung-canh-lenh/VclCore.cs" />
+    <Compile Include="../BenzoOrderFlow.cs" />
+    <Compile Include="../BenzoCorven.cs" />
+    <Compile Include="../tools/ReplayCorven/CorvenData.cs" />
+    <Compile Include="../../quantower-orderflow-indicator/StackedImbalance.cs" />
+    <Compile Include="../../quantower-orderflow-indicator/ExhaustionLogic.cs" />
+    <Compile Include="../../quantower-range/RangeLogic.cs" />
   </ItemGroup>
 </Project>

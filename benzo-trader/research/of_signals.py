@@ -349,10 +349,31 @@ def bubbles(bar: FpBar, side: int, base: float, mult: float = 3.0, min_contracts
     return out
 
 
-def bubble_in_place(bar: FpBar, side: int, cell_tick: int, band: Optional[Tuple[float, float]] = None) -> bool:
-    """Ô bóng nằm ở nửa nến phía S (buy: ô ≤ trung điểm nến; sell: ô ≥ trung điểm) HOẶC trong dải mốc [lo, hi] (tick)."""
+def cell_frac(bar: FpBar, cell_tick: int) -> float:
+    """p = (tick ô − L)/(H − L) của nến chứa ô; H == L ⇒ 0,5 (coi là thỏa cả hai luật 1/3 và 2/3)."""
+    rg = bar.h - bar.l
+    return 0.5 if rg <= 0 else (cell_tick - bar.l) / rg
+
+
+def trap_pos_ok(bar: FpBar, side: int, cell_tick: int) -> bool:
+    """Ô trap (phe −S) hợp lệ về vị trí: buy (S=+1) p ≥ 2/3; sell (S=−1) p ≤ 1/3 (H == L ⇒ thỏa)."""
+    if bar.h <= bar.l:
+        return True
+    p = cell_frac(bar, cell_tick)
+    return p >= 2.0 / 3.0 - EPS if side > 0 else p <= 1.0 / 3.0 + EPS
+
+
+def bubble_in_place(bar: FpBar, side: int, cell_tick: int, band: Optional[Tuple[float, float]] = None, rule23: bool = False) -> bool:
+    """Ô bóng nằm ở nửa nến phía S (buy: ô ≤ trung điểm nến; sell: ô ≥ trung điểm) HOẶC trong dải mốc [lo, hi] (tick).
+    rule23=True: thay luật nửa nến bằng luật 2/3 (buy: p ≤ 2/3; sell: p ≥ 1/3; H == L ⇒ thỏa)."""
     mid = (bar.h + bar.l) / 2.0
     half_ok = cell_tick <= mid + EPS if side > 0 else cell_tick >= mid - EPS
+    if rule23:
+        if bar.h <= bar.l:
+            half_ok = True
+        else:
+            p = cell_frac(bar, cell_tick)
+            half_ok = p <= 2.0 / 3.0 + EPS if side > 0 else p >= 1.0 / 3.0 - EPS
     band_ok = band is not None and band[0] - EPS <= cell_tick <= band[1] + EPS
     return half_ok or band_ok
 
@@ -403,7 +424,7 @@ def delta_divergence(H: Sequence[int], L: Sequence[int], D: Sequence[float], x: 
 
 
 def trap(bar: FpBar, side: int, level_tick: int, base: float, mult: float = 3.0, sweep_ticks: int = 1,
-         min_contracts: float = 0.0):
+         min_contracts: float = 0.0, pos13: bool = False):
     """③e — trap / stop hunt phe ngược tại mốc quan trọng `level_tick`. Hướng vào `side`.
     sell: râu trên quét qua mốc ≥ sweep_ticks (H ≥ mốc + 1) và đóng lại dưới mốc (C < mốc), và trong phần râu
           TRÊN (tick > max(O, C)) có ô ASK (phía −S) ≥ mult × nền_ô và ≥ min_contracts (Q10: setup dùng 10).
@@ -419,6 +440,8 @@ def trap(bar: FpBar, side: int, level_tick: int, base: float, mult: float = 3.0,
             return False, -1, 0.0
         edge = min(bar.o, bar.c)
         cells = [(k, b) for (k, b, a, v) in bar.levels if k < edge]
+    if pos13:   # chỉ xét ô nằm đúng 1/3 (xem trap_pos_ok); ô lớn nhất trong số ô thỏa
+        cells = [t for t in cells if trap_pos_ok(bar, side, t[0])]
     if not cells or base <= 0:
         return False, -1, 0.0
     k, v = max(cells, key=lambda t: (t[1], -t[0] if side < 0 else t[0]))

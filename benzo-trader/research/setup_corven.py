@@ -99,6 +99,9 @@ class CP:
     bat_fail_break: bool = True    # corven-6: công tắc Settings — tắt ⇒ ứng viên Fail Break không được vào và không chiếm chỗ 1 lệnh mở
     bat_break: bool = True
     dead_run_mult: float = 0.0     # corven-7 (cp_live = 2,0): range BROKEN mà giá chạy xa cạnh vừa phá ≥ mult × chiều cao range ⇒ Dead, không ReEntry (≤ 0 = TẮT) — truyền vào range_proto.Params.DeadRunMult
+    bong_23: bool = False          # đo vị trí bóng: ③b dùng luật 2/3 (buy p ≤ 2/3, sell p ≥ 1/3) thay luật nửa nến (giữ nhánh dải mốc)
+    trap_hoi_13: bool = False      # đo vị trí bóng: ③f chỉ nhận ô −S đúng 1/3 (buy p ≥ 2/3, sell p ≤ 1/3)
+    trap_quet_13: bool = False     # đo vị trí bóng: ③e chỉ nhận ô trap đúng 1/3 (như trên)
     gan_range_gan_nhat: bool = False  # corven-5: nhiều Break cùng nến xác nhận ⇒ xét range có nến đóng ngoài (ref) MUỘN nhất trước
 
 
@@ -890,7 +893,7 @@ def find_signs(c: Cand, f: Feat, cp: CP) -> dict:
         if not np.isfinite(bs) or bs <= 0:
             continue
         for (tk, v) in OF.bubbles(f.bars[k], S, bs, cp.bubble_mult, cp.bubble_min):
-            if any(OF.bubble_in_place(f.bars[k], S, tk, mo['band']) for mo in c.mocs) or OF.bubble_in_place(f.bars[k], S, tk):
+            if any(OF.bubble_in_place(f.bars[k], S, tk, mo['band'], cp.bong_23) for mo in c.mocs) or OF.bubble_in_place(f.bars[k], S, tk, None, cp.bong_23):
                 if best is None or v > best[0]:
                     best = (v, k, tk, bs)
     if best:
@@ -926,7 +929,7 @@ def find_signs(c: Cand, f: Feat, cp: CP) -> dict:
         if not np.isfinite(bs) or bs <= 0:
             continue
         for lvl in c.trap_levels:
-            ok, tk, v = OF.trap(f.bars[k], S, lvl, bs, 3.0, 1, cp.bubble_min)
+            ok, tk, v = OF.trap(f.bars[k], S, lvl, bs, 3.0, 1, cp.bubble_min, cp.trap_quet_13)
             if ok:
                 sg['trap'] = (f"trap quét {_px(lvl)}, bóng {'đỏ' if S > 0 else 'xanh'} {v:.0f} @{_px(tk)}", k, tk)
                 break
@@ -942,7 +945,8 @@ def find_signs(c: Cand, f: Feat, cp: CP) -> dict:
                 continue
             for (tk, bv, av, _v) in f.bars[k].levels:
                 vol = bv if S > 0 else av
-                if vol >= 3.0 * bs - 1e-9 and vol >= cp.bubble_min - 1e-9 and (C[cf] - tk) * S > 0:
+                if vol >= 3.0 * bs - 1e-9 and vol >= cp.bubble_min - 1e-9 and (C[cf] - tk) * S > 0 \
+                        and (not cp.trap_hoi_13 or OF.trap_pos_ok(f.bars[k], S, tk)):
                     key = (vol, -k, tk * S)
                     if best is None or key > best[0]:
                         best = (key, k, tk, vol)

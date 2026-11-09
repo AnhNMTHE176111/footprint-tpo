@@ -816,7 +816,7 @@ namespace BenzoTraderNs
             return st >= 0 && st < M.F.Bars.Count ? M.F.Bars[st].Time.Ticks : 0;
         }
 
-        /// <summary>Nhãn ngắn trên chart: "A sell · Δ ngược + bóng đỏ 18" (loại + số đắt nhất mỗi loại).</summary>
+        /// <summary>Nhãn ngắn trên chart: "Fail Break sell · Δ ngược + bóng đỏ 18" (loại + số đắt nhất mỗi loại).</summary>
         public static string ShortLabel(CorvenCand c)
         {
             var parts = new List<string>();
@@ -832,7 +832,7 @@ namespace BenzoTraderNs
                     case "trap": parts.Add("trap"); break;
                 }
             }
-            return $"{c.The} {(c.S > 0 ? "buy" : "sell")} · {string.Join(" + ", parts)}";
+            return $"{BenzoCore.TheName(c.The)} {(c.S > 0 ? "buy" : "sell")} · {string.Join(" + ", parts)}";
         }
     }
 }

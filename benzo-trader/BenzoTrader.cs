@@ -643,7 +643,7 @@ namespace BenzoTraderNs
         {
             ConfigTele();
             if (!_tele.Ready) { BenzoLog.Write(_logPath ?? Path.Combine(Path.GetTempPath(), "benzo_tele_log.txt"), "gửi thử: thiếu bot token / chat id"); _tele.LastError = "thiếu bot token / chat id"; return; }
-            string cap = $"🔔 TEST — Benzo Trader CORVEN {BenzoCore.LogicVersion} ({Symbol?.Name ?? "?"}) bot chạy OK\n(mẫu: 🔴 SELL · CORVEN thế B · ... kèm ảnh chụp Optimus Flow)\n{CorvenParams.TeleWarn}";
+            string cap = $"🔔 TEST — Benzo Trader CORVEN {BenzoCore.LogicVersion} ({Symbol?.Name ?? "?"}) bot chạy OK\n(mẫu: 🔴 SELL · CORVEN Break · ... kèm ảnh chụp Optimus Flow)\n{CorvenParams.TeleWarn}";
             SendOpenAsync(cap);
         }
 
@@ -741,7 +741,7 @@ namespace BenzoTraderNs
                         : new[] { new PointF(xE, yE - sz - 4), new PointF(xE - sz, yE - sz * 2 - 4), new PointF(xE + sz, yE - sz * 2 - 4) };
                     using (var br = new SolidBrush(Color.FromArgb(a, dir))) gr.FillPolygon(br, tri);
                     if (!ShowSigns) continue;
-                    string lbl = (string.IsNullOrEmpty(s.Short) ? $"{s.Setup} {(s.Side > 0 ? "buy" : "sell")}" : s.Short)
+                    string lbl = BenzoCore.ShortDisplay(s)
                                + (s.IsClosed ? (s.R > 0 ? " ✓" : " ✗") : "");
                     float ly = s.Side > 0 ? yE + sz * 2 + 8 : yE - sz * 2 - 22;
                     var szLbl = gr.MeasureString(lbl, fLbl);

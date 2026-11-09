@@ -80,8 +80,8 @@ static partial class Program
         Check(ls.Count == 4, "bảng đúng 4 dòng", ls.Count.ToString());
         var rx = new Regex(@"^BENZO CORVEN corven-4 · \d+ lệnh · WR \d+ % · [+−]?\d+,\d+R( · \d+ đang mở)?$");
         Check(rx.IsMatch(ls[0]) && ls[0].EndsWith(" · 1 đang mở"), "dòng 1 khớp mẫu plan 12.2-Q3 (có '· k đang mở' khi k > 0)", ls[0]);
-        Check(ls[1] == "Thế A · 2 · WR 50 % · +0,8R", "dòng thế A", ls[1]);
-        Check(ls[2] == "Thế B · 2 · WR 50 % · −0,7R", "dòng thế B", ls[2]);
+        Check(ls[1] == "Fail Break · 2 · WR 50 % · +0,8R", "dòng thế A", ls[1]);
+        Check(ls[2] == "Break · 2 · WR 50 % · −0,7R", "dòng thế B", ls[2]);
         Check(ls[3] == "Backtest 35 phiên: −0,02R/lệnh, ngang vào ngẫu nhiên (−0,05R) · chạy thử, không phải khuyến nghị", "dòng 4 nhãn backtest đúng chữ", ls[3]);
         var empty = BenzoCore.TableLines(BenzoCore.ComputeStats(new Signal[0], null));
         Check(empty.Count == 4 && empty[3] == CorvenParams.BacktestLine, "dòng 4 LUÔN hiện kể cả khi chưa có lệnh");
@@ -120,15 +120,20 @@ static partial class Program
         BenzoCore.Finalize(s, "GCZ26", new DateTime(2026, 11, 5, 17, 23, 0, DateTimeKind.Utc));
         var ls = BenzoCore.ComposeOpen(s, "GCZ26", 7, 1, 1).Split('\n');
         Check(ls.Length == 5, "5 dòng (4 dòng plan mục 2 + cảnh báo)", ls.Length.ToString());
-        Check(ls[0] == "🔴 SELL · CORVEN thế B · GCZ26 · 00:23 VN", "dòng 1", ls[0]);
+        Check(ls[0] == "🔴 SELL · CORVEN Break · GCZ26 · 00:23 VN", "dòng 1", ls[0]);
         Check(ls[1] == "Mốc: cạnh dưới 4127,4 vừa phá (range 4127,3–4132,5)", "dòng 2 mốc", ls[1]);
         Check(ls[2] == "Dấu hiệu (2): Δ ngược giá ΣΔ -62/2 nến · bóng đỏ 18 @4127,3 (3,6× nền)", "dòng 3 dấu hiệu có số", ls[2]);
         Check(ls[3] == "CF 00:23 thân 0,6 giá · Vào 4126,6 · SL 4129,1 (2,5) · TP 4121,6 (2R, R sẵn 1,9)", "dòng 4 lệnh", ls[3]);
         Check(ls[4] == CorvenParams.TeleWarn, "dòng cuối cảnh báo chưa có lợi thế", ls[4]);
         var a = new Signal { Setup = 'A', Side = -1, Entry = 4135.6, Sl = 4138.3, Tp = 4130.2, RangeLo = 4130.9, RangeHi = 4135.8, Edge = 4135.8, Zone = "canh" };
+        Check(BenzoCore.TheName('A') == "Fail Break" && BenzoCore.TheName('B') == "Break", "tên hiển thị: A = Fail Break, B = Break");
+        Check(BenzoCore.ShortDisplay(new Signal { Setup = 'B', Side = 1, Short = "B buy · stacked 4 mức + trap" }) == "Break buy · stacked 4 mức + trap"
+              && BenzoCore.ShortDisplay(new Signal { Setup = 'A', Side = -1, Short = "A sell · Δ ngược" }) == "Fail Break sell · Δ ngược"
+              && BenzoCore.ShortDisplay(new Signal { Setup = 'B', Side = 1, Short = "Break buy · trap" }) == "Break buy · trap"
+              && BenzoCore.ShortDisplay(new Signal { Setup = 'A', Side = 1, Short = "" }) == "Fail Break buy", "nhãn chart: cache cũ 'B buy …' → 'Break buy …', nhãn mới giữ nguyên");
         Check(BenzoCore.MocLine(a, 1) == "Mốc: cạnh trên 4135,8 fail break (range 4130,9–4135,8)", "mốc thế A", BenzoCore.MocLine(a, 1));
         s.Outcome = "TP"; s.R = 1.9; s.ExitTime = s.Time.AddMinutes(9);
-        Check(BenzoCore.ComposeClose(s, 7, 1) == "✅ CORVEN thế B +1,9R · 00:23→00:32", "tin đóng thắng: giờ MỞ nến vào → giờ MỞ nến thoát", BenzoCore.ComposeClose(s, 7, 1));
+        Check(BenzoCore.ComposeClose(s, 7, 1) == "✅ CORVEN Break +1,9R · 00:23→00:32", "tin đóng thắng: giờ MỞ nến vào → giờ MỞ nến thoát", BenzoCore.ComposeClose(s, 7, 1));
         // plan 12.1 #6: giờ caption = giờ MỞ nến CF = time_vn của CSV (lệnh GCZ26 2026-07-29 15:52 UTC thế A sell ⇒ 22:52 VN)
         var a1 = new Signal { Setup = 'A', Side = -1, Entry = 4070.3, Sl = 4072.6, Tp = 4065.7, RangeLo = 4065.0, RangeHi = 4070.6, Edge = 4070.6, Zone = "canh", NSigns = 2, Reason = "x · y" };
         BenzoCore.Finalize(a1, "GCZ26", new DateTime(2026, 7, 29, 15, 52, 0, DateTimeKind.Utc));
@@ -143,7 +148,7 @@ static partial class Program
         tW.Time = tW.ExitTime = s.Time; tL.Time = tL.ExitTime = s.Time; tW.Setup = tL.Setup = 'A';
         Check(BenzoCore.ComposeClose(tW, 7, 1).StartsWith("✅") && BenzoCore.ComposeClose(tL, 7, 1).StartsWith("🛑"), "tin đóng TIME ✅/🛑 theo cùng dấu R");
         s.Outcome = "TIME"; s.R = -0.3;
-        Check(BenzoCore.ComposeClose(s, 7, 1).StartsWith("🛑 CORVEN thế B −0,3R") && BenzoCore.ComposeClose(s, 7, 1).EndsWith("(hết phiên)"), "tin đóng TIME");
+        Check(BenzoCore.ComposeClose(s, 7, 1).StartsWith("🛑 CORVEN Break −0,3R") && BenzoCore.ComposeClose(s, 7, 1).EndsWith("(hết phiên)"), "tin đóng TIME");
         var mp = TeleClient.BuildPhoto("123", new byte[] { 1, 2, 3 }, "cap");
         string body = mp.ReadAsStringAsync().Result;
         Check(body.Contains("name=chat_id") && body.Contains("name=caption") && body.Contains("name=photo") && body.Contains("image/png"), "multipart sendPhoto đủ trường");

@@ -132,7 +132,7 @@ static class Program
             foreach (var ln in cap.Split('\n')) Console.WriteLine("  | " + ln);
             var lines = cap.Split('\n');
             Check(lines.Length == 5, "5 dòng (4 dòng mục 2 + dòng ⚠)", lines.Length.ToString());
-            Check(lines[0].StartsWith(s.Side > 0 ? "🟢 BUY · CORVEN thế " : "🔴 SELL · CORVEN thế ") && lines[0].EndsWith(" VN"), "dòng 1: icon BUY/SELL · CORVEN thế X · mã · giờ VN");
+            Check(lines[0].StartsWith(s.Side > 0 ? "🟢 BUY · CORVEN " : "🔴 SELL · CORVEN ") && lines[0].Split(' ').Skip(4).Take(3).Contains("Break") && (lines[0].Contains(" · CORVEN Break · ") || lines[0].Contains(" · CORVEN Fail Break · ")) && lines[0].EndsWith(" VN"), "dòng 1: icon BUY/SELL · CORVEN Break|Fail Break · mã · giờ VN");
             Check(lines[1].StartsWith("Mốc: "), "dòng 2: Mốc");
             Check(lines[2].StartsWith($"Dấu hiệu ({s.NSigns}): ") && s.NSigns >= 2 && lines[2].Split(" · ").Length == s.NSigns, "dòng 3: Dấu hiệu (N) liệt kê đủ N dấu hiệu, có số", lines[2]);
             Check(lines[3].StartsWith("CF ") && lines[3].Contains(" · Vào ") && lines[3].Contains(" · SL ") && lines[3].Contains(" · TP ") && lines[3].Contains("(2R, R sẵn "), "dòng 4: CF · Vào · SL · TP (2R, R sẵn)");
@@ -145,7 +145,7 @@ static class Program
         }
         var c = sigs.First(x => x.IsClosed);
         Console.WriteLine("  ---- tin đóng: " + BenzoCore.ComposeClose(c, 7, 1));
-        Check(BenzoCore.ComposeClose(c, 7, 1).StartsWith(c.R > 0 ? "✅ CORVEN thế " : "🛑 CORVEN thế "), "tin đóng dạng ✅/🛑 CORVEN thế X ±R · giờ→giờ");
+        Check(BenzoCore.ComposeClose(c, 7, 1).StartsWith(c.R > 0 ? "✅ CORVEN " : "🛑 CORVEN ") && (BenzoCore.ComposeClose(c, 7, 1).Contains(" CORVEN Break ") || BenzoCore.ComposeClose(c, 7, 1).Contains(" CORVEN Fail Break ")), "tin đóng dạng ✅/🛑 CORVEN Break|Fail Break ±R · giờ→giờ");
         Console.WriteLine("  ---- tin huỷ: " + BenzoCore.ComposeCancel(c, 7, 1));
         // nút gửi thử: chuỗi trong DLL (đọc IL string) có dòng ⚠
         Check(CorvenParams.TeleWarn.StartsWith("⚠"), "nút 'gửi thử' nối CorvenParams.TeleWarn (xem nguồn SendTest)");
@@ -410,7 +410,7 @@ static class Program
             var lines = (List<string>)rs.GetType().GetField("Lines").GetValue(rs);
             foreach (var ln in lines) Console.WriteLine("  | " + ln);
             Check(lines.Count == 4, "bảng 4 dòng", lines.Count.ToString());
-            Check(lines[0].StartsWith("BENZO CORVEN corven-4 · ") && lines[0].Contains(" lệnh · WR ") && lines[1].StartsWith("Thế A · ") && lines[2].StartsWith("Thế B · "), "dòng 1–3 đúng mẫu");
+            Check(lines[0].StartsWith("BENZO CORVEN corven-4 · ") && lines[0].Contains(" lệnh · WR ") && lines[1].StartsWith("Fail Break · ") && lines[2].StartsWith("Break · "), "dòng 1–3 đúng mẫu");
             Check(lines[3] == "Backtest 35 phiên: −0,02R/lệnh, ngang vào ngẫu nhiên (−0,05R) · chạy thử, không phải khuyến nghị", "dòng 4 = nhãn trung thực đúng chữ");
             // dòng 4 thật sự hiện trên ảnh: có pixel màu cam (255,170,120) ở vùng đáy trái
             int orange = 0;

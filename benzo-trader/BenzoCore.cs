@@ -46,7 +46,7 @@ namespace BenzoTraderNs
         public string Signs { get; set; } = "";           // = cột dau_hieu Python: "Δ: … (nến N) | bóng: …"
         public int NSigns { get; set; }
         public string SignTypes { get; set; } = "";       // "Δ+bóng"
-        public string Short { get; set; } = "";           // nhãn chart "A sell · Δ ngược + bóng đỏ 18"
+        public string Short { get; set; } = "";           // nhãn chart "Fail Break sell · Δ ngược + bóng đỏ 18"
         public double RangeLo { get; set; }
         public double RangeHi { get; set; }
         public double Edge { get; set; }                  // cạnh range của thế (A: cạnh fail break; B: cạnh vừa phá)
@@ -184,7 +184,15 @@ namespace BenzoTraderNs
             return best;
         }
 
-        public static string TheName(char s) => s == 'A' ? "thế A" : s == 'B' ? "thế B" : "?";
+        /// <summary>Tên HIỂN THỊ của setup (một chỗ duy nhất): A = "Fail Break", B = "Break". Mã nội bộ 'A'/'B' (cache, CSV, khoá) giữ nguyên.</summary>
+        public static string TheName(char s) => s == 'A' ? "Fail Break" : s == 'B' ? "Break" : "?";
+        /// <summary>Nhãn chart để vẽ: cache cũ lưu "A buy · …"/"B buy · …" ⇒ đổi tiền tố sang tên hiển thị hiện hành.</summary>
+        public static string ShortDisplay(Signal s)
+        {
+            if (string.IsNullOrEmpty(s.Short)) return $"{TheName(s.Setup)} {(s.Side > 0 ? "buy" : "sell")}";
+            if (s.Short.Length > 2 && (s.Short[0] == 'A' || s.Short[0] == 'B') && s.Short[1] == ' ') return TheName(s.Short[0]) + s.Short.Substring(1);
+            return s.Short;
+        }
 
         public static string MakeId(string symbol, DateTime barOpenUtc, char setup, int side) =>
             $"{symbol}|{barOpenUtc:yyyyMMddHHmm}|{setup}|{(side > 0 ? 'B' : 'S')}";
@@ -285,15 +293,15 @@ namespace BenzoTraderNs
         }
 
         /// <summary>Bảng chart 4 dòng (plan 10.3) — dòng 4 LUÔN hiện:
-        /// "BENZO CORVEN corven-4 · N lệnh · WR x % · ΣR" / "Thế A · n · WR · ΣR" / "Thế B · n · WR · ΣR" / nhãn backtest.</summary>
+        /// "BENZO CORVEN corven-4 · N lệnh · WR x % · ΣR" / "Fail Break · n · WR · ΣR" / "Break · n · WR · ΣR" / nhãn backtest.</summary>
         public static List<string> TableLines(StatsResult st)
         {
             string open = st.Total.Open > 0 ? $" · {st.Total.Open} đang mở" : "";
             return new List<string>
             {
                 $"BENZO CORVEN {LogicVersion} · {st.Total.N} lệnh · WR {Num(st.Total.WinRate, "0")} % · {SignedR(st.Total.SumR)}{open}",
-                $"Thế A · {st.A.N} · WR {Num(st.A.WinRate, "0")} % · {SignedR(st.A.SumR)}",
-                $"Thế B · {st.B.N} · WR {Num(st.B.WinRate, "0")} % · {SignedR(st.B.SumR)}",
+                $"{TheName('A')} · {st.A.N} · WR {Num(st.A.WinRate, "0")} % · {SignedR(st.A.SumR)}",
+                $"{TheName('B')} · {st.B.N} · WR {Num(st.B.WinRate, "0")} % · {SignedR(st.B.SumR)}",
                 CorvenParams.BacktestLine,
             };
         }
@@ -354,7 +362,7 @@ namespace BenzoTraderNs
             return Truncate(sb.ToString(), 1000);   // giới hạn caption ảnh Telegram = 1024
         }
 
-        /// <summary>Tin ĐÓNG lệnh: "✅ CORVEN thế A +1,9R · 20:24→20:51" (TIME ghi thêm "hết phiên").</summary>
+        /// <summary>Tin ĐÓNG lệnh: "✅ CORVEN Fail Break +1,9R · 20:24→20:51" (TIME ghi thêm "hết phiên").</summary>
         public static string ComposeClose(Signal s, int tzOffset, int barMinutes)
         {
             bool win = s.R > 0;

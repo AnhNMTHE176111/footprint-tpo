@@ -1,7 +1,7 @@
 # Benzo Trader — setup CORVEN (corven-4) trên nến M1 đã đóng
 
 **Setup là gì:** một setup "follow theo footprint" của CORVEN, cơ khí hoá theo `plans/BENZO-CORVEN-plan.md` — có range (Range Box)
-⇒ chờ giá về mốc gần (thế A: fail break cạnh range; thế B: phá range rồi giữ được) ⇒ cần **≥ 2 loại dấu hiệu** order flow
+⇒ chờ giá về mốc gần (**Fail Break** = thế A: fail break cạnh range; **Break** = thế B: phá range rồi giữ được) ⇒ cần **≥ 2 loại dấu hiệu** order flow
 (Δ, bóng, kiệt sức, stacked, trap) ⇒ vào ở giá đóng nến xác nhận, SL sau cực trị cú thủng/mốc, TP 2R.
 **Số backtest (35 phiên TRAIN, file 90 ngày GCZ26) — corven-4:** 374 lệnh (thế A 38, thế B 336), **−0,02R/lệnh**, WR 35 %, hai nửa −0,05 / +0,01; vào ngẫu nhiên sau CF −0,05R ⇒ **ngang vào ngẫu nhiên** (hậu kiểm). (corven-3: 399 lệnh +0,02R; (corven-2: 333 lệnh −0,07R; corven-1: 97 lệnh −0,29R.) Chi tiết: `research/report/VARIANTS-NGUOI-HOC-2026-11-09.md`.
 
@@ -56,6 +56,7 @@ và mỗi bộ tham số là một chuỗi forward test riêng (n live ≈ 3 l�
 - **⛔:** kiệt sức chống hướng chưa bị quét (5 nến) · range chồng range (thế A, chỉ từ FailBreak thứ 2). (corven-3 đã bỏ "nhịp đẩy do quét stop".)
 - **corven-3 (người học chốt 2026-11-09):** thế B không cần nhịp hồi chạm cạnh (đủ ≥ 1 nến hồi, mọi nến đóng ngoài range, CF đóng vượt nến hồi) · thế B bỏ luật R sẵn ≥ 1,7 (TP 2R) · thêm dấu hiệu "trap trong nhịp hồi" (ô ngược phe ≥ 3× nền và ≥ 10 ở nến hồi, CF đóng vượt ô đó).
 - **corven-3:** SL thế B mốc cạnh = ngay sau cạnh vừa phá: min(đáy cửa sổ, cạnh) − đệm (buy), bỏ phần trừ dung sai cạnh.
+- **Tên hiển thị (2026-11-09):** thế A → "Fail Break", thế B → "Break" (bảng chart, nhãn mũi tên, Telegram, caption) — định nghĩa một chỗ `BenzoCore.TheName`. Mã nội bộ 'A'/'B' giữ nguyên trong cache/CSV/khoá (không đổi định dạng ⇒ cache cũ vẫn nạp; nhãn cũ "A buy · …" trong cache được đổi tiền tố lúc vẽ).
 - **corven-4 (Opus quyết 2026-11-09):** nhịp hồi không chạm cạnh phải thuộc cú phá — nến hồi đầu tiên cách nến phá (CloseOutside) ≤ 5 nến, nếu không thì không tính là mốc cạnh.
 - Lệnh còn mở qua khoảng trống > 30′ đóng `TIME` tại giá đóng nến cuối phiên.
 
@@ -95,23 +96,23 @@ và mỗi bộ tham số là một chuỗi forward test riêng (n live ≈ 3 l�
 ## Bảng trên chart (4 dòng, dòng 4 luôn hiện)
 ```
 BENZO CORVEN corven-4 · N lệnh · WR x % · ΣR
-Thế A · n · WR x % · ΣR
-Thế B · n · WR x % · ΣR
+Fail Break · n · WR x % · ΣR
+Break · n · WR x % · ΣR
 Backtest 35 phiên: −0,02R/lệnh, ngang vào ngẫu nhiên (−0,05R) · chạy thử, không phải khuyến nghị
 ```
 Trên chart: hộp range (xanh lơ = ACTIVE, chấm = PENDING, xám đứt = BROKEN), đường đứt tại cạnh vừa phá của thế B đang sống,
-mũi tên + hộp SL/TP tại nến CF, nhãn ngắn `A sell · Δ ngược + bóng đỏ 18` (tắt bằng "Hiện dấu hiệu đã đếm").
+mũi tên + hộp SL/TP tại nến CF, nhãn ngắn `Fail Break sell · Δ ngược + bóng đỏ 18` (tắt bằng "Hiện dấu hiệu đã đếm").
 
 ## Telegram
 ```
-🔴 SELL · CORVEN thế B · GCZ26 · 00:23 VN
+🔴 SELL · CORVEN Break · GCZ26 · 00:23 VN
 Mốc: cạnh dưới 4127,4 vừa phá (range 4127,3–4132,5)
 Dấu hiệu (2): Δ ngược giá ΣΔ -62/2 nến · bóng đỏ 18 @4127,3 (3,6× nền)
 CF 00:23 thân 0,6 giá · Vào 4126,6 · SL 4129,1 (2,5) · TP 4121,6 (2R, R sẵn 1,9)
 ⚠ Chưa có lợi thế đo được (−0,02R/lệnh, 35 phiên)
 
-✅ CORVEN thế B +1,9R · 00:23→00:32          (R đã trừ chi phí 0,2; TIME ghi thêm "(hết phiên)")
-⚪ CORVEN thế A 03:59 huỷ — nến xác nhận là nến cuối phiên
+✅ CORVEN Break +1,9R · 00:23→00:32          (R đã trừ chi phí 0,2; TIME ghi thêm "(hết phiên)")
+⚪ CORVEN Fail Break 03:59 huỷ — nến xác nhận là nến cuối phiên
 ```
 **Mọi giờ trong tin = giờ MỞ nến** (nến CF / nến thoát), trùng `time_vn` của CSV, cột `t_vn` Python và nhãn thời gian nến trên Quantower.
 Chống trùng: lần quét đầu sau reload chỉ nạp id; chỉ bắn tín hiệu ở nến vừa đóng, tuổi ≤ 90 giây; khoá file `%LOCALAPPDATA%\BenzoTrader\sent\`.

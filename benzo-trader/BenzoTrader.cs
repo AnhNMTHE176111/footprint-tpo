@@ -188,6 +188,13 @@ namespace BenzoTraderNs
         [InputParameter("SL kiểu cũ", 35)]
         public bool SlKieuCu { get; set; } = false;       // BẬT = SL Break + trần SL như corven-5 (ghi đè corven-6; bỏ qua "SL tối đa")      // lệnh có SL (entry↔SL) > mức này ⇒ bỏ; đổi ⇒ tính lại
 
+        [InputParameter("Gửi lệnh sang MT5", 40)]
+        public bool Mt5Send { get; set; } = false;
+        [InputParameter("MT5: chạy thử (chỉ ghi nhật ký)", 41)]
+        public bool Mt5DryRun { get; set; } = true;
+        [InputParameter("MT5: thư mục Files", 42)]
+        public string Mt5Dir { get; set; } = "";            // trống = %APPDATA%\MetaQuotes\Terminal\Common\Files
+
         // ======= trạng thái =======
         private sealed class BoxV { public DateTime T0, T1; public double Top, Bot; public int State; }   // 0 active, 1 pending, 2 broken
         private sealed class MocV { public DateTime T0; public double Price; public int Dir; public bool Suspended; }
@@ -215,6 +222,7 @@ namespace BenzoTraderNs
         private int _minutes = -1;
         private readonly TeleClient _tele = new();
         private bool _armed;
+        private readonly Mt5Emitter _mt5 = new();
         private readonly HashSet<string> _seen = new(), _openSent = new(), _closedSent = new();
         private bool _lastTest;
         private string _builtKey;
@@ -252,7 +260,7 @@ namespace BenzoTraderNs
             lock (_calc)
             {
                 _vaLoaded = false; _lastN = -1; _engine = null; _det = null; _cache = null; _hdOfBar.Clear(); _lvMemoIdx = -1; _lvMemo = null;
-                _armed = false; _seen.Clear(); _openSent.Clear(); _closedSent.Clear(); _minutes = -1;
+                _armed = false; _seen.Clear(); _openSent.Clear(); _closedSent.Clear(); _minutes = -1; _mt5.Reset();
                 lock (_sync) _render = null;
             }
         }
@@ -384,7 +392,7 @@ namespace BenzoTraderNs
                             BarMinutes = 1,
                         };
                         _hdOfBar.Clear(); _lvMemoIdx = -1; _lvMemo = null;
-                        _armed = false; _seen.Clear(); _openSent.Clear(); _closedSent.Clear();
+                        _armed = false; _seen.Clear(); _openSent.Clear(); _closedSent.Clear(); _mt5.Reset();
                     }
                     _engine.TzOffset = TzOffset;
                     int closed = n - 2;                     // nến cuối đang chạy → chỉ xử lý tới Count−2
@@ -423,6 +431,8 @@ namespace BenzoTraderNs
                         EmitTele(res, closed);
                         LogCandidates(res, closed);
                     }
+                    _mt5.DryRun = Mt5DryRun; _mt5.Dir = Mt5Dir ?? "";
+                    _mt5.Process(_engine.Signals, closed, _symbol, TzOffset, 1, Mt5Send, EnableFailBreak, EnableBreak, DateTime.UtcNow, _engine.Bars[closed].Time);
                     if (first || res.Opened.Count > 0 || res.Closed.Count > 0 || res.Cancelled.Count > 0)
                     {
                         try { SignalCsv.Merge(_csvPath, _engine.Signals, TzOffset, res.Cancelled); } catch (Exception ex) { LogErr(ex.ToString(), "csv"); }
@@ -506,6 +516,7 @@ namespace BenzoTraderNs
                 Digits = _digits,
                 Warn = TeleEnabled && !string.IsNullOrEmpty(_tele.LastError) ? "Telegram: " + _tele.LastError : null,
             };
+            if (Mt5Send) rs.Lines.Add(_mt5.TableLine());
             var m = _det?.M;
             int last = _engine.Processed - 1;
             if (m != null && last >= 0 && last < _engine.Bars.Count)

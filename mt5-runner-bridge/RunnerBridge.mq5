@@ -39,7 +39,7 @@ input long            InpMagic           = 20260728;           // Magic number
 input bool            InpMarkExistingDone= true;               // Danh dau cac dong dang co la "da xu ly" khi khoi dong
 
 input group "=== FILE CAU NOI ==="
-input string          InpCmdFile         = "runner_cmd.jsonl,entry_cmd.jsonl"; // File lenh (Quantower ghi) — nhieu file cach nhau bang dau phay
+input string          InpCmdFile         = "runner_cmd.jsonl,entry_cmd.jsonl,benzo_cmd.jsonl"; // File lenh (Quantower ghi) — nhieu file cach nhau bang dau phay
 input string          InpAckFile         = "runner_ack.csv";   // File ack (EA ghi)
 input string          InpDoneFile        = "runner_done.txt";  // File id da xu ly
 input bool            InpUseCommonFolder = true;               // Dung thu muc Common\Files (khop mac dinh Quantower)

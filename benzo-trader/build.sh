@@ -4,7 +4,7 @@
 #   quantower-tpo-suite/ProfileEngine.cs          (chỉ vì NewsCalendar — tách sau)
 #   quantower-orderflow-indicator/StackedImbalance.cs + ExhaustionLogic.cs   (namespace OrderFlowBubbles → BenzoOfLib)
 #   quantower-range/RangeLogic.cs                  (namespace RangeBox → BenzoRangeLib)
-#   BenzoCore.cs + BenzoZones.cs + BenzoOrderFlow.cs + BenzoCorven.cs + BenzoTrader.cs
+#   BenzoCore.cs + BenzoZones.cs + BenzoOrderFlow.cs + BenzoCorven.cs + BenzoMt5.cs + BenzoTrader.cs
 # Đổi namespace bằng sed để DLL này không trùng tên kiểu với OrderFlowBubbles.dll / RangeBox.dll cùng nạp trong Optimus Flow.
 # Hai file order flow có `using` ở đầu file (ngoài namespace) ⇒ bỏ các dòng đó và đặt 1 khối `using` ở đầu file nối.
 # Sau build: copy TRỰC TIẾP vào C:\OptimusFLOW\Settings\Scripts\Indicators\BenzoTrader (tạo thư mục nếu chưa có).
@@ -20,7 +20,7 @@ TMP="$(mktemp -d)"
   sed -E '/^using [A-Za-z.]+;[[:space:]]*$/d' "$ROOT/quantower-orderflow-indicator/StackedImbalance.cs"
   sed -E '/^using [A-Za-z.]+;[[:space:]]*$/d' "$ROOT/quantower-orderflow-indicator/ExhaustionLogic.cs"
   cat "$ROOT/quantower-range/RangeLogic.cs"
-  cat "$HERE/BenzoCore.cs" "$HERE/BenzoZones.cs" "$HERE/BenzoOrderFlow.cs" "$HERE/BenzoCorven.cs" "$HERE/BenzoTrader.cs"
+  cat "$HERE/BenzoCore.cs" "$HERE/BenzoZones.cs" "$HERE/BenzoOrderFlow.cs" "$HERE/BenzoCorven.cs" "$HERE/BenzoMt5.cs" "$HERE/BenzoTrader.cs"
 } | sed -E 's/\bOrderFlowBubbles\b/BenzoOfLib/g; s/\bRangeBox\b/BenzoRangeLib/g' > "$TMP/BenzoTrader.cs"
 LOG="$TMP/build.log"
 bash "$QW" "$TMP/BenzoTrader.cs" BenzoTrader | tee "$LOG"

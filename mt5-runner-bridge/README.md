@@ -18,6 +18,17 @@ Muốn chạy riêng một nguồn thì để lại đúng file đó. Lỗi liê
 - **Nạp id cũ bỏ sót file:** `MarkExistingDone()` chỉ quét 1 file; nếu không sửa, mọi dòng cũ
   trong file thứ hai sẽ bị bắn lại ngay khi khởi động EA. Nay quét đủ mọi file.
 
+## BenzoTrader → MT5 (thêm 2026-11-09)
+
+BenzoTrader (setup CORVEN: Fail Break / Break) ghi **`benzo_cmd.jsonl`** (file riêng). `InpCmdFile` mặc định giờ là
+`runner_cmd.jsonl,entry_cmd.jsonl,benzo_cmd.jsonl`.
+
+- ⚠ **EA đang gắn sẵn trên chart giữ giá trị `InpCmdFile` cũ** (MT5 nhớ input theo chart): phải vào thuộc tính EA (F7 trên chart → Inputs) thêm `,benzo_cmd.jsonl`, hoặc gỡ EA gắn lại — nếu không lệnh Benzo không tới MT5.
+- `id` = `BENZO|<mã>|<yyyyMMddHHmm nến xác nhận, UTC>|B/S|FB hoặc BR` (prefix riêng, không đụng id của runner). `branch` = `FB` (Fail Break) / `BR` (Break) chỉ là nhãn log/comment.
+- `rr` = 2 (TP 2R như indicator), `sl_dist` = |entry − SL| theo giá. `ts_utc` = giờ ĐÓNG nến xác nhận.
+- Bật ở Optimus Flow: Settings BenzoTrader → "Gửi lệnh sang MT5" (mặc định tắt), "MT5: chạy thử" (mặc định bật). Giai đoạn 1 giữ chạy thử, xem `runner_ack.csv` ghi `LOG`.
+- BenzoTrader chưa có lợi thế đã đo (backtest −0,07R/lệnh): chỉ chạy thử, không bật vào lệnh thật.
+
 ## ⛔ EA KHÔNG COMPILE ĐƯỢC từ 9f75180 → nhồi chưa từng chạy (sửa 2026-08-04)
 
 Commit `9f75180` thêm tham số `szMult` vào `CalcLot(...)` nhưng **quên sửa chỗ gọi trong

@@ -12,6 +12,7 @@
     <Compile Include="../BenzoZones.cs" />
     <Compile Include="../BenzoOrderFlow.cs" />
     <Compile Include="../BenzoCorven.cs" />
+    <Compile Include="../BenzoMt5.cs" />
     <Compile Include="../tools/ReplayCorven/CorvenData.cs" />
     <Compile Include="../../quantower-orderflow-indicator/StackedImbalance.cs" />
     <Compile Include="../../quantower-orderflow-indicator/ExhaustionLogic.cs" />

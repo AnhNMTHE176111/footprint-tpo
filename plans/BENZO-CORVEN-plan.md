@@ -227,3 +227,24 @@ Nhận định thêm: ② chỉ lọc 10 % thế A / 3 % thế B là **đúng d�
 
 ### 7.5 Đánh giá thẳng của Fable
 Khả năng cao nhất là **không đạt T1**; đạt **T0** (không kém C1/C2 quá 0,05R) cũng chưa chắc — hiện kém 0,06–0,14R. Nếu vòng 3 không đạt (a) thì theo plan mục 3.6 là **dừng trước khi port** và trình người học hai lựa chọn: (i) vẫn port với nhãn "chưa có lợi thế" để forward test (như A/B/C/D trước đây), hoặc (ii) giữ indicator đọc chart (Range Box + Bubbles) và không bắn tín hiệu. Tôi nghiêng về (ii) nếu còn kém đối chứng, vì bắn tín hiệu kém hơn vào bừa là có hại.
+
+## 8. QUYẾT ĐỊNH SAU GĐ2 VÒNG 1 (Fable, 2026-11-09 — `RESULTS-CORVEN.md` mục GĐ2 v1, 20 ảnh, tự đo thêm trên `_corven_trades.csv`)
+
+### 8.1 Neo SL: **giữ neo cú thủng / mốc (4b)**
+Neo "đáy/đỉnh mới quét" gần lời CORVEN hơn nhưng **tệ hơn ở mọi mặt đo được**: n 77 < 97, R TB −0,36 < −0,29, thế B −0,45, 16,7 % chạm trần 4 mbr, loại vì R < 1,7 tăng 67 → 76 %. Luật chọn ở 7.3.3 là "theo nguồn **và không tệ hơn**" ⇒ không đạt vế hai. "SL rồi vẫn chạm TP" chỉ hơn nền 2–7 điểm % (37/51 % so với 31/44 %) ⇒ **gác hẳn giả thuyết "SL sát"**; vấn đề là điểm vào.
+
+### 8.2 Ba ý của agent chính — kiểm bằng số trước khi quyết
+| Ý | Số tôi đo trên 97 lệnh | Quyết |
+|---|---|---|
+| (a) Δ "to" phải so với nhịp gần, không chỉ medΔ 50 nến (THUA3: CF +22 sau các nến −50/−60/−80) | \|Δ_CF\| / max\|Δ\| 5 nến trước **< 0,5 → R TB −0,18 (n 36); ≥ 0,5 → −0,36 (n 61)** — ngược chiều giả thuyết | **Không thêm.** Không có số ủng hộ, và là luật mới (cấm ở 7.4) |
+| (b) Thế B cấm CF là nến đẩy rời mốc (THUA5: vào ở đáy nến −93, cách mốc ≈ 0,5 mbr) | THUA5 vẫn trong "gần" 1,0 mbr. R theo biên độ CF/mbr: < 1 → −0,19 (n 56), 1–2 → −0,46 (n 38), ≥ 2 → −0,08 (n 3) — không đơn điệu | **Không thêm luật mới**; "không đuổi giá" đã có đòn bẩy hợp lệ là `near_mbr` {0,5; 1,0; 1,5} ở vòng 2 (0,5 sẽ loại ca này) |
+| (c) Phiên Á tệ hơn? | Á **−0,60** (n 36) · Âu **+0,14** (n 29) · Mỹ −0,33 (n 32). Hậu kiểm, n nhỏ | **Không lọc phiên ở v1** (QĐ-2 cũ: bot chạy cả ngày, bảng tách phiên, người học tự tắt phiên khi thấy số live). Vòng 2 phải báo thêm **rủi ro trung vị theo giá** từng phiên: Á có mbr nhỏ ⇒ rủi ro ≈ 1,5–2 giá ⇒ phí 0,2 ăn 10–13 % mỗi R — đó là lý do cơ học có thể giải thích Á âm, không phải "setup sai ở Á" |
+
+### 8.3 V1–V5
+V1 giữ (y = nến lập cực trị và là "lần 1") · V2 giữ (nhóm báo cáo, đã tắt) · V3 giữ (pivot gần nhất về thời gian, phía −S của giá vào, sàn 1 mbr) · V4 giữ (nền quanh nến dính SL, 3R theo rủi ro lệnh) · V5 đúng.
+
+### 8.4 Vòng 2 — lưới quét từng tham số quanh bộ vòng 1 (neo cú thủng, A2 tắt)
+`si_run` {3,**4**} · `bubble_mult` {3,**4**} · `delta_mult` {2,**3**} · `near_mbr` {**0,5**; 1,0; **1,5**} · `win_b` {**2**,3,**4**} · `sl_buf_ticks` {**2**,3,**5**} · `b_from_exhausted` {bật,**tắt**} · `need_signs` {2,**3**} (hậu kiểm) — **14 ô mới + bộ gốc**, mỗi ô đổi đúng một tham số. Mỗi ô báo: n · lệnh/ngày · WR · R TB + KTC · ΣR · max DD · **C1 và C2 chạy lại cho đúng ô đó** · R theo thế A/B · R theo phiên Á/Âu/Mỹ + rủi ro trung vị (giá) theo phiên · R theo số dấu hiệu. Không lưới chéo, không thêm tham số, không lọc phiên/giờ mới. Kết quả: `RESULTS-CORVEN.md` mục "GĐ2 vòng 2" một bảng 15 dòng + phụ lục theo ô. *Dừng — Fable chọn ô cho vòng 3.*
+
+### 8.5 Điều kiện mở TEST (không đổi so với 7.4) và nhận định
+Vòng 3 chốt bộ **đơn giản nhất** thoả (a) R TB TRAIN ≥ C1 **và** ≥ C2 của chính ô đó, (b) hai hàng xóm trong lưới không đổi dấu, (c) n ≥ 35. Lưu ý thẳng: C2 hiện là −0,08 nên (a) đòi ô ≈ ≥ −0,08; `need_signs` = 3 có n 29 < 35 — nếu nó là ô duy nhất qua (a) thì **vẫn không mở TEST** (điều kiện (c) giữ nguyên, không hạ cho vừa). Khả năng cao nhất vẫn là dừng ở vòng 3 và trình người học hai lựa chọn ở 7.5.

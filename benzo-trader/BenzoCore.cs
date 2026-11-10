@@ -185,6 +185,29 @@ namespace BenzoTraderNs
             return best;
         }
 
+        /// <summary>Chọn màn hình để chụp khi không tìm được vùng chart. monitors = [left,top,right,bottom] từng màn hình;
+        /// primaryIdx = màn hình chính (máy ASUS). pref: 0 = tự động, k≥1 = màn hình thứ k (theo thứ tự hệ điều hành).
+        /// Tự động: (1) màn hình chứa nhiều nhất cửa sổ gợi ý hint (nếu có); (2) màn hình KHÔNG phải màn hình chính
+        /// (màn hình rời Dell) nếu có; (3) màn hình chính. Trả -1 nếu không có màn hình nào.</summary>
+        public static int PickMonitor(IList<int[]> monitors, int primaryIdx, int pref, int[] hint)
+        {
+            if (monitors == null || monitors.Count == 0) return -1;
+            if (pref >= 1) return Math.Min(pref, monitors.Count) - 1;
+            if (hint != null && hint.Length == 4)
+            {
+                int best = -1; long bestArea = 0;
+                for (int i = 0; i < monitors.Count; i++)
+                {
+                    long w = Math.Min(monitors[i][2], hint[2]) - Math.Max(monitors[i][0], hint[0]);
+                    long h = Math.Min(monitors[i][3], hint[3]) - Math.Max(monitors[i][1], hint[1]);
+                    if (w > 0 && h > 0 && w * h > bestArea) { bestArea = w * h; best = i; }
+                }
+                if (best >= 0) return best;
+            }
+            for (int i = 0; i < monitors.Count; i++) if (i != primaryIdx) return i;
+            return primaryIdx >= 0 && primaryIdx < monitors.Count ? primaryIdx : 0;
+        }
+
         /// <summary>Tên HIỂN THỊ của setup (một chỗ duy nhất): A = "Fail Break", B = "Break". Mã nội bộ 'A'/'B' (cache, CSV, khoá) giữ nguyên.</summary>
         public static string TheName(char s) => s == 'A' ? "Fail Break" : s == 'B' ? "Break" : "?";
         /// <summary>Nhãn chart để vẽ: cache cũ lưu "A buy · …"/"B buy · …" ⇒ đổi tiền tố sang tên hiển thị hiện hành.</summary>

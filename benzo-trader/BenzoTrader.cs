@@ -87,6 +87,12 @@ namespace BenzoTraderNs
             catch { }
             return false;
         }
+        /// <summary>0 = tự động (màn hình chứa chart; không rõ thì màn hình KHÔNG phải màn hình chính); k≥1 = màn hình thứ k. Gán từ setting.</summary>
+        public static volatile int PreferredMonitor;
+        [StructLayout(LayoutKind.Sequential)] private struct MONITORINFO { public int cbSize; public RECT rcMonitor, rcWork; public int dwFlags; }
+        private delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdc, ref RECT rc, IntPtr data);
+        [DllImport("user32.dll")] private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr clip, MonitorEnumProc cb, IntPtr data);
+        [DllImport("user32.dll")] private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO mi);
         private const int SM_CXSCREEN = 0, SM_CYSCREEN = 1, SM_XVIRTUALSCREEN = 76, SM_YVIRTUALSCREEN = 77,
                           SM_CXVIRTUALSCREEN = 78, SM_CYVIRTUALSCREEN = 79;
 
@@ -131,11 +137,29 @@ namespace BenzoTraderNs
             catch (Exception ex) { first = ex; }
 
             try
-            {   // fallback: toàn màn hình chính (không cần System.Windows.Forms)
+            {   // fallback: chụp MỘT màn hình nguyên (không phải màn hình chính ASUS nếu có màn hình rời Dell)
+                var mons = new List<int[]>(); int primary = 0;
+                EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr hm, IntPtr hdc, ref RECT rc, IntPtr d) =>
+                {
+                    var mi = new MONITORINFO { cbSize = Marshal.SizeOf(typeof(MONITORINFO)) };
+                    if (GetMonitorInfo(hm, ref mi) && (mi.dwFlags & 1) != 0) primary = mons.Count;   // MONITORINFOF_PRIMARY
+                    mons.Add(new[] { rc.Left, rc.Top, rc.Right, rc.Bottom });
+                    return true;
+                }, IntPtr.Zero);
+                int[] hint = null;
+                try { var mh = Process.GetCurrentProcess().MainWindowHandle; if (mh != IntPtr.Zero && GetWindowRect(mh, out var mr)) hint = new[] { mr.Left, mr.Top, mr.Right, mr.Bottom }; } catch { }
+                int k = BenzoCore.PickMonitor(mons, primary, PreferredMonitor, hint);
+                if (k >= 0)
+                {
+                    var m = mons[k];
+                    var png = Grab(m[0], m[1], m[2] - m[0], m[3] - m[1]);
+                    how = $"toàn màn hình số {k + 1}{(k == primary ? " (màn hình chính)" : "")} (fallback: " + first.Message + ")";
+                    return png;
+                }
                 int w = GetSystemMetrics(SM_CXSCREEN), hgt = GetSystemMetrics(SM_CYSCREEN);
-                var png = Grab(0, 0, w, hgt);
+                var png2 = Grab(0, 0, w, hgt);
                 how = "toàn màn hình chính (fallback: " + first.Message + ")";
-                return png;
+                return png2;
             }
             catch (Exception ex2)
             {
@@ -175,6 +199,8 @@ namespace BenzoTraderNs
         public string TeleChatId { get; set; } = "";
         [InputParameter("Telegram: gửi thử (bật lên để gửi)", 23)]
         public bool TeleTestNow { get; set; } = false;
+        [InputParameter("Telegram: màn hình chụp (0 = tự động, 1/2 = màn hình số)", 24, 0, 8, 1, 0)]
+        public int ShotMonitor { get; set; } = 0;
         [InputParameter("Hiện range", 30)]
         public bool ShowRange { get; set; } = true;
         [InputParameter("Hiện bảng thống kê", 31)]
@@ -595,6 +621,7 @@ namespace BenzoTraderNs
         private void SendOpenAsync(string caption)
         {
             var tele = CloneTele();
+            WinShot.PreferredMonitor = Math.Max(0, ShotMonitor);
             Task.Run(async () =>
             {
                 try

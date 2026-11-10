@@ -253,6 +253,7 @@ static partial class Program
         TestsCorven();
         TestsCorven2();
         TestsMt5();
+        TestPickMonitor();
         Console.WriteLine($"\n{_ok} OK, {_fail} FAIL");
         return _fail == 0 ? 0 : 1;
     }

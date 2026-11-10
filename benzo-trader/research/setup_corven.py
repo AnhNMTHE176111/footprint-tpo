@@ -102,6 +102,8 @@ class CP:
     bong_23: bool = False          # đo vị trí bóng: ③b dùng luật 2/3 (buy p ≤ 2/3, sell p ≥ 1/3) thay luật nửa nến (giữ nhánh dải mốc)
     trap_hoi_13: bool = False      # đo vị trí bóng: ③f chỉ nhận ô −S đúng 1/3 (buy p ≥ 2/3, sell p ≤ 1/3)
     trap_quet_13: bool = False     # đo vị trí bóng: ③e chỉ nhận ô trap đúng 1/3 (như trên)
+    chan_tau_n: int = 0            # đo "chặn tàu": 0 = TẮT; N ≥ 1 = pivot độ mạnh N; Fail Break buy bị chặn khi cấu trúc đang GIẢM chưa gãy (sell: TĂNG) — cổng 'v_can_tau'
+    chan_tau_break: bool = False   # áp cùng luật cho Break (chỉ để tham khảo)
     gan_range_gan_nhat: bool = False  # corven-5: nhiều Break cùng nến xác nhận ⇒ xét range có nến đóng ngoài (ref) MUỘN nhất trước
 
 
@@ -750,10 +752,10 @@ def summarize(m: Step2Machine, df: pd.DataFrame, good: np.ndarray) -> dict:
 # =====================================================================================================
 SIGN_TYPES = ('delta', 'bong', 'kiet_suc', 'stacked', 'trap')
 GATES = ('g4a_cf', 'v_kiet_suc_chong', 'v_quet_stop', 'v_chong_range', 'tran_sl', 'r_nho', 'chan_1920', 'dau_phien',
-         'cuoi_phien')
+         'cuoi_phien', 'v_can_tau')
 GATE_VN = dict(g4a_cf='4a nến xác nhận', v_kiet_suc_chong='⛔ kiệt sức chống hướng', v_quet_stop='⛔ nhịp đẩy do quét stop',
                v_chong_range='⛔ range chồng range', tran_sl='4b trần SL 4 mbr', r_nho='4c R sẵn < 1,7',
-               chan_1920='4d chặn 19:20–20:30 VN', dau_phien='4d 15 nến đầu phiên', cuoi_phien='nến cuối phiên (không vào được)')
+               chan_1920='4d chặn 19:20–20:30 VN', dau_phien='4d 15 nến đầu phiên', cuoi_phien='nến cuối phiên (không vào được)', v_can_tau='chặn tàu: ngược cấu trúc chưa gãy')
 THE_ORDER = {'A': 0, 'A2': 1, 'B': 2}
 
 
@@ -956,6 +958,46 @@ def find_signs(c: Cand, f: Feat, cp: CP) -> dict:
     return sg
 
 
+def struct_states(f: Feat, N: int) -> np.ndarray:
+    """Trạng thái cấu trúc tại từng nến (đóng cửa nến t, chỉ dùng dữ liệu tới t): -1 GIẢM, +1 TĂNG, 0 TRUNG TÍNH.
+    Pivot đỉnh: H[i] > H của N nến mỗi bên (BẰNG NHAU = không phải pivot); xác nhận ở nến i+N. Pivot đáy đối xứng.
+    Chỉ dùng pivot trong CÙNG phiên. GIẢM = 2 pivot đáy gần nhất hạ dần VÀ 2 pivot đỉnh gần nhất hạ dần; TĂNG đối xứng.
+    GÃY: nến đóng cửa vượt pivot đỉnh gần nhất (GIẢM) / thủng pivot đáy gần nhất (TĂNG) ⇒ TRUNG TÍNH tới khi xác nhận pivot MỚI
+    cùng loại với pivot bị vượt (đỉnh mới nếu GIẢM gãy, đáy mới nếu TĂNG gãy) thì tính lại trạng thái."""
+    cache = f.__dict__.setdefault('_struct', {})
+    if N in cache:
+        return cache[N]
+    n = len(f.C); H, L, C = f.H, f.L, f.C
+    out = np.zeros(n, np.int8)
+    st = 0; hs = []; ls = []; broke = 0   # broke: -1 GIẢM gãy, +1 TĂNG gãy, 0 không
+    for t in range(n):
+        if t == f.sstart[t]:
+            hs = []; ls = []; st = 0; broke = 0
+        i = t - N
+        newh = newl = False
+        if i >= f.sstart[t] + N:
+            if H[i] > H[i - N:i].max() and H[i] > H[i + 1:t + 1].max():
+                hs.append(H[i]); newh = True
+            if L[i] < L[i - N:i].min() and L[i] < L[i + 1:t + 1].min():
+                ls.append(L[i]); newl = True
+        if newh or newl:
+            if broke == -1 and not newh: pass
+            elif broke == 1 and not newl: pass
+            else: broke = 0
+            if broke == 0:
+                st = 0
+                if len(hs) >= 2 and len(ls) >= 2:
+                    if ls[-1] < ls[-2] and hs[-1] < hs[-2]: st = -1
+                    elif ls[-1] > ls[-2] and hs[-1] > hs[-2]: st = 1
+        if st == -1 and hs and C[t] > hs[-1]:
+            st = 0; broke = -1
+        elif st == 1 and ls and C[t] < ls[-1]:
+            st = 0; broke = 1
+        out[t] = st
+    cache[N] = out
+    return out
+
+
 def eval_order(c: Cand, f: Feat, cp: CP, m: Step2Machine, chong: dict, use_chong: bool = True) -> None:
     """④ + ⛔ cho một CF ứng viên (độc lập với ③). Ghi c.gates (mọi cổng trượt) + entry/SL/TP/R."""
     S, cf = c.S, c.cf
@@ -1087,6 +1129,9 @@ def eval_order(c: Cand, f: Feat, cp: CP, m: Step2Machine, chong: dict, use_chong
         g.append('dau_phien')
     if cf >= f.send[cf]:
         g.append('cuoi_phien')
+    if cp.chan_tau_n > 0 and (c.the in ('A', 'A2') or (c.the == 'B' and cp.chan_tau_break)):
+        if struct_states(f, cp.chan_tau_n)[cf] == -S:    # Fail Break/Break buy khi GIẢM chưa gãy; sell khi TĂNG chưa gãy
+            g.append('v_can_tau')
     c.gates = g
 
 

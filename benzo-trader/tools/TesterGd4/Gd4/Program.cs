@@ -77,6 +77,7 @@ static class Program
             ("Telegram: gửi thử (bật lên để gửi)", "Boolean", false),
             ("Telegram: màn hình chụp (0 = tự động, 1/2 = màn hình số)", "Int32", 0),
             ("Hiện range", "Boolean", true),
+            ("Hiện entry", "Boolean", true),
             ("Hiện bảng thống kê", "Boolean", true),
             ("Bật Fail Break", "Boolean", true),
             ("Bật Break", "Boolean", true),

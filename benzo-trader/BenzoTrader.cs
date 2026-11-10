@@ -203,15 +203,17 @@ namespace BenzoTraderNs
         public int ShotMonitor { get; set; } = 0;
         [InputParameter("Hiện range", 30)]
         public bool ShowRange { get; set; } = true;
-        [InputParameter("Hiện bảng thống kê", 31)]
+        [InputParameter("Hiện entry", 31)]
+        public bool ShowEntries { get; set; } = true;     // chỉ ẩn/hiện hình vẽ lệnh trên chart; không ảnh hưởng tín hiệu, bảng, Telegram, MT5
+        [InputParameter("Hiện bảng thống kê", 32)]
         public bool ShowTable { get; set; } = true;
-        [InputParameter("Bật Fail Break", 32)]
+        [InputParameter("Bật Fail Break", 33)]
         public bool EnableFailBreak { get; set; } = true;
-        [InputParameter("Bật Break", 33)]
+        [InputParameter("Bật Break", 34)]
         public bool EnableBreak { get; set; } = true;
-        [InputParameter("SL tối đa (giá)", 34, 0.5, 1000, 0.1, 1)]
+        [InputParameter("SL tối đa (giá)", 35, 0.5, 1000, 0.1, 1)]
         public double SlMaxGia { get; set; } = CorvenParams.SlMaxGia;
-        [InputParameter("SL kiểu cũ", 35)]
+        [InputParameter("SL kiểu cũ", 36)]
         public bool SlKieuCu { get; set; } = false;       // BẬT = SL Break + trần SL như corven-5 (ghi đè corven-6; bỏ qua "SL tối đa")      // lệnh có SL (entry↔SL) > mức này ⇒ bỏ; đổi ⇒ tính lại
 
         [InputParameter("Gửi lệnh sang MT5", 40)]
@@ -720,7 +722,7 @@ namespace BenzoTraderNs
                         gr.DrawLine(pe, x0, y, clip.Right, y);
                     }
                 }
-                foreach (var s in rs.Sigs)
+                if (ShowEntries) foreach (var s in rs.Sigs)
                 {
                     bool open = !s.IsClosed;
                     float xE = (float)conv.GetChartX(s.Time) + bw2;

@@ -405,12 +405,12 @@ static partial class Program
         const int Cut = 51318, Deny = 3697;    // nến cuối TRAIN (2026-09-15) · 4 phiên mỏng đầu file (Python `good`)
         var (tb, tl) = CorvenData.Load(prefix, Cut);
 
-        Console.WriteLine("[C12] Hồi quy TRAIN trên file 90d (corven-7): 229 lệnh = Python cp_live (Fail Break 43, Break 186)");
+        Console.WriteLine("[C12] Hồi quy TRAIN trên file 90d (corven-8): 215 lệnh = Python cp_live (Fail Break 29, Break 186)");
         var (engT, _) = CorvenData.Run(tb, tl, 0.1, Deny);
         var sg = engT.Signals;
-        Check(sg.Count == 229, "229 lệnh TRAIN", sg.Count.ToString());
-        Check(sg.Count(x => x.Setup == 'A') == 43 && sg.Count(x => x.Setup == 'B') == 186, "Fail Break 43 · Break 186", $"{sg.Count(x => x.Setup == 'A')}/{sg.Count(x => x.Setup == 'B')}");
-        Check(sg.Count(x => x.Outcome == "TP") == 76 && sg.Count(x => x.Outcome == "SL") == 151, "76 TP · 151 SL · 2 TIME (= Python cp_live)", $"{sg.Count(x => x.Outcome == "TP")}/{sg.Count(x => x.Outcome == "SL")}");
+        Check(sg.Count == 215, "215 lệnh TRAIN", sg.Count.ToString());
+        Check(sg.Count(x => x.Setup == 'A') == 29 && sg.Count(x => x.Setup == 'B') == 186, "Fail Break 29 · Break 186", $"{sg.Count(x => x.Setup == 'A')}/{sg.Count(x => x.Setup == 'B')}");
+        Check(sg.Count(x => x.Outcome == "TP") == 74 && sg.Count(x => x.Outcome == "SL") == 139, "74 TP · 139 SL · 2 TIME (= Python cp_live)", $"{sg.Count(x => x.Outcome == "TP")}/{sg.Count(x => x.Outcome == "SL")}");
         Check(sg[0].BarIdx == 4050 && sg[0].Signs == "kiệt sức: kiệt sức đỉnh (Ask 0) @4084,2 (nến 4048) | stacked: stacked sell 3 mức 4083,2–4083,4 (nến 4050)", "lệnh đầu: nến 4050, chuỗi dấu hiệu đúng định dạng Python", sg[0].Signs);
 
         Console.WriteLine("[V5-2] corven-5: nhiều ứng viên cùng nến xác nhận ⇒ Break gán range có nến đóng ngoài MUỘN nhất trước (Fail Break giữ thứ tự rid)");

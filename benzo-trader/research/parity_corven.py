@@ -203,7 +203,7 @@ def main():
     m = py_tr.merge(cs_tr, on='idx', how='outer', suffixes=('_py', '_cs'))
     m.to_csv(os.path.join(REPORT, f'_parity_corven_train{SUF}.csv'), index=False, encoding='utf-8')
     nA = int((py_tr['the'] == 'A').sum()); nB = int((py_tr['the'] == 'B').sum())
-    L = ['# Parity Python ↔ C# — setup CORVEN (corven-7' + (', SL kiểu cũ' if KIEU_CU else '') + ', setup_corven.cp_live())', '',
+    L = ['# Parity Python ↔ C# — setup CORVEN (corven-8' + (', SL kiểu cũ' if KIEU_CU else '') + ', setup_corven.cp_live())', '',
          '> Opus, GĐ3 (plan mục 10.6). `research/parity_corven.py` chạy `setup_corven.run_gd1` (chuẩn) và `tools/ReplayCorven` '
          '(mã C# sản phẩm: BenzoEngine + DetectorCorven + RangeLogic/StackedImbalance/ExhaustionLogic nối nguồn) trên '
          '`fp_GCZ26_XCEC_Time_20260723-20261021_90d`. Phiên mỏng đầu file (nến < %d) không vào lệnh ở cả hai bên.' % deny, '',
@@ -241,7 +241,7 @@ def main():
         print('  TRAIN lệch:', d)
     if t_diag or tc_diag:
         print('  TEST lệch (khoá, cột):', (t_diag + tc_diag)[:15])
-    ok = a_ok == a_n and c_ok == c_n and f_ok == f_n and fc_ok == fc_n and t_ok == t_n and tc_ok == tc_n and len(py_tr) == (267 if KIEU_CU else 229)
+    ok = a_ok == a_n and c_ok == c_n and f_ok == f_n and fc_ok == fc_n and t_ok == t_n and tc_ok == tc_n and len(py_tr) == (254 if KIEU_CU else 215)
     print('PARITY 100 %' if ok else 'PARITY CHƯA ĐẠT')
     return 0 if ok else 1
 

@@ -189,3 +189,24 @@ Opus chọn 2: không mức nào cải thiện rõ ngoài nhiễu (±0,03R); m�
 
 Mã thật (`cp_live()`): **SL mới 229 lệnh (Fail Break 43, Break 186), −0,068R, WR 33 % (76 TP / 151 SL / 2 TIME), nửa +0,013 / −0,158, C2' −0,120; SL kiểu cũ 267 lệnh (41 / 226), +0,047R, WR 37 % (98 TP / 167 SL / 2 TIME), nửa +0,024 / +0,066, C2' −0,029** — khớp bảng quét. Nhãn: SL mới "−0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,12R)"; SL cũ "+0,05R/lệnh, hơn vào ngẫu nhiên (−0,03R) chưa đủ chắc".
 Ca 29/10: range chuyển Dead tại BreakConfirmed 08:53 VN, không ReEntry 09:10, không sự kiện nào sau đó; LiveRanges không còn range đó (hộp "Hiện range" không kéo dài); lệnh Break sell 09:10 VN (4067,8, TP) vẫn còn.
+
+## corven-8: luật "không cản tàu" — Fail Break ngược cấu trúc chưa gãy thì không vào (Opus quyết N = 5, Sonnet implement)
+
+Nguồn CORVEN: 0:21:59, 0:42:34, 1:04:00, 0:56:05. Đo bằng `variants_chan_tau.py` (`_variants_chan_tau.csv`), TRAIN 35 phiên. Pivot độ mạnh N; GIẢM/TĂNG cần 2 đỉnh + 2 đáy gần nhất cùng chiều; gãy = nến đóng cửa vượt pivot gần nhất.
+
+| Chế độ SL | N | n | Fail Break | Break | R TB | R Fail Break | WR | C2' |
+|---|---|---|---|---|---|---|---|---|
+| SL mới | tắt | 229 | 43 | 186 | −0,068 | −0,327 | 34,1 % | −0,120 |
+| SL mới | 1 | 212 | 26 | 186 | −0,057 | −0,406 | 34,4 % | −0,112 |
+| SL mới | 2 | 216 | 30 | 186 | −0,076 | −0,495 | 33,8 % | −0,118 |
+| SL mới | 3 | 210 | 24 | 186 | −0,047 | −0,345 | 34,8 % | −0,110 |
+| SL mới | **5** | 215 | 29 | 186 | **−0,029** | −0,163 | 35,3 % | −0,101 |
+| SL mới | 8 | 216 | 30 | 186 | −0,048 | −0,293 | 34,7 % | −0,113 |
+| SL cũ | tắt | 267 | 41 | 226 | +0,047 | −0,363 | 37,1 % | −0,029 |
+| SL cũ | 1 | 251 | 25 | 226 | +0,059 | −0,496 | 37,5 % | −0,025 |
+| SL cũ | 2 | 254 | 28 | 226 | +0,046 | −0,560 | 37,0 % | −0,028 |
+| SL cũ | 3 | 249 | 23 | 226 | +0,069 | −0,440 | 37,8 % | −0,022 |
+| SL cũ | **5** | 254 | 28 | 226 | **+0,082** | −0,235 | 38,2 % | −0,028 |
+| SL cũ | 8 | 255 | 29 | 226 | +0,077 | −0,265 | 38,0 % | −0,043 |
+
+Opus chọn N = 5. Mã thật (`cp_live()`): **SL mới 215 lệnh (Fail Break 29, Break 186), −0,029R, 74 TP / 139 SL / 2 TIME, vào ngẫu nhiên −0,101R; SL kiểu cũ 254 lệnh (28 / 226), +0,082R, 96 TP / 156 SL / 2 TIME, vào ngẫu nhiên −0,028R.** N không đơn điệu (N=2 tệ hơn không chặn) ⇒ một phần cải thiện có thể là nhiễu. Holdout: 5 lệnh bị chặn, tổng +0,43R (trung tính). Fail Break riêng vẫn âm trên TRAIN (−0,16R, 29 lệnh). Áp luật lên Break (N=5+Break) làm xấu thêm ⇒ không áp.

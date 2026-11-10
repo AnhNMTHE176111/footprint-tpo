@@ -107,13 +107,13 @@ class CP:
     gan_range_gan_nhat: bool = False  # corven-5: nhiều Break cùng nến xác nhận ⇒ xét range có nến đóng ngoài (ref) MUỘN nhất trước
 
 
-LIVE_VERSION = 'corven-7'
+LIVE_VERSION = 'corven-8'
 
 
 def cp_live(sl_kieu_cu: bool = False) -> 'CP':
-    """Bộ tham số đang chạy trong indicator (LogicVersion corven-7). sl_kieu_cu=True (Settings "SL kiểu cũ"): SL Break + trần SL như corven-5."""
+    """Bộ tham số đang chạy trong indicator (LogicVersion corven-8: corven-7 + luật không cản tàu N=5). sl_kieu_cu=True (Settings "SL kiểu cũ"): SL Break + trần SL như corven-5."""
     return CP(hoi_khong_cham=True, bo_quet_stop=True, b_bo_rmin=True, trap_hoi=True, sl_b_canh_sat=True, hoi_trong_n_nen=True,
-              b_bo_moc_stacked=True, gan_range_gan_nhat=True, sl_b_canh_3tick=not sl_kieu_cu, sl_cap_gia=None if sl_kieu_cu else 5.0, dead_run_mult=2.0)
+              b_bo_moc_stacked=True, gan_range_gan_nhat=True, sl_b_canh_3tick=not sl_kieu_cu, sl_cap_gia=None if sl_kieu_cu else 5.0, dead_run_mult=2.0, chan_tau_n=5)
 
 
 # =====================================================================================================

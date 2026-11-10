@@ -1,4 +1,4 @@
-// GĐ4 — tester độc lập cho Benzo CORVEN (cập nhật corven-7 2026-11-09) (plan BENZO-CORVEN mục 4 + 10.6). KHÔNG sửa mã sản phẩm.
+// GĐ4 — tester độc lập cho Benzo CORVEN (cập nhật corven-8 2026-11-09) (plan BENZO-CORVEN mục 4 + 10.6). KHÔNG sửa mã sản phẩm.
 // Nạp dist/BenzoTrader.dll đã build. Chạy:  dotnet run --project benzo-trader/tools/TesterGd4/Gd4 -c Release -- <reflect|ui|caption|cache|all>
 // CHỈ dùng phần TRAIN của file 90d (bar_idx ≤ 51318) — không nạp TEST.
 using System;
@@ -102,7 +102,7 @@ static class Program
         object V(string f) => cp.GetField(f).GetRawConstantValue();
         var want = new Dictionary<string, object>
         {
-            ["LogicVersion"] = "corven-7", ["NearMbr"] = 1.0, ["WinB"] = 3, ["WinAMax"] = 5, ["CfAfterFb"] = 2, ["AgeB"] = 30, ["SiRatio"] = 250.0,
+            ["LogicVersion"] = "corven-8", ["NearMbr"] = 1.0, ["WinB"] = 3, ["WinAMax"] = 5, ["CfAfterFb"] = 2, ["AgeB"] = 30, ["SiRatio"] = 250.0,
             ["SiRun"] = 3, ["SiMinVol"] = 1.0, ["BFromExhausted"] = true, ["SameSession"] = true, ["DeltaMult"] = 2.0, ["BubbleMult"] = 3.0,
             ["BubbleMin"] = 10.0, ["DivMinLen"] = 2, ["DivMaxLen"] = 8, ["NeedSigns"] = 2, ["CfBody"] = 0.4, ["CfCloseExt"] = 0.3, ["CfMinRngMbr"] = 0.5,
             ["CfMinDelta"] = 0.5, ["SlBufTicks"] = 3.0, ["SlBufMbr"] = 0.2, ["SlFloorMbr"] = 1.0, ["SlCapMbr"] = 4.0, ["RMin"] = 1.7, ["TpR"] = 2.0,
@@ -140,9 +140,9 @@ static class Program
             Check(lines[1].StartsWith("Mốc: "), "dòng 2: Mốc");
             Check(lines[2].StartsWith($"Dấu hiệu ({s.NSigns}): ") && s.NSigns >= 2 && lines[2].Split(" · ").Length == s.NSigns, "dòng 3: Dấu hiệu (N) liệt kê đủ N dấu hiệu, có số", lines[2]);
             Check(lines[3].StartsWith("CF ") && lines[3].Contains(" · Vào ") && lines[3].Contains(" · SL ") && lines[3].Contains(" · TP ") && lines[3].Contains("(2R, R sẵn "), "dòng 4: CF · Vào · SL · TP (2R, R sẵn)");
-            Check(lines[4] == "⚠ Chưa có lợi thế đo được (−0,07R/lệnh, 35 phiên)", "dòng 5 = nhãn ⚠ đúng chữ plan 10.3");
+            Check(lines[4] == "⚠ Chưa có lợi thế đo được (−0,03R/lệnh, 35 phiên)", "dòng 5 = nhãn ⚠ đúng chữ plan 10.3");
             var capOld = BenzoCore.ComposeOpen(s, "GCZ26", 7, 1, 1, true).Split('\n');
-            Check(capOld.Length == 5 && capOld[4] == "⚠ Chưa có lợi thế đo được (+0,05R/lệnh, 35 phiên)", "SL kiểu cũ BẬT: dòng ⚠ caption = số SL cũ (+0,05R)");
+            Check(capOld.Length == 5 && capOld[4] == "⚠ Chưa có lợi thế đo được (+0,08R/lệnh, 35 phiên)", "SL kiểu cũ BẬT: dòng ⚠ caption = số SL cũ (+0,08R)");
             Check(cap.Length <= 1024, "≤ 1024 ký tự (giới hạn caption ảnh)", cap.Length.ToString());
             // dòng 4: giờ CF hiển thị = giờ MỞ nến theo VN (plan 12.1 #6: = time_vn CSV = nhãn nến Quantower) — kiểm khớp dòng 1
             string tVn = s.Time.AddHours(7).ToString("HH:mm");
@@ -172,9 +172,9 @@ static class Program
         Console.WriteLine("  thư mục: " + dir);
         Check(BenzoCore.CacheFileName("GCZ26", "Time", 1) == "cache_GCZ26_Time_1m.jsonl", "tên cache gồm khung: cache_GCZ26_Time_1m.jsonl");
         Check(BenzoCore.CacheFileName("GCZ26", "Time", 1) != BenzoCore.CacheFileName("GCZ26", "Time", 5), "M1 và M5 ra 2 file khác nhau");
-        Check(BenzoCore.SignalsCsvName("MGCZ6", 1) == "signals_MGCZ6_1m_corven-7.csv" && BenzoCore.CandidatesCsvName("MGCZ6", 1) == "candidates_MGCZ6_1m_corven-7.csv", "2 CSV có khung + phiên bản");
+        Check(BenzoCore.SignalsCsvName("MGCZ6", 1) == "signals_MGCZ6_1m_corven-8.csv" && BenzoCore.CandidatesCsvName("MGCZ6", 1) == "candidates_MGCZ6_1m_corven-8.csv", "2 CSV có khung + phiên bản");
         Check(BenzoCore.CacheFileName("GC/Z26:XCEC", "Time", 1).IndexOfAny(Path.GetInvalidFileNameChars()) < 0, "mã có ký tự lạ (/ :) được làm sạch");
-        Check(BenzoCore.CacheVersion() == "corven-7-sl5.0-f1-b1-old0" && BenzoCore.CacheVersion(3.0, true, true) == "corven-7-sl3.0-f1-b1-old0" && BenzoCore.CacheVersion(5.0, false, true) == "corven-7-sl5.0-f0-b1-old0" && BenzoCore.CacheVersion(5.0, true, false) == "corven-7-sl5.0-f1-b0-old0" && BenzoCore.CacheVersion(5.0, true, true, true) == "corven-7-sl5.0-f1-b1-old1", "khoá cache = corven-7-sl{SL tối đa}-f{Fail Break}-b{Break}-old{SL kiểu cũ}");
+        Check(BenzoCore.CacheVersion() == "corven-8-sl5.0-f1-b1-old0" && BenzoCore.CacheVersion(3.0, true, true) == "corven-8-sl3.0-f1-b1-old0" && BenzoCore.CacheVersion(5.0, false, true) == "corven-8-sl5.0-f0-b1-old0" && BenzoCore.CacheVersion(5.0, true, false) == "corven-8-sl5.0-f1-b0-old0" && BenzoCore.CacheVersion(5.0, true, true, true) == "corven-8-sl5.0-f1-b1-old1", "khoá cache = corven-8-sl{SL tối đa}-f{Fail Break}-b{Break}-old{SL kiểu cũ}");
 
         var (tb, tl) = Train();
         int n = 24000;
@@ -371,7 +371,7 @@ static class Program
         var (tb, tl) = Train();
         var (e0, _) = CorvenData.Run(tb.Take(30000).ToList(), tl.Take(30000).ToArray(), 0.1, Deny);
         // ca 1: lệnh TP (đã đóng) — xem hộp SL/TP, mũi tên, nhãn
-        foreach (var (s, tag) in new[] { (e0.Signals.First(x => x.Outcome == "TP" && x.Setup == 'B'), "B-TP"), (e0.Signals.First(x => x.Outcome == "SL" && x.Setup == 'A'), "A-SL") })
+        foreach (var (s, tag) in new[] { (e0.Signals.First(x => x.Outcome == "TP" && x.Setup == 'B'), "B-TP"), (e0.Signals.First(x => x.Outcome == "SL" && x.Setup == 'A' && x.Side < 0), "A-SL") })
         {
             int exit = tb.FindIndex(x => x.Time == s.ExitTime);
             var (bmp, conv, _, eng) = Render($"corven-{tag}-{s.Time:MMdd-HHmm}.png", tb, tl, exit + 8, s.BarIdx - 70, 6);
@@ -417,9 +417,9 @@ static class Program
             var lines = (List<string>)rs.GetType().GetField("Lines").GetValue(rs);
             foreach (var ln in lines) Console.WriteLine("  | " + ln);
             Check(lines.Count == 4, "bảng 4 dòng", lines.Count.ToString());
-            Check(lines[0].StartsWith("BENZO CORVEN corven-7 · ") && lines[0].Contains(" lệnh · WR ") && lines[1].StartsWith("Fail Break · ") && lines[2].StartsWith("Break · "), "dòng 1–3 đúng mẫu");
-            Check(lines[3] == "Backtest 35 phiên: −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,12R) · chạy thử, không phải khuyến nghị", "dòng 4 = nhãn trung thực đúng chữ");
-            Check(BenzoCore.TableLines(BenzoCore.ComputeStats(eng.Signals), true)[3] == "Backtest 35 phiên: +0,05R/lệnh, hơn vào ngẫu nhiên (−0,03R) chưa đủ chắc · chạy thử, không phải khuyến nghị", "SL kiểu cũ BẬT: dòng 4 bảng = nhãn SL cũ");
+            Check(lines[0].StartsWith("BENZO CORVEN corven-8 · ") && lines[0].Contains(" lệnh · WR ") && lines[1].StartsWith("Fail Break · ") && lines[2].StartsWith("Break · "), "dòng 1–3 đúng mẫu");
+            Check(lines[3] == "Backtest 35 phiên: −0,03R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,10R) · chạy thử, không phải khuyến nghị", "dòng 4 = nhãn trung thực đúng chữ");
+            Check(BenzoCore.TableLines(BenzoCore.ComputeStats(eng.Signals), true)[3] == "Backtest 35 phiên: +0,08R/lệnh, hơn vào ngẫu nhiên (−0,03R) chưa đủ chắc · chạy thử, không phải khuyến nghị", "SL kiểu cũ BẬT: dòng 4 bảng = nhãn SL cũ");
             // dòng 4 thật sự hiện trên ảnh: có pixel màu cam (255,170,120) ở vùng đáy trái
             int orange = 0;
             for (int y = conv.Rc.Bottom - 40; y < conv.Rc.Bottom; y++) for (int x = 0; x < 700; x++) if (ColNear(bmp.GetPixel(x, y), Color.FromArgb(255, 170, 120), 90)) orange++;
@@ -475,7 +475,8 @@ static class Program
         var (e0, _) = CorvenData.Run(tb.Take(30000).ToList(), tl.Take(30000).ToArray(), 0.1, Deny);
         // #4 mũi tên — ảnh không có nến: chỉ còn mũi tên/hộp/nhãn của indicator
         // (corven-3: chọn lệnh mà hộp range KHÔNG đè lên hộp SL/TP của lệnh trước — pixel "mờ" đổi màu khi nằm trên nền hộp đỏ/xanh)
-        bool Clear(Signal x) => !e0.Signals.Any(o => o.Id != x.Id && o.Time < x.Time && o.ExitTime.Ticks > x.RangeT0 - TimeSpan.TicksPerMinute * 10);
+        // corven-8: thêm điều kiện đường TP của chính lệnh không sát cạnh hộp range (≥ 1,0 giá) — đường TP đè cạnh hộp làm pixel 'mờ' đổi màu
+        bool Clear(Signal x) => Math.Abs(x.Tp - x.RangeHi) >= 1.0 && Math.Abs(x.Tp - x.RangeLo) >= 1.0 && !e0.Signals.Any(o => o.Id != x.Id && o.Time < x.Time && o.ExitTime.Ticks > x.RangeT0 - TimeSpan.TicksPerMinute * 10);
         foreach (var (s, tag) in new[] { (e0.Signals.First(x => x.Outcome == "TP" && x.Setup == 'B' && Clear(x)), "B-TP"), (e0.Signals.First(x => x.Outcome == "SL" && x.Setup == 'A' && Clear(x)), "A-SL") })
         {
             int exit = tb.FindIndex(x => x.Time == s.ExitTime);
@@ -527,13 +528,14 @@ static class Program
         }
         // #6 giờ caption = time_vn CSV, lệnh mẫu của plan
         {
-            var s = e0.Signals.First(x => x.Id == "GCZ26|202607291552|A|S");
+            var s = e0.Signals.First(x => x.Setup == 'A');   // corven-8: lệnh Fail Break mẫu 15:52 UTC bị luật không cản tàu chặn ⇒ lấy Fail Break đầu tiên
+            string hhmm = SignalCsv.ToLine(s, 7).Split(',')[1].Substring(11), ymdhm = SignalCsv.ToLine(s, 7).Split(',')[1];
             string cap = BenzoCore.ComposeOpen(s, "GCZ26", 7, 1, 1);
             string csvVn = SignalCsv.ToLine(s, 7).Split(',')[1];
-            Check(cap.Split('\n')[0].EndsWith("· 22:52 VN") && cap.Split('\n')[3].StartsWith("CF 22:52 ") && csvVn == "2026-07-29 22:52",
-                  "#6: caption 22:52 VN = time_vn CSV (15:52 UTC + 7)", cap.Split('\n')[0] + " / " + csvVn);
+            Check(cap.Split('\n')[0].EndsWith("· " + hhmm + " VN") && cap.Split('\n')[3].StartsWith("CF " + hhmm + " ") && csvVn == ymdhm,
+                  "#6: caption giờ VN = time_vn CSV (UTC + 7)", cap.Split('\n')[0] + " / " + csvVn);
             string cl = BenzoCore.ComposeClose(s, 7, 1);
-            Check(cl.EndsWith("· 22:52→" + s.ExitTime.AddHours(7).ToString("HH:mm")), "#6: tin đóng dùng giờ mở nến vào/thoát", cl);
+            Check(cl.EndsWith("· " + hhmm + "→" + s.ExitTime.AddHours(7).ToString("HH:mm")), "#6: tin đóng dùng giờ mở nến vào/thoát", cl);
         }
         // #2 kịch bản xen kẽ: BẬT 0–7999, TẮT 8000–14999, BẬT từ 15000 (một engine, đổi công tắc giữa chừng như live)
         {

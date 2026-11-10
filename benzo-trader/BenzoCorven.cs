@@ -1,7 +1,7 @@
 // ============================================================================
 //  BenzoCorven — setup "follow theo footprint" của CORVEN (plans/BENZO-CORVEN-plan.md, GĐ3 mục 10)
 // ============================================================================
-//  PORT Y CHỮ từ benzo-trader/research/setup_corven.py (LogicVersion "corven-7" = corven-1 + 11 sửa đổi người học 2026-11-09, setup_corven.cp_live()):
+//  PORT Y CHỮ từ benzo-trader/research/setup_corven.py (LogicVersion "corven-8" = corven-1 + 11 sửa đổi người học 2026-11-09 + corven-7 + luật không cản tàu, setup_corven.cp_live()):
 //    ① bối cảnh = RangeLogic (quantower-range/RangeLogic.cs, nối nguồn lúc build) — thế A (fail break) / thế B (phá giữ được)
 //    ② mốc "gần" + test không quá sâu + cửa sổ test          (Step2Machine.on_bar / _a_candidate / _b_step / _b_eval)
 //    ③ 5 loại dấu hiệu, cần ≥ 2 loại                          (find_signs)
@@ -26,7 +26,7 @@ namespace BenzoTraderNs
     /// muốn đổi phải đo lại bằng Python rồi tăng LogicVersion.</summary>
     public static class CorvenParams
     {
-        public const string LogicVersion = "corven-7";
+        public const string LogicVersion = "corven-8";
         public const double NearMbr = 1.0;
         public const int WinB = 3;
         public const int WinAMax = 5;
@@ -81,13 +81,15 @@ namespace BenzoTraderNs
         public const double SlMaxGia = 5.0;
         // ---- corven-7 (Opus chọn 2026-11-09): range Broken mà giá chạy xa cạnh vừa phá ≥ 2 × chiều cao range ⇒ Dead (không ReEntry, không Merge) ----
         public const double DeadRunMult = 2.0;
+        // ---- corven-8 (Opus chọn 2026-11-10): "không cản tàu" — Fail Break buy bị chặn khi cấu trúc (pivot độ mạnh N) đang GIẢM chưa gãy; sell: TĂNG ----
+        public const int ChanTauN = 5;
 
         // ---- nhãn trung thực (plan 10.3) — test so đúng chữ ----
-        public const string BacktestLine = "Backtest 35 phiên: −0,07R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,12R) · chạy thử, không phải khuyến nghị";
-        public const string TeleWarn = "⚠ Chưa có lợi thế đo được (−0,07R/lệnh, 35 phiên)";
+        public const string BacktestLine = "Backtest 35 phiên: −0,03R/lệnh, chưa có lợi thế (vào ngẫu nhiên −0,10R) · chạy thử, không phải khuyến nghị";
+        public const string TeleWarn = "⚠ Chưa có lợi thế đo được (−0,03R/lệnh, 35 phiên)";
         // chế độ "SL kiểu cũ" (Settings, mặc định tắt) = SL Break + trần SL của corven-5 ⇒ nhãn theo số backtest của chế độ đó
-        public const string BacktestLineOld = "Backtest 35 phiên: +0,05R/lệnh, hơn vào ngẫu nhiên (−0,03R) chưa đủ chắc · chạy thử, không phải khuyến nghị";
-        public const string TeleWarnOld = "⚠ Chưa có lợi thế đo được (+0,05R/lệnh, 35 phiên)";
+        public const string BacktestLineOld = "Backtest 35 phiên: +0,08R/lệnh, hơn vào ngẫu nhiên (−0,03R) chưa đủ chắc · chạy thử, không phải khuyến nghị";
+        public const string TeleWarnOld = "⚠ Chưa có lợi thế đo được (+0,08R/lệnh, 35 phiên)";
         public static string Backtest(bool kieuCu) => kieuCu ? BacktestLineOld : BacktestLine;
         public static string Warn(bool kieuCu) => kieuCu ? TeleWarnOld : TeleWarn;
     }
@@ -116,10 +118,12 @@ namespace BenzoTraderNs
         public bool BatFailBreak = true, BatBreak = true;
         /// <summary>corven-7: truyền vào RangeParams.DeadRunMult (0 = tắt — V1).</summary>
         public double DeadRunMult = CorvenParams.DeadRunMult;
+        /// <summary>corven-8: "không cản tàu" — độ mạnh pivot N (0 = tắt — V1). Fail Break buy bị chặn khi cấu trúc đang GIẢM chưa gãy (sell: TĂNG).</summary>
+        public int ChanTauN = CorvenParams.ChanTauN;
         /// <summary>Settings "SL kiểu cũ": SL Break + trần SL như corven-5 (SL cạnh có râu hồi + dung sai, trần 4 biên độ, bỏ qua SL tối đa).</summary>
         public static CorvenCfg KieuCu_(bool on, CorvenCfg c) { if (on) { c.SlBCanh3Tick = false; c.SlMaxGia = 0; } return c; }
-        /// <summary>Bộ corven-1 (mọi cờ corven-2/3/4/5/6/7 tắt (trần SL về 4 biên độ)) — cho test cũ dựng ca biên của luật đã bỏ.</summary>
-        public static CorvenCfg V1() => new CorvenCfg { HoiKhongCham = false, BoQuetStop = false, BBoRMin = false, TrapHoi = false, SlBCanhSat = false, HoiTrongNNen = false, BBoMocStacked = false, GanRangeGanNhat = false, SlBCanh3Tick = false, SlMaxGia = 0, DeadRunMult = 0 };
+        /// <summary>Bộ corven-1 (mọi cờ corven-2/3/4/5/6/7/8 tắt (trần SL về 4 biên độ)) — cho test cũ dựng ca biên của luật đã bỏ.</summary>
+        public static CorvenCfg V1() => new CorvenCfg { HoiKhongCham = false, BoQuetStop = false, BBoRMin = false, TrapHoi = false, SlBCanhSat = false, HoiTrongNNen = false, BBoMocStacked = false, GanRangeGanNhat = false, SlBCanh3Tick = false, SlMaxGia = 0, DeadRunMult = 0, ChanTauN = 0 };
     }
 
     // ======================================================================== đặc trưng từng nến (Feat)
@@ -137,6 +141,55 @@ namespace BenzoTraderNs
         private readonly List<double> _cbSorted = new();
         private readonly List<double> _absD = new();
         public int Count => C.Count;
+
+        // ---- "không cản tàu" (corven-8): trạng thái cấu trúc tính tăng dần theo từng nến, chỉ dùng dữ liệu tới nến t ----
+        private int _stN = -1, _stState, _stBroke;
+        private readonly List<double> _stHs = new(), _stLs = new();
+        private readonly List<sbyte> _stOut = new();
+
+        /// <summary>Trạng thái cấu trúc tại đóng cửa nến t: −1 GIẢM, +1 TĂNG, 0 TRUNG TÍNH (đúng hệt Python struct_states).
+        /// Pivot đỉnh: H[i] &gt; H của N nến mỗi bên (BẰNG NHAU = không phải pivot), xác nhận ở nến i+N; pivot đáy đối xứng; chỉ dùng pivot cùng phiên.
+        /// GIẢM = 2 pivot đáy gần nhất hạ dần VÀ 2 pivot đỉnh gần nhất hạ dần (TĂNG đối xứng). GÃY = nến ĐÓNG CỬA vượt pivot đỉnh gần nhất (GIẢM) / thủng pivot đáy gần nhất (TĂNG)
+        /// ⇒ TRUNG TÍNH tới khi xác nhận pivot MỚI cùng loại với pivot bị vượt thì tính lại.</summary>
+        public int StructState(int N, int t)
+        {
+            if (N != _stN) { _stN = N; _stState = 0; _stBroke = 0; _stHs.Clear(); _stLs.Clear(); _stOut.Clear(); }
+            for (int u = _stOut.Count; u <= t; u++)
+            {
+                if (u == SStart[u]) { _stHs.Clear(); _stLs.Clear(); _stState = 0; _stBroke = 0; }
+                int i = u - N;
+                bool newh = false, newl = false;
+                if (N >= 1 && i >= SStart[u] + N)
+                {
+                    long mxL = long.MinValue, mnL = long.MaxValue;
+                    for (int j = i - N; j < i; j++) { if (H[j] > mxL) mxL = H[j]; if (L[j] < mnL) mnL = L[j]; }
+                    long mxR = long.MinValue, mnR = long.MaxValue;
+                    for (int j = i + 1; j <= u; j++) { if (H[j] > mxR) mxR = H[j]; if (L[j] < mnR) mnR = L[j]; }
+                    if (H[i] > mxL && H[i] > mxR) { _stHs.Add(H[i]); newh = true; }
+                    if (L[i] < mnL && L[i] < mnR) { _stLs.Add(L[i]); newl = true; }
+                }
+                if (newh || newl)
+                {
+                    if (_stBroke == -1 && !newh) { }
+                    else if (_stBroke == 1 && !newl) { }
+                    else _stBroke = 0;
+                    if (_stBroke == 0)
+                    {
+                        _stState = 0;
+                        int nh = _stHs.Count, nl = _stLs.Count;
+                        if (nh >= 2 && nl >= 2)
+                        {
+                            if (_stLs[nl - 1] < _stLs[nl - 2] && _stHs[nh - 1] < _stHs[nh - 2]) _stState = -1;
+                            else if (_stLs[nl - 1] > _stLs[nl - 2] && _stHs[nh - 1] > _stHs[nh - 2]) _stState = 1;
+                        }
+                    }
+                }
+                if (_stState == -1 && _stHs.Count > 0 && C[u] > _stHs[_stHs.Count - 1]) { _stState = 0; _stBroke = -1; }
+                else if (_stState == 1 && _stLs.Count > 0 && C[u] < _stLs[_stLs.Count - 1]) { _stState = 0; _stBroke = 1; }
+                _stOut.Add((sbyte)_stState);
+            }
+            return _stOut[t];
+        }
 
         /// <summary>Nạp nến i: nền_ô lấy TRƯỚC khi nạp nến (Q11), medΔ gồm nến hiện tại (rolling 50, tối thiểu 10).</summary>
         public void Add(CorvenBar b, double mbr, int sess, int sm, CorvenCfg cfg)
@@ -445,6 +498,8 @@ namespace BenzoTraderNs
             // nến cuối phiên (plan 12.2-Q2): nến mở 16:59 ET (sm ≥ 1379) = nến M1 cuối của phiên 18:00→17:00 ET — cách NHÂN QUẢ duy nhất
             // để code luật 4d "nến cuối phiên không vào" (Python nhìn trước). Huỷ ở BenzoEngine.EndSession giữ làm lưới dự phòng.
             if (sm >= LastBarSm) g.Add("cuoi_phien");
+            // corven-8 "không cản tàu": Fail Break ngược cấu trúc chưa gãy (buy khi GIẢM, sell khi TĂNG) không được vào
+            if (cp.ChanTauN > 0 && c.The == 'A' && f.StructState(cp.ChanTauN, cf) == -S) g.Add("v_can_tau");
             c.Gates = g;
         }
 
@@ -456,9 +511,9 @@ namespace BenzoTraderNs
         public static readonly string[] AllGateLabels =
         {
             "③ 0 loại", "③ 1 loại", "④ CF", "④ R<1,7", "SL > X giá", "⛔ veto kiệt sức", "⛔ quét stop", "⛔ chồng range",
-            "chặn giờ", "cuối phiên", "tin USD", "thế đã có lệnh", "đang có lệnh", "Fail Break tắt", "Break tắt",
+            "chặn giờ", "cuối phiên", "không cản tàu", "tin USD", "thế đã có lệnh", "đang có lệnh", "Fail Break tắt", "Break tắt",
         };
-        public static readonly string[] GateCodes = { "g4a_cf", "r_nho", "tran_sl", "v_kiet_suc_chong", "v_quet_stop", "v_chong_range", "chan_1920", "dau_phien", "cuoi_phien", "tin_usd" };
+        public static readonly string[] GateCodes = { "g4a_cf", "r_nho", "tran_sl", "v_kiet_suc_chong", "v_quet_stop", "v_chong_range", "chan_1920", "dau_phien", "cuoi_phien", "v_can_tau", "tin_usd" };
 
         /// <summary>Nhãn cổng cho CSV ứng viên bị loại (plan 10.4).</summary>
         public static string GateVn(string g, double slMaxGia = 0) => g switch
@@ -472,6 +527,7 @@ namespace BenzoTraderNs
             "chan_1920" => "chặn giờ",
             "dau_phien" => "chặn giờ",
             "cuoi_phien" => "cuối phiên",
+            "v_can_tau" => "không cản tàu",
             "tin_usd" => "tin USD",
             _ => g
         };

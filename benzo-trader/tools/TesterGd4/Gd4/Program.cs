@@ -75,12 +75,14 @@ static class Program
             ("Telegram: bot token", "String", ""),
             ("Telegram: chat id", "String", ""),
             ("Telegram: gửi thử (bật lên để gửi)", "Boolean", false),
+            ("Telegram: màn hình chụp (0 = tự động, 1/2 = màn hình số)", "Int32", 0),
             ("Hiện range", "Boolean", true),
             ("Hiện bảng thống kê", "Boolean", true),
             ("Bật Fail Break", "Boolean", true),
             ("Bật Break", "Boolean", true),
             ("SL tối đa (giá)", "Double", 5.0),
             ("SL kiểu cũ", "Boolean", false),
+            ("Gửi lệnh sang MT5", "Boolean", false),
         };
         Check(props.Count == expect.Length, $"đúng {expect.Length} mục Settings (plan 10.2)", props.Count.ToString());
         for (int i = 0; i < Math.Min(props.Count, expect.Length); i++)
@@ -90,8 +92,8 @@ static class Program
             bool okDef = inst == null || Equals(p.GetValue(inst), expect[i].def);
             Check(okName && okType && okDef, $"Settings #{i + 1}: {expect[i].name} = {FormatVal(expect[i].def)}", $"thấy: {name} / {p.PropertyType.Name} / {(inst == null ? "?" : FormatVal(p.GetValue(inst)))}");
         }
-        var numeric = props.Where(x => x.p.PropertyType != typeof(bool) && x.p.PropertyType != typeof(string) && x.name != "Lệch giờ (UTC → VN)" && x.name != "SL tối đa (giá)").ToList();
-        Check(numeric.Count == 0, "không có ngưỡng số nào trong Settings (ngoài Lệch giờ và SL tối đa)", string.Join(", ", numeric.Select(x => x.name)));
+        var numeric = props.Where(x => x.p.PropertyType != typeof(bool) && x.p.PropertyType != typeof(string) && x.name != "Lệch giờ (UTC → VN)" && x.name != "SL tối đa (giá)" && x.name != "Telegram: màn hình chụp (0 = tự động, 1/2 = màn hình số)").ToList();
+        Check(numeric.Count == 0, "không có ngưỡng số nào trong Settings (ngoài Lệch giờ, SL tối đa và Telegram: màn hình chụp)", string.Join(", ", numeric.Select(x => x.name)));
         var old = new[] { "Bật setup CORVEN", "Chặn 19:20", "Hiện dấu hiệu", "Đặt lại thống kê", "Hiện lại toàn bộ thống kê" };
         Check(!props.Any(x => old.Any(o => x.name.StartsWith(o))), "các mục cũ (công tắc tổng, chặn giờ, hiện dấu hiệu, đặt lại / hiện lại thống kê) không còn");
         var slp = props.First(x => x.name == "SL tối đa (giá)");

@@ -525,7 +525,7 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
-                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigBalancedPct, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v4",
+                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigBalancedPct, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v5",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
@@ -901,8 +901,12 @@ namespace OrderFlowBubbles
                     var col2 = dec.Side == 0 ? CellBigBalancedColor : dec.Side > 0 ? BuyColor : SellColor;
                     string rng = r.HiTick > r.LoTick ? (r.LoTick * tick).ToString("0.0###", inv) + "–" + (r.HiTick * tick).ToString("0.0###", inv)
                                                       : (r.LoTick * tick).ToString("0.0###", inv);
-                    string tip2 = $"Hàng lớn {rng}: buy {r.Buy:0} / sell {r.Sell:0}"
-                                + (dec.Mult > 0 ? $" — gấp {dec.Mult:0.0} lần TB hàng {CellBigBaselineBars} nến" : "");
+                    string head = dec.Side > 0 ? $"Buy dồn {r.Buy:0} hợp đồng tại {rng} (sell chỉ {r.Sell:0})"
+                                : dec.Side < 0 ? $"Sell dồn {r.Sell:0} hợp đồng tại {rng} (buy chỉ {r.Buy:0})"
+                                : $"Buy {r.Buy:0} và sell {r.Sell:0} cùng lớn tại {rng}";
+                    string tip2 = head + (dec.Mult > 0
+                        ? $" — gấp {dec.Mult.ToString("0.0", inv)} lần volume trung bình mỗi mức giá của {CellBigBaselineBars} nến trước"
+                        : "");
                     var b2 = Solid(cp, Shape.Ellipse, col2, true, tip2);
                     b2.SizeFrac = dec.SizeFrac;
                     cellBigCands.Add((b2, Math.Max(r.Buy, r.Sell), r.LoTick, r.HiTick));

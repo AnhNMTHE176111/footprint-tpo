@@ -1,0 +1,348 @@
+//@version=6
+indicator("Benzo Volume Profile", "Benzo Volume Profile", overlay = true, behind_chart = true, max_lines_count = 500, max_boxes_count = 500, max_polylines_count = 100)
+
+// =====================================================================================
+//  INPUTS
+// =====================================================================================
+grpP        = "═══ Profile ═══"
+profileTF   = input.timeframe("D", "Session Anchor", group = grpP, tooltip = "Each profile resets on a new period. 'D' = one profile per day. Use '240'/'60' for finer intraday profiles.", display = display.none)
+profileRows = input.int(20,  "Rows per Profile", minval = 8, maxval = 100, group = grpP, tooltip = "Vertical resolution of each profile (higher = finer). Each session draws roughly Rows×2 boxes and a script is capped at 500 boxes total, so high Rows + many Sessions will silently drop the OLDEST profiles. Guide: Rows 20 → keep ~8 sessions; Rows 40 → keep ~5 sessions; Rows 100 → keep ~2 sessions.", display = display.none)
+valueArea   = input.float(70, "Value Area %", minval = 50, maxval = 95, step = 1, group = grpP, display = display.none)
+maxSessions = input.int(5,   "Historical Sessions to Keep", minval = 1, maxval = 10, group = grpP, tooltip = "How many completed sessions to keep on the chart. Higher values + high Rows can exceed the 500-box limit, dropping the oldest profiles.", display = display.none)
+widthPct    = input.float(0.32, "Profile Width (% of session)", minval = 0.05, maxval = 1.0, step = 0.02, group = grpP, tooltip = "Width of the widest (POC) row as a fraction of the session's bar-width.", display = display.none)
+maxWidthBar = input.int(90,  "Max Profile Width (bars)", minval = 10, maxval = 300, group = grpP, display = display.none)
+showLive    = input.bool(true, "Show Developing (current) Profile", group = grpP, display = display.none)
+
+grpC        = "═══ Colors / Gradient ═══"
+colBuy      = input.color(#90bff9, "Buy (up) Volume",    group = grpC, inline = "c1", tooltip = "Volume of up candles (close >= open) — right part of each row.", display = display.none)
+colSell     = input.color(#b39ddb, "Sell (down) Volume", group = grpC, inline = "c1", tooltip = "Volume of down candles (close < open) — left part of each row.", display = display.none)
+colPOC      = input.color(#5b6472, "POC",  group = grpC, inline = "c2", display = display.none)
+colVWAP     = input.color(#ab47bc, "VWAP", group = grpC, inline = "c2", display = display.none)
+vaBoost     = input.float(1.18, "Value Area Emphasis", minval = 1.0, maxval = 2.0, step = 0.02, group = grpC, tooltip = "Extra brightness for rows inside the value area.", display = display.none)
+// Row transparency runs from gEdge (lowest volume) to gPeak (POC).
+gPeak       = 3
+gEdge       = 68
+
+grpV        = "═══ VWAP ═══"
+showVWAP    = input.bool(true, "Session VWAP", group = grpV, display = display.none)
+vwapSrc     = input.source(hlc3, "  VWAP Source", group = grpV, tooltip = "Price series the VWAP is built from. Default hlc3 (typical price).", display = display.none)
+vwapAnchor  = input.timeframe("D", "  VWAP Anchor", group = grpV, tooltip = "When the VWAP resets. 'D' = daily. Use 'W'/'M' for weekly/monthly, or '60'/'240' for intraday anchors.", display = display.none)
+vwapWidth   = input.int(2, "  VWAP Width", minval = 1, maxval = 4, group = grpV, display = display.none)
+showBand1   = input.bool(true,  "  Band #1 ±", group = grpV, inline = "vb1", display = display.none)
+bandMult1   = input.float(1.0, "", minval = 0.1, maxval = 5.0, step = 0.1, group = grpV, inline = "vb1", display = display.none)
+bandLine1   = input.color(#ab47bca6, "", group = grpV, inline = "vb1", display = display.none)
+bandFill1   = input.color(#ab47bc1a, "", group = grpV, inline = "vb1", display = display.none)
+showBand2   = input.bool(false, "  Band #2 ±", group = grpV, inline = "vb2", display = display.none)
+bandMult2   = input.float(2.0, "", minval = 0.1, maxval = 5.0, step = 0.1, group = grpV, inline = "vb2", display = display.none)
+bandLine2   = input.color(#ab47bc80, "", group = grpV, inline = "vb2", display = display.none)
+bandFill2   = input.color(#ab47bc12, "", group = grpV, inline = "vb2", display = display.none)
+showBand3   = input.bool(false, "  Band #3 ±", group = grpV, inline = "vb3", tooltip = "Each band sits at VWAP ± (multiplier × standard deviation). Per band: on/off, multiplier, line color, zone fill color. A zone is the area between this band and the next enabled band inside it (or the VWAP).", display = display.none)
+bandMult3   = input.float(3.0, "", minval = 0.1, maxval = 5.0, step = 0.1, group = grpV, inline = "vb3", display = display.none)
+bandLine3   = input.color(#ab47bc59, "", group = grpV, inline = "vb3", display = display.none)
+bandFill3   = input.color(#ab47bc0d, "", group = grpV, inline = "vb3", display = display.none)
+vwapKeep    = input.int(5, "  VWAP Periods to Keep", minval = 1, maxval = 6, group = grpV, tooltip = "Completed VWAP periods kept on the chart (the current one is always drawn).", display = display.none)
+
+// All drawings use time-based x coordinates (xloc.bar_time). bar_index coordinates are
+// limited in how far back they can reach, which breaks long sessions (e.g. 1W anchor on 1m).
+barMs = timeframe.in_seconds() * 1000
+
+// =====================================================================================
+//  PROFILE MATH
+// =====================================================================================
+f_clearBoxes(array<box> a) =>
+    if array.size(a) > 0
+        for i = 0 to array.size(a) - 1
+            box.delete(array.get(a, i))
+        array.clear(a)
+
+f_clearLines(array<line> a) =>
+    if array.size(a) > 0
+        for i = 0 to array.size(a) - 1
+            line.delete(array.get(a, i))
+        array.clear(a)
+
+// Spreads each bar's volume evenly over the rows its high-low range touches.
+// Returns total volume per row, down-candle volume per row, and the row height.
+// Callers must pass non-empty arrays.
+f_binVolumes(array<float> H, array<float> L, array<float> V, array<float> U, float top, float bot) =>
+    rows = profileRows
+    rh   = (top - bot) / rows
+    vr   = array.new<float>(rows, 0.0)
+    dr   = array.new<float>(rows, 0.0)
+    if rh > 0
+        for i = 0 to array.size(V) - 1
+            // Clamp both bins into [0, rows-1]: a bar touching the session top maps to bin == rows.
+            rB = math.min(rows - 1, math.max(0, int(math.floor((array.get(L, i) - bot) / rh))))
+            rT = math.min(rows - 1, math.max(0, int(math.floor((array.get(H, i) - bot) / rh))))
+            ve = array.get(V, i) / (rT - rB + 1)
+            isDown = array.get(U, i) < 0.5
+            for r = rB to rT
+                array.set(vr, r, array.get(vr, r) + ve)
+                if isDown
+                    array.set(dr, r, array.get(dr, r) + ve)
+    [vr, dr, rh]
+
+// POC row, then the value area grown outward from it one row at a time (higher side wins ties).
+f_valueArea(array<float> vr) =>
+    rows   = array.size(vr)
+    pIdx   = array.indexof(vr, array.max(vr))
+    target = array.sum(vr) * valueArea / 100.0
+    vaVol  = array.get(vr, pIdx)
+    up = pIdx
+    dn = pIdx
+    while vaVol < target and (up < rows - 1 or dn > 0)
+        uV = up < rows - 1 ? array.get(vr, up + 1) : -1.0
+        dV = dn > 0        ? array.get(vr, dn - 1) : -1.0
+        if uV >= dV
+            up += 1
+            vaVol += uV
+        else
+            dn -= 1
+            vaVol += dV
+    [pIdx, up, dn]
+
+// x1 / x2 are UNIX timestamps (ms); histogram widths are counted in bars, then converted to ms.
+f_draw(int x1, int x2, array<float> H, array<float> L, array<float> V, array<float> U, float top, float bot, array<box> bp, array<line> lp) =>
+    [vr, dr, rh] = f_binVolumes(H, L, V, U, top, bot)
+    [pIdx, up, dn] = f_valueArea(vr)
+    maxV = array.max(vr)
+    pocP = bot + (pIdx + 0.5) * rh
+    wMax = math.min(maxWidthBar, math.max(3, int(array.size(V) * widthPct)))
+
+    if maxV > 0 and rh > 0
+        for r = 0 to profileRows - 1
+            tv = array.get(vr, r)
+            if tv > 0
+                w  = math.max(1, int(tv / maxV * wMax))
+                dW = int(array.get(dr, r) / tv * w)
+                uW = w - dW
+                rTopP = bot + (r + 1) * rh
+                rBotP = bot + r * rh
+                inVA  = r >= dn and r <= up
+                shr   = math.min(1.0, (tv / maxV) * (inVA ? vaBoost : 1.0))
+                tr    = int(gEdge - shr * (gEdge - gPeak))
+                xMid  = x1 + dW * barMs
+                if dW > 0
+                    array.push(bp, box.new(x1,   rTopP, xMid,              rBotP, border_width = 0, xloc = xloc.bar_time, bgcolor = color.new(colSell, tr)))
+                if uW > 0
+                    array.push(bp, box.new(xMid, rTopP, xMid + uW * barMs, rBotP, border_width = 0, xloc = xloc.bar_time, bgcolor = color.new(colBuy, tr)))
+
+    array.push(bp, box.new(x1, pocP + rh * 0.5, x2, pocP - rh * 0.5, border_width = 0, xloc = xloc.bar_time, bgcolor = color.new(colPOC, 62)))
+    array.push(lp, line.new(x1, pocP, x2, pocP, xloc = xloc.bar_time, color = color.new(colPOC, 15), width = 4))
+
+// =====================================================================================
+//  SESSION STATE & COLLECTION  (confirmed bars only -> non-repaint)
+// =====================================================================================
+var array<float> pH = array.new<float>()   // session bar highs
+var array<float> pL = array.new<float>()   // session bar lows
+var array<float> pV = array.new<float>()   // session bar volumes
+var array<float> pU = array.new<float>()   // 1.0 = up candle, 0.0 = down candle
+
+var int   sStartT = time   // session start time
+var int   lastT   = time   // time of the last collected bar
+var float sessHi  = na
+var float sessLo  = na
+
+// Developing levels — only used by the alerts.
+var float cPoc = na
+var float cVah = na
+var float cVal = na
+
+var array<box>  histB  = array.new<box>()
+var array<line> histL  = array.new<line>()
+var array<int>  batchB = array.new<int>()   // boxes drawn per completed session
+var array<int>  batchL = array.new<int>()
+var array<box>  liveB  = array.new<box>()
+var array<line> liveL  = array.new<line>()
+
+newSession = timeframe.change(profileTF)
+
+if barstate.isconfirmed
+    if newSession
+        if array.size(pV) > 0
+            b0 = array.size(histB)
+            l0 = array.size(histL)
+            f_draw(sStartT, lastT, pH, pL, pV, pU, sessHi, sessLo, histB, histL)
+            array.push(batchB, array.size(histB) - b0)
+            array.push(batchL, array.size(histL) - l0)
+            while array.size(batchB) > maxSessions
+                nb = array.shift(batchB)
+                if nb > 0
+                    for i = 1 to nb
+                        box.delete(array.shift(histB))
+                nl = array.shift(batchL)
+                if nl > 0
+                    for i = 1 to nl
+                        line.delete(array.shift(histL))
+        array.clear(pH)
+        array.clear(pL)
+        array.clear(pV)
+        array.clear(pU)
+        sStartT := time
+        sessHi  := na
+        sessLo  := na
+
+    array.push(pH, high)
+    array.push(pL, low)
+    array.push(pV, volume)
+    array.push(pU, close >= open ? 1.0 : 0.0)
+    lastT  := time
+    sessHi := na(sessHi) ? high : math.max(sessHi, high)
+    sessLo := na(sessLo) ? low  : math.min(sessLo, low)
+
+    // Alerts only fire in realtime, so skip rebuilding the session profile on every
+    // historical bar; the last historical bar seeds the value the first realtime bar compares to.
+    if barstate.isrealtime or barstate.islast
+        [cVr, cDr, cRh] = f_binVolumes(pH, pL, pV, pU, sessHi, sessLo)
+        [cIdx, cUp, cDn] = f_valueArea(cVr)
+        cPoc := sessLo + (cIdx + 0.5) * cRh
+        cVah := sessLo + (cUp + 1) * cRh
+        cVal := sessLo + cDn * cRh
+
+if barstate.islast
+    f_clearBoxes(liveB)
+    f_clearLines(liveL)
+    if showLive and array.size(pV) > 0
+        f_draw(sStartT, time, pH, pL, pV, pU, sessHi, sessLo, liveB, liveL)
+
+// =====================================================================================
+//  SESSION VWAP
+// =====================================================================================
+vwapAnc = timeframe.change(vwapAnchor)
+// One ta.vwap call with multiplier 1 gives the standard deviation; every band is VWAP ± mult × sd.
+[vwapVal, vwapUp1Sd, vwapDn1Sd] = ta.vwap(vwapSrc, vwapAnc, 1.0)
+vwapSd = vwapUp1Sd - vwapVal
+
+hasVwapPoint = showVWAP and not na(vwapVal) and not na(vwapSd)
+
+// VWAP and bands are drawn as polylines, not plot(): plots get selection dots on every
+// point when the indicator is clicked. This plot only feeds the price-scale label.
+plot(showVWAP ? vwapVal : na, "VWAP", color = colVWAP, display = display.price_scale)
+
+cNoLine    = color.new(color.white, 100)
+vwChunkMax = 4000   // polyline cap is 10000 points; a zone polygon uses 2 × chunk points
+
+var array<chart.point> vwM  = array.new<chart.point>()
+var array<chart.point> vwU1 = array.new<chart.point>()
+var array<chart.point> vwL1 = array.new<chart.point>()
+var array<chart.point> vwU2 = array.new<chart.point>()
+var array<chart.point> vwL2 = array.new<chart.point>()
+var array<chart.point> vwU3 = array.new<chart.point>()
+var array<chart.point> vwL3 = array.new<chart.point>()
+var array<polyline> vwHist  = array.new<polyline>()
+var array<int>      vwBatch = array.new<int>()
+var array<polyline> vwLive  = array.new<polyline>()
+
+f_clearPolys(array<polyline> a) =>
+    if array.size(a) > 0
+        for i = 0 to array.size(a) - 1
+            polyline.delete(array.get(a, i))
+        array.clear(a)
+
+f_resetPoints(array<chart.point> a, bool keepLast) =>
+    if keepLast and array.size(a) > 0
+        p = array.last(a)
+        array.clear(a)
+        array.push(a, p)
+    else
+        array.clear(a)
+
+f_withPoint(array<chart.point> a, bool add, float price) =>
+    c = array.copy(a)
+    if add
+        array.push(c, chart.point.from_time(time, price))
+    c
+
+// Closed polygon: outer edge left→right, then inner edge right→left.
+f_ring(array<chart.point> outer, array<chart.point> inner) =>
+    pts = array.copy(outer)
+    rev = array.copy(inner)
+    array.reverse(rev)
+    array.concat(pts, rev)
+    pts
+
+f_zone(array<polyline> pool, array<chart.point> outer, array<chart.point> inner, color fillCol) =>
+    array.push(pool, polyline.new(f_ring(outer, inner), curved = false, closed = true, xloc = xloc.bar_time, line_color = cNoLine, fill_color = fillCol))
+
+f_path(array<polyline> pool, array<chart.point> pts, color col, int wid) =>
+    array.push(pool, polyline.new(pts, curved = false, closed = false, xloc = xloc.bar_time, line_color = col, fill_color = cNoLine, line_width = wid))
+
+// Zones first so lines sit on top. Each zone spans from the next enabled band inside it
+// (or the VWAP) out to its own band.
+f_vwapPolys(array<polyline> pool, array<chart.point> m, array<chart.point> u1, array<chart.point> l1, array<chart.point> u2, array<chart.point> l2, array<chart.point> u3, array<chart.point> l3) =>
+    if array.size(m) > 1
+        array<chart.point> inU = m
+        array<chart.point> inL = m
+        if showBand1
+            f_zone(pool, u1, inU, bandFill1)
+            f_zone(pool, l1, inL, bandFill1)
+            inU := u1
+            inL := l1
+        if showBand2
+            f_zone(pool, u2, inU, bandFill2)
+            f_zone(pool, l2, inL, bandFill2)
+            inU := u2
+            inL := l2
+        if showBand3
+            f_zone(pool, u3, inU, bandFill3)
+            f_zone(pool, l3, inL, bandFill3)
+        if showBand1
+            f_path(pool, u1, bandLine1, 1)
+            f_path(pool, l1, bandLine1, 1)
+        if showBand2
+            f_path(pool, u2, bandLine2, 1)
+            f_path(pool, l2, bandLine2, 1)
+        if showBand3
+            f_path(pool, u3, bandLine3, 1)
+            f_path(pool, l3, bandLine3, 1)
+        f_path(pool, m, colVWAP, vwapWidth)
+
+// Collect confirmed bars; a finished period (or a full chunk) is drawn once, permanently.
+if barstate.isconfirmed and showVWAP
+    vwPeriodEnd = vwapAnc and array.size(vwM) > 0
+    vwChunkFull = array.size(vwM) >= vwChunkMax
+    if vwPeriodEnd or vwChunkFull
+        n0 = array.size(vwHist)
+        f_vwapPolys(vwHist, vwM, vwU1, vwL1, vwU2, vwL2, vwU3, vwL3)
+        array.push(vwBatch, array.size(vwHist) - n0)
+        while array.size(vwBatch) > vwapKeep
+            nb = array.shift(vwBatch)
+            if nb > 0
+                for i = 1 to nb
+                    polyline.delete(array.shift(vwHist))
+        // A chunk split inside one period keeps its last point so the line stays joined.
+        keepLast = not vwPeriodEnd
+        f_resetPoints(vwM,  keepLast)
+        f_resetPoints(vwU1, keepLast)
+        f_resetPoints(vwL1, keepLast)
+        f_resetPoints(vwU2, keepLast)
+        f_resetPoints(vwL2, keepLast)
+        f_resetPoints(vwU3, keepLast)
+        f_resetPoints(vwL3, keepLast)
+    if hasVwapPoint
+        array.push(vwM,  chart.point.from_time(time, vwapVal))
+        array.push(vwU1, chart.point.from_time(time, vwapVal + bandMult1 * vwapSd))
+        array.push(vwL1, chart.point.from_time(time, vwapVal - bandMult1 * vwapSd))
+        array.push(vwU2, chart.point.from_time(time, vwapVal + bandMult2 * vwapSd))
+        array.push(vwL2, chart.point.from_time(time, vwapVal - bandMult2 * vwapSd))
+        array.push(vwU3, chart.point.from_time(time, vwapVal + bandMult3 * vwapSd))
+        array.push(vwL3, chart.point.from_time(time, vwapVal - bandMult3 * vwapSd))
+
+// Current period: redrawn on the last bar, including the still-forming bar.
+// On the first unconfirmed bar of a new period the stored points still belong to the
+// previous period, so the forming bar is not appended to them.
+if barstate.islast
+    f_clearPolys(vwLive)
+    if showVWAP
+        addCur = hasVwapPoint and not barstate.isconfirmed and not vwapAnc
+        f_vwapPolys(vwLive, f_withPoint(vwM, addCur, vwapVal), f_withPoint(vwU1, addCur, vwapVal + bandMult1 * vwapSd), f_withPoint(vwL1, addCur, vwapVal - bandMult1 * vwapSd), f_withPoint(vwU2, addCur, vwapVal + bandMult2 * vwapSd), f_withPoint(vwL2, addCur, vwapVal - bandMult2 * vwapSd), f_withPoint(vwU3, addCur, vwapVal + bandMult3 * vwapSd), f_withPoint(vwL3, addCur, vwapVal - bandMult3 * vwapSd))
+
+// =====================================================================================
+//  ALERTS  (evaluated on confirmed bars -> non-repaint)
+// =====================================================================================
+cf = barstate.isconfirmed
+alertcondition(cf and not na(cPoc) and ta.crossover(close, cPoc),  "POC Cross Up",   "Benzo VP: Price crossed above session POC")
+alertcondition(cf and not na(cPoc) and ta.crossunder(close, cPoc), "POC Cross Down", "Benzo VP: Price crossed below session POC")
+alertcondition(cf and not na(cVah) and ta.crossover(close, cVah),  "Value Area Breakout",  "Benzo VP: Price accepted above Value Area High")
+alertcondition(cf and not na(cVal) and ta.crossunder(close, cVal), "Value Area Breakdown", "Benzo VP: Price rejected below Value Area Low")
+alertcondition(cf and showVWAP and ta.cross(close, vwapVal), "VWAP Cross", "Benzo VP: Price crossed session VWAP")

@@ -61,6 +61,53 @@ static class CellBigTests
         var tie2 = new System.Collections.Generic.List<(long, double)> { (10, 30), (11, 30) };
         Check(K(CellBigLogic.MergeAdjacent(tie2, 1)) == "0", "hoa side (thu tu dao): van giu tick thap hon");
         Check(CellBigLogic.MergeAdjacent(new System.Collections.Generic.List<(long, double)>(), 1).Count == 0, "rong -> rong");
+        Console.WriteLine("[CellBig] gom hang (RowTicks/RowOffset)");
+        // RowOf: offset 1, 2 tick/hang -> (1,2)=0, (3,4)=1, (41241,41242)=20620 ; so am: (-1,0)=-1, (-3,-2)=-2
+        Check(CellBigLogic.RowOf(41241, 2, 1) == CellBigLogic.RowOf(41242, 2, 1), "offset 1: tick le 41241 + chan 41242 cung hang");
+        Check(CellBigLogic.RowOf(41242, 2, 1) != CellBigLogic.RowOf(41243, 2, 1), "offset 1: 41242 va 41243 khac hang");
+        Check(CellBigLogic.RowOf(1, 2, 1) == 0 && CellBigLogic.RowOf(2, 2, 1) == 0 && CellBigLogic.RowOf(3, 2, 1) == 1, "offset 1: (1,2)=0, 3=1");
+        Check(CellBigLogic.RowOf(-1, 2, 1) == -1 && CellBigLogic.RowOf(0, 2, 1) == -1 && CellBigLogic.RowOf(-2, 2, 1) == -2 && CellBigLogic.RowOf(-3, 2, 1) == -2, "so am: floor chia dung", $"{CellBigLogic.RowOf(-1,2,1)},{CellBigLogic.RowOf(0,2,1)},{CellBigLogic.RowOf(-2,2,1)},{CellBigLogic.RowOf(-3,2,1)}");
+        Check(CellBigLogic.RowOf(41240, 2, 0) == CellBigLogic.RowOf(41241, 2, 0) && CellBigLogic.RowOf(41241, 2, 0) != CellBigLogic.RowOf(41242, 2, 0), "offset 0: (41240,41241) cung hang");
+        Check(CellBigLogic.RowOf(-1, 2, 0) == -1 && CellBigLogic.RowOf(-2, 2, 0) == -1 && CellBigLogic.RowOf(-3, 2, 0) == -2, "offset 0 so am");
+        Check(CellBigLogic.RowOf(41241, 1, 0) == 41241 && CellBigLogic.RowOf(41241, 1, 1) == 41241 && CellBigLogic.RowOf(-5, 1, 1) == -5, "RowTicks 1: hang = tick, offset khong anh huong");
+        Check(CellBigLogic.RowOf(10, 3, 1) == 3 && CellBigLogic.RowOf(9, 3, 1) == 2, "RowTicks 3");
+        // tâm hàng
+        Check(Math.Abs(CellBigLogic.RowCenterTick(CellBigLogic.RowOf(41241, 2, 1), 2, 1) - 41241.5) < 1e-9, "tam hang (41241,41242) = 41241,5 tick");
+        Check(Math.Abs(CellBigLogic.RowCenterPrice(CellBigLogic.RowOf(41241, 2, 1), 2, 1, 0.1) - 4124.15) < 1e-9, "gia ve = 4124,15 cho hang 4124.1-4124.2");
+        Check(Math.Abs(CellBigLogic.RowCenterTick(CellBigLogic.RowOf(-3, 2, 1), 2, 1) - (-2.5)) < 1e-9, "tam hang so am (-3,-2) = -2,5");
+        Check(Math.Abs(CellBigLogic.RowCenterTick(CellBigLogic.RowOf(41241, 1, 1), 1, 1) - 41241) < 1e-9, "RowTicks 1: tam = chinh tick");
+        // gom mức
+        var lv = new System.Collections.Generic.List<(long, double, double, double)>
+            { (41241, 3, 4, 7), (41242, 5, 1, 6), (41243, 2, 2, 4), (41245, 9, 0, 9) };
+        var rws = CellBigLogic.GroupRows(lv, 2, 1);
+        Check(rws.Count == 3, "gom 4 muc -> 3 hang (41241+41242, 41243, 41245)", rws.Count.ToString());
+        Check(rws[0].Buy == 8 && rws[0].Sell == 5 && rws[0].Vol == 13 && rws[0].LoTick == 41241 && rws[0].HiTick == 41242, "hang 1: buy 8 sell 5 vol 13");
+        Check(rws[1].Buy == 2 && rws[1].Vol == 4 && rws[2].Buy == 9, "hang 2, 3 dung tong");
+        Check(rws[0].RowId < rws[1].RowId && rws[1].RowId < rws[2].RowId, "hang xep theo RowId tang");
+        var rws1 = CellBigLogic.GroupRows(lv, 1, 1);
+        Check(rws1.Count == 4 && rws1[0].Buy == 3 && rws1[0].Sell == 4, "RowTicks 1: moi tick 1 hang");
+        // BarRowMean
+        Check(CellBigLogic.BarRowMean(rws, out double rm) && Math.Abs(rm - 26.0 / 3) < 1e-9, "BarRowMean = tong vol / so hang co vol", rm.ToString());
+        var withZero = new System.Collections.Generic.List<CellBigLogic.Row> { new CellBigLogic.Row { Vol = 10 }, new CellBigLogic.Row { Vol = 0 } };
+        Check(CellBigLogic.BarRowMean(withZero, out double rm2) && Math.Abs(rm2 - 10) < 1e-9, "hang vol 0 khong tinh");
+        Check(!CellBigLogic.BarRowMean(new System.Collections.Generic.List<CellBigLogic.Row>(), out _), "khong hang -> khong nap");
+        // ngưỡng mới 1,3 x B và tím 0,75
+        static CellBigDecision N(double buy, double sell, double B = 10) => CellBigLogic.Decide(buy, sell, B, true, 1.3, 3, 0.75, false, 0);
+        Check(N(13, 0).Hit && !N(12.9, 0).Hit, "bien 1,3 x B = 13: 13 no, 12,9 khong");
+        Check(N(0, 13).Hit && N(0, 13).Side == -1, "sell 13 no, do");
+        Check(!CellBigLogic.Decide(2, 0, 1, true, 1.3, 3, 0.75, false, 0).Hit && CellBigLogic.Decide(3, 0, 1, true, 1.3, 3, 0.75, false, 0).Hit, "san 3 van giu");
+        Check(N(40, 30).Side == 0, "yeu/manh = 0,75 -> tim");
+        Check(N(40, 29.9).Side == 1 && N(29.9, 40).Side == -1, "yeu/manh < 0,75 -> xanh/do");
+        // RowTicks=1: luật theo hàng = luật theo tick (Decide trên từng mức)
+        bool same = true;
+        foreach (var l in lv)
+        {
+            var r1 = CellBigLogic.GroupRows(new[] { l }, 1, 1)[0];
+            var d1 = N(r1.Buy, r1.Sell, 3); var d2 = N(l.Item2, l.Item3, 3);
+            if (d1.Hit != d2.Hit || d1.Side != d2.Side) same = false;
+        }
+        Check(same, "RowTicks 1 cho ket qua nhu luat theo tick");
+
         // BarMean
         Check(CellBigLogic.BarMean(100, 20, out double m1) && Math.Abs(m1 - 5) < 1e-9, "BarMean = tong / so muc gia");
         Check(!CellBigLogic.BarMean(0, 0, out _), "nen rong -> khong nap");

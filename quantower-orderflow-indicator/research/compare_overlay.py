@@ -1,4 +1,4 @@
-"""So điểm nổ bóng của indicator (luật mới CellBig: max(buy,sell) >= 1,5 x B20, >=3) với bóng CORVEN.
+"""So điểm nổ bóng của indicator (luật CellBig 2026-11-11: gom hàng 2 tick pha 1, bóng ở tâm hàng, max(buy,sell) >= 1,3 x B20 hàng, >=3) với bóng CORVEN.
 Vẽ lên chính ảnh chart CORVEN: vòng XANH LÁ = mình nổ & CORVEN cũng có bóng (±1 tick);
 vòng VÀNG = mình nổ nhưng CORVEN không có; ô vuông TRẮNG viền đen = CORVEN có bóng mà mình KHÔNG nổ."""
 import json, numpy as np, pandas as pd
@@ -10,20 +10,15 @@ bars=load_bars(); t0,H,L,row=minute_grid(bars)
 from io import StringIO
 rows=[l for l in open(LVL) if (',2026-11-04' in l[:40] or ',2026-11-05' in l[:40] or ',2026-11-06' in l[:40] or ',2026-11-07' in l[:40])]
 D=pd.read_csv(StringIO('bar_idx,datetime,price,bid_vol,ask_vol,volume,delta,trades,buy_trades,sell_trades,max_one_trade\n'+''.join(rows)),parse_dates=['datetime'])
-D['side']=D[['bid_vol','ask_vol']].max(axis=1); D['tk']=(D.price*10).round().astype(int)
-g=D[D.volume>0].groupby('datetime'); B=(g.volume.sum()/g.volume.count()).sort_index()
-Bb=B.shift(1).rolling(20,min_periods=5).mean()
-D['B']=D.datetime.map(Bb)
-D['hit']=(D.side>=1.5*D.B)&(D.side>=3)
-ours=D[D.hit]
-# gộp ô liền kề ±1 tick như C# (side giảm dần, hòa lấy tick thấp)
-keep=[]
-for t,g2 in ours.groupby('datetime'):
-    taken=[]
-    for idx,tk,sd in sorted(zip(g2.index,g2.tk,g2.side),key=lambda z:(-z[2],z[1])):
-        if all(abs(tk-x)>1 for x in taken): taken.append(tk); keep.append(idx)
-ours=ours.loc[keep]
-O=pd.read_csv('corven_bubbles.csv',parse_dates=['time_utc']); O['tk']=(O.price*10).round().astype(int)
+D=D[D.volume>0].copy(); D['tk']=(D.price*10).round().astype(int)
+# LUẬT MỚI 2026-11-11 (= CellBigLogic C#): gom HÀNG 2 tick pha 1 (row = floor((tick-1)/2)), bóng ở TÂM hàng
+R=D.assign(row=(D.tk-1)//2).groupby(['datetime','row'],as_index=False).agg(bid=('bid_vol','sum'),ask=('ask_vol','sum'),vol=('volume','sum'))
+R['side']=R[['bid','ask']].max(axis=1); R['tk']=R.row*2+1.5   # tâm hàng (chỉ số tick, có thể lẻ nửa tick)
+B=R.groupby('datetime').vol.mean().sort_index().shift(1).rolling(20,min_periods=5).mean()
+R['B']=R.datetime.map(B)
+ours=R[(R.B>0)&(R.side>=1.3*R.B)&(R.side>=3)].copy()
+ours=ours.rename(columns={'bid':'bid_vol','ask':'ask_vol'})
+O=pd.read_csv('corven_bubbles.csv',parse_dates=['time_utc']); O['tk']=O.price*10   # giá bóng CORVEN đã bù lệch tâm (build_csv)
 C=pd.read_csv('corven_bars_control.csv',parse_dates=['time_utc']); vis=set(C.time_utc)
 def stats(times,lab):
     o=O[O.time_utc.isin(times)]; p=ours[ours.datetime.isin(times)]
@@ -42,9 +37,10 @@ stats(vis,'TẤT CẢ')
 for d in ('2026-11-05','2026-11-06'):
     stats({t for t in vis if str(t).startswith(d)},d)
 # màu
-m=O.merge(ours[['datetime','tk','bid_vol','ask_vol','side']],left_on=['time_utc','tk'],right_on=['datetime','tk'])
-mine=np.where(np.minimum(m.bid_vol,m.ask_vol)/m.side>=0.6,'tim',np.where(m.ask_vol>=m.bid_vol,'xanh','do'))
-print('màu khớp (ô trùng đúng tick):',f'{(mine==m.color).mean():.0%}',len(m))
+O['rk']=np.floor((O.tk-1)/2).astype(int); ours['rk']=ours.row.astype(int)
+m=O.merge(ours[['datetime','rk','bid_vol','ask_vol','side']],left_on=['time_utc','rk'],right_on=['datetime','rk'])
+mine=np.where(np.minimum(m.bid_vol,m.ask_vol)/m.side>=0.75,'tim',np.where(m.ask_vol>=m.bid_vol,'xanh','do'))
+print('màu khớp (bóng trùng đúng hàng):',f'{(mine==m.color).mean():.0%}',len(m))
 # vẽ
 def draw(fr):
     c=cal[fr]; im=Image.open(f'{S}/hi/{fr}.png').convert('RGB'); d=ImageDraw.Draw(im)

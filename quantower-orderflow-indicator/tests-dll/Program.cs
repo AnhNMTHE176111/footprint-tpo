@@ -10,7 +10,7 @@ object o = null; try { o = Activator.CreateInstance(t); } catch (Exception e) { 
 if (o != null) {
   void chk(string n, object exp){ var v=t.GetProperty(n).GetValue(o); bool ok=Equals(v,exp); if(!ok) fail++; Console.WriteLine($"  {(ok?"OK  ":"FAIL")} {n} = {v} (mong doi {exp})"); }
   chk("DeltaFontSize",7); chk("DeltaYOffsetPx",8); chk("DLineEnabled",false); chk("DeltaMinBarWidthPx",6);
-  chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhSmallRel",0.10); chk("BigTradeAbsFloor",50.0); chk("CellBigRatio",1.5); chk("CellBigBaselineBars",20); chk("CellBigMinSide",3.0); chk("CellBigBalancedPct",0.6); chk("CellBigTopN",0); chk("AbsScoreMin",4); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true);
+  chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhSmallRel",0.10); chk("BigTradeAbsFloor",50.0); chk("CellBigRatio",1.3); chk("CellBigBaselineBars",20); chk("CellBigMinSide",3.0); chk("CellBigBalancedPct",0.75); chk("CellBigRowTicks",2); chk("CellBigRowOffset",1); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("AbsScoreMin",4); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true);
 }
 
 // ---- Lifecycle: bat/tat Settings -> Refresh -> OnClear -> phai tu mo lai co VA ----

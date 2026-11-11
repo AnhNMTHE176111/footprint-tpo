@@ -54,12 +54,12 @@ def draw(fr):
     xs=[]
     for t,k in zip(ours.datetime,ours.tk):
         x,y=xy(t,k/10)
-        if not(60<x<1335 and 270<y<c['y1']+90): continue
+        if not(60<x<1335 and 270<y<c['y1']): continue
         ok=any(abs(k-b)<=1 for b in cb.get(t,()))
         R=9; d.ellipse((x-R,y-R,x+R,y+R),outline=(0,200,0) if ok else (255,190,0),width=3); xs.append(x)
     for t,k in zip(O.time_utc,O.tk):
         x,y=xy(t,k/10)
-        if not(60<x<1335 and 270<y<c['y1']+90): continue
+        if not(60<x<1335 and 270<y<c['y1']): continue
         if not any(abs(k-q)<=1 for q in pb.get(t,())):
             d.rectangle((x-6,y-6,x+6,y+6),outline=(0,0,0),width=3)
     if xs:

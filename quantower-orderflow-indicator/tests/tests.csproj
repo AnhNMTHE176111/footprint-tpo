@@ -10,6 +10,7 @@
     <Compile Include="../SignalCache.cs" />
     <Compile Include="../ExhaustionLogic.cs" />
     <Compile Include="../StackedImbalance.cs" />
+    <Compile Include="../CellBigLogic.cs" />
     <!-- BigTradeLog nam trong cung file SignalCache.cs, khong can dong compile rieng -->
 
   </ItemGroup>

@@ -38,6 +38,7 @@ namespace OrderFlowBubbles
         public int Transparency { get; set; }
         public bool Halo { get; set; }
         public bool UseBarWidth { get; set; }
+        public double SizeFrac { get; set; }  // Ô lớn: tỉ lệ cỡ 0..1 (bản ghi cũ = 0 = đầy đủ)
         public string Tooltip { get; set; }
         public int Confirm { get; set; }      // 0=đang chờ, +1=giữ mức, -1=vỡ mức
         public bool Confirmable { get; set; } // true = bubble này thuộc luồng Absorption (được theo dõi Confirm)

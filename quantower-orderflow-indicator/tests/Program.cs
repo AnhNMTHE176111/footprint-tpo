@@ -261,6 +261,7 @@ static class Tests
         FitsBarGuard();
         ImportLegacyM1Only();
         _fail += ExhaustionTests.Run();
+        _fail += CellBigTests.Run();
         StackedImbalanceTests.RunAll();
         _fail += StackedImbalanceTests.Fail;
         Console.WriteLine(_fail == 0 ? "\n=== TAT CA PASS ===" : $"\n=== {_fail} FAIL ===");

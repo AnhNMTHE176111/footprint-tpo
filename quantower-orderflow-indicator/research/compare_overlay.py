@@ -16,6 +16,13 @@ Bb=B.shift(1).rolling(20,min_periods=5).mean()
 D['B']=D.datetime.map(Bb)
 D['hit']=(D.side>=1.5*D.B)&(D.side>=3)
 ours=D[D.hit]
+# gộp ô liền kề ±1 tick như C# (side giảm dần, hòa lấy tick thấp)
+keep=[]
+for t,g2 in ours.groupby('datetime'):
+    taken=[]
+    for idx,tk,sd in sorted(zip(g2.index,g2.tk,g2.side),key=lambda z:(-z[2],z[1])):
+        if all(abs(tk-x)>1 for x in taken): taken.append(tk); keep.append(idx)
+ours=ours.loc[keep]
 O=pd.read_csv('corven_bubbles.csv',parse_dates=['time_utc']); O['tk']=(O.price*10).round().astype(int)
 C=pd.read_csv('corven_bars_control.csv',parse_dates=['time_utc']); vis=set(C.time_utc)
 def stats(times,lab):

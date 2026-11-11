@@ -51,14 +51,16 @@ for bp in (0.5,0.6,0.7,0.75,0.8,0.9):
     print('tím nếu yếu/mạnh >=',bp,'màu đúng',f'{(pred==M.color).mean():.0%}',len(M))
 
 # ===================== KIỂM CHÉO ĐÚNG LUẬT C# (CellBigLogic, 2026-11-11) =====================
-# RowTicks=2, RowOffset=1, Ratio 1,3, sàn 3, tím >= 0,75, B = TB 20 nến đóng trước (>=5) của vol TB mỗi hàng có vol>0,
+# RowTicks=2, RowOffset=1, Ratio 1,3, sàn 3, tím khi bên yếu >= 1,3 x B và >= 3 (luật 2026-11-12), B = TB 20 nến đóng trước (>=5) của vol TB mỗi hàng có vol>0,
 # bóng ở TÂM hàng (R.pos tính theo décima-giá = tick). Ghép 1-1 ±1 tick, giống bảng báo cáo.
-print('=== MÔ PHỎNG ĐÚNG LUẬT C# (ratio 1,3, sàn 3, tím 0,75, hàng 2 tick pha 1) ===')
+print('=== MÔ PHỎNG ĐÚNG LUẬT C# (ratio 1,3, sàn 3, tím = bên yếu cũng nổ, hàng 2 tick pha 1) ===')
 R=make(1); V=R[R.datetime.isin(vis)]
 PC=V[(V.B>0)&(V.side>=1.3*V.B)&(V.side>=3)].copy()
 for lab,day in (('TỔNG',None),('05/11','2026-11-05'),('06/11','2026-11-06')):
     a=score(PC,1.0,day); print(f'{lab}: mình {a[0]} CORVEN {a[1]} trúng {a[2]} thừa {a[3]} ({a[3]/a[0]:.0%}) sót {a[4]} ({a[4]/a[1]:.0%}) F1 {2*a[2]/(a[0]+a[1]):.3f}')
 PC['key']=list(zip(PC.datetime,(PC.row*2+2).astype(int)))
 M=O[['key','color']].merge(PC,on='key')
-pred=np.where(np.minimum(M.bid,M.ask)/M.side>=0.75,'tim',np.where(M.ask>=M.bid,'xanh','do'))
+pred=np.where((np.minimum(M.bid,M.ask)>=1.3*M.B)&(np.minimum(M.bid,M.ask)>=3),'tim',np.where(M.ask>=M.bid,'xanh','do'))
+_t=(M.color=='tim'); _p=(pred=='tim')
+print(f'tím: bắt được {(_t&_p).sum()}/{_t.sum()} ({(_t&_p).sum()/max(1,_t.sum()):.0%}) | báo tím đúng {(_t&_p).sum()}/{_p.sum()} ({(_t&_p).sum()/max(1,_p.sum()):.0%})')
 print(f'màu đúng {(pred==M.color).mean():.0%} (trên {len(M)} bóng ghép được theo hàng)')

@@ -43,7 +43,7 @@ B 26
 B 27
  {Price=4427.6;Shape=Zone;Color=-10497056;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance buy 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4427.8;ZoneSide=1;ZoneWeak=F;}
  {Price=4427.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4529483191972306;Tooltip="Buy - 4 Bid 11 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
- {Price=4427.95;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4529483191972306;Tooltip="Buy + Sell - 11 Bid 9 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4427.95;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4529483191972306;Tooltip="Sell - 11 Bid 9 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
 B 28
  {Price=4428.7;Shape=Zone;Color=-10497056;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance buy 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4428.900000000001;ZoneSide=1;ZoneWeak=T;}
  {Price=4428.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6920489679130564;Tooltip="Buy - 2 Bid 25 Ask | Trung bình 8.5";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
@@ -53,7 +53,7 @@ B 28
 B 29
  {Price=4429.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4664945023928837;Tooltip="Buy - 1 Bid 12 Ask | Trung bình 8.6";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
 B 31
- {Price=4427.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=1;Tooltip="Buy - 20 Bid 54 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4427.95;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=1;Tooltip="Buy + Sell - 20 Bid 54 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4428.150000000001;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5499658903799143;Tooltip="Sell - 16 Bid 3 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4428.75;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.47240582767892575;Tooltip="Sell - 12 Bid 4 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4429.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4510616473265211;Tooltip="Buy - 2 Bid 11 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
@@ -61,7 +61,7 @@ B 32
  {Price=4429.6;Shape=Zone;Color=-10497056;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance buy 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4429.8;ZoneSide=1;ZoneWeak=F;}
  {Price=4430.1;Shape=Zone;Color=-10497056;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance buy 5 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4430.5;ZoneSide=1;ZoneWeak=T;}
  {Price=4430.150000000001;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6512023728060512;Tooltip="Buy - 1 Bid 22 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
- {Price=4429.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5862709407930624;Tooltip="Buy - 11 Bid 18 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4429.95;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5862709407930624;Tooltip="Buy + Sell - 11 Bid 18 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4430.35;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5510858484561326;Tooltip="Buy - 0 Bid 16 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4429.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5326672858272574;Tooltip="Buy - 5 Bid 15 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4430.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5326672858272574;Tooltip="Buy - 0 Bid 15 Ask | Trung bình 8.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
@@ -72,12 +72,12 @@ B 33
 B 34
  {Price=4430.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5217905194629556;Tooltip="Buy - 9 Bid 15 Ask | Trung bình 8.7";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
 B 35
- {Price=4431.35;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.9798444829246094;Tooltip="Buy - 24 Bid 51 Ask | Trung bình 8.8";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4431.35;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.9798444829246094;Tooltip="Buy + Sell - 24 Bid 51 Ask | Trung bình 8.8";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4431.75;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6183821633171405;Tooltip="Sell - 21 Bid 9 Ask | Trung bình 8.8";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4431.55;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5360877978455956;Tooltip="Buy + Sell - 16 Bid 12 Ask | Trung bình 8.8";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4432.1;Shape=ExhTop;Color=-14336;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức buy · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
 B 36
- {Price=4431.55;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.9021340437776485;Tooltip="Sell - 46 Bid 20 Ask | Trung bình 9.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4431.55;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.9021340437776485;Tooltip="Buy + Sell - 46 Bid 20 Ask | Trung bình 9.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4431.35;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.7353973861657184;Tooltip="Sell - 31 Bid 6 Ask | Trung bình 9.4";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4431;Shape=ExhBottom;Color=-12732161;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức sell · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
 B 39
@@ -85,8 +85,8 @@ B 39
 B 42
  {Price=4431.400000000001;Shape=Zone;Color=-880730;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance sell 4 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4431.7;ZoneSide=-1;ZoneWeak=T;}
  {Price=4431.900000000001;Shape=Zone;Color=-880730;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance sell 4 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4432.2;ZoneSide=-1;ZoneWeak=T;}
- {Price=4431.55;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.95710152301682;Tooltip="Sell - 50 Bid 18 Ask | Trung bình 9.1";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
- {Price=4431.35;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.7474676820963706;Tooltip="Sell - 31 Bid 13 Ask | Trung bình 9.1";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4431.55;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.95710152301682;Tooltip="Buy + Sell - 50 Bid 18 Ask | Trung bình 9.1";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4431.35;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.7474676820963706;Tooltip="Buy + Sell - 31 Bid 13 Ask | Trung bình 9.1";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4431.75;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.625122484529991;Tooltip="Sell - 22 Bid 10 Ask | Trung bình 9.1";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4431.95;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.562680794251404;Tooltip="Sell - 18 Bid 6 Ask | Trung bình 9.1";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4432.35;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5111325268343928;Tooltip="Buy + Sell - 14 Bid 15 Ask | Trung bình 9.1";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
@@ -97,8 +97,8 @@ B 43
  {Price=4431.55;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5180889627767749;Tooltip="Sell - 17 Bid 7 Ask | Trung bình 10.0";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
 B 45
  {Price=4434.150000000001;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.7274054522444284;Tooltip="Buy - 10 Bid 33 Ask | Trung bình 10.2";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
- {Price=4433.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6800854664584993;Tooltip="Buy - 18 Bid 29 Ask | Trung bình 10.2";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
- {Price=4434.35;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6160720529551946;Tooltip="Buy - 17 Bid 24 Ask | Trung bình 10.2";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4433.95;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6800854664584993;Tooltip="Buy + Sell - 18 Bid 29 Ask | Trung bình 10.2";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4434.35;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6160720529551946;Tooltip="Buy + Sell - 17 Bid 24 Ask | Trung bình 10.2";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4434.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5886115858750498;Tooltip="Buy - 12 Bid 22 Ask | Trung bình 10.2";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4435.150000000001;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5449625448559605;Tooltip="Buy - 8 Bid 19 Ask | Trung bình 10.2";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4434.95;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4636936598199197;Tooltip="Buy + Sell - 14 Bid 14 Ask | Trung bình 10.2";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
@@ -143,8 +143,8 @@ B 70
 B 71
  {Price=4433;Shape=Zone;Color=-10497056;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance buy 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4433.2;ZoneSide=1;ZoneWeak=F;}
  {Price=4433.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.9287237915799114;Tooltip="Buy - 2 Bid 34 Ask | Trung bình 6.5";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
- {Price=4433.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6071475236199125;Tooltip="Buy - 10 Bid 15 Ask | Trung bình 6.5";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4433.75;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6071475236199125;Tooltip="Buy + Sell - 10 Bid 15 Ask | Trung bình 6.5";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4433.150000000001;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.585578580671231;Tooltip="Buy - 5 Bid 14 Ask | Trung bình 6.5";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
- {Price=4433.55;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5632245467660126;Tooltip="Sell - 13 Bid 9 Ask | Trung bình 6.5";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4433.55;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5632245467660126;Tooltip="Buy + Sell - 13 Bid 9 Ask | Trung bình 6.5";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4432.75;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5399928896979947;Tooltip="Buy + Sell - 12 Bid 11 Ask | Trung bình 6.5";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
  {Price=4432.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.490421398323682;Tooltip="Buy - 3 Bid 10 Ask | Trung bình 6.5";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}

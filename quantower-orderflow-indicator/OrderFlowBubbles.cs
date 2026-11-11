@@ -49,7 +49,7 @@
 //  Luật mô phỏng hiển thị của CORVEN, khớp F1 0,83 trên 2 phiên 5-6/11 (recall 87%, precision 80%):
 //  Chart CORVEN (Sierra) gộp 2 tick thành 1 HÀNG (hàng = tick lẻ + tick chẵn kế, row = floor((tickIdx-1)/2)),
 //  bóng đặt ở TÂM hàng. Hàng: bid = Σ sell, ask = Σ buy. Nổ khi max(bid,ask) của hàng >= 1,3 x B (B = TB 20 nến
-//  trước của volume TB mỗi HÀNG có giao dịch), sàn 3, không giới hạn số bóng/nến. Màu tím khi yếu/mạnh >= 0,75.
+//  trước của volume TB mỗi HÀNG có giao dịch), sàn 3, không giới hạn số bóng/nến. Màu tím khi bên yếu cũng vượt ngưỡng nổ.
 //  Ghép 1-1 ±1 tick với 885 bóng CORVEN 5-6/11: mình 972, trúng 784, thừa 19%, sót 11%, F1 0,844; ngày 06/11:
 //  319 vs 302. (Bản gộp ô liền kề ±1 tick cũ: thừa 24%, sót 20%, F1 0,78 — CellBigMergeTicks giữ nhưng mặc định 0.)
 //  ⚠ Pha hàng đo trên GC (tick 0,1) chart CORVEN; mã khác chưa kiểm. KHÔNG phải lợi thế đã kiểm định.
@@ -223,7 +223,7 @@ namespace OrderFlowBubbles
         // LUẬT 2026-11-11 (CellBigLogic.cs): MÔ PHỎNG HIỂN THỊ của CORVEN (Sierra) — gom 2 tick/hàng, bóng ở tâm
         // hàng; bên áp đảo của hàng (max buy,sell) >= 1,3 x B, B = TB 20 nến TRƯỚC của volume TB mỗi hàng có giao
         // dịch; F1 0,844 (885 bóng CORVEN 5-6/11). KHÔNG phải lợi thế đã kiểm định; không giới hạn số bóng/nến.
-        // Màu: tím khi hai bên cân (yếu/mạnh >= 0,75), xanh buy, đỏ sell. Cỡ to dần theo độ lớn (45%..100%
+        // Màu: tím khi bên yếu cũng vượt ngưỡng nổ (cả Bid lẫn Ask đều đủ nổ), xanh buy, đỏ sell. Cỡ to dần theo độ lớn (45%..100%
         // bề ngang nến, nén sqrt, đầy ở >= 6 lần B). Khác Absorption: KHÔNG đòi gần cực trị / sau swing / chấm điểm.
         [InputParameter("Ô Bid/Ask lớn (đại diện chính) · Bật", 25)]
         public bool CellBigEnabled { get; set; } = true;
@@ -235,9 +235,6 @@ namespace OrderFlowBubbles
         public int CellBigBaselineBars { get; set; } = 20;
 
         public double CellBigMinSide { get; set; } = 3;
-
-        // tím khi bên yếu / bên mạnh >= số này (hai bên cân)
-        public double CellBigBalancedPct { get; set; } = 0.75;
 
         public Color CellBigBalancedColor { get; set; } = Color.MediumOrchid;
 
@@ -525,7 +522,7 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
-                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigBalancedPct, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v7",
+                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v8",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
@@ -780,12 +777,8 @@ namespace OrderFlowBubbles
                                 // để nhìn nhất quán trên chart (bỏ nhãn "CỰC TRỊ YẾU" theo yêu cầu 2026-09-15).
                                 // Tooltip nói THẲNG con số buy/sell thật của ô, không dùng ký hiệu z/điểm trừu
                                 // tượng — người đọc chart cần thấy ngay bên nào áp đảo bao nhiêu.
-                                string ratioTxt = _rLvlVol.Median > 0 ? $" (gấp {vol / _rLvlVol.Median:0.0} lần bình thường)" : "";
-                                string why = $"Hấp thụ tại {(top ? "đỉnh" : "đáy")}: buy {buy:0} / sell {sell:0}{ratioTxt}"
-                                      + (swing ? " ·sau swing" : "")
-                                      + (divergence ? " ·delta lệch chiều" : "") + (twoSided ? " ·2 phe cùng lớn" : "")
-                                      + (noResult ? " ·giá không nhúc nhích" : "") + (prominent ? " ·POC nổi bật" : "")
-                                      + (multi ? " ·đa nến" : "");
+                                string avgTxt = _rLvlVol.Median > 0 ? $" | Trung bình {_rLvlVol.Median.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}" : "";
+                                string why = $"Hấp thụ {(top ? "đỉnh" : "đáy")} - {sell:0} Bid {buy:0} Ask{avgTxt}";
                                 var col = top ? BuyColor : SellColor;
                                 var b = Solid(price, Shape.Ellipse, col, true, why);
                                 absCands.Add((b, score, volZ, k, top));
@@ -895,7 +888,7 @@ namespace OrderFlowBubbles
                 {
                     if (r.Buy + r.Sell <= 0) continue;
                     var dec = CellBigLogic.Decide(r.Buy, r.Sell, cellB, hasCellB, CellBigRatio, CellBigMinSide,
-                                                  CellBigBalancedPct, UseFixedThreshold, FixedThresholdContracts);
+                                                  UseFixedThreshold, FixedThresholdContracts);
                     if (!dec.Hit) continue;
                     double cp = CellBigLogic.RowCenterPrice(r.RowId, CellBigRowTicks, CellBigRowOffset, tick);
                     var col2 = dec.Side == 0 ? CellBigBalancedColor : dec.Side > 0 ? BuyColor : SellColor;
@@ -1525,7 +1518,7 @@ namespace OrderFlowBubbles
                 if (verdict != 0)
                 {
                     lock (_sync) { r.B.Confirm = verdict; }
-                    r.B.Tooltip += broke ? "  → VỠ mức" : "  → GIỮ mức";
+                    r.B.Tooltip += broke ? " → VỠ" : " → GIỮ";
                     done.Add(r);
                     RePersistBar(r.Idx);   // Confirm vừa chốt -> ghi đè niêm phong để lần sau khôi phục đúng
                 }

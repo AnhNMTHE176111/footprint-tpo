@@ -1,5 +1,6 @@
 """So điểm nổ bóng của indicator (luật CellBig 2026-11-11: gom hàng 2 tick pha 1, bóng ở tâm hàng, max(buy,sell) >= 1,3 x B20 hàng, >=3) với bóng CORVEN.
 Vẽ lên chính ảnh chart CORVEN: vòng XANH LÁ = mình nổ & CORVEN cũng có bóng (±1 tick);
+chấm TÍM ở giữa = mình báo bóng TÍM (bên yếu cũng >= 1,3 x B và >= 3);
 vòng VÀNG = mình nổ nhưng CORVEN không có; ô vuông TRẮNG viền đen = CORVEN có bóng mà mình KHÔNG nổ."""
 import json, numpy as np, pandas as pd
 from PIL import Image, ImageDraw
@@ -39,8 +40,10 @@ for d in ('2026-11-05','2026-11-06'):
 # màu
 O['rk']=np.floor((O.tk-1)/2).astype(int); ours['rk']=ours.row.astype(int)
 m=O.merge(ours[['datetime','rk','bid_vol','ask_vol','side']],left_on=['time_utc','rk'],right_on=['datetime','rk'])
-mine=np.where(np.minimum(m.bid_vol,m.ask_vol)/m.side>=0.75,'tim',np.where(m.ask_vol>=m.bid_vol,'xanh','do'))
+m['B']=m.datetime.map(B)
+mine=np.where((np.minimum(m.bid_vol,m.ask_vol)>=1.3*m.B)&(np.minimum(m.bid_vol,m.ask_vol)>=3),'tim',np.where(m.ask_vol>=m.bid_vol,'xanh','do'))
 print('màu khớp (bóng trùng đúng hàng):',f'{(mine==m.color).mean():.0%}',len(m))
+_t=(m.color=='tim'); _p=(mine=='tim'); print(f'tím: bắt {(_t&_p).sum()}/{_t.sum()} | báo đúng {(_t&_p).sum()}/{_p.sum()}')
 # vẽ
 def draw(fr):
     c=cal[fr]; im=Image.open(f'{S}/hi/{fr}.png').convert('RGB'); d=ImageDraw.Draw(im)
@@ -52,11 +55,12 @@ def draw(fr):
     cb={}; [cb.setdefault(t,set()).add(k) for t,k in zip(O.time_utc,O.tk)]
     pb={}; [pb.setdefault(t,set()).add(k) for t,k in zip(ours.datetime,ours.tk)]
     xs=[]
-    for t,k in zip(ours.datetime,ours.tk):
+    for t,k,bd,ak,Bv in zip(ours.datetime,ours.tk,ours.bid_vol,ours.ask_vol,ours.B):
         x,y=xy(t,k/10)
         if not(60<x<1335 and 270<y<c['y1']): continue
         ok=any(abs(k-b)<=1 for b in cb.get(t,()))
         R=9; d.ellipse((x-R,y-R,x+R,y+R),outline=(0,200,0) if ok else (255,190,0),width=3); xs.append(x)
+        if min(bd,ak)>=1.3*Bv and min(bd,ak)>=3: d.ellipse((x-3,y-3,x+3,y+3),fill=(160,32,240))
     for t,k in zip(O.time_utc,O.tk):
         x,y=xy(t,k/10)
         if not(60<x<1335 and 270<y<c['y1']): continue

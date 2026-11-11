@@ -10,7 +10,8 @@
 //    hàng: bid = tổng SellVolume, ask = tổng BuyVolume, vol = tổng Volume các mức trong hàng.
 //    bên áp đảo của hàng = max(ask, bid) >= Ratio (1,3) x B  (và >= sàn 3)
 //    B = trung bình của N nến ĐÃ ĐÓNG TRƯỚC của "volume TB mỗi HÀNG có giao dịch" (cần >= 5 nến)
-//    Màu: tím khi yếu/mạnh >= 0,75; còn lại xanh = ask trội, đỏ = bid trội.
+//    Màu (luật 2026-11-12, màu đúng 93,6% trên 879 bóng): tím khi BÊN YẾU CŨNG tự vượt ngưỡng nổ (cả cột Bid lẫn
+//    cột Ask đều đủ nổ bóng); còn lại xanh = ask trội, đỏ = bid trội.
 //    Fit ngày 05/11, kiểm ngày 06/11 — ghép 1-1 ±1 tick với 885 bóng CORVEN (580 nến 5-6/11): mình 972 bóng,
 //    trúng 784, thừa 188 (19%), sót 101 (11%), F1 0,844; ngày 06/11: 319 vs 302, F1 0,870; màu đúng 88%.
 //    RowTicks = 1 -> hành vi theo từng tick như bản cũ. Gộp ô liền kề ±1 tick (MergeAdjacent) giữ lại nhưng
@@ -24,7 +25,7 @@ namespace OrderFlowBubbles
     public struct CellBigDecision
     {
         public bool Hit;
-        public int Side;        // +1 = buy (Ask) trội, -1 = sell (Bid) trội, 0 = hai bên cân (tím)
+        public int Side;        // +1 = buy (Ask) trội, -1 = sell (Bid) trội, 0 = bên yếu cũng đủ nổ (tím)
         public double Mult;     // sideVol / B (0 nếu chưa có B)
         public double SizeFrac; // 0..1 (tỉ lệ so với bề ngang nến)
     }
@@ -36,7 +37,7 @@ namespace OrderFlowBubbles
         public const double SizeFullMult = 6.0;   // từ tỉ lệ này trở lên = 100% bề ngang nến
 
         public static CellBigDecision Decide(double buy, double sell, double baseline, bool hasBaseline,
-            double ratio, double minSide, double balancedPct, bool fixedMode, double fixedThreshold)
+            double ratio, double minSide, bool fixedMode, double fixedThreshold)
         {
             var d = new CellBigDecision();
             double side = Math.Max(buy, sell), weak = Math.Min(buy, sell);
@@ -46,7 +47,9 @@ namespace OrderFlowBubbles
             else d.Hit = hasBaseline && baseline > 0 && side >= ratio * baseline;
             if (side < minSide) d.Hit = false;
             if (!d.Hit) return d;
-            d.Side = (weak / side >= balancedPct) ? 0 : (buy >= sell ? 1 : -1);
+            bool weakBig = fixedMode ? weak >= fixedThreshold : (hasBaseline && baseline > 0 && weak >= ratio * baseline);
+            weakBig = weakBig && weak >= minSide;
+            d.Side = weakBig ? 0 : (buy >= sell ? 1 : -1);
             d.SizeFrac = Size(d.Mult, ratio);
             return d;
         }

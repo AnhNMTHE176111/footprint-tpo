@@ -67,3 +67,31 @@ for k in (1.3,1.4,1.5,1.6):
 # CORVEN có bóng liền kề nhau không?
 adj=sum(1 for t,b in cb.items() for i in range(1,len(b)) if b[i]-b[i-1]==1)
 print('cặp bóng CORVEN liền nhau 1 tick:',adj,'/',len(O))
+
+# ===== KIỂM CHÉO C#: mô phỏng ĐÚNG CellBigLogic.MergeAdjacent (gộp SAU ngưỡng, side giảm dần, hòa -> tick thấp trước) =====
+def merge_cs(P,gap=1):
+    out=[]
+    for t,s in P.groupby('datetime'):
+        s=s.sort_values(['side','tk'],ascending=[False,True]); kept=[]
+        for r in s.itertuples():
+            if gap<=0 or all(abs(r.tk-x)>gap for x in kept): kept.append(r.tk); out.append(r.Index)
+    return P.loc[out]
+def score_day(P,day=None,tol=1):
+    vt=[t for t in vis if day is None or t.date()==day]
+    pb={t:sorted(s.tk) for t,s in P.groupby('datetime')}; hit=0; nP=0; nC=0
+    for t in vt:
+        a=pb.get(t,[]); b=cb.get(t,[]); nP+=len(a); nC+=len(b)
+        pairs=sorted((abs(x-y),i,j) for i,x in enumerate(a) for j,y in enumerate(b) if abs(x-y)<=tol)
+        ua=set(); ub=set()
+        for _,i,j in pairs:
+            if i in ua or j in ub: continue
+            ua.add(i); ub.add(j); hit+=1
+    return nP,nC,hit
+print('--- KIỂM CHÉO C# (k=1,5, sàn 3, gộp ±1 sau ngưỡng, tie tick thấp trước)')
+base=V[(V.side>=1.5*V.B)&(V.side>=3)]
+days=sorted({t.date() for t in vis})
+for name,P in (('TRƯỚC gộp',base),('SAU gộp ±1',merge_cs(base,1))):
+    for d in [None]+days:
+        nP,nC,h=score_day(P,d)
+        if nP==0 and nC==0: continue
+        print(f'{name} | {d or "tổng"}: mình {nP} | CORVEN {nC} | trúng {h} | thừa {nP-h} ({(nP-h)/max(nP,1):.0%}) | sót {nC-h} ({(nC-h)/max(nC,1):.0%})')

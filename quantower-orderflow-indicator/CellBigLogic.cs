@@ -3,6 +3,9 @@
 //  Luật MÔ PHỎNG HIỂN THỊ của CORVEN (Sierra), fit trên 885 bóng / 11.796 ô, 2 phiên 5-6/11/2026
 //  (GCZ26 M1): F1 0,83, recall 87%, precision 80%. KHÔNG phải lợi thế đã kiểm định.
 //    bên áp đảo = max(buy, sell) >= Ratio x B  (và >= sàn nhỏ)
+//    sau đó GỘP Ô LIỀN KỀ ±1 tick trong cùng nến (giữ ô lớn nhất, non-maximum suppression) — CORVEN gần như
+//    không bao giờ có 2 bóng cách nhau 1 tick. Ghép 1-1 lệch ±1 tick với 885 bóng CORVEN 5-6/11:
+//    trước 1.245 bóng (thừa 39%, sót 14%) -> sau ~925 bóng (thừa ~24%, sót ~21%).
 //    B = trung bình của N nến TRƯỚC (không tính nến hiện tại) của "volume TB mỗi ô giá có giao dịch"
 // ============================================================================
 using System;
@@ -38,6 +41,33 @@ namespace OrderFlowBubbles
             d.Side = (weak / side >= balancedPct) ? 0 : (buy >= sell ? 1 : -1);
             d.SizeFrac = Size(d.Mult, ratio);
             return d;
+        }
+
+        // Gộp ô liền kề trong MỘT nến (non-maximum suppression). cells = (chỉ số tick, bên áp đảo).
+        // Duyệt theo side giảm dần (hòa -> tick thấp hơn trước, tất định); giữ ô nếu không ô đã giữ nào
+        // cách nó <= gapTicks. gapTicks <= 0 = tắt gộp (giữ hết). Trả về CHỈ SỐ trong cells của ô được giữ.
+        public static List<int> MergeAdjacent(IList<(long tick, double side)> cells, int gapTicks)
+        {
+            var kept = new List<int>();
+            if (cells == null || cells.Count == 0) return kept;
+            if (gapTicks <= 0) { for (int i = 0; i < cells.Count; i++) kept.Add(i); return kept; }
+            var order = new List<int>();
+            for (int i = 0; i < cells.Count; i++) order.Add(i);
+            order.Sort((a, b) =>
+            {
+                int c = cells[b].side.CompareTo(cells[a].side);
+                if (c != 0) return c;
+                c = cells[a].tick.CompareTo(cells[b].tick);
+                return c != 0 ? c : a.CompareTo(b);
+            });
+            foreach (int i in order)
+            {
+                bool clash = false;
+                foreach (int j in kept)
+                    if (Math.Abs(cells[i].tick - cells[j].tick) <= gapTicks) { clash = true; break; }
+                if (!clash) kept.Add(i);
+            }
+            return kept;
         }
 
         // cỡ to dần theo mult (nén sqrt): SizeMinFrac ở mult = ratio → 1,0 ở mult >= SizeFullMult

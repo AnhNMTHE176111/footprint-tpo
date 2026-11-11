@@ -48,7 +48,9 @@
 //  ---- Ô BID/ASK LỚN (mục 1.5, viết lại 2026-11-11, xem CellBigLogic.cs) -------------
 //  Luật mô phỏng hiển thị của CORVEN, khớp F1 0,83 trên 2 phiên 5-6/11 (recall 87%, precision 80%):
 //  max(buy,sell) của ô >= 1,5 x B (B = TB 20 nến trước của volume TB mỗi ô giá), sàn 3, không giới
-//  hạn số bóng/nến. KHÔNG phải lợi thế đã kiểm định — chỉ để nhìn giống chart CORVEN.
+//  hạn số bóng/nến; sau đó gộp ô liền kề ±1 tick (giữ ô lớn nhất; CellBigMergeTicks, 0 = tắt): ghép 1-1
+//  với 885 bóng CORVEN 5-6/11 — trước 1.245 bóng (thừa 39%, sót 14%), sau ~925 (thừa ~24%, sót ~21%);
+//  ngày 06/11 kiểm chéo: 304 bóng vs CORVEN 302. KHÔNG phải lợi thế đã kiểm định — chỉ để nhìn giống chart CORVEN.
 //
 //  ---- NIÊM PHONG TÍN HIỆU (2026-09-15, xem SignalCache.cs) --------------------
 //  Sự cố: Quantower gọi lại VolumeAnalysisData_Loaded() → ResetState() nhiều lần trong 1 phiên
@@ -241,6 +243,9 @@ namespace OrderFlowBubbles
         public int CellBigTopN { get; set; } = 0;
 
         public bool CellBigSkipOnAbsorption { get; set; } = true;
+
+        // Gộp ô liền kề trong cùng nến: giữ ô lớn nhất, bỏ ô cách nó <= số tick này. 0 = tắt gộp.
+        public int CellBigMergeTicks { get; set; } = 1;
 
         // ---------- Nến delta lớn (dominant-delta candle) ----------
         [InputParameter("Nến delta · Bật (tô thân nến)", 20)]
@@ -504,7 +509,7 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
-                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigBalancedPct, CellBigTopN, CellBigSkipOnAbsorption, "cellbig-v2",
+                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigBalancedPct, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, "cellbig-v3",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
@@ -885,7 +890,11 @@ namespace OrderFlowBubbles
             // nhất; Big Trade/Absorption (đặc thù hơn) vẽ chồng lên trên khi trùng vị trí.
             if (cellBigCands.Count > 0)
             {
-                IEnumerable<(Bubble b, double magnitude, long k)> cellKeep = cellBigCands.OrderByDescending(x => x.magnitude);
+                // gộp ô liền kề TRƯỚC (non-maximum suppression), rồi mới áp TopN / SkipOnAbsorption
+                var cellMerged = new List<(Bubble b, double magnitude, long k)>();
+                var mergeIn = cellBigCands.Select(x => (x.k, x.magnitude)).ToList();
+                foreach (int mi in CellBigLogic.MergeAdjacent(mergeIn, CellBigMergeTicks)) cellMerged.Add(cellBigCands[mi]);
+                IEnumerable<(Bubble b, double magnitude, long k)> cellKeep = cellMerged.OrderByDescending(x => x.magnitude).ThenBy(x => x.k);
                 if (CellBigTopN > 0) cellKeep = cellKeep.Take(CellBigTopN);   // 0 = không giới hạn
                 foreach (var c in cellKeep)
                 {

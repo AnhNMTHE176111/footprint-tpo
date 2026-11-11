@@ -46,6 +46,21 @@ static class CellBigTests
         Check(Math.Abs(CellBigLogic.Size(6, 1.5) - 1.0) < 1e-9 && CellBigLogic.Size(20, 1.5) == 1.0, "ty le >= 6: 100%");
         Check(CellBigLogic.Size(3, 1.5) > 0.45 && CellBigLogic.Size(3, 1.5) < 1.0, "ty le 3: o giua 45%..100%");
         Check(Math.Abs(D(15, 0).SizeFrac - 0.45) < 1e-9, "Decide tra SizeFrac 0,45 o nguong");
+        // MergeAdjacent (gop o lien ke)
+        static string K(System.Collections.Generic.List<int> l) { l.Sort(); return string.Join(",", l); }
+        var c3 = new System.Collections.Generic.List<(long, double)> { (10, 20), (11, 50), (12, 30) };
+        Check(K(CellBigLogic.MergeAdjacent(c3, 1)) == "1", "cum 3 o lien nhau -> giu o lon nhat", K(CellBigLogic.MergeAdjacent(c3, 1)));
+        var c2 = new System.Collections.Generic.List<(long, double)> { (10, 20), (12, 30) };
+        Check(K(CellBigLogic.MergeAdjacent(c2, 1)) == "0,1", "2 o cach 2 tick, gap 1 -> giu ca hai");
+        Check(K(CellBigLogic.MergeAdjacent(c3, 0)) == "0,1,2", "gap 0 -> giu het");
+        var c5 = new System.Collections.Generic.List<(long, double)> { (1, 10), (2, 20), (3, 30), (4, 40), (5, 50) };
+        Check(K(CellBigLogic.MergeAdjacent(c5, 1)) == "0,2,4", "chuoi 5 o side tang: NMS giu 5,3,1", K(CellBigLogic.MergeAdjacent(c5, 1)));
+        Check(K(CellBigLogic.MergeAdjacent(c5, 2)) == "1,4", "chuoi 5 o gap 2: giu o 5 va o 2", K(CellBigLogic.MergeAdjacent(c5, 2)));
+        var tie = new System.Collections.Generic.List<(long, double)> { (11, 30), (10, 30) };
+        Check(K(CellBigLogic.MergeAdjacent(tie, 1)) == "1", "hoa side: giu o tick thap hon (tat dinh)");
+        var tie2 = new System.Collections.Generic.List<(long, double)> { (10, 30), (11, 30) };
+        Check(K(CellBigLogic.MergeAdjacent(tie2, 1)) == "0", "hoa side (thu tu dao): van giu tick thap hon");
+        Check(CellBigLogic.MergeAdjacent(new System.Collections.Generic.List<(long, double)>(), 1).Count == 0, "rong -> rong");
         // BarMean
         Check(CellBigLogic.BarMean(100, 20, out double m1) && Math.Abs(m1 - 5) < 1e-9, "BarMean = tong / so muc gia");
         Check(!CellBigLogic.BarMean(0, 0, out _), "nen rong -> khong nap");

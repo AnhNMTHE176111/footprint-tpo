@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Golden test + benchmark loi tinh toan THAT cua OrderFlow Bubbles (bien dich thang cac file nguon, khong qua DLL). Xem perf/README.md -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Optimize>true</Optimize>
+    <ServerGarbageCollector>false</ServerGarbageCollector>
+    <NoWarn>CA1416;NU1701;MSB3277;CS0649;CS0169;CS0414</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RootNamespace>GoldenPerf</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../OrderFlowBubbles.cs" />
+    <Compile Include="../../SignalCache.cs" />
+    <Compile Include="../../StackedImbalance.cs" />
+    <Compile Include="../../ExhaustionLogic.cs" />
+    <Compile Include="../../CellBigLogic.cs" />
+    <Compile Include="../../RollingRobust.cs" />
+    <Compile Include="Program.cs" />
+    <Reference Include="TradingPlatform.BusinessLayer"><HintPath>$(USERPROFILE)\quantower-libs\TradingPlatform.BusinessLayer.dll</HintPath></Reference>
+    <Reference Include="System.Drawing.Common"><HintPath>$(USERPROFILE)\quantower-libs\System.Drawing.Common.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

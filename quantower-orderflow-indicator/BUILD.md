@@ -36,7 +36,7 @@ Indicator implement `IVolumeAnalysisIndicator` và đọc `bar.VolumeAnalysisDat
 Xem `OrderFlowBubbles.csproj`. Chỉnh `<QuantowerDir>` = thư mục cài Quantower, rồi `dotnet build -c Release`.
 Reference cần: `TradingPlatform.BusinessLayer.dll` + `System.Drawing.Common.dll` (trong `…\TradingPlatform\v<ver>\bin\`).
 
-⚠️ **Từ 2026-11-11 có thêm file thứ 5 `CellBigLogic.cs` (logic Ô Bid/Ask lớn thuần) — build tay phải liệt kê cả 5 file.**
+⚠️ **Từ 2026-11-11 có thêm file thứ 5 `CellBigLogic.cs` (logic Ô Bid/Ask lớn thuần) và file thứ 6 `RollingRobust.cs` (median+MAD cuốn, tách ra từ OrderFlowBubbles.cs) — build tay phải liệt kê cả 6 file.** Cách nhanh trên máy Windows: `./perf/build-dll.sh` (csproj tạm liệt kê đủ 6 file → `dist/OrderFlowBubbles.dll`).
 
 ⚠️ **Từ 2026-11-08 indicator gồm 4 file nguồn: `OrderFlowBubbles.cs` + `SignalCache.cs` (niêm phong
 tín hiệu) + `StackedImbalance.cs` (logic Stacked Imbalance thuần) + `ExhaustionLogic.cs` (logic kiệt sức
@@ -44,8 +44,17 @@ thuần theo CORVEN).** Build tay phải liệt kê CẢ 4 file trong `<Compile 
 file nên không dùng được). ⚠️ `OrderFlowBubbles.csproj` là SDK-style, glob mặc định `*.cs` sẽ kéo cả thư
 mục `tests/` vào — build tay bằng csproj liệt kê đúng 4 file, `EnableDefaultCompileItems=false`.
 
+## Hiệu năng nạp + golden test (2026-11-11)
+Báo cáo: `research/PERF-RESEARCH-2026-11-11.md`. Đã làm (KHÔNG đổi dữ liệu, kiểm bằng golden hash): (1) `SignalCache.Put` xếp hàng, `Flush()` ghi 1 lần
+(cuối `Process`, `OnClear`, `Dispose`, mỗi 4096 bản ghi); (2) `RollingRobust` mảng sắp xếp cuốn + MAD merge-walk (bit-exact), bỏ baseline `_rLvlSideVol`
+không ai đọc, `_rLvlAbsDelta` chỉ nạp khi DLine bật; (3) `_activeZones` thay vì quét hết `_zones`; (4) `SignalCache.Load` đọc nhanh bằng
+System.Text.Json source-generated + nén file khi số dòng > 1,2 × số nến; (5) dấu vân tay tham số tính 1 lần (đổi tham số → `OnSettingsUpdated`/`ResetState` đặt lại).
+**Golden test:** `perf/` (xem `perf/README.md`): `dotnet build -c Release perf/Golden` rồi `dotnet perf/Golden/bin/Release/net10.0-windows/Golden.dll golden`
+— phải in `GOLDEN: KHOP HET`. Mọi thay đổi `OrderFlowBubbles.cs`/`SignalCache.cs`/`CellBigLogic.cs`… phải chạy golden; nếu cố ý đổi luật thì cập nhật
+`perf/golden-expected.txt` (`--write-expected`) kèm giải thích trong commit.
+
 ## Test
-`tests/` (`OrderFlowBubblesTests`) test riêng `SignalCache.cs` (gồm cả `BigTradeLog`), `ExhaustionLogic.cs`
+`tests/` (`OrderFlowBubblesTests`) test riêng `SignalCache.cs` (gồm cả `BigTradeLog`), `RollingRobust.cs` (`tests/PerfTests.cs`), `ExhaustionLogic.cs`
 (`tests/ExhaustionTests.cs`; đặt biến `EXH_XCHECK_CSV` để đối chiếu thêm với Python trên dữ liệu thật) và `StackedImbalance.cs` — không cần SDK
 Quantower vì các class này không phụ thuộc `TradingPlatform.BusinessLayer`. Chạy:
 `dotnet run --project quantower-orderflow-indicator/tests`.

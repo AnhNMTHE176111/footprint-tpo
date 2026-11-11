@@ -1,0 +1,150 @@
+B 1
+ {Price=4423.3;Shape=ExhTop;Color=-14336;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức buy · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 5
+ {Price=4425.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5246101978108376;Tooltip="Hàng lớn 4425.9–4426.0: buy 17 / sell 0 — gấp 1.7 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 6
+ {Price=4425.55;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.7733614440130472;Tooltip="Hàng lớn 4425.5–4425.6: buy 37 / sell 3 — gấp 3.6 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 7
+ {Price=4425.55;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4539974683635535;Tooltip="Hàng lớn 4425.5–4425.6: buy 14 / sell 1 — gấp 1.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 8
+ {Price=4426.2;Shape=ExhTop;Color=-14336;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức buy · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 10
+ {Price=4424.55;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5012904329946124;Tooltip="Hàng lớn 4424.5–4424.6: buy 14 / sell 15 — gấp 1.6 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4423.95;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.46467695851089963;Tooltip="Hàng lớn 4423.9–4424.0: buy 2 / sell 13 — gấp 1.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4424.150000000001;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.46467695851089963;Tooltip="Hàng lớn 4424.1–4424.2: buy 4 / sell 13 — gấp 1.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 11
+ {Price=4423.5;Shape=Zone;Color=-880730;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance sell 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4423.7;ZoneSide=-1;ZoneWeak=T;}
+ {Price=4423.75;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6782739279096526;Tooltip="Hàng lớn 4423.7–4423.8: buy 6 / sell 29 — gấp 2.8 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 18
+ {Price=4421.55;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5660995579931438;Tooltip="Hàng lớn 4421.5–4421.6: buy 18 / sell 10 — gấp 2.0 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4421.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5142534168679455;Tooltip="Hàng lớn 4421.7–4421.8: buy 15 / sell 2 — gấp 1.7 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 19
+ {Price=4419.2;Shape=Zone;Color=-880730;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance sell 7 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4419.8;ZoneSide=-1;ZoneWeak=T;}
+ {Price=4419.75;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.7662776670808438;Tooltip="Hàng lớn 4419.7–4419.8: buy 4 / sell 32 — gấp 3.6 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4419.55;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6739385602681806;Tooltip="Hàng lớn 4419.5–4419.6: buy 2 / sell 25 — gấp 2.8 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4419.95;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6739385602681806;Tooltip="Hàng lớn 4419.9–4420.0: buy 9 / sell 25 — gấp 2.8 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4418.55;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.645237010736949;Tooltip="Hàng lớn 4418.5–4418.6: buy 11 / sell 23 — gấp 2.6 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4418.75;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5506667029846362;Tooltip="Hàng lớn 4418.7–4418.8: buy 10 / sell 17 — gấp 1.9 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4420.150000000001;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5506667029846362;Tooltip="Hàng lớn 4420.1–4420.2: buy 17 / sell 13 — gấp 1.9 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4418.150000000001;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5333607884352004;Tooltip="Hàng lớn 4418.1–4418.2: buy 2 / sell 16 — gấp 1.8 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4418.35;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4970435594983717;Tooltip="Hàng lớn 4418.3–4418.4: buy 5 / sell 14 — gấp 1.6 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4419.35;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4779100656375671;Tooltip="Hàng lớn 4419.3–4419.4: buy 5 / sell 13 — gấp 1.5 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4419.150000000001;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.45802538756237315;Tooltip="Hàng lớn 4419.1–4419.2: buy 3 / sell 12 — gấp 1.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 24
+ {Price=4426.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4635516961845808;Tooltip="Hàng lớn 4426.9–4427.0: buy 12 / sell 0 — gấp 1.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 25
+ {Price=4426.95;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5677772923534009;Tooltip="Hàng lớn 4426.9–4427.0: buy 10 / sell 17 — gấp 2.0 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4427.150000000001;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4510571765200015;Tooltip="Hàng lớn 4427.1–4427.2: buy 11 / sell 2 — gấp 1.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4426.2;Shape=ExhBottom;Color=-12732161;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức sell · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 26
+ {Price=4427;Shape=Zone;Color=-10497056;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance buy 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4427.2;ZoneSide=1;ZoneWeak=F;}
+ {Price=4427.150000000001;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.7157548339915061;Tooltip="Hàng lớn 4427.1–4427.2: buy 26 / sell 1 — gấp 3.1 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4427.55;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.7012931635013133;Tooltip="Hàng lớn 4427.5–4427.6: buy 25 / sell 3 — gấp 3.0 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 27
+ {Price=4427.6;Shape=Zone;Color=-10497056;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance buy 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4427.8;ZoneSide=1;ZoneWeak=F;}
+ {Price=4427.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4529483191972306;Tooltip="Hàng lớn 4427.7–4427.8: buy 11 / sell 4 — gấp 1.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4427.95;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4529483191972306;Tooltip="Hàng lớn 4427.9–4428.0: buy 9 / sell 11 — gấp 1.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 28
+ {Price=4428.7;Shape=Zone;Color=-10497056;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance buy 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4428.900000000001;ZoneSide=1;ZoneWeak=T;}
+ {Price=4428.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6920489679130564;Tooltip="Hàng lớn 4428.7–4428.8: buy 25 / sell 2 — gấp 2.9 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4428.95;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5828378660533461;Tooltip="Hàng lớn 4428.9–4429.0: buy 18 / sell 17 — gấp 2.1 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4428.55;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4909696663141981;Tooltip="Hàng lớn 4428.5–4428.6: buy 13 / sell 9 — gấp 1.5 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4429.55;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4909696663141981;Tooltip="Hàng lớn 4429.5–4429.6: buy 13 / sell 1 — gấp 1.5 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 29
+ {Price=4429.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4664945023928837;Tooltip="Hàng lớn 4429.9–4430.0: buy 12 / sell 1 — gấp 1.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 31
+ {Price=4427.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=1;Tooltip="Hàng lớn 4427.9–4428.0: buy 54 / sell 20 — gấp 6.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4428.150000000001;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5499658903799143;Tooltip="Hàng lớn 4428.1–4428.2: buy 3 / sell 16 — gấp 1.9 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4428.75;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.47240582767892575;Tooltip="Hàng lớn 4428.7–4428.8: buy 4 / sell 12 — gấp 1.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4429.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4510616473265211;Tooltip="Hàng lớn 4429.9–4430.0: buy 11 / sell 2 — gấp 1.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 32
+ {Price=4429.6;Shape=Zone;Color=-10497056;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance buy 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4429.8;ZoneSide=1;ZoneWeak=F;}
+ {Price=4430.1;Shape=Zone;Color=-10497056;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance buy 5 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4430.5;ZoneSide=1;ZoneWeak=T;}
+ {Price=4430.150000000001;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6512023728060512;Tooltip="Hàng lớn 4430.1–4430.2: buy 22 / sell 1 — gấp 2.6 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4429.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5862709407930624;Tooltip="Hàng lớn 4429.9–4430.0: buy 18 / sell 11 — gấp 2.1 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4430.35;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5510858484561326;Tooltip="Hàng lớn 4430.3–4430.4: buy 16 / sell 0 — gấp 1.9 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4429.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5326672858272574;Tooltip="Hàng lớn 4429.7–4429.8: buy 15 / sell 5 — gấp 1.8 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4430.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5326672858272574;Tooltip="Hàng lớn 4430.7–4430.8: buy 15 / sell 0 — gấp 1.8 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4429.35;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.47337573982410436;Tooltip="Hàng lớn 4429.3–4429.4: buy 12 / sell 6 — gấp 1.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4430.55;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.45199026750645716;Tooltip="Hàng lớn 4430.5–4430.6: buy 11 / sell 1 — gấp 1.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 33
+ {Price=4430.150000000001;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5793557902828119;Tooltip="Hàng lớn 4430.1–4430.2: buy 5 / sell 18 — gấp 2.1 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 34
+ {Price=4430.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5217905194629556;Tooltip="Hàng lớn 4430.9–4431.0: buy 15 / sell 9 — gấp 1.7 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 35
+ {Price=4431.35;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.9798444829246094;Tooltip="Hàng lớn 4431.3–4431.4: buy 51 / sell 24 — gấp 5.8 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4431.75;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6183821633171405;Tooltip="Hàng lớn 4431.7–4431.8: buy 9 / sell 21 — gấp 2.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4431.55;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5360877978455956;Tooltip="Hàng lớn 4431.5–4431.6: buy 12 / sell 16 — gấp 1.8 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4432.1;Shape=ExhTop;Color=-14336;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức buy · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 36
+ {Price=4431.55;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.9021340437776485;Tooltip="Hàng lớn 4431.5–4431.6: buy 20 / sell 46 — gấp 4.9 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4431.35;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.7353973861657184;Tooltip="Hàng lớn 4431.3–4431.4: buy 6 / sell 31 — gấp 3.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4431;Shape=ExhBottom;Color=-12732161;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức sell · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 39
+ {Price=4433.55;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4735976112764313;Tooltip="Hàng lớn 4433.5–4433.6: buy 14 / sell 2 — gấp 1.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 42
+ {Price=4431.400000000001;Shape=Zone;Color=-880730;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance sell 4 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4431.7;ZoneSide=-1;ZoneWeak=T;}
+ {Price=4431.900000000001;Shape=Zone;Color=-880730;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance sell 4 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4432.2;ZoneSide=-1;ZoneWeak=T;}
+ {Price=4431.55;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.95710152301682;Tooltip="Hàng lớn 4431.5–4431.6: buy 18 / sell 50 — gấp 5.5 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4431.35;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.7474676820963706;Tooltip="Hàng lớn 4431.3–4431.4: buy 13 / sell 31 — gấp 3.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4431.75;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.625122484529991;Tooltip="Hàng lớn 4431.7–4431.8: buy 10 / sell 22 — gấp 2.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4431.95;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.562680794251404;Tooltip="Hàng lớn 4431.9–4432.0: buy 6 / sell 18 — gấp 2.0 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4432.35;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5111325268343928;Tooltip="Hàng lớn 4432.3–4432.4: buy 15 / sell 14 — gấp 1.7 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4432.150000000001;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.47383944923836585;Tooltip="Hàng lớn 4432.1–4432.2: buy 2 / sell 13 — gấp 1.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4433.2;Shape=ExhTop;Color=-14336;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức buy · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4431.1;Shape=ExhBottom;Color=-12732161;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức sell · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 43
+ {Price=4431.55;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5180889627767749;Tooltip="Hàng lớn 4431.5–4431.6: buy 7 / sell 17 — gấp 1.7 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 45
+ {Price=4434.150000000001;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.7274054522444284;Tooltip="Hàng lớn 4434.1–4434.2: buy 33 / sell 10 — gấp 3.2 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4433.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6800854664584993;Tooltip="Hàng lớn 4433.9–4434.0: buy 29 / sell 18 — gấp 2.8 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4434.35;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6160720529551946;Tooltip="Hàng lớn 4434.3–4434.4: buy 24 / sell 17 — gấp 2.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4434.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5886115858750498;Tooltip="Hàng lớn 4434.7–4434.8: buy 22 / sell 12 — gấp 2.2 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4435.150000000001;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5449625448559605;Tooltip="Hàng lớn 4435.1–4435.2: buy 19 / sell 8 — gấp 1.9 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4434.95;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4636936598199197;Tooltip="Hàng lớn 4434.9–4435.0: buy 14 / sell 14 — gấp 1.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 46
+ {Price=4434.150000000001;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5656398700582876;Tooltip="Hàng lớn 4434.1–4434.2: buy 22 / sell 1 — gấp 2.0 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4434.4;Shape=ExhTop;Color=-14336;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức buy · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 47
+ {Price=4431.2;Shape=ExhBottom;Color=-12732161;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức sell · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 51
+ {Price=4429.35;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4908988265821583;Tooltip="Hàng lớn 4429.3–4429.4: buy 3 / sell 15 — gấp 1.5 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4430.1;Shape=ExhTop;Color=-14336;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức buy · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4429;Shape=ExhBottom;Color=-12732161;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức sell · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 52
+ {Price=4429.2;Shape=Zone;Color=-880730;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance sell 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4429.400000000001;ZoneSide=-1;ZoneWeak=F;}
+ {Price=4429.150000000001;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4907946003153755;Tooltip="Hàng lớn 4429.1–4429.2: buy 11 / sell 15 — gấp 1.5 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4428.95;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4549058700447598;Tooltip="Hàng lớn 4428.9–4429.0: buy 1 / sell 13 — gấp 1.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 54
+ {Price=4426.55;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.47118107099570034;Tooltip="Hàng lớn 4426.5–4426.6: buy 6 / sell 14 — gấp 1.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 55
+ {Price=4426.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5493584864619454;Tooltip="Hàng lớn 4426.7–4426.8: buy 19 / sell 1 — gấp 1.9 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 56
+ {Price=4429.1;Shape=Zone;Color=-10497056;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance buy 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4429.3;ZoneSide=1;ZoneWeak=F;}
+ {Price=4429.150000000001;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5780460197764465;Tooltip="Hàng lớn 4429.1–4429.2: buy 20 / sell 0 — gấp 2.1 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4426.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5306726556453181;Tooltip="Hàng lớn 4426.9–4427.0: buy 17 / sell 3 — gấp 1.8 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4428.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.47889925719045773;Tooltip="Hàng lớn 4428.7–4428.8: buy 14 / sell 1 — gấp 1.5 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 57
+ {Price=4428.7;Shape=Zone;Color=-880730;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance sell 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4428.900000000001;ZoneSide=-1;ZoneWeak=T;}
+ {Price=4428.75;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.47029619232277936;Tooltip="Hàng lớn 4428.7–4428.8: buy 0 / sell 13 — gấp 1.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4429.35;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.45071021469915645;Tooltip="Hàng lớn 4429.3–4429.4: buy 12 / sell 7 — gấp 1.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4430.35;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.45071021469915645;Tooltip="Hàng lớn 4430.3–4430.4: buy 12 / sell 2 — gấp 1.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4430.5;Shape=ExhTop;Color=-14336;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức buy · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 58
+ {Price=4429.75;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4674845603892174;Tooltip="Hàng lớn 4429.7–4429.8: buy 1 / sell 13 — gấp 1.4 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4429.4;Shape=ExhBottom;Color=-12732161;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức sell · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 61
+ {Price=4430.9;Shape=ExhTop;Color=-14336;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0;Tooltip="Kiệt sức buy · hết hiệu lực";Confirm=-1;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 64
+ {Price=4430.95;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.7329422588849801;Tooltip="Hàng lớn 4430.9–4431.0: buy 1 / sell 25 — gấp 3.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 70
+ {Price=4433.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4935368200882314;Tooltip="Hàng lớn 4433.9–4434.0: buy 10 / sell 2 — gấp 1.5 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4434.35;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.4935368200882314;Tooltip="Hàng lớn 4434.3–4434.4: buy 10 / sell 0 — gấp 1.5 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+B 71
+ {Price=4433;Shape=Zone;Color=-10497056;Size=0;Transparency=0;Halo=F;UseBarWidth=F;SizeFrac=0;Tooltip="Stacked imbalance buy 3 mức";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=4433.2;ZoneSide=1;ZoneWeak=F;}
+ {Price=4433.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.9287237915799114;Tooltip="Hàng lớn 4433.9–4434.0: buy 34 / sell 2 — gấp 5.2 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4433.75;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.6071475236199125;Tooltip="Hàng lớn 4433.7–4433.8: buy 15 / sell 10 — gấp 2.3 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4433.150000000001;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.585578580671231;Tooltip="Hàng lớn 4433.1–4433.2: buy 14 / sell 5 — gấp 2.1 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4433.55;Shape=Ellipse;Color=-47872;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5632245467660126;Tooltip="Hàng lớn 4433.5–4433.6: buy 9 / sell 13 — gấp 2.0 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4432.75;Shape=Ellipse;Color=-4565549;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.5399928896979947;Tooltip="Hàng lớn 4432.7–4432.8: buy 11 / sell 12 — gấp 1.8 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}
+ {Price=4432.95;Shape=Ellipse;Color=-16711681;Size=17;Transparency=10;Halo=F;UseBarWidth=T;SizeFrac=0.490421398323682;Tooltip="Hàng lớn 4432.9–4433.0: buy 10 / sell 3 — gấp 1.5 lần TB hàng 20 nến";Confirm=0;Confirmable=F;IsDivergence=F;PriceHi=0;ZoneSide=0;ZoneWeak=F;}

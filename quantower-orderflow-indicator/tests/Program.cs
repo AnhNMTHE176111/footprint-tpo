@@ -59,6 +59,7 @@ static class Tests
             cache1.Load();
             cache1.Put(MakeBar(2000, -1, (4325.5, 0, true)));
             cache1.Put(MakeBar(2060, 0, (4326.0, 0, false)));   // nến khác, không có absorption
+            cache1.Flush();   // Put chỉ xếp hàng; Flush ghi xuống file (cuối Process/OnClear/Dispose)
 
             // "khởi động lại" -> instance MỚI, đọc lại từ file
             var cache2 = new SignalCache(path);
@@ -84,6 +85,7 @@ static class Tests
             cache1.Load();
             cache1.Put(MakeBar(3000, 1, (4330.0, 0, true)));    // lần 1: đang chờ xác nhận (Confirm=0)
             cache1.Put(MakeBar(3000, 1, (4330.0, -1, true)));   // lần 2: đã chốt VỠ MỨC (Confirm=-1)
+            cache1.Flush();
 
             var cache2 = new SignalCache(path);   // đọc lại từ đầu, như sau khi ResetState()
             cache2.Load();
@@ -104,6 +106,7 @@ static class Tests
             var cache = new SignalCache(path);
             cache.Load();
             cache.Put(new CachedBarData { TimeTicks = 4000, Tint = 0 });   // Bubbles để mặc định = rỗng
+            cache.Flush();
 
             var cache2 = new SignalCache(path);
             cache2.Load();
@@ -236,6 +239,7 @@ static class Tests
             old.Put(Rec(t1100, (4138.9, 0, 0)));
             old.Put(Rec(t1107, (4145.0, 0, 0)));
             old.Put(Rec(t1115, (4150.0, 0, 0)));
+            old.Flush();
             var c = new SignalCache(fresh);
             c.Load();
             int n = c.ImportLegacy(legacy, SignalCache.IsSafeLegacyM1);
@@ -260,6 +264,7 @@ static class Tests
         CacheNamePerTimeframe();
         FitsBarGuard();
         ImportLegacyM1Only();
+        _fail += PerfTests.Run();
         _fail += ExhaustionTests.Run();
         _fail += CellBigTests.Run();
         StackedImbalanceTests.RunAll();

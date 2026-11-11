@@ -24,9 +24,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace OrderFlowBubbles
 {
+    // Bộ (de)serialize SINH SẴN lúc biên dịch (System.Text.Json source generator): không phản chiếu, không JIT
+    // ở lần đọc đầu (đo 1,65 s -> ~0,4 s). Cùng JSON với JsonSerializer.Serialize<CachedBarData> mặc định.
+    [JsonSerializable(typeof(CachedBarData))]
+    internal partial class SignalCacheJson : JsonSerializerContext { }
+
     // Bản sao "phẳng" của 1 bubble — đủ dữ liệu để vẽ lại y hệt, không phụ thuộc
     // enum Shape/Color của file chính (dùng int/argb) để tránh vòng phụ thuộc.
     public sealed class CachedBubbleData
@@ -74,12 +80,33 @@ namespace OrderFlowBubbles
 
         public int Count => _byTime.Count;
 
+        /// <summary>Mọi bản ghi đang giữ (dùng cho golden test perf/Golden để băm nội dung cache).</summary>
+        internal IEnumerable<CachedBarData> Values => _byTime.Values;
+
         public bool TryGet(long timeTicks, out CachedBarData data) => _byTime.TryGetValue(timeTicks, out data);
 
-        public void Load()
+        /// <summary>Quá file lớn hơn mức này thì đọc kiểu cũ (từng dòng) thay vì nạp cả file vào bộ nhớ.</summary>
+        private const long MaxFastLoadBytes = 1_000_000_000L;
+
+        /// <summary>Đọc file niêm phong: mỗi nến giữ bản ghi thắng cuối (dòng hỏng bị bỏ qua).
+        /// <paramref name="compact"/> = true: nếu số dòng &gt; 1,2 × số nến duy nhất thì viết lại file chỉ còn bản ghi thắng
+        /// (ghi file tạm rồi thay thế; chỉ khi file không đổi từ lúc đọc).</summary>
+        public void Load(bool compact = false)
         {
             _byTime.Clear();
             if (string.IsNullOrEmpty(FilePath) || !File.Exists(FilePath)) return;
+            bool ok = false;
+            try
+            {
+                if (new FileInfo(FilePath).Length <= MaxFastLoadBytes) ok = TryLoadFast(compact);
+            }
+            catch { ok = false; }
+            if (!ok) { _byTime.Clear(); LoadSlow(); }
+        }
+
+        // Đường chậm = bản gốc: ReadLines + Deserialize từng dòng (dòng sau thắng).
+        private void LoadSlow()
+        {
             foreach (var line in File.ReadLines(FilePath))
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
@@ -90,17 +117,145 @@ namespace OrderFlowBubbles
             }
         }
 
-        // Ghi/đè bản ghi trong bộ nhớ + append 1 dòng vào file.
+        // Đường nhanh: đọc cả file 1 lần, chỉ lập chỉ mục theo "TimeTicks" (khoá nằm ngay đầu mỗi dòng do chính mình ghi),
+        // rồi giải mã CHỈ dòng thắng bằng bộ sinh sẵn. Gặp BẤT KỲ dòng không đúng dạng chuẩn -> trả false để dùng đường
+        // chậm (kết quả luôn như bản gốc). Dòng thắng giải mã hỏng (ghi dở) -> lùi về dòng trước cùng khoá, đúng như
+        // bản gốc (dòng hỏng không đè dòng tốt).
+        private bool TryLoadFast(bool compact)
+        {
+            var writeTime = new FileInfo(FilePath).LastWriteTimeUtc;
+            byte[] all = File.ReadAllBytes(FilePath);
+            var span = all.AsSpan();
+            int pos = (span.Length >= 3 && span[0] == 0xEF && span[1] == 0xBB && span[2] == 0xBF) ? 3 : 0;
+            ReadOnlySpan<byte> keyPrefix = "{\"TimeTicks\":"u8;
+            var st = new List<int>(); var en = new List<int>(); var prev = new List<int>();
+            var last = new Dictionary<long, int>();
+            int garbage = 0;   // dòng không giải mã được (ghi dở/rác): bị bỏ qua như bản gốc, và bị loại khi nén
+            while (pos < all.Length)
+            {
+                int nl = span.Slice(pos).IndexOf((byte)'\n');
+                int end = nl < 0 ? all.Length : pos + nl;
+                int next = nl < 0 ? all.Length : end + 1;
+                if (end > pos && all[end - 1] == (byte)'\r') end--;
+                var line = span.Slice(pos, end - pos);
+                pos = next;
+                if (IsBlank(line)) continue;
+                if (line.IndexOf((byte)'\r') >= 0) return false;   // \r lẻ giữa dòng: ReadLines sẽ tách khác -> đường chậm
+                int p = keyPrefix.Length, digits = 0; long t = 0;
+                bool standard = line.StartsWith(keyPrefix);
+                if (standard)
+                {
+                    while (p < line.Length && line[p] >= (byte)'0' && line[p] <= (byte)'9') { if (++digits > 18) { standard = false; break; } t = t * 10 + (line[p] - (byte)'0'); p++; }
+                    if (standard && (digits == 0 || p >= line.Length || (line[p] != (byte)',' && line[p] != (byte)'}'))) standard = false;
+                }
+                if (!standard)
+                {
+                    // dòng lạ: nếu cũng KHÔNG giải mã được (rác/ghi dở) thì bản gốc cũng bỏ qua -> bỏ qua luôn;
+                    // còn nếu giải mã được (JSON dạng khác thường) -> nhường cho đường chậm để giữ đúng thứ tự "dòng sau thắng".
+                    try { if (JsonSerializer.Deserialize(line, SignalCacheJson.Default.CachedBarData) != null) return false; }
+                    catch { }
+                    garbage++;
+                    continue;
+                }
+                int li = st.Count;
+                st.Add(end - line.Length); en.Add(end);
+                prev.Add(last.TryGetValue(t, out int pj) ? pj : -1);
+                last[t] = li;
+            }
+            int lines = st.Count + garbage;
+            var winners = new List<int>(last.Count);
+            foreach (var kv in last)
+            {
+                for (int j = kv.Value; j >= 0; j = prev[j])
+                {
+                    CachedBarData d;
+                    try { d = JsonSerializer.Deserialize(span.Slice(st[j], en[j] - st[j]), SignalCacheJson.Default.CachedBarData); }
+                    catch { continue; }   // dòng hỏng -> thử dòng cũ hơn cùng khoá
+                    if (d == null) continue;
+                    if (d.TimeTicks != kv.Key) return false;   // khác thường -> dùng đường chậm cho chắc
+                    _byTime[kv.Key] = d; winners.Add(j);
+                    break;
+                }
+            }
+            if (compact && lines > 1.2 * last.Count && winners.Count < lines) { winners.Sort(); Compact(all, st, en, winners, writeTime); }
+            return true;
+        }
+
+        private static bool IsBlank(ReadOnlySpan<byte> line)
+        {
+            foreach (byte b in line) if (b != (byte)' ' && b != (byte)'\t' && b != (byte)'\r') return false;
+            return true;
+        }
+
+        // Viết lại file chỉ còn bản ghi thắng (NGUYÊN VĂN từng dòng, không serialize lại). Tạo file tạm rồi thay thế;
+        // bỏ qua nếu file đã đổi từ lúc đọc (instance khác đang ghi) hoặc bị khoá. KHÔNG bao giờ ném lỗi.
+        private void Compact(byte[] all, List<int> st, List<int> en, List<int> winners, DateTime readWriteTime)
+        {
+            string tmp = FilePath + ".tmp";
+            try
+            {
+                byte[] nl = System.Text.Encoding.UTF8.GetBytes(Environment.NewLine);
+                using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16))
+                    foreach (int j in winners) { fs.Write(all, st[j], en[j] - st[j]); fs.Write(nl, 0, nl.Length); }
+                var fi = new FileInfo(FilePath);
+                if (fi.Length != all.Length || fi.LastWriteTimeUtc != readWriteTime) { File.Delete(tmp); return; }
+                File.Move(tmp, FilePath, true);
+            }
+            catch { try { File.Delete(tmp); } catch { } }
+        }
+
+        // ---- GHI THEO LÔ (perf 2026-11-11) ----
+        //  Bản cũ: mỗi Put = serialize + CreateDirectory + File.AppendAllText (mở-ghi-đóng file) ~180-230 µs;
+        //  nạp nguội 87k nến ghi 108k lần = 25 s. Giờ Put chỉ cập nhật bộ nhớ + hàng đợi; mỗi nến CHỈ giữ bản
+        //  cuối (Confirm giữ/vỡ ghi đè nhiều lần trong 1 lượt chỉ tốn 1 dòng). Flush() ghi 1 lần: cuối Process,
+        //  OnClear, Dispose, và tự động mỗi FlushEvery bản ghi chờ (crash giữa chừng chỉ mất ≤ 1 lô;
+        //  dòng ghi dở đã được Load bỏ qua). Kết quả Load() giống hệt cách ghi từng dòng (dòng sau thắng).
+        public const int FlushEvery = 4096;
+        private readonly Dictionary<long, int> _pendingIdx = new();
+        private readonly List<CachedBarData> _pending = new();
+
+        /// <summary>Số bản ghi đang chờ ghi xuống file.</summary>
+        public int PendingCount { get { lock (_fileLock) return _pending.Count; } }
+
+        // Ghi/đè bản ghi trong bộ nhớ + xếp hàng ghi file (xem Flush).
         public void Put(CachedBarData data)
         {
             _byTime[data.TimeTicks] = data;
             if (string.IsNullOrEmpty(FilePath)) return;
-            string json = JsonSerializer.Serialize(data);
+            bool flushNow;
             lock (_fileLock)
             {
-                string dir = Path.GetDirectoryName(FilePath);
-                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-                File.AppendAllText(FilePath, json + Environment.NewLine);
+                if (_pendingIdx.TryGetValue(data.TimeTicks, out int i)) _pending[i] = data;
+                else { _pendingIdx[data.TimeTicks] = _pending.Count; _pending.Add(data); }
+                flushNow = _pending.Count >= FlushEvery;
+            }
+            if (flushNow) Flush();
+        }
+
+        /// <summary>Ghi mọi bản ghi đang chờ xuống file (append, 1 lần mở file). Không ném lỗi I/O: lỗi thì giữ hàng đợi, thử lại lần sau.</summary>
+        public void Flush()
+        {
+            lock (_fileLock)
+            {
+                if (_pending.Count == 0 || string.IsNullOrEmpty(FilePath)) return;
+                try
+                {
+                    string dir = Path.GetDirectoryName(FilePath);
+                    if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                    bool needNewline = false;   // file kết thúc dở (crash) -> xuống dòng trước, kẻo dính vào dòng hỏng
+                    if (File.Exists(FilePath))
+                        using (var rf = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                            if (rf.Length > 0) { rf.Seek(-1, SeekOrigin.End); needNewline = rf.ReadByte() != 10; }
+                    using (var fs = new FileStream(FilePath, FileMode.Append, FileAccess.Write, FileShare.Read, 1 << 16))
+                    using (var w = new StreamWriter(fs, new System.Text.UTF8Encoding(false), 1 << 16))
+                    {
+                        if (needNewline) w.Write(Environment.NewLine);
+                        foreach (var d in _pending) { w.Write(JsonSerializer.Serialize(d, SignalCacheJson.Default.CachedBarData)); w.Write(Environment.NewLine); }
+                    }
+                    _pending.Clear(); _pendingIdx.Clear();
+                }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
             }
         }
 

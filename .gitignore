@@ -34,3 +34,7 @@ tram-dem-vang/test-results/
 benzo-trader/research/report/_replay_cs_levels.csv
 **/tests-dll/bin/
 **/tests-dll/obj/
+
+# Rac build cua perf/Golden (harness golden test)
+**/perf/Golden/bin/
+**/perf/Golden/obj/

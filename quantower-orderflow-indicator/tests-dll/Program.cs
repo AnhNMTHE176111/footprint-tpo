@@ -37,4 +37,24 @@ if (o != null) {
   int pcv=(int)pc.GetValue(o); bool ok2 = pcv==123; if(!ok2) fail++;
   Console.WriteLine($"  {(ok2?"OK  ":"FAIL")} OnSettingsUpdated KHONG tu dat lai _processedClosedCount (de Clear() lo) -> {pcv}");
 }
+// ---- perf 2026-11-11: SignalCache trong DLL (bo sinh san System.Text.Json chay duoc trong DLL, Put/Flush/Load/nen) ----
+{
+  var sct = typeof(OrderFlowBubbles.SignalCache);
+  string tp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dll_sc_" + Guid.NewGuid() + ".jsonl");
+  try {
+    var c = new OrderFlowBubbles.SignalCache(tp);
+    for (int r = 0; r < 3; r++) for (int i = 0; i < 20; i++) c.Put(new OrderFlowBubbles.CachedBarData { TimeTicks = 1000 + i, Tint = r, SettingsFingerprint = "fp" });
+    c.Flush();
+    int nlines = System.IO.File.ReadLines(tp).Count();
+    var c2 = new OrderFlowBubbles.SignalCache(tp); c2.Load(true);   // 20 nen / 20 dong -> khong nen
+    bool ok1 = nlines == 20 && c2.Count == 20 && c2.TryGet(1005, out var d) && d.Tint == 2;
+    if (!ok1) fail++; Console.WriteLine($"  {(ok1?"OK  ":"FAIL")} DLL: Put x60 -> Flush -> {nlines} dong; Load -> {c2.Count} nen, ban ghi cuoi Tint=2");
+    System.IO.File.AppendAllText(tp, System.IO.File.ReadAllText(tp));   // nhan doi dong -> 40 dong / 20 nen -> nen
+    var c3 = new OrderFlowBubbles.SignalCache(tp); c3.Load(true);
+    int after = System.IO.File.ReadLines(tp).Count();
+    bool ok2 = c3.Count == 20 && after == 20;
+    if (!ok2) fail++; Console.WriteLine($"  {(ok2?"OK  ":"FAIL")} DLL: file 40 dong/20 nen -> nen con {after} dong, {c3.Count} nen");
+  } catch (Exception e) { fail++; Console.WriteLine("  FAIL DLL SignalCache: " + e); }
+  finally { try { System.IO.File.Delete(tp); } catch { } }
+}
 Console.WriteLine(fail==0 ? "=== PASS ===" : $"=== {fail} FAIL ==="); return fail;

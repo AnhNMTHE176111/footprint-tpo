@@ -142,8 +142,8 @@ namespace OrderFlowBubbles
         // ===================== baseline ROBUST (median + MAD) =====================
         private RollingRobust _rLvlVol;       // per-level Volume (chỉ top-K ô/nến nếu BaselineTopLevels>0)
         private CellBigBaseline _cellBigBase;   // B của Ô lớn: TB 20 nến đóng TRƯỚC
-        private RollingRobust _rLvlSideVol;   // per-level max(buy,sell) — dùng cho "Ô Bid/Ask lớn" (xét 1 BÊN, không xét tổng)
-        private RollingRobust _rLvlAbsDelta;  // per-level |Delta|
+        private RollingRobust _rLvlAbsDelta;  // per-level |Delta| — CHỈ nạp khi DLineEnabled (chỉ Big Delta line đọc nó)
+        private bool _trackAbsDelta;          // DLineEnabled tại lúc InitBaselines (ResetState)
         private RollingRobust _rLvlMot;       // per-level MaxOneTradeVolume (chỉ khi feed điền)
         private RollingRobust _rBarVol;       // per-bar Total.Volume
         private RollingRobust _rBarAbsDelta;  // per-bar |Total.Delta|
@@ -159,6 +159,7 @@ namespace OrderFlowBubbles
         private readonly Dictionary<int, List<long>> _hotLvls = new();
         private readonly List<AbsRec> _absRecs = new();   // absorption chờ xác nhận
         private readonly List<ZoneRec> _zones = new();    // vùng Stacked Imbalance (của nến ĐÃ ĐÓNG), lock(_sync)
+        private readonly List<ZoneRec> _activeZones = new();  // tập con của _zones còn hiệu lực (EndIdx < 0), cùng thứ tự — UpdateZones chỉ duyệt cái này (O(Z hoạt động) thay vì O(mọi vùng))
 
         // kiệt sức còn HIỆU LỰC (chưa bị râu nến sau quét qua) — xem ExhaustionLogic.cs
         private sealed class ExhRec { public int Idx; public long Tick; public bool Top; public Bubble B; }
@@ -170,6 +171,7 @@ namespace OrderFlowBubbles
         private SignalCache _cache;
         private BigTradeLog _bigTradeLog;
         private string _settingsFingerprint = "";   // đổi khi người dùng đổi tham số -> vô hiệu cache cũ
+        private bool _fingerprintValid;             // true = _settingsFingerprint đã tính cho bộ tham số hiện tại (đổi tham số luôn đi qua OnClear -> ResetState)
 
         // ================================================================
         //  INPUT PARAMETERS
@@ -486,7 +488,13 @@ namespace OrderFlowBubbles
 
         protected override void OnClear()
         {
-            lock (_calcLock) { _vaLoaded = false; ResetState(); }
+            lock (_calcLock) { _vaLoaded = false; ResetState(); _cache?.Flush(); }
+        }
+
+        public override void Dispose()
+        {
+            try { lock (_calcLock) { _cache?.Flush(); } } catch { }   // không để lỗi ghi file chặn việc tháo indicator
+            base.Dispose();
         }
 
         // Người dùng ĐỔI THAM SỐ trên chart (vd bật "Ngưỡng · Dùng số CỐ ĐỊNH") -> đây là hành động
@@ -502,6 +510,7 @@ namespace OrderFlowBubbles
         //  SONG SONG với lượt tính lại (chạy trên task khác) dễ làm baseline nạp trùng.
         protected override void OnSettingsUpdated()
         {
+            _fingerprintValid = false;   // tham số đổi -> tính lại dấu vân tay ở lượt Process kế tiếp
             base.OnSettingsUpdated();
         }
 
@@ -535,9 +544,9 @@ namespace OrderFlowBubbles
         private void InitBaselines()
         {
             _rLvlVol = new RollingRobust(BaselineBars);
-            _rLvlSideVol = new RollingRobust(BaselineBars);
             _cellBigBase = new CellBigBaseline(CellBigBaselineBars);
             _rLvlAbsDelta = new RollingRobust(BaselineBars);
+            _trackAbsDelta = DLineEnabled;
             _rLvlMot = new RollingRobust(BaselineBars);
             _rBarVol = new RollingRobust(BaselineBars);
             _rBarAbsDelta = new RollingRobust(BaselineBars);
@@ -547,7 +556,8 @@ namespace OrderFlowBubbles
 
         private void ResetState()
         {
-            lock (_sync) { _bubbles.Clear(); _barTint.Clear(); _zones.Clear(); }
+            lock (_sync) { _bubbles.Clear(); _barTint.Clear(); _zones.Clear(); _activeZones.Clear(); }
+            _fingerprintValid = false;
             InitBaselines();
             _cvd.Clear();
             _processedClosedCount = 0;
@@ -578,12 +588,13 @@ namespace OrderFlowBubbles
             lock (_calcLock)
             {
                 if (_rBarVol == null) return;
-                double tick = Symbol?.TickSize ?? 0;
+                double tick = TickSizeNow;
                 if (tick <= 0) return;
 
-                int total = HistoricalData.Count;
+                int total = BarCountNow;
                 if (total == 0) return;
 
+                if (DLineEnabled != _trackAbsDelta) ResetState();   // baseline |Delta| chỉ nạp khi DLine bật: đổi cờ mà không qua OnClear -> nạp lại từ đầu
                 int closedCount = total - 1;               // trừ nến đang hình thành
                 EnsureCvd(total);
 
@@ -592,8 +603,10 @@ namespace OrderFlowBubbles
                 //     KHÔNG tính lại — dù ResetState() vừa chạy và dữ liệu VA của nến đó bây giờ
                 //     có mỏng hơn lúc live cũng mặc kệ (xem SignalCache.cs).
                 EnsureCache();
-                _settingsFingerprint = ComputeSettingsFingerprint();
-                if (_processedClosedCount == 0) lock (_sync) { _zones.Clear(); }   // tính lại từ đầu (đổi tham số)
+                try   // finally: ghi niêm phong 1 lần cho cả lượt (SignalCache.Put chỉ xếp hàng — xem SignalCache.Flush)
+                {
+                if (!_fingerprintValid) { _settingsFingerprint = ComputeSettingsFingerprint(); _fingerprintValid = true; }
+                if (_processedClosedCount == 0) lock (_sync) { _zones.Clear(); _activeZones.Clear(); }   // tính lại từ đầu (đổi tham số)
                 for (int i = _processedClosedCount; i < closedCount; i++)
                 {
                     var bar = Bar(i);
@@ -634,6 +647,8 @@ namespace OrderFlowBubbles
                     // râu nến đang chạy đã quét qua thì KHÔNG rút lại được (high/low chỉ nới ra) → vô hiệu ngay
                     UpdateExhaustionSweeps(cur, curBar, tick);
                 }
+                }
+                finally { _cache?.Flush(); }
             }
         }
 
@@ -1389,9 +1404,21 @@ namespace OrderFlowBubbles
         private Bubble Solid(double price, Shape shape, Color color, bool useBarWidth, string tip)
             => new Bubble { Price = price, Shape = shape, Color = color, Size = MidSize(), Transparency = SolidTransparency, Halo = false, UseBarWidth = useBarWidth, Tooltip = tip };
 
+        // ---- khe TEST (perf/Golden): cho phép chạy lõi tính toán THẬT ngoài Quantower. Khi TestBarSource == null
+        //      (luôn luôn trong Quantower) mọi hàm dưới đây trả ĐÚNG như code cũ (HistoricalData.Count / Symbol.TickSize). ----
+        internal Func<int, HistoryItemBar> TestBarSource;
+        internal int TestBarCount;
+        internal double TestTickSize;
+        internal string TestCacheFile;
+        private int BarCountNow => TestBarSource != null ? TestBarCount : HistoricalData.Count;
+        private double TickSizeNow => TestBarSource != null ? TestTickSize : (Symbol?.TickSize ?? 0);
+
         private HistoryItemBar Bar(int absIdx)
-            => (absIdx >= 0 && absIdx < HistoricalData.Count)
+        {
+            if (TestBarSource != null) return (absIdx >= 0 && absIdx < TestBarCount) ? TestBarSource(absIdx) : null;
+            return (absIdx >= 0 && absIdx < HistoricalData.Count)
                 ? HistoricalData[absIdx, SeekOriginHistory.Begin] as HistoryItemBar : null;
+        }
 
         private static double BarDelta(HistoryItemBar bar) => bar.VolumeAnalysisData?.Total?.Delta ?? 0.0;
         private static double PrevVol(HistoryItemBar bar) => bar.VolumeAnalysisData?.Total?.Volume ?? 0.0;
@@ -1421,27 +1448,33 @@ namespace OrderFlowBubbles
             var va = bar.VolumeAnalysisData;
             if (va?.PriceLevels == null) return;
 
-            var pairs = new List<(double vol, double sideVol)>(); var ads = new List<double>(); var mots = new List<double>();
-            foreach (var it in va.PriceLevels.Values)
+            // perf 2026-11-11: dựng mảng thẳng (không List/LINQ). _rLvlSideVol (max buy/sell) đã BỎ — không nơi nào đọc.
+            var levels = va.PriceLevels;
+            double[] vols = new double[levels.Count];
+            double[] ads = _trackAbsDelta ? new double[vols.Length] : null;
+            List<double> mots = null;
+            int li = 0;
+            foreach (var it in levels.Values)
             {
-                pairs.Add((it.Volume, Math.Max(it.BuyVolume, it.SellVolume)));
-                ads.Add(Math.Abs(it.Delta));
+                vols[li] = it.Volume;
+                if (ads != null) ads[li] = Math.Abs(it.Delta);
+                li++;
                 double m = it.MaxOneTradeVolume;
-                if (m > 0) mots.Add(m);
+                if (m > 0) (mots ??= new List<double>()).Add(m);
             }
             // Chỉ nạp K ô ĐẬM NHẤT (theo tổng volume) → "bất thường" nghĩa là bất thường so với các ô
             // đậm lịch sử, không phải so với ô rìa 1-2 lot (nguyên nhân tín hiệu nổ khắp nơi ở bản cũ).
-            if (BaselineTopLevels > 0 && pairs.Count > BaselineTopLevels)
+            // (chỉ cần TẬP giá trị top-K: median/MAD không phụ thuộc thứ tự → sort tăng dần lấy K cuối)
+            if (BaselineTopLevels > 0 && vols.Length > BaselineTopLevels)
             {
-                pairs.Sort((a, b) => b.vol.CompareTo(a.vol));
-                pairs = pairs.GetRange(0, BaselineTopLevels);
+                Array.Sort(vols);
+                var top = new double[BaselineTopLevels];
+                Array.Copy(vols, vols.Length - BaselineTopLevels, top, 0, BaselineTopLevels);
+                vols = top;
             }
-            _rLvlVol.AddBar(pairs.Select(p => p.vol).ToArray());
-            // baseline RIÊNG cho "bên áp đảo" (max(buy,sell)) — dùng cho Ô Bid/Ask lớn, KHÔNG lẫn với
-            // _rLvlVol (tổng cả 2 bên) vì Ô Bid/Ask lớn xét TỪNG BÊN, không xét tổng.
-            _rLvlSideVol.AddBar(pairs.Select(p => p.sideVol).ToArray());
+            _rLvlVol.AddBar(vols);
             // baseline Ô lớn: volume TB mỗi ô giá có giao dịch của nến ĐÃ ĐÓNG (gọi đúng 1 lần/nến đóng)
-            double tickSz = Symbol?.TickSize ?? 0;
+            double tickSz = TickSizeNow;
             if (tickSz > 0)
             {
                 var cbRows = CellBigLogic.GroupRows(
@@ -1449,8 +1482,8 @@ namespace OrderFlowBubbles
                     CellBigRowTicks, CellBigRowOffset);
                 if (CellBigLogic.BarRowMean(cbRows, out double bmean)) _cellBigBase.Add(bmean);
             }
-            _rLvlAbsDelta.AddBar(ads.ToArray());
-            if (mots.Count > 0) _rLvlMot.AddBar(mots.ToArray());
+            if (ads != null) _rLvlAbsDelta.AddBar(ads);
+            if (mots != null) _rLvlMot.AddBar(mots.ToArray());
             _rBarVol.AddBar(new[] { va.Total.Volume });
             _rBarAbsDelta.AddBar(new[] { Math.Abs(va.Total.Delta) });
             _rBarRange.AddBar(new[] { bar.High - bar.Low });
@@ -1506,10 +1539,15 @@ namespace OrderFlowBubbles
         {
             lock (_sync)
             {
-                _zones.RemoveAll(z => z.Idx == idx);
+                // _zones được thêm theo Idx không giảm -> chỉ khi phần tử cuối có Idx >= idx mới có thể trùng (hiếm: tính lại cùng idx)
+                if (_zones.Count > 0 && _zones[_zones.Count - 1].Idx >= idx)
+                {
+                    _zones.RemoveAll(z => z.Idx == idx);
+                    _activeZones.RemoveAll(z => z.Idx == idx);
+                }
                 if (_bubbles.TryGetValue(idx, out var l))
                     foreach (var b in l)
-                        if (b.Shape == Shape.Zone) _zones.Add(new ZoneRec { Idx = idx, B = b });
+                        if (b.Shape == Shape.Zone) { var zr = new ZoneRec { Idx = idx, B = b }; _zones.Add(zr); _activeZones.Add(zr); }
                 // giữ bộ nhớ gọn: bỏ vùng ĐÃ kết thúc cũ nhất khi quá nhiều
                 if (_zones.Count > 4000) _zones.RemoveAll(z => z.EndIdx >= 0 && z.EndIdx < idx - 5000);
             }
@@ -1522,13 +1560,19 @@ namespace OrderFlowBubbles
             var mode = ImbEndOnTouch ? SiEndMode.Touch : SiEndMode.CloseThrough;
             lock (_sync)
             {
-                foreach (var z in _zones)
+                int w = 0;
+                for (int zi = 0; zi < _activeZones.Count; zi++)
                 {
-                    if (z.EndIdx >= 0 || z.Idx >= idx) continue;
-                    var e = StackedImbalanceCalc.CheckEnd(z.B.ZoneSide, z.B.Price, z.B.PriceHi, bar.High, bar.Low, bar.Close, mode);
-                    if (e == SiEnd.Active && ImbMaxBars > 0 && idx - z.Idx >= ImbMaxBars) e = SiEnd.Expired;
-                    if (e != SiEnd.Active) { z.EndIdx = idx; z.End = e; }
+                    var z = _activeZones[zi];
+                    if (z.Idx < idx)
+                    {
+                        var e = StackedImbalanceCalc.CheckEnd(z.B.ZoneSide, z.B.Price, z.B.PriceHi, bar.High, bar.Low, bar.Close, mode);
+                        if (e == SiEnd.Active && ImbMaxBars > 0 && idx - z.Idx >= ImbMaxBars) e = SiEnd.Expired;
+                        if (e != SiEnd.Active) { z.EndIdx = idx; z.End = e; continue; }   // kết thúc -> rời danh sách hoạt động
+                    }
+                    _activeZones[w++] = z;
                 }
+                if (w < _activeZones.Count) _activeZones.RemoveRange(w, _activeZones.Count - w);
             }
         }
 
@@ -1538,6 +1582,11 @@ namespace OrderFlowBubbles
         private void EnsureCache()
         {
             if (_cache != null) return;
+            if (TestCacheFile != null)   // khe test: file cache chỉ định, không đụng %AppData% của người dùng
+            {
+                _cache = new SignalCache(TestCacheFile); _cache.Load(); _bigTradeLog = new BigTradeLog(null);
+                return;
+            }
             string symName = Symbol?.Name ?? "unknown";
             var agg = HistoricalData?.Aggregation;
             string aggName = agg?.Name ?? "unknown";
@@ -1554,7 +1603,7 @@ namespace OrderFlowBubbles
                 string path = Path.Combine(dir, safe + ".jsonl");
                 bool fresh = !File.Exists(path);
                 _cache = new SignalCache(path);
-                _cache.Load();
+                _cache.Load(compact: true);
                 // lần đầu chạy bản mới trên M1: giữ niêm phong cũ CHẮC CHẮN của M1 (phút lẻ), phần còn lại tính lại
                 if (fresh && isM1)
                     _cache.ImportLegacy(Path.Combine(dir, SignalCache.LegacyCacheName(symName, aggName) + ".jsonl"),
@@ -1619,7 +1668,7 @@ namespace OrderFlowBubbles
                 if (tint != 0) _barTint[idx] = tint; else _barTint.Remove(idx);
             }
             // kiệt sức còn hiệu lực từ phiên trước -> tiếp tục theo dõi bị râu quét qua chưa
-            double tk = Symbol?.TickSize ?? 0;
+            double tk = TickSizeNow;
             if (tk > 0)
                 foreach (var b in list)
                     if ((b.Shape == Shape.ExhTop || b.Shape == Shape.ExhBottom) && b.Confirm == 0)
@@ -1673,7 +1722,7 @@ namespace OrderFlowBubbles
         private bool IsPivotHigh(int idx, int n)
         {
             var c = Bar(idx);
-            if (c == null || idx - n < 0 || idx + n >= HistoricalData.Count) return false;
+            if (c == null || idx - n < 0 || idx + n >= BarCountNow) return false;
             for (int i = 1; i <= n; i++)
             {
                 var l = Bar(idx - i); var r = Bar(idx + i);
@@ -1684,7 +1733,7 @@ namespace OrderFlowBubbles
         private bool IsPivotLow(int idx, int n)
         {
             var c = Bar(idx);
-            if (c == null || idx - n < 0 || idx + n >= HistoricalData.Count) return false;
+            if (c == null || idx - n < 0 || idx + n >= BarCountNow) return false;
             for (int i = 1; i <= n; i++)
             {
                 var l = Bar(idx - i); var r = Bar(idx + i);
@@ -1701,66 +1750,6 @@ namespace OrderFlowBubbles
         {
             for (int b = fromIdx; b - n >= 0; b--) if (IsPivotLow(b, n)) return b;
             return -1;
-        }
-
-        // ================================================================
-        //  ROLLING ROBUST BASELINE (median + MAD)
-        //  Cửa sổ = N NẾN gần nhất; mỗi nến đóng góp 1 mảng giá trị (per-level) hoặc 1 giá trị
-        //  (per-bar). median/MAD tính lười (cache) — chỉ tính lại khi có nến mới.
-        // ================================================================
-        private sealed class RollingRobust
-        {
-            private readonly Queue<double[]> _bars = new();
-            private readonly int _window;
-            private double _median, _mad;
-            private bool _dirty = true;
-            private int _valueCount;
-
-            public RollingRobust(int window) { _window = Math.Max(1, window); }
-
-            public int BarCount => _bars.Count;
-
-            public void AddBar(double[] vals)
-            {
-                if (vals == null) vals = Array.Empty<double>();
-                _bars.Enqueue(vals);
-                _valueCount += vals.Length;
-                while (_bars.Count > _window) { var d = _bars.Dequeue(); _valueCount -= d.Length; }
-                _dirty = true;
-            }
-
-            private void Recompute()
-            {
-                _dirty = false;
-                if (_valueCount == 0) { _median = 0; _mad = 0; return; }
-                var all = new double[_valueCount];
-                int k = 0;
-                foreach (var arr in _bars) { Array.Copy(arr, 0, all, k, arr.Length); k += arr.Length; }
-                Array.Sort(all);
-                _median = Med(all);
-                var dev = new double[all.Length];
-                for (int i = 0; i < all.Length; i++) dev[i] = Math.Abs(all[i] - _median);
-                Array.Sort(dev);
-                _mad = Med(dev);
-            }
-
-            private static double Med(double[] s)
-            {
-                int len = s.Length;
-                if (len <= 0) return 0;
-                int mid = len / 2;
-                return (len % 2 == 1) ? s[mid] : 0.5 * (s[mid - 1] + s[mid]);
-            }
-
-            public double Median { get { if (_dirty) Recompute(); return _median; } }
-
-            public double ModZ(double x)
-            {
-                if (_dirty) Recompute();
-                if (_mad > 1e-9) return 0.6745 * (x - _median) / _mad;   // modified z (robust)
-                if (_median > 1e-9) return (x - _median) / _median;      // fallback khi MAD=0
-                return 0;
-            }
         }
     }
 }

@@ -11,6 +11,7 @@
     <Compile Include="../ExhaustionLogic.cs" />
     <Compile Include="../StackedImbalance.cs" />
     <Compile Include="../CellBigLogic.cs" />
+    <Compile Include="../RollingRobust.cs" />
     <!-- BigTradeLog nam trong cung file SignalCache.cs, khong can dong compile rieng -->
 
   </ItemGroup>

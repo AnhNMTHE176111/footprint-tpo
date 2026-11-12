@@ -234,7 +234,10 @@ namespace OrderFlowBubbles
 
         public int CellBigBaselineBars { get; set; } = 20;
 
-        public double CellBigMinSide { get; set; } = 3;
+        public double CellBigMinSide { get; set; } = 9;
+
+        // sàn cho BÊN YẾU khi xét bóng tím (tách khỏi sàn nổ bên áp đảo)
+        public double CellBigPurpleMinWeak { get; set; } = 3;
 
         public Color CellBigBalancedColor { get; set; } = Color.MediumOrchid;
 
@@ -522,7 +525,7 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
-                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v8",
+                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigPurpleMinWeak, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v9",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
@@ -887,7 +890,7 @@ namespace OrderFlowBubbles
                 foreach (var r in rows)
                 {
                     if (r.Buy + r.Sell <= 0) continue;
-                    var dec = CellBigLogic.Decide(r.Buy, r.Sell, cellB, hasCellB, CellBigRatio, CellBigMinSide,
+                    var dec = CellBigLogic.Decide(r.Buy, r.Sell, cellB, hasCellB, CellBigRatio, CellBigMinSide, CellBigPurpleMinWeak,
                                                   UseFixedThreshold, FixedThresholdContracts);
                     if (!dec.Hit) continue;
                     double cp = CellBigLogic.RowCenterPrice(r.RowId, CellBigRowTicks, CellBigRowOffset, tick);

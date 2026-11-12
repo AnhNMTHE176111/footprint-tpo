@@ -8,7 +8,7 @@
 //    (x.0,x.1) trúng 400/885, pha (x.1,x.2) trúng 784/885. ⚠ Pha hàng đo trên GC (tick 0,1) chart CORVEN;
 //    mã khác chưa kiểm.
 //    hàng: bid = tổng SellVolume, ask = tổng BuyVolume, vol = tổng Volume các mức trong hàng.
-//    bên áp đảo của hàng = max(ask, bid) >= Ratio (1,3) x B  (và >= sàn 3)
+//    bên áp đảo của hàng = max(ask, bid) >= Ratio (1,3) x B  (và >= sàn nổ 9 hợp đồng, 2026-11-12; tím: bên yếu >= 1,3 x B và >= sàn riêng 3)
 //    B = trung bình của N nến ĐÃ ĐÓNG TRƯỚC của "volume TB mỗi HÀNG có giao dịch" (cần >= 5 nến)
 //    Màu (luật 2026-11-12, màu đúng 93,6% trên 879 bóng): tím khi BÊN YẾU CŨNG tự vượt ngưỡng nổ (cả cột Bid lẫn
 //    cột Ask đều đủ nổ bóng); còn lại xanh = ask trội, đỏ = bid trội.
@@ -37,7 +37,7 @@ namespace OrderFlowBubbles
         public const double SizeFullMult = 6.0;   // từ tỉ lệ này trở lên = 100% bề ngang nến
 
         public static CellBigDecision Decide(double buy, double sell, double baseline, bool hasBaseline,
-            double ratio, double minSide, bool fixedMode, double fixedThreshold)
+            double ratio, double minSide, double purpleMinWeak, bool fixedMode, double fixedThreshold)
         {
             var d = new CellBigDecision();
             double side = Math.Max(buy, sell), weak = Math.Min(buy, sell);
@@ -48,7 +48,7 @@ namespace OrderFlowBubbles
             if (side < minSide) d.Hit = false;
             if (!d.Hit) return d;
             bool weakBig = fixedMode ? weak >= fixedThreshold : (hasBaseline && baseline > 0 && weak >= ratio * baseline);
-            weakBig = weakBig && weak >= minSide;
+            weakBig = weakBig && weak >= purpleMinWeak;
             d.Side = weakBig ? 0 : (buy >= sell ? 1 : -1);
             d.SizeFrac = Size(d.Mult, ratio);
             return d;

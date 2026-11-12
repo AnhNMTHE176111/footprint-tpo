@@ -12,7 +12,7 @@ static class CellBigTests
     }
 
     static CellBigDecision D(double buy, double sell, double B = 10, bool has = true)
-        => CellBigLogic.Decide(buy, sell, B, has, 1.5, 3, false, 0);
+        => CellBigLogic.Decide(buy, sell, B, has, 1.5, 3, 3, false, 0);
 
     public static int Run()
     {
@@ -24,11 +24,16 @@ static class CellBigTests
         Check(D(0, 15).Hit, "sell 15 -> no (xet ben ap dao, khong xet tong)");
         Check(!D(7, 7).Hit, "buy 7 / sell 7 (tong 14) khong no");
         // sàn 3
-        Check(!CellBigLogic.Decide(2, 0, 1, true, 1.5, 3, false, 0).Hit, "side 2 < san 3 -> khong no du >= 1,5 B");
-        Check(CellBigLogic.Decide(3, 0, 1, true, 1.5, 3, false, 0).Hit, "side 3 >= san 3 -> no");
+        Check(!CellBigLogic.Decide(2, 0, 1, true, 1.5, 3, 3, false, 0).Hit, "side 2 < san 3 -> khong no du >= 1,5 B");
+        Check(CellBigLogic.Decide(3, 0, 1, true, 1.5, 3, 3, false, 0).Hit, "side 3 >= san 3 -> no");
+        // sàn nổ 9 (mặc định mới), sàn bên yếu của tím = 3
+        Check(!CellBigLogic.Decide(8, 0, 1, true, 1.3, 9, 3, false, 0).Hit, "san 9: side 8 voi B nho -> khong no");
+        Check(CellBigLogic.Decide(9, 0, 1, true, 1.3, 9, 3, false, 0).Hit, "san 9: side 9 -> no");
+        Check(CellBigLogic.Decide(12, 5, 3, true, 1.3, 9, 3, false, 0).Side == 0, "tim: side 12, yeu 5 >= 1,3 x 3 va >= 3 -> van tim");
+        Check(CellBigLogic.Decide(12, 2, 1, true, 1.3, 9, 3, false, 0).Side == 1, "tim: yeu 2 < san 3 -> khong tim");
         // chưa đủ lịch sử
         Check(!D(1000, 0, 10, false).Hit, "chua co B (<5 nen) -> khong no");
-        Check(!CellBigLogic.Decide(1000, 0, 0, true, 1.5, 3, false, 0).Hit, "B = 0 -> khong no");
+        Check(!CellBigLogic.Decide(1000, 0, 0, true, 1.5, 3, 3, false, 0).Hit, "B = 0 -> khong no");
         // màu
         Check(D(30, 0).Side == 1, "buy troi -> xanh (+1)");
         Check(D(0, 30).Side == -1, "sell troi -> do (-1)");
@@ -37,7 +42,7 @@ static class CellBigTests
         Check(D(14, 30).Side == -1, "sell troi, ben yeu 14 < 15 -> do");
         Check(D(25, 25).Side == 0, "hai ben bang nhau -> tim");
         // ngưỡng cố định
-        Check(CellBigLogic.Decide(12, 0, 0, false, 1.5, 3, true, 10).Hit, "fixed: 12 >= 10 -> no du khong co B");
+        Check(CellBigLogic.Decide(12, 0, 0, false, 1.5, 3, 3, true, 10).Hit, "fixed: 12 >= 10 -> no du khong co B");
         // cỡ đơn điệu
         double prev = -1; bool mono = true;
         for (double m = 1.5; m <= 10; m += 0.25) { double s = CellBigLogic.Size(m, 1.5); if (s < prev - 1e-12) mono = false; prev = s; }
@@ -92,16 +97,16 @@ static class CellBigTests
         Check(CellBigLogic.BarRowMean(withZero, out double rm2) && Math.Abs(rm2 - 10) < 1e-9, "hang vol 0 khong tinh");
         Check(!CellBigLogic.BarRowMean(new System.Collections.Generic.List<CellBigLogic.Row>(), out _), "khong hang -> khong nap");
         // ngưỡng 1,3 x B; tím khi bên yếu cũng >= 1,3 x B và >= sàn
-        static CellBigDecision N(double buy, double sell, double B = 10) => CellBigLogic.Decide(buy, sell, B, true, 1.3, 3, false, 0);
+        static CellBigDecision N(double buy, double sell, double B = 10) => CellBigLogic.Decide(buy, sell, B, true, 1.3, 3, 3, false, 0);
         Check(N(13, 0).Hit && !N(12.9, 0).Hit, "bien 1,3 x B = 13: 13 no, 12,9 khong");
         Check(N(0, 13).Hit && N(0, 13).Side == -1, "sell 13 no, do");
-        Check(!CellBigLogic.Decide(2, 0, 1, true, 1.3, 3, false, 0).Hit && CellBigLogic.Decide(3, 0, 1, true, 1.3, 3, false, 0).Hit, "san 3 van giu");
+        Check(!CellBigLogic.Decide(2, 0, 1, true, 1.3, 3, 3, false, 0).Hit && CellBigLogic.Decide(3, 0, 1, true, 1.3, 3, 3, false, 0).Hit, "san 3 van giu");
         Check(N(20, 15).Side == 0 && N(15, 20).Side == 0, "bid 20 ask 15, B=10 -> tim (ca hai >= 13)");
         Check(N(20, 12).Side == 1 && N(12, 20).Side == -1, "ben yeu 12 < 13 -> xanh/do");
         Check(N(13, 13).Side == 0 && N(13, 12.9).Side == 1, "bien ben yeu = 13 -> tim");
-        Check(CellBigLogic.Decide(20, 15, 0, false, 1.3, 3, true, 15).Side == 0 && CellBigLogic.Decide(20, 14, 0, false, 1.3, 3, true, 15).Side == 1, "fixed mode: yeu >= nguong co dinh -> tim");
-        Check(CellBigLogic.Decide(20, 2, 1, true, 1.3, 3, false, 0).Side == 1, "ben yeu 2 < san 3 -> khong tim (du 2 >= 1,3 x B)");
-        Check(CellBigLogic.Decide(20, 2, 0, false, 1.3, 3, true, 1).Side == 1, "fixed: ben yeu < minSide -> khong tim");
+        Check(CellBigLogic.Decide(20, 15, 0, false, 1.3, 3, 3, true, 15).Side == 0 && CellBigLogic.Decide(20, 14, 0, false, 1.3, 3, 3, true, 15).Side == 1, "fixed mode: yeu >= nguong co dinh -> tim");
+        Check(CellBigLogic.Decide(20, 2, 1, true, 1.3, 3, 3, false, 0).Side == 1, "ben yeu 2 < san 3 -> khong tim (du 2 >= 1,3 x B)");
+        Check(CellBigLogic.Decide(20, 2, 0, false, 1.3, 3, 3, true, 1).Side == 1, "fixed: ben yeu < minSide -> khong tim");
         // RowTicks=1: luật theo hàng = luật theo tick (Decide trên từng mức)
         bool same = true;
         foreach (var l in lv)
@@ -136,7 +141,7 @@ static class CellBigTests
         // nến live: tính lại nhiều lần mà không Add -> B không đổi
         var b3 = new CellBigBaseline(20);
         for (int i = 0; i < 6; i++) b3.Add(5 + i);
-        b3.TryGet(out double x1); for (int r = 0; r < 50; r++) CellBigLogic.Decide(20, 0, x1, true, 1.5, 3, false, 0);
+        b3.TryGet(out double x1); for (int r = 0; r < 50; r++) CellBigLogic.Decide(20, 0, x1, true, 1.5, 3, 3, false, 0);
         b3.TryGet(out double x2);
         Check(x1 == x2 && b3.Count == 6, "nen live tinh lai nhieu lan khong nap trung baseline");
         return _fail;

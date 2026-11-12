@@ -17,7 +17,7 @@ R=D.assign(row=(D.tk-1)//2).groupby(['datetime','row'],as_index=False).agg(bid=(
 R['side']=R[['bid','ask']].max(axis=1); R['tk']=R.row*2+1.5   # tâm hàng (chỉ số tick, có thể lẻ nửa tick)
 B=R.groupby('datetime').vol.mean().sort_index().shift(1).rolling(20,min_periods=5).mean()
 R['B']=R.datetime.map(B)
-ours=R[(R.B>0)&(R.side>=1.3*R.B)&(R.side>=3)].copy()
+ours=R[(R.B>0)&(R.side>=1.3*R.B)&(R.side>=9)].copy()
 ours=ours.rename(columns={'bid':'bid_vol','ask':'ask_vol'})
 O=pd.read_csv('corven_bubbles.csv',parse_dates=['time_utc']); O['tk']=O.price*10   # giá bóng CORVEN đã bù lệch tâm (build_csv)
 C=pd.read_csv('corven_bars_control.csv',parse_dates=['time_utc']); vis=set(C.time_utc)

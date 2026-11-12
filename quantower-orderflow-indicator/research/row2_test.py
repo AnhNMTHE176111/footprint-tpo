@@ -31,17 +31,17 @@ print('lệch pha hàng: off=1 nghĩa là hàng (x.1,x.2), off=0 hàng (x.0,x.1)
 for off in (0,1):
     R=make(off); V=R[R.datetime.isin(vis)]
     for k in (1.2,1.3,1.4,1.5,1.6,1.8):
-        P=V[(V.side>=k*V.B)&(V.side>=3)]
+        P=V[(V.side>=k*V.B)&(V.side>=9)]
         a=score(P,1.0); e=score(P,0.5)
         print(f'off={off} k={k}: mình {a[0]} CORVEN {a[1]} | ±1 tick: trúng {a[2]} thừa {a[3]} ({a[3]/a[0]:.0%}) sót {a[4]} ({a[4]/a[1]:.0%}) | ±0,5 tick: trúng {e[2]} thừa {e[3]/e[0]:.0%} sót {e[4]/e[1]:.0%}')
 print('--- theo ngày, off=1')
 R=make(1); V=R[R.datetime.isin(vis)]
 for k in (1.25,1.3,1.35,1.4):
-    P=V[(V.side>=k*V.B)&(V.side>=3)]
+    P=V[(V.side>=k*V.B)&(V.side>=9)]
     for d in ('2026-11-05','2026-11-06'):
         a=score(P,1.0,d); print(f'k={k} {d}: mình {a[0]} CORVEN {a[1]} trúng {a[2]} thừa {a[3]/a[0]:.0%} sót {a[4]/a[1]:.0%} F1 {2*a[2]/(a[0]+a[1]):.3f}')
 # màu trên hàng
-P=V[(V.side>=1.3*V.B)&(V.side>=3)].copy()
+P=V[(V.side>=1.3*V.B)&(V.side>=9)].copy()
 P['key']=list(zip(P.datetime,np.round(P.pos).astype(int)))
 O['key']=list(zip(O.time_utc,[int(np.floor((x-1)/2))*2+2 for x in O.t10]))  # tâm hàng làm tròn
 P['key']=list(zip(P.datetime,(P.row*2+2).astype(int)))
@@ -51,11 +51,11 @@ for bp in (0.5,0.6,0.7,0.75,0.8,0.9):
     print('tím nếu yếu/mạnh >=',bp,'màu đúng',f'{(pred==M.color).mean():.0%}',len(M))
 
 # ===================== KIỂM CHÉO ĐÚNG LUẬT C# (CellBigLogic, 2026-11-11) =====================
-# RowTicks=2, RowOffset=1, Ratio 1,3, sàn 3, tím khi bên yếu >= 1,3 x B và >= 3 (luật 2026-11-12), B = TB 20 nến đóng trước (>=5) của vol TB mỗi hàng có vol>0,
+# RowTicks=2, RowOffset=1, Ratio 1,3, sàn nổ 9, tím khi bên yếu >= 1,3 x B và >= 3 (luật 2026-11-12), B = TB 20 nến đóng trước (>=5) của vol TB mỗi hàng có vol>0,
 # bóng ở TÂM hàng (R.pos tính theo décima-giá = tick). Ghép 1-1 ±1 tick, giống bảng báo cáo.
-print('=== MÔ PHỎNG ĐÚNG LUẬT C# (ratio 1,3, sàn 3, tím = bên yếu cũng nổ, hàng 2 tick pha 1) ===')
+print('=== MÔ PHỎNG ĐÚNG LUẬT C# (ratio 1,3, sàn nổ 9, tím = bên yếu cũng nổ, hàng 2 tick pha 1) ===')
 R=make(1); V=R[R.datetime.isin(vis)]
-PC=V[(V.B>0)&(V.side>=1.3*V.B)&(V.side>=3)].copy()
+PC=V[(V.B>0)&(V.side>=1.3*V.B)&(V.side>=9)].copy()
 for lab,day in (('TỔNG',None),('05/11','2026-11-05'),('06/11','2026-11-06')):
     a=score(PC,1.0,day); print(f'{lab}: mình {a[0]} CORVEN {a[1]} trúng {a[2]} thừa {a[3]} ({a[3]/a[0]:.0%}) sót {a[4]} ({a[4]/a[1]:.0%}) F1 {2*a[2]/(a[0]+a[1]):.3f}')
 PC['key']=list(zip(PC.datetime,(PC.row*2+2).astype(int)))

@@ -111,7 +111,10 @@
 - [0:21:25] Đoạn này trap xanh, trap đỉnh, xong tạo [stacked] sell rồi rơi xuống tiếp.
 - [0:21:34] **HV:** Thấy cây lúc 10:58 [?] không? … 16:15 — chơi được không? — Chơi được, chơi từ cây …08 / …10.
 - [0:21:59] Vì ở đây nó **trap đúng vùng zone** này. Với lại **cấu trúc đang còn giảm** — ít nhất phải **phá qua cái đỉnh này** thì cấu trúc mới gãy.
-- [0:22:53] Bóng xanh nhồi cao lên mấy cái gần … [?], lên nổ bóng, xong mới đâm ngược xuống. Trên đỉnh tạo ra stacked imbalance — tức là lên trên bị **lệch sell nhiều**, imbalance sell ngay trên đỉnh. Đâm xuống, phá range.
+- [0:22:41] *(bổ sung 2026-11-12, nghe lại bằng large-v3; bản chép cũ hụt 0:22:15–0:22:53)* Đoạn trên này là **stop hunt** này — đoạn trên range này.
+- [0:22:51] Thấy không? Bóng xanh nhồi cao lên gần mấy cái **range top**, **fail break** này, **lên nổ bóng** này, xong mới đâm ngược xuống.
+  - Chart lúc 2:54 PM (GCZ26 M1, ~16:13 ngày 06/11): chỗ râu quét qua cạnh trên range là **một chùm bóng TÍM + 1 bóng đỏ** ([frames/0-22-52-zoom-tim.png](frames/0-22-52-zoom-tim.png)). CORVEN không gọi tên màu, chỉ nói "nổ bóng".
+- [0:22:58] Lên nổ bóng, xong mới đâm ngược xuống. Trên đỉnh tạo ra stacked imbalance — tức là lên trên bị **lệch sell nhiều**, imbalance sell ngay trên đỉnh. Đâm xuống, phá range.
 
 ## 9. Stop hunt: quét SL ở mốc quan trọng (0:23:45 – 0:24:40)
 ![](frames/0-24-15.jpg)

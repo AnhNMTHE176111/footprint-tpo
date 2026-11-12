@@ -62,7 +62,33 @@ namespace GoldenPerf
             var sw = Stopwatch.StartNew();
             var bars = LoadBars(lvl, barsCsv);
             Console.WriteLine($"da nap {bars.Count} nen trong {sw.ElapsedMilliseconds} ms");
+            if (mode == "stophunt") return StopHuntList(bars, work, Arg(args, "--out", Path.Combine(work, "sh_cs_signals.csv")));
             return mode == "bench" ? Bench(bars, work, baseline) : Golden(args, bars, work, baseline, perfDir);
+        }
+
+        // ---------------------------------------------------------------- danh sách stop hunt (so với research/stophunt_corven.py --spec)
+        // Chạy nạp NGUỘI cấu hình mặc định rồi ghi mọi dấu stop hunt (tooltip bắt đầu "Stop hunt") ra CSV: fail_time,side,level,colour,bid,ask
+        static int StopHuntList(List<HistoryItemBar> bars, string work, string outFile)
+        {
+            string c = Path.Combine(work, "SH.jsonl"); if (File.Exists(c)) File.Delete(c);
+            var r = Make(bars, 0, bars.Count, c, null); r.Ind.VolumeAnalysisData_Loaded();
+            var bubbles = (IDictionary)typeof(Ind).GetField("_bubbles", NP).GetValue(r.Ind);
+            var rows = new List<string>();
+            foreach (int k in bubbles.Keys.Cast<int>().OrderBy(x => x))
+                foreach (var b in (IEnumerable)bubbles[k])
+                {
+                    string tip = (string)b.GetType().GetField("Tooltip", NP).GetValue(b);
+                    if (tip == null || !tip.StartsWith("Stop hunt")) continue;
+                    // "Stop hunt đỉnh - quét 4090.3 | Tím 22 Bid 20 Ask → fail break"
+                    var m = System.Text.RegularExpressions.Regex.Match(tip, @"^Stop hunt (đỉnh|đáy) - quét (\S+) \| (\S+) (\d+) Bid (\d+) Ask");
+                    if (!m.Success) throw new Exception("tooltip la: " + tip);
+                    string side = m.Groups[1].Value == "đỉnh" ? "dinh" : "day";
+                    string col = m.Groups[3].Value == "Xanh" ? "Xanh" : m.Groups[3].Value == "Đỏ" ? "Do" : "Tim";
+                    rows.Add($"{bars[k].TimeLeft:yyyy-MM-dd HH:mm},{side},{m.Groups[2].Value},{col},{m.Groups[4].Value},{m.Groups[5].Value}");
+                }
+            File.WriteAllLines(outFile, rows.Prepend("fail_time,side,level,colour,bid,ask"));
+            Console.WriteLine($"stop hunt: {rows.Count} dau -> {outFile}");
+            return 0;
         }
 
         // ---------------------------------------------------------------- nạp dữ liệu

@@ -18,6 +18,7 @@
     <Compile Include="../../StackedImbalance.cs" />
     <Compile Include="../../ExhaustionLogic.cs" />
     <Compile Include="../../CellBigLogic.cs" />
+    <Compile Include="../../StopHuntLogic.cs" />
     <Compile Include="../../RollingRobust.cs" />
     <Compile Include="Program.cs" />
     <Reference Include="TradingPlatform.BusinessLayer"><HintPath>$(USERPROFILE)\quantower-libs\TradingPlatform.BusinessLayer.dll</HintPath></Reference>

@@ -267,6 +267,7 @@ static class Tests
         _fail += PerfTests.Run();
         _fail += ExhaustionTests.Run();
         _fail += CellBigTests.Run();
+        _fail += StopHuntTests.Run();
         StackedImbalanceTests.RunAll();
         _fail += StackedImbalanceTests.Fail;
         Console.WriteLine(_fail == 0 ? "\n=== TAT CA PASS ===" : $"\n=== {_fail} FAIL ===");

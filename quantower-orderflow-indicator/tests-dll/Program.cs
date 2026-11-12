@@ -11,6 +11,8 @@ if (o != null) {
   void chk(string n, object exp){ var v=t.GetProperty(n).GetValue(o); bool ok=Equals(v,exp); if(!ok) fail++; Console.WriteLine($"  {(ok?"OK  ":"FAIL")} {n} = {v} (mong doi {exp})"); }
   chk("DeltaFontSize",7); chk("DeltaYOffsetPx",8); chk("DLineEnabled",false); chk("DeltaMinBarWidthPx",6);
   chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhSmallRel",0.10); chk("BigTradeAbsFloor",50.0); chk("CellBigRatio",1.3); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellBigPurpleMinWeak",3.0); chk("CellBigRowTicks",2); chk("CellBigRowOffset",1); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("AbsScoreMin",4); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true);
+  chk("StopHuntEnabled",true); chk("StopHuntBoxSmall",20); chk("StopHuntBoxLarge",60); chk("StopHuntBoxMaxMult",8.0); chk("StopHuntTolTicks",3); chk("StopHuntConfirmBars",2); chk("StopHuntCooldown",5);
+  { bool gone = t.GetProperty("StopHuntLookback") == null; if(!gone) fail++; Console.WriteLine($"  {(gone?"OK  ":"FAIL")} StopHuntLookback da bo"); }
 }
 
 // ---- Lifecycle: bat/tat Settings -> Refresh -> OnClear -> phai tu mo lai co VA ----

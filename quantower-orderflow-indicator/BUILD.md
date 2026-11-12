@@ -36,7 +36,7 @@ Indicator implement `IVolumeAnalysisIndicator` và đọc `bar.VolumeAnalysisDat
 Xem `OrderFlowBubbles.csproj`. Chỉnh `<QuantowerDir>` = thư mục cài Quantower, rồi `dotnet build -c Release`.
 Reference cần: `TradingPlatform.BusinessLayer.dll` + `System.Drawing.Common.dll` (trong `…\TradingPlatform\v<ver>\bin\`).
 
-⚠️ **Từ 2026-11-11 có thêm file thứ 5 `CellBigLogic.cs` (logic Ô Bid/Ask lớn thuần) và file thứ 6 `RollingRobust.cs` (median+MAD cuốn, tách ra từ OrderFlowBubbles.cs) — build tay phải liệt kê cả 6 file.** Cách nhanh trên máy Windows: `./perf/build-dll.sh` (csproj tạm liệt kê đủ 6 file → `dist/OrderFlowBubbles.dll`).
+⚠️ **Từ 2026-11-11 có thêm file thứ 5 `CellBigLogic.cs` (logic Ô Bid/Ask lớn thuần) và file thứ 6 `RollingRobust.cs` và (2026-11-12) file thứ 7 `StopHuntLogic.cs` (stop hunt CORVEN) (median+MAD cuốn, tách ra từ OrderFlowBubbles.cs) — build tay phải liệt kê cả 7 file.** Cách nhanh trên máy Windows: `./perf/build-dll.sh` (csproj tạm liệt kê đủ 7 file → `dist/OrderFlowBubbles.dll`).
 
 ⚠️ **Từ 2026-11-08 indicator gồm 4 file nguồn: `OrderFlowBubbles.cs` + `SignalCache.cs` (niêm phong
 tín hiệu) + `StackedImbalance.cs` (logic Stacked Imbalance thuần) + `ExhaustionLogic.cs` (logic kiệt sức

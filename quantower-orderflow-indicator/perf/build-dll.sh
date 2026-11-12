@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build dist/OrderFlowBubbles.dll tu 6 file nguon (xem BUILD.md). Chay tren Git Bash (Windows).
+# Build dist/OrderFlowBubbles.dll tu 7 file nguon (xem BUILD.md). Chay tren Git Bash (Windows).
 #   ./perf/build-dll.sh            -> build ra dist/OrderFlowBubbles.dll
 # Can: .NET SDK (dotnet) + $HOME/quantower-libs/{TradingPlatform.BusinessLayer,System.Drawing.Common}.dll
 set -e
@@ -32,6 +32,7 @@ cat > "$B/proj.csproj" <<XML
     <Compile Include="$HERE_W\StackedImbalance.cs" />
     <Compile Include="$HERE_W\ExhaustionLogic.cs" />
     <Compile Include="$HERE_W\CellBigLogic.cs" />
+    <Compile Include="$HERE_W\StopHuntLogic.cs" />
     <Compile Include="$HERE_W\RollingRobust.cs" />
   </ItemGroup>
 </Project>

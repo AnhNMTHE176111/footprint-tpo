@@ -141,6 +141,7 @@ namespace OrderFlowBubbles
 
         // ===================== baseline ROBUST (median + MAD) =====================
         private RollingRobust _rLvlVol;       // per-level Volume (chỉ top-K ô/nến nếu BaselineTopLevels>0)
+        private StopHuntDetector _stopHunt;     // stop hunt CORVEN (chỉ nạp nến ĐÃ ĐÓNG, đúng 1 lần/nến)
         private CellBigBaseline _cellBigBase;   // B của Ô lớn: TB 20 nến đóng TRƯỚC
         private RollingRobust _rLvlAbsDelta;  // per-level |Delta| — CHỈ nạp khi DLineEnabled (chỉ Big Delta line đọc nó)
         private bool _trackAbsDelta;          // DLineEnabled tại lúc InitBaselines (ResetState)
@@ -460,10 +461,17 @@ namespace OrderFlowBubbles
         public bool UnfinishedEnabled { get; set; } = false;
 
         // ---------- 9) Stop-hunt + Absorption ----------
+        // Stop hunt kiểu CORVEN (2026-11-12, logic ở StopHuntLogic.cs): quét cạnh range 20/60 nến + bóng Ô lớn + fail break.
+        // DẤU ĐỂ ĐỌC CHART, không phải tín hiệu vào lệnh (chưa có lợi thế sau phí 1 tick).
         [InputParameter("Stop-hunt · Bật", 130)]
-        public bool StopHuntEnabled { get; set; } = false;
+        public bool StopHuntEnabled { get; set; } = true;
 
-        public int StopHuntLookback { get; set; } = 8;
+        public int StopHuntBoxSmall { get; set; } = 20;      // hộp nhỏ (nến đóng trước)
+        public int StopHuntBoxLarge { get; set; } = 60;      // hộp lớn
+        public double StopHuntBoxMaxMult { get; set; } = 8;  // hộp hợp lệ khi cao <= k x trung vị biên độ 100 nến trước
+        public int StopHuntTolTicks { get; set; } = 3;       // bóng phải có tâm >= mốc - tol x tick
+        public int StopHuntConfirmBars { get; set; } = 2;    // fail break trong nến quét + N nến sau
+        public int StopHuntCooldown { get; set; } = 5;       // nghỉ giữa 2 dấu cùng phía (nến)
 
         // ================================================================
         //  CTOR
@@ -525,7 +533,7 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
-                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigPurpleMinWeak, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v9",
+                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigPurpleMinWeak, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v10",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
@@ -538,7 +546,7 @@ namespace OrderFlowBubbles
                 ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun, ImbMinVolume,
                 DivergenceEnabled, DivSwingLookback, DivVolPartic, DivCooldown,
                 SweepEnabled, SweepLookback, UnfinishedEnabled,
-                StopHuntEnabled, StopHuntLookback);
+                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v1");
         }
 
         private void InitBaselines()
@@ -557,6 +565,7 @@ namespace OrderFlowBubbles
         private void ResetState()
         {
             lock (_sync) { _bubbles.Clear(); _barTint.Clear(); _zones.Clear(); _activeZones.Clear(); }
+            _stopHunt = null;   // dựng lại với tham số hiện tại ở nến đóng kế tiếp
             _fingerprintValid = false;
             InitBaselines();
             _cvd.Clear();
@@ -628,6 +637,7 @@ namespace OrderFlowBubbles
                         PersistBar(i, bar, timeKey);
                     }
 
+                    ApplyStopHunt(i, bar, tick);           // stop hunt CORVEN: dấu đặt ở nến fail break = nến vừa đóng (TRƯỚC AddToBaseline: B của nến i)
                     UpdateZones(i, bar);                   // vùng stacked imbalance của các nến TRƯỚC có kết thúc ở nến này?
                     RegisterZones(i);                      // rồi mới nhận vùng của chính nến này
                     AddToBaseline(bar);
@@ -969,7 +979,6 @@ namespace OrderFlowBubbles
             // ---- detector theo NẾN ----
             if (ExhaustionEnabled) TryExhaustion(idx, bar, va, tick, list, isClosed);
             if (SweepEnabled) TrySweep(idx, bar, barDelta, list);
-            if (StopHuntEnabled && ready) TryStopHunt(idx, bar, tick, list);
             if (DivergenceEnabled && isClosed) TryDivergence(idx);
 
             lock (_sync)
@@ -1106,31 +1115,6 @@ namespace OrderFlowBubbles
                     Tooltip = $"Quét đáy {SweepLookback} nến rồi bị đẩy lùi: xuống dưới {lo:0.0} nhưng đóng lại {cur.Close:0.0}, delta +{barDelta:0}" });
         }
 
-        private void TryStopHunt(int idx, HistoryItemBar cur, double tick, List<Bubble> list)
-        {
-            if (idx < StopHuntLookback + 1) return;
-            var va = cur.VolumeAnalysisData;
-            if (va == null || va.PriceLevels == null) return;
-
-            double hi = MaxHighPrior(idx, StopHuntLookback);
-            double lo = MinLowPrior(idx, StopHuntLookback);
-
-            if (cur.High > hi && cur.Close < hi && TryLevel(va, cur.High, tick, out var itH))
-            {
-                double vz = _rLvlVol.ModZ(itH.Volume);
-                if (vz >= AbsEffortZ && itH.BuyVolume > itH.SellVolume)
-                    list.Add(Solid(cur.High, Shape.Ellipse, SellColor, true,
-                        $"Quét dừng lỗ tại đỉnh rồi bị chặn: buy {itH.BuyVolume:0} / sell {itH.SellVolume:0}"));
-            }
-            if (cur.Low < lo && cur.Close > lo && TryLevel(va, cur.Low, tick, out var itL))
-            {
-                double vz = _rLvlVol.ModZ(itL.Volume);
-                if (vz >= AbsEffortZ && itL.SellVolume > itL.BuyVolume)
-                    list.Add(Solid(cur.Low, Shape.Ellipse, BuyColor, true,
-                        $"Quét dừng lỗ tại đáy rồi bị chặn: buy {itL.BuyVolume:0} / sell {itL.SellVolume:0}"));
-            }
-        }
-
         // ================================================================
         //  RENDER
         // ================================================================
@@ -1253,6 +1237,7 @@ namespace OrderFlowBubbles
                         {
                             if (b.Shape == Shape.Zone) continue;   // vùng stacked imbalance đã vẽ ở trên
                             float y = (float)conv.GetChartY(b.Price);
+                            if (IsStopHuntMark(b)) y += StopHuntIsTop(b) ? -(b.Size * 0.8f + 3f) : (b.Size * 0.8f + 3f);   // dấu nằm NGOÀI nến: trên đỉnh / dưới đáy
                             // absorption dùng bề rộng nến, nhưng có SÀN px: khi zoom hẹp nó từng nhỏ
                             // hơn cả halo Big Trade nên gần như vô hình.
                             // UseBarWidth = luôn ĐÚNG BẰNG bề ngang nến, KHÔNG có sàn tối thiểu — trước
@@ -1359,6 +1344,18 @@ namespace OrderFlowBubbles
                 return;
             }
 
+            // STOP HUNT: đỉnh = tam giác mũi chỉ XUỐNG (nằm trên đỉnh nến), đáy = mũi chỉ LÊN (nằm dưới đáy nến)
+            if (IsStopHuntMark(b))
+            {
+                float hf = Math.Max(1, size) / 2f, dir = StopHuntIsTop(b) ? 1f : -1f;
+                var spts = new[] { new PointF(cx - hf, cy - dir * hf), new PointF(cx + hf, cy - dir * hf), new PointF(cx, cy + dir * hf) };
+                using var sfb = new SolidBrush(Color.FromArgb(alpha, b.Color));
+                gr.FillPolygon(sfb, spts);
+                using var sop = new Pen(Color.FromArgb(Math.Min(alpha, 160), Color.Black), 1f);
+                gr.DrawPolygon(sop, spts);
+                return;
+            }
+
             // mức đã VỠ → làm mờ hẳn (giữ lại để học, không gây nhiễu mắt)
             if (b.Confirm < 0) alpha = Math.Max(30, alpha / 3);
 
@@ -1397,6 +1394,66 @@ namespace OrderFlowBubbles
         // ================================================================
         //  HELPERS
         // ================================================================
+        private const string StopHuntTipTop = "Stop hunt đỉnh", StopHuntTipBot = "Stop hunt đáy";
+        private static bool IsStopHuntMark(Bubble b) => b.Shape == Shape.Triangle && b.Tooltip != null && b.Tooltip.StartsWith("Stop hunt", StringComparison.Ordinal);
+        private static bool StopHuntIsTop(Bubble b) => b.Tooltip.StartsWith(StopHuntTipTop, StringComparison.Ordinal);
+
+        // Stop hunt CORVEN: nạp nến i (ĐÃ ĐÓNG) vào bộ dò; nếu có fail break thì gắn dấu vào nến i. Chạy cho cả nến tính mới lẫn nến khôi phục
+        // từ niêm phong (bộ dò cần đủ lịch sử); dấu cũ trong niêm phong được thay bằng kết quả tính lại (tất định) và ghi đè niêm phong nếu khác.
+        private void ApplyStopHunt(int idx, HistoryItemBar bar, double tick)
+        {
+            if (!StopHuntEnabled || !CellBigEnabled) return;
+            _stopHunt ??= new StopHuntDetector(new StopHuntSettings
+            {
+                BoxSmall = StopHuntBoxSmall, BoxLarge = StopHuntBoxLarge, BoxMaxMult = StopHuntBoxMaxMult,
+                TolTicks = StopHuntTolTicks, ConfirmBars = StopHuntConfirmBars, Cooldown = StopHuntCooldown
+            }, tick);
+
+            var cells = new List<ShCell>();
+            var va = bar.VolumeAnalysisData;
+            if (va != null && va.PriceLevels != null && va.PriceLevels.Count > 0)
+            {
+                double cellB = 0; bool hasB = _cellBigBase != null && _cellBigBase.TryGet(out cellB);
+                var rows = CellBigLogic.GroupRows(
+                    va.PriceLevels.Select(kv => ((long)Math.Round(kv.Key / tick), kv.Value.BuyVolume, kv.Value.SellVolume, kv.Value.Volume)),
+                    CellBigRowTicks, CellBigRowOffset);
+                foreach (var r in rows)
+                {
+                    if (r.Buy + r.Sell <= 0) continue;
+                    var dec = CellBigLogic.Decide(r.Buy, r.Sell, cellB, hasB, CellBigRatio, CellBigMinSide, CellBigPurpleMinWeak, UseFixedThreshold, FixedThresholdContracts);
+                    if (!dec.Hit) continue;
+                    cells.Add(new ShCell { Centre = CellBigLogic.RowCenterPrice(r.RowId, CellBigRowTicks, CellBigRowOffset, tick), Bid = r.Sell, Ask = r.Buy, Side = dec.Side });
+                }
+            }
+
+            var sigs = _stopHunt.OnBarClosed(idx, bar.High, bar.Low, bar.Close, StopHuntDetector.ToMinutes(bar.TimeLeft.Ticks), cells);
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            var marks = new List<Bubble>();
+            foreach (var sg in sigs)
+            {
+                string colour = sg.Colour > 0 ? "Xanh" : sg.Colour < 0 ? "Đỏ" : "Tím";
+                string tip = (sg.Top ? StopHuntTipTop : StopHuntTipBot) + " - quét " + sg.Level.ToString("0.0", inv)
+                           + " | " + colour + " " + sg.Bid.ToString("0", inv) + " Bid " + sg.Ask.ToString("0", inv) + " Ask → fail break";
+                marks.Add(new Bubble { Price = sg.Top ? bar.High : bar.Low, Shape = Shape.Triangle, Color = sg.Top ? SellColor : BuyColor, Size = MidSize(), Transparency = SolidTransparency, Tooltip = tip });
+            }
+            bool changed = false;
+            lock (_sync)
+            {
+                _bubbles.TryGetValue(idx, out var list);
+                var old = list == null ? new List<Bubble>() : list.Where(IsStopHuntMark).ToList();
+                if (old.Count != marks.Count) changed = true;
+                else for (int k = 0; k < old.Count; k++) if (old[k].Tooltip != marks[k].Tooltip || old[k].Price != marks[k].Price) { changed = true; break; }
+                if (changed)
+                {
+                    if (list == null) { list = new List<Bubble>(); _bubbles[idx] = list; }
+                    list.RemoveAll(IsStopHuntMark);
+                    list.AddRange(marks);
+                    if (list.Count == 0) _bubbles.Remove(idx);
+                }
+            }
+            if (changed) RePersistBar(idx);
+        }
+
         private Bubble Solid(double price, Shape shape, Color color, bool useBarWidth, string tip)
             => new Bubble { Price = price, Shape = shape, Color = color, Size = MidSize(), Transparency = SolidTransparency, Halo = false, UseBarWidth = useBarWidth, Tooltip = tip };
 

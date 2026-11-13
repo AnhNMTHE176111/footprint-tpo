@@ -264,3 +264,130 @@ Chỉ dùng để vẽ dấu đánh dấu, không phát lệnh.
 ## 7. Cách chạy lại
 
 `PYTHONIOENCODING=utf-8 python research/stophunt_corven.py` (khoảng 10 giây khi đã có cache; lần đầu vài chục giây vì đọc file 78 MB). Kết quả đầy đủ in ra màn hình: bảng gộp, bảng đỉnh/đáy, so CÓ BÓNG với KHÔNG BÓNG, hai cách chọn, và bảng đáp án CORVEN. Cache nằm ở thư mục tạm của phiên.
+
+## 8. Vòng 3: định nghĩa "range" tốt hơn (2026-11-12)
+
+### 8.1 Vấn đề và khai báo trước (viết TRƯỚC khi xem kết quả)
+
+Bản đang ship (hộp N=20 gộp N=60, X=8, tol=3, fail break trong 2 nến, nghỉ 5 nến) cho khoảng 29 dấu mỗi ngày và chênh đảo chiều CÓ BÓNG so với KHÔNG BÓNG chỉ +3,6 điểm phần trăm (z = 2,0). Hộp N=60 một mình tốt hơn nhiều (+11 đến +12 điểm, khoảng 10 dấu mỗi ngày) nhưng hụt GT1 vì 60 nến trước đó chứa cả đoạn đi lên.
+
+**Ý tưởng "range chạy"**: với mỗi nến i, lấy đoạn nến đóng liên tiếp DÀI NHẤT kết thúc ở nến i-1 mà đường bao (cao nhất - thấp nhất) còn ≤ X × trung vị biên độ nến của 100 nến trước; đoạn tối đa 120 nến. Đoạn phải dài ≥ M nến (không có đoạn nào đủ dài thì không có range). Mốc = đỉnh (hoặc đáy) của đoạn đó. Mỗi cạnh phải có ≥ T lần chạm (cụm cách nhau ≥ 3 nến, vùng chạm = 25% chiều cao hộp). Đoạn liên tục về thời gian (trải ≤ 1,5 × độ dài). Đoạn đi lên trước range bị loại vì thêm nó vào thì đường bao vượt X × trung vị.
+
+**8 biến thể khai báo trước** (fail break trong 2 nến, nghỉ 5 nến, đều giữ như bản ship):
+
+| Mã | X | M | T (chạm) | tol bubble | thêm |
+|---|---|---|---|---|---|
+| R1 | 8 | 20 | 2 | 3 | |
+| R2 | 8 | 30 | 2 | 3 | |
+| R3 | 6 | 20 | 2 | 3 | |
+| R4 | 8 | 20 | 2 | 0 | |
+| R5 | 8 | 30 | 2 | 0 | |
+| R6 | 8 | 20 | 3 | 3 | |
+| R7 | 8 | 20 | 2 | 3 | gộp thêm mốc đỉnh/đáy phiên-ngày (L3U) |
+| R8 | 10 | 40 | 2 | 3 | |
+
+Đối chiếu: S0 = bản đang ship (hộp 20 + 60, X=8, tol=3); S1 = chỉ hộp N=60 X=8, tol=0; S2 = chỉ hộp N=60 X=8, tol=3.
+
+**Luật chọn (khai báo trước)**: chỉ dùng NỬA 1 (trước 2026-09-25) của file 90 ngày. Trong các biến thể R1-R8 thoả (a) số dấu CÓ BÓNG mỗi ngày ≤ 12 ở nửa 1 và (b) bắt cả GT1 lẫn GT2, chọn biến thể có z của chênh đảo chiều (CÓ BÓNG - KHÔNG BÓNG) lớn nhất ở nửa 1. Nửa 2 chỉ để kiểm. Lưu ý: GT1 và GT2 nằm ở ngày 05-06/11 tức nửa 2, nên điều kiện (b) dùng một thông tin nhị phân từ nửa 2; thống kê chọn thì chỉ lấy từ nửa 1. Holdout thật: file 2 năm, các ngày trước 2026-08-11, chỉ chạy cho biến thể được chọn + S0 + S1 (+ S2), không chọn lại gì.
+
+### 8.2 Kết quả vòng 3a (R1-R8): không biến thể nào đạt luật chọn
+
+Bản S0 đang ship chạy lại khớp đúng báo cáo cũ (1.890 dấu CÓ BÓNG, chênh +3,6 điểm, z = 2,0). Trong R1-R8, **không biến thể nào** thoả đồng thời "≤ 12 dấu/ngày", "bắt GT1 và GT2" (luật chọn đã khai báo): R3 (X=6) là biến thể duy nhất chênh ≥ +10 điểm ở nửa 1 (+11,0, z = 3,5) nhưng nửa 2 chỉ +2,3, có 21 dấu/ngày và hụt GT1; R7 (thêm L3U) bắt GT1 nhưng hụt GT2 và có 37 dấu/ngày. Kết quả đầy đủ in bởi `python stophunt_corven.py --v3`.
+
+**Chẩn đoán (không phải kết quả thống kê):** mốc ở GT1 vẫn tìm ra đúng (đỉnh 4090,3 với đoạn 27-48 nến), nhưng điều kiện "cả hai cạnh ≥ 2 lần chạm" làm rớt: đoạn dài nhất kéo xuống tận đáy đoạn đi lên trước đó, cạnh dưới đó chỉ chạm 1 lần. Cạnh dưới không liên quan đến việc cạnh trên bị quét.
+
+### 8.3 Vòng 3b (khai báo SAU khi đã chẩn đoán, trước khi chạy): chỉ đòi chạm ở cạnh bị quét
+
+Đây là vòng làm sau khi đã thấy nửa 2 và đáp án GT của vòng 3a, nên thống kê chọn có nguy cơ nhiễm; vì thế **kết luận chỉ dựa vào holdout 2 năm**. Đổi duy nhất: cạnh bị quét cần ≥ 2 lần chạm, cạnh đối diện không đòi hỏi. Vì bỏ một điều kiện làm tăng số dấu, thử X nhỏ và M lớn để đưa số dấu về ≤ 12/ngày. 8 biến thể (tol = 3 hết vì GT1 có bubble nằm dưới mốc 0,15 giá nên tol = 0 không bao giờ bắt được GT1):
+
+| Mã | X | M | chạm cạnh bị quét | chạm cạnh đối diện |
+|---|---|---|---|---|
+| Q1 | 6 | 20 | 2 | 0 |
+| Q2 | 5 | 20 | 2 | 0 |
+| Q3 | 4 | 20 | 2 | 0 |
+| Q4 | 6 | 30 | 2 | 0 |
+| Q5 | 5 | 30 | 2 | 0 |
+| Q6 | 4 | 30 | 2 | 0 |
+| Q7 | 5 | 40 | 2 | 0 |
+| Q8 | 4 | 40 | 2 | 0 |
+
+Luật chọn y nguyên 8.1 (nửa 1: ≤ 12 dấu/ngày, bắt GT1 và GT2, max z chênh đảo chiều).
+
+### 8.4 Kết quả vòng 3b và vòng 3c khai báo trước (kiểm giả thuyết "độ dài range quyết định")
+
+Vòng 3b: không biến thể nào đạt luật chọn. Q1, Q4 (X=6) chênh +7 đến +8 điểm ở nửa 1 nhưng về 0 ở nửa 2 (nhiễu); Q2, Q3, Q5-Q8 chênh nhỏ hoặc đổi dấu; **cả 8 đều hụt GT1** (GT1 là đoạn tăng 27 nến lên sát mốc, chỉ một cụm chạm ở cạnh trên, không phải range ngang đúng nghĩa; hộp cố định 20 nến thì tình cờ bắt được). Vậy khi chọn định nghĩa "range chạy", độ dài hộp càng ngắn, số dấu càng nhiều và chênh càng nhiễu; chỉ hộp N=60 cố định (S1) cho chênh ổn định ở cả hai nửa (+10,1 và +12,5).
+
+Giả thuyết còn lại: **độ bền của range (≥ 40-60 nến) mới là thứ làm bubble có nghĩa**, và hộp "chạy" nhận cả đoạn 20-59 nến nên loãng. Vòng 3c, 4 biến thể khai báo trước (cả hai cạnh ≥ 2 chạm trừ D4), cộng một đối chiếu S3 = chỉ hộp N=20 X=8 (nửa "yếu" của bản ship):
+
+| Mã | X | M | chạm bị quét / đối diện | tol |
+|---|---|---|---|---|
+| D1 | 8 | 40 | 2 / 2 | 0 |
+| D2 | 8 | 50 | 2 / 2 | 0 |
+| D3 | 8 | 60 | 2 / 2 | 0 |
+| D4 | 8 | 60 | 2 / 0 | 3 |
+
+Luật chọn chung: nửa 1, ≤ 12 dấu/ngày, **cho phép không bắt GT1/GT2** (vì đã thấy GT không nằm trong range bền), max z chênh đảo chiều. Dự định khuyến nghị theo hai tầng nếu giả thuyết đúng: tầng mạnh = range bền (đánh dấu nổi bật), tầng yếu = hộp 20 nến (đánh dấu nhạt, vẫn bắt GT1/GT2).
+
+### 8.5 Kết quả vòng 3c (file 90 ngày)
+
+| Biến thể | dấu/ngày (nửa 1 / nửa 2) | chênh đảo chiều nửa 1 (z) | chênh nửa 2 (z) | GT1 / GT2 |
+|---|---|---|---|---|
+| S0 bản ship | 29,6 / 29,5 | +2,1 (0,8) | +5,1 (2,0) | bắt / bắt |
+| S1 N=60 tol0 | 10,6 / 9,8 | +10,1 (2,6) | +12,5 (3,0) | hụt / hụt |
+| S2 N=60 tol3 | 12,5 / 11,5 | +7,0 (1,7) | +9,4 (2,1) | hụt / hụt |
+| S3 chỉ hộp N=20 | 21,0 / 21,8 | +1,8 (0,6) | +4,8 (1,7) | bắt / bắt |
+| D1 range chạy M=40 | 13,1 / 13,5 | +0,9 (0,3) | +4,5 (1,3) | hụt / hụt |
+| D2 range chạy M=50 | 11,0 / 11,0 | -2,7 (-0,7) | +3,2 (0,8) | hụt / hụt |
+| **D3 range chạy M=60** | 8,3 / 8,3 | +5,4 (1,2) | +5,1 (1,1) | hụt / hụt |
+| D4 range chạy M=60, chạm cạnh bị quét | 11,4 / 11,8 | +3,8 (0,8) | +8,7 (1,9) | hụt / hụt |
+
+Theo luật khai báo, vòng 3c chọn **D3**. Giả thuyết "độ bền range quyết định" **không được ủng hộ**: kéo M lên 40, 50, 60 không làm chênh đảo chiều lớn lên; chênh +11 đến +12 của hộp N=60 cố định (S1) không tái lập khi đổi sang "đoạn dài nhất ≤ X × trung vị" (D3 chỉ +5).
+
+### 8.6 HOLDOUT thật: file 2 năm, các nến trước 2026-08-11 (không dùng để chọn gì)
+
+Dữ liệu: 715.432 nến M1 (2024-08-01 đến 2026-08-10), cùng cách tính bubble (hàng 2 tick, ≥ 1,3 × B và ≥ 9, B = trung bình 20 nến đóng trước). Kiểm tương thích: tick 0,1 như file 90 ngày; số bubble mỗi nến 1,12 (file 90 ngày 1,39; theo nửa năm: 2024-H2 0,69, 2025-H1 0,99, 2025-H2 1,18, 2026-H1 1,54, 2026 tháng 7-8 1,16); khối lượng mỗi nến trung bình 123 (file 90 ngày 108). Đủ cùng thang để dùng luật tương đối. **Mã liên tục `/GC:XCEC` nối thô** nên tôi cắt chuỗi ở mọi khoảng nghỉ > 5 phút và mọi bước nhảy giá > 8 giá giữa phiên (539 điểm cắt, 540 đoạn; trong đó 8 bước nhảy giữa phiên); mọi hộp, cửa sổ đo đảo chiều 20 nến, cửa sổ E[R] 60 nến và đoạn fail break không được vắt qua điểm cắt. Cách cắt này chặt hơn bản chạy trên file 90 ngày (file đó là một hợp đồng GCZ26 nên không có chỗ nối).
+
+Chênh đảo chiều (CÓ BÓNG - KHÔNG BÓNG, điểm phần trăm, z) và E[R] ở phí 1 tick của tín hiệu CÓ BÓNG:
+
+| Biến thể | dấu/ngày | 2024-H2 | 2025-H1 | 2025-H2 | 2026-H1 | 2026 T7-8 | CẢ KỲ chênh (z) | đảo chiều CÓ BÓNG | E[R] phí 1 |
+|---|---|---|---|---|---|---|---|---|---|
+| S0 bản ship | 29,5 | +2,6 | +0,8 | +1,5 | +0,5 | +0,6 | **+1,2 (1,8)** | 50,0% (n=15.413) | -0,144 ± 0,011 |
+| S1 N=60 tol0 | 10,0 | +1,0 | +1,4 | +1,5 | -0,1 | +3,2 | **+1,1 (1,0)** | 50,2% (n=5.239) | -0,142 ± 0,020 |
+| S2 N=60 tol3 | 12,0 | +3,7 | +0,5 | 0,0 | +1,0 | +4,4 | +1,3 (1,2) | 50,1% (n=6.253) | -0,170 ± 0,018 |
+| S3 chỉ hộp N=20 | 21,2 | +1,9 | +0,4 | +1,7 | -0,1 | -2,5 | +0,7 (0,9) | 49,8% (n=11.042) | -0,140 ± 0,014 |
+| D3 (được chọn) | 8,3 | +1,3 | -2,1 | +0,2 | +2,1 | -0,9 | **+0,3 (0,2)** | 50,4% (n=4.356) | -0,142 ± 0,021 |
+
+Cơ sở đảo chiều của mọi nến là 50,0%. Theo năm: S0 +2,6 / +1,2 / +0,5 (2024 / 2025 / 2026); S1 +1,0 / +1,4 / +0,5; D3 +1,3 / -0,9 / +1,6.
+
+### 8.7 Kết luận vòng 3
+
+1. **Chênh +11 đến +12 điểm của hộp N=60 trên file 90 ngày KHÔNG tái lập.** Trên 5.239 dấu ngoài mẫu chênh chỉ +1,1 điểm (z = 1,0), đảo chiều CÓ BÓNG 50,2% (bằng cơ sở 50,0%). Với n này sai số chuẩn của chênh khoảng 1,1 điểm, nên +11 nằm rất xa. Nhiều khả năng là kết quả may rủi của việc chọn tốt nhất trong 60 biến thể trên 65 ngày, hoặc đặc thù của giai đoạn tháng 8-11/2026. Phát hiện "bubble tách fail break thật khỏi giả" ở mục 4.4 nên được hạ xuống **chưa được kiểm chứng**.
+2. **Không có định nghĩa range nào ở vòng 3 vừa bắt GT1 và GT2, vừa giữ chênh đảo chiều, vừa ≤ 12 dấu/ngày.** Range chạy (R1-R8, Q1-Q8, D1-D4) hoặc hụt GT1 (GT1 là đoạn tăng 27 nến lên sát mốc, không phải range ngang với cạnh trên chạm 2 lần), hoặc chênh nhiễu và đổi dấu giữa hai nửa. Chỉ hộp 20 nến cố định bắt được cả GT1 và GT2, với giá là 21 dấu/ngày và chênh ngoài mẫu +0,7.
+3. **Ngoài mẫu mọi biến thể đều giống nhau**: chênh trong khoảng +0,3 đến +1,3 điểm, E[R] phí 1 tick ≈ -0,14 đến -0,17, tức mọi biến thể gần như không phân biệt được với nhau và không có lợi thế giao dịch. Bản S0 đang ship có chênh ngoài mẫu lớn nhất trong nhóm (+1,2, z = 1,8, 2024-H2 +2,6) nhưng đó vẫn chỉ là dấu yếu, và 29,5 dấu/ngày.
+4. **Khuyến nghị.** Không đổi định nghĩa range dựa trên vòng 3: không có biến thể nào được holdout ủng hộ. Nếu mục tiêu là giảm số dấu xuống ≤ 12/ngày vì thị giác, thì dùng **hộp N=60, tol = 3 (S2, khoảng 12 dấu/ngày)** hoặc N=60 tol = 0 (S1, khoảng 10 dấu/ngày), chấp nhận hụt GT1 và GT2, và **không** nói với người học rằng bubble làm dấu đáng tin hơn. Nếu muốn giữ GT1/GT2 thì giữ nguyên S0. Dù chọn gì thì đây chỉ là dấu đánh dấu đọc chart.
+5. **Giới hạn**: mốc tuổi, phiên L3 dùng giờ UTC cố định nên lệch 1 giờ khi đổi giờ mùa hè ở file 2 năm (chỉ ảnh hưởng R7); vòng 3b và 3c khai báo sau khi đã thấy nửa 2 nên chỉ holdout có giá trị kết luận; tổng số biến thể đã thử ở vòng 3 là 8 + 8 + 4 + 2 đối chiếu, vượt giới hạn ban đầu 8 (3b và 3c là vòng bổ sung có khai báo).
+
+### 8.8 Chạy lại
+
+- `python research/stophunt_corven.py --v3` (R1-R8), `--v3 --b` (Q1-Q8), `--v3 --c` (D1-D4 + S3): file 90 ngày, chia hai nửa, bảng chọn.
+- `python research/stophunt_corven.py --holdout "--pick=S1 N60 tol0" ...`: file 2 năm trước 2026-08-11 (bỏ `--pick` để chạy tất cả). Lần đầu đọc 583 MB mất vài phút và lưu cache ở thư mục tạm.
+
+## Vòng 4 — sửa sau review
+
+1. **Bóng của stop hunt = đúng bóng Ô lớn đang hiển thị/niêm phong.** Bộ dò không dựng lại bóng từ dữ liệu từng mức giá nữa mà đọc các bóng Ô lớn đã lưu của nến trong `_bubbles[idx]` (cả nến tính mới lẫn nến khôi phục từ niêm phong). Bubble và `CachedBubbleData` có thêm `CellBig/CellBid/CellAsk/CellSide` (bản ghi cũ mặc định false, tương thích ngược); dấu vân tay `cellbig-v11` / `stophunt-v2`. Nến khôi phục cho cùng kết quả thì không ghi đè niêm phong.
+2. **Kiểm tra hộp liên tục theo chu kỳ nến:** giới hạn = N x chu kỳ x 1,5 (trước đây cố định theo phút nên M5 không bao giờ ra dấu). Chu kỳ lấy từ khung thời gian của biểu đồ; không rõ thì bộ dò ước từ khoảng cách dương nhỏ nhất giữa hai nến liền nhau.
+3. **Dấu không còn dùng bóng bị ẩn** (TopN / SkipOnAbsorption / MergeTicks) — hệ quả của sửa 1; chữ rê chuột luôn nêu một bóng đang hiển thị.
+
+Đối chiếu (GCZ26 M1, 90 ngày, mặc định TopN=0, SkipOnAbsorption=bật): Python `--spec` 1890 dấu, C# 1865. Chung 1853 (mức khác nhau 2, Bid/Ask của bóng nêu trong chữ khác 88); chỉ Python có 37, chỉ C# có 12. Khác biệt đúng như kỳ vọng: bóng bị ẩn do SkipOnAbsorption không còn được dùng (Python đọc ô thô). Hai ca CORVEN vẫn có dấu: 06/11 09:21 đỉnh 4090.3 (Tím 22 Bid 20 Ask) và 05/11 20:45 đáy 4108.4 (Đỏ 11 Bid 2 Ask). Digest golden bỏ dòng stop hunt và 4 trường mới: 0 dòng khác.
+
+## Ghi chú 2026-11-13 — bỏ kết quả holdout 2 năm, đo lại tháng gần nhất
+Người dùng xác nhận file 2 năm `fp_GC_XCEC_Time_20240801-20260819_748d9h.csv` có đoạn dữ liệu hỏng ⇒ **không dùng kết luận holdout ở Vòng 3**.
+Đo lại trên tháng gần nhất 10/10–09/11 (file GCZ26 90 ngày, script `scratchpad/sh/last1m.py`), cơ sở ~50%:
+
+| biến thể | dấu/ngày | có bóng đảo chiều | không bóng | chênh |
+|---|---|---|---|---|
+| đang ship (hộp 20+60, tol 3) | 29,5 | 53,2% | 49,8% | +3,4 pp (z 1,1) |
+| hộp 60, tol 0 | 9,8 | 52,3% | 43,6% | +8,8 pp (z 1,7) |
+| hộp 60, tol 3 | 11,7 | 52,6% | 44,3% | +8,3 pp (z 1,5) |
+
+Cùng chiều tháng trước (10/09–10/10: hộp 60 +10,7 đến +16 pp; ship +8,5 pp). Fail break KHÔNG bóng hay đi tiếp; có bóng chỉ nhỉnh hơn cơ sở. 1 tháng chưa đủ ý nghĩa thống kê; E[R] sau phí ~0.

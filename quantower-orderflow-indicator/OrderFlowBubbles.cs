@@ -113,6 +113,9 @@ namespace OrderFlowBubbles
             public double PriceHi;      // Shape.Zone: mép trên vùng (Price = mép dưới)
             public int ZoneSide;        // Shape.Zone: +1 buy / −1 sell
             public bool ZoneWeak;       // Shape.Zone: buy ở râu trên / sell ở râu dưới (bị rút râu)
+            public bool CellBig;        // true = bóng Ô Bid/Ask lớn (Price = tâm bóng); stop hunt đọc đúng các bóng này
+            public double CellBid, CellAsk;  // Ô lớn: Bid (sell chủ động) / Ask (buy chủ động) của hàng
+            public int CellSide;        // Ô lớn: +1 xanh, -1 đỏ, 0 tím
         }
 
         // vùng Stacked Imbalance đang theo dõi (kéo sang phải tới khi kết thúc)
@@ -533,7 +536,7 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
-                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigPurpleMinWeak, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v10",
+                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigPurpleMinWeak, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v11",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
@@ -546,7 +549,7 @@ namespace OrderFlowBubbles
                 ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun, ImbMinVolume,
                 DivergenceEnabled, DivSwingLookback, DivVolPartic, DivCooldown,
                 SweepEnabled, SweepLookback, UnfinishedEnabled,
-                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v1");
+                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v2");
         }
 
         private void InitBaselines()
@@ -911,6 +914,7 @@ namespace OrderFlowBubbles
                                 + (dec.Mult > 0 ? $" | Trung bình {cellB.ToString("0.0", inv)}" : "");
                     var b2 = Solid(cp, Shape.Ellipse, col2, true, tip2);
                     b2.SizeFrac = dec.SizeFrac;
+                    b2.CellBig = true; b2.CellBid = r.Sell; b2.CellAsk = r.Buy; b2.CellSide = dec.Side;
                     cellBigCands.Add((b2, Math.Max(r.Buy, r.Sell), r.LoTick, r.HiTick));
                 }
             }
@@ -1406,24 +1410,18 @@ namespace OrderFlowBubbles
             _stopHunt ??= new StopHuntDetector(new StopHuntSettings
             {
                 BoxSmall = StopHuntBoxSmall, BoxLarge = StopHuntBoxLarge, BoxMaxMult = StopHuntBoxMaxMult,
-                TolTicks = StopHuntTolTicks, ConfirmBars = StopHuntConfirmBars, Cooldown = StopHuntCooldown
+                TolTicks = StopHuntTolTicks, ConfirmBars = StopHuntConfirmBars, Cooldown = StopHuntCooldown,
+                BarMinutes = ChartBarMinutes(bar)
             }, tick);
 
+            // Bóng đưa vào bộ dò = ĐÚNG các Ô lớn đang hiển thị/niêm phong của nến (qua TopN, SkipOnAbsorption, MergeTicks),
+            // cho cả nến tính mới lẫn nến khôi phục từ niêm phong — không dựng lại từ dữ liệu từng mức giá (có thể mỏng hơn lúc nạp lại).
             var cells = new List<ShCell>();
-            var va = bar.VolumeAnalysisData;
-            if (va != null && va.PriceLevels != null && va.PriceLevels.Count > 0)
+            lock (_sync)
             {
-                double cellB = 0; bool hasB = _cellBigBase != null && _cellBigBase.TryGet(out cellB);
-                var rows = CellBigLogic.GroupRows(
-                    va.PriceLevels.Select(kv => ((long)Math.Round(kv.Key / tick), kv.Value.BuyVolume, kv.Value.SellVolume, kv.Value.Volume)),
-                    CellBigRowTicks, CellBigRowOffset);
-                foreach (var r in rows)
-                {
-                    if (r.Buy + r.Sell <= 0) continue;
-                    var dec = CellBigLogic.Decide(r.Buy, r.Sell, cellB, hasB, CellBigRatio, CellBigMinSide, CellBigPurpleMinWeak, UseFixedThreshold, FixedThresholdContracts);
-                    if (!dec.Hit) continue;
-                    cells.Add(new ShCell { Centre = CellBigLogic.RowCenterPrice(r.RowId, CellBigRowTicks, CellBigRowOffset, tick), Bid = r.Sell, Ask = r.Buy, Side = dec.Side });
-                }
+                if (_bubbles.TryGetValue(idx, out var shown))
+                    foreach (var b in shown)
+                        if (b.CellBig) cells.Add(new ShCell { Centre = b.Price, Bid = b.CellBid, Ask = b.CellAsk, Side = b.CellSide });
             }
 
             var sigs = _stopHunt.OnBarClosed(idx, bar.High, bar.Low, bar.Close, StopHuntDetector.ToMinutes(bar.TimeLeft.Ticks), cells);
@@ -1452,6 +1450,25 @@ namespace OrderFlowBubbles
                 }
             }
             if (changed) RePersistBar(idx);
+        }
+
+        // Chu kỳ nến (phút) cho kiểm tra liên tục của hộp. Khung thời gian: lấy từ HistoricalData; không rõ: bộ dò ước từ khoảng cách nhỏ nhất
+        // giữa hai nến liền nhau đã thấy (chưa có -> 1 phút). Dưới 1 phút / không phải khung thời gian: trả 0 = để bộ dò tự ước.
+        private double ChartBarMinutes(HistoryItemBar bar)
+        {
+            if (HistoricalData?.Aggregation is HistoryAggregationTime at)
+            {
+                double m = at.Period.BasePeriod switch
+                {
+                    BasePeriod.Second => at.Period.PeriodMultiplier / 60.0,
+                    BasePeriod.Minute => at.Period.PeriodMultiplier,
+                    BasePeriod.Hour => at.Period.PeriodMultiplier * 60.0,
+                    BasePeriod.Day => at.Period.PeriodMultiplier * 1440.0,
+                    _ => 0
+                };
+                return m >= 1 ? m : 0;
+            }
+            return 0;   // không rõ -> bộ dò tự ước từ khoảng cách nến
         }
 
         private Bubble Solid(double price, Shape shape, Color color, bool useBarWidth, string tip)
@@ -1691,7 +1708,8 @@ namespace OrderFlowBubbles
                         Price = b.Price, Shape = (int)b.Shape, ColorArgb = b.Color.ToArgb(), Size = b.Size,
                         Transparency = b.Transparency, Halo = b.Halo, UseBarWidth = b.UseBarWidth, SizeFrac = b.SizeFrac,
                         Tooltip = b.Tooltip, Confirm = b.Confirm, Confirmable = b.Confirmable,
-                        PriceHi = b.PriceHi, ZoneSide = b.ZoneSide, ZoneWeak = b.ZoneWeak
+                        PriceHi = b.PriceHi, ZoneSide = b.ZoneSide, ZoneWeak = b.ZoneWeak,
+                        CellBig = b.CellBig, CellBid = b.CellBid, CellAsk = b.CellAsk, CellSide = b.CellSide
                     });
             return d;
         }
@@ -1705,7 +1723,8 @@ namespace OrderFlowBubbles
                     Price = cb.Price, Shape = (Shape)cb.Shape, Color = Color.FromArgb(cb.ColorArgb), Size = cb.Size,
                     Transparency = cb.Transparency, Halo = cb.Halo, UseBarWidth = cb.UseBarWidth, SizeFrac = cb.SizeFrac,
                     Tooltip = cb.Tooltip, Confirm = cb.Confirm, Confirmable = cb.Confirmable,
-                    PriceHi = cb.PriceHi, ZoneSide = cb.ZoneSide, ZoneWeak = cb.ZoneWeak
+                    PriceHi = cb.PriceHi, ZoneSide = cb.ZoneSide, ZoneWeak = cb.ZoneWeak,
+                    CellBig = cb.CellBig, CellBid = cb.CellBid, CellAsk = cb.CellAsk, CellSide = cb.CellSide
                 });
             return list;
         }

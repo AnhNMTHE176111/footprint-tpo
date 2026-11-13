@@ -37,6 +37,11 @@ def load():
     b = pd.read_csv(BARS, parse_dates=['datetime'],
                     usecols=['bar_idx', 'datetime', 'open', 'high', 'low', 'close', 'volume', 'delta'])
     L = pd.read_csv(LVL, usecols=['bar_idx', 'price', 'bid_vol', 'ask_vol', 'volume'])
+    b, Bb = bubbles_from_levels(b, L)
+    pickle.dump((b, Bb), open(pk, 'wb'))
+    return b, Bb
+
+def bubbles_from_levels(b, L):
     L = L[L.volume > 0].copy()
     L['tk'] = (L.price * 10).round().astype(int)
     L['row'] = (L.tk - 1) // 2                         # hang 2 tick, pha 1 (nhu indicator)
@@ -53,7 +58,6 @@ def load():
     Bb = R[(R.B > 0) & (R.side >= RATIO * R.B) & (R.side >= FLOOR)].copy()
     Bb['col'] = np.where((Bb.weak >= RATIO * Bb.B) & (Bb.weak >= WEAK_FLOOR), 'tim', np.where(Bb.ask >= Bb.bid, 'xanh', 'do'))
     Bb = Bb[['p', 'cen', 'bid', 'ask', 'col']]
-    pickle.dump((b, Bb), open(pk, 'wb'))
     return b, Bb
 
 class Side:
@@ -186,7 +190,7 @@ def lv_L3(S, sg, dg, kinds, min_sess=30, min_day=60, min_prior_bars=120):
     return sw
 
 # ---------------------------------------------------------------- su kien -------------------------------------
-def build_events(S, sw, mode, bub_tol=0):
+def build_events(S, sw, mode, bub_tol=0, seg=None):
     """Tra ve (with_bubble, no_bubble) = list dict(i, j, L, cols, ...) da loc cooldown."""
     cl, hi, n = S.cl, S.hi, S.n
     W, N_ = [], []
@@ -197,6 +201,7 @@ def build_events(S, sw, mode, bub_tol=0):
             else:
                 j = None
                 for jj in range(i, min(i + 3, n)):
+                    if seg is not None and seg[jj] != seg[i]: break
                     if cl[jj] <= L + EPS: j = jj; break
             if j is None: continue
             bs = [(c, col) for (c, col) in S.bub.get(i, ()) if c >= L - bub_tol * TICK - EPS]
@@ -219,12 +224,14 @@ def build_events(S, sw, mode, bub_tol=0):
 
 # ---------------------------------------------------------------- ket qua ------------------------------------
 class Outcome:
-    def __init__(self, S, tt):
+    def __init__(self, S, tt, seg=None):
         self.S, self.tt, n = S, tt, S.n
+        self.seg = seg
         hi, lo, cl = S.hi, S.lo, S.cl
         self.med100 = pd.Series(hi - lo).rolling(100).median().values
         # first-hit +-1 x med100 trong 20 nen
         v20 = np.full(n, False); v20[:n - HORIZ_REV] = (tt[HORIZ_REV:] - tt[:-HORIZ_REV]) <= HORIZ_REV * 2.2
+        if seg is not None: v20[:n - HORIZ_REV] &= (seg[HORIZ_REV:] == seg[:-HORIZ_REV])
         self.v20 = v20
         H = swv(hi[1:], HORIZ_REV)[:n - HORIZ_REV]; Lw = swv(lo[1:], HORIZ_REV)[:n - HORIZ_REV]
         c = cl[:n - HORIZ_REV]; b = self.med100[:n - HORIZ_REV]
@@ -244,6 +251,7 @@ class Outcome:
         for e in evs:
             i, j = e['i'], e['j']
             if j + HORIZ_R >= n or tt[j + HORIZ_R] - tt[j] > HORIZ_R * 2.2: continue
+            if self.seg is not None and self.seg[j + HORIZ_R] != self.seg[j]: continue
             ent = cl[j]; sl = hi[i:j + 1].max() + TICK; risk = sl - ent
             if risk <= 0: continue
             tp = ent - TP_R * risk; R = None
@@ -494,5 +502,257 @@ def main():
     open(SCR + r'\stophunt_corven_results.txt', 'w', encoding='utf-8').write('\n'.join(out))
     pickle.dump((R_ALL,), open(SCR + r'\sh_res.pkl', 'wb'))
 
+# =============================================================== VONG 3: range chay (--v3) + holdout (--holdout) ===
+HOLD_BARS = ROOT + r"\data-export\data-footprint\fp_GC_XCEC_Time_20240801-20260819_748d9h_bars.csv"
+HOLD_LVL = ROOT + r"\data-export\data-footprint\fp_GC_XCEC_Time_20240801-20260819_748d9h.csv"
+HOLD_END = pd.Timestamp('2026-08-11')       # holdout = cac nen TRUOC moc nay
+SCR2 = SCR[:-2] + 'sh2'
+os.makedirs(SCR2, exist_ok=True)
+CAP = 120
+
+def lv_run(S, tt, seg, X, M, T, To=None, cap=CAP, CH=30000):
+    """RANGE CHAY: voi moi nen i, doan nen dong lien tiep DAI NHAT ket thuc o i-1 co duong bao (cao-thap) <= X x trung vi bien do(100 nen truoc),
+    toi da cap nen; dai >= M; moi canh >= T lan cham (cum cach nhau >= 3 nen, vung cham 25% chieu cao). Muc = dinh doan. Tra ve {i: [top]} khi hi[i] >= top + 1 tick."""
+    To = T if To is None else To
+    n, hi, lo = S.n, S.hi, S.lo
+    med = pd.Series(hi - lo).shift(1).rolling(100).median().values
+    Wh = swv(np.concatenate([np.full(cap, np.nan), hi]), cap)[:n]
+    Wl = swv(np.concatenate([np.full(cap, np.nan), lo]), cap)[:n]
+    ar = np.arange(cap)[None, :]
+    sw = {}
+    for a in range(cap + 100, n, CH):
+        z = min(n, a + CH)
+        Hr, Lr = Wh[a:z, ::-1], Wl[a:z, ::-1]            # cot 0 = nen i-1, cot k = nen i-1-k
+        cmx = np.maximum.accumulate(Hr, axis=1); cmn = np.minimum.accumulate(Lr, axis=1)
+        over = (cmx - cmn) > (X * med[a:z])[:, None]
+        L = np.where(over.any(1), over.argmax(1), cap)
+        ok = (L >= M) & ~np.isnan(med[a:z])
+        rows = np.where(ok)[0]
+        if not len(rows): continue
+        Lr_ = L[rows]
+        top = cmx[rows, Lr_ - 1]; bot = cmn[rows, Lr_ - 1]
+        ia = a + rows
+        k = (hi[ia] >= top + TICK - EPS)
+        if not k.any(): continue
+        rows, Lr_, top, bot, ia = rows[k], Lr_[k], top[k], bot[k], ia[k]
+        st = ia - Lr_
+        good = (tt[ia] - tt[st] <= 1.5 * Lr_)
+        if seg is not None: good &= (seg[ia] == seg[st])
+        rows, Lr_, top, bot, ia = rows[good], Lr_[good], top[good], bot[good], ia[good]
+        if not len(rows): continue
+        H2, L2 = Hr[rows], Lr[rows]
+        cm = ar < Lr_[:, None]
+        zone = 0.25 * (top - bot)
+        def nst(c):
+            p1 = np.zeros_like(c); p2 = np.zeros_like(c)
+            p1[:, :-1] = c[:, 1:]; p2[:, :-2] = c[:, 2:]
+            return (c & ~p1 & ~p2).sum(1)
+        nt = nst((H2 >= (top - zone)[:, None]) & cm); nb = nst((L2 <= (bot + zone)[:, None]) & cm)
+        g = (nt >= T) & (nb >= To)
+        for i_, t_ in zip(ia[g], top[g]): sw[int(i_)] = [float(t_)]
+    return sw
+
+def merge_sw(*ds):
+    sw = {}
+    for d in ds:
+        for i, lv in d.items(): sw.setdefault(i, set()).update(lv)
+    return {i: sorted(v, reverse=True) for i, v in sw.items()}
+
+def mk_run(X, M, T, tol, l3=False, To=None):
+    def fn(S, tt, seg, ctx):
+        r = lv_run(S, tt, seg, X, M, T, To)
+        return merge_sw(r, lv_L3(S, ctx[0], ctx[1], {'S', 'D', 'P'})) if l3 else r
+    return dict(fn=fn, tol=tol)
+
+V3 = {
+    'R1 X8 M20 T2 tol3': mk_run(8, 20, 2, 3), 'R2 X8 M30 T2 tol3': mk_run(8, 30, 2, 3),
+    'R3 X6 M20 T2 tol3': mk_run(6, 20, 2, 3), 'R4 X8 M20 T2 tol0': mk_run(8, 20, 2, 0),
+    'R5 X8 M30 T2 tol0': mk_run(8, 30, 2, 0), 'R6 X8 M20 T3 tol3': mk_run(8, 20, 3, 3),
+    'R7 X8 M20 T2 tol3 +L3U': mk_run(8, 20, 2, 3, True), 'R8 X10 M40 T2 tol3': mk_run(10, 40, 2, 3),
+}
+V3B = {f'Q{k+1} X{X} M{M} Ts2 To0 tol3': mk_run(X, M, 2, 3, False, 0)
+       for k, (X, M) in enumerate(((6, 20), (5, 20), (4, 20), (6, 30), (5, 30), (4, 30), (5, 40), (4, 40)))}
+V3C = {'D1 X8 M40 T2 To2 tol0': mk_run(8, 40, 2, 0), 'D2 X8 M50 T2 To2 tol0': mk_run(8, 50, 2, 0),
+       'D3 X8 M60 T2 To2 tol0': mk_run(8, 60, 2, 0), 'D4 X8 M60 T2 To0 tol3': mk_run(8, 60, 2, 3, False, 0)}
+REFS = {
+    'S3 N20 tol3': dict(fn=lambda S, tt, seg, ctx: lv_L2_build(S, None, 20, 8, tt), tol=3),
+    'S0 ship 20+60 tol3': dict(fn=lambda S, tt, seg, ctx: lv_union(S, tt), tol=3),
+    'S1 N60 tol0': dict(fn=lambda S, tt, seg, ctx: lv_L2_build(S, None, 60, 8, tt), tol=0),
+    'S2 N60 tol3': dict(fn=lambda S, tt, seg, ctx: lv_L2_build(S, None, 60, 8, tt), tol=3),
+}
+
+def er_ev(S, tt, E, seg):
+    """(len(E), 3) E[R] theo phi 0/1/2 tick, NaN neu khong hop le. Cung luat Outcome.er."""
+    hi, lo, cl, n = S.hi, S.lo, S.cl, S.n
+    out = np.full((len(E), 3), np.nan)
+    for k, e in enumerate(E):
+        i, j = e['i'], e['j']
+        if j + HORIZ_R >= n or tt[j + HORIZ_R] - tt[j] > HORIZ_R * 2.2: continue
+        if seg is not None and seg[j + HORIZ_R] != seg[j]: continue
+        ent = cl[j]; sl = hi[i:j + 1].max() + TICK; risk = sl - ent
+        if risk <= 0: continue
+        tp = ent - TP_R * risk; R = None
+        for m in range(1, HORIZ_R + 1):
+            if hi[j + m] >= sl - EPS: R = -1.0; break
+            if lo[j + m] <= tp + EPS: R = TP_R; break
+        if R is None: R = (ent - cl[j + HORIZ_R]) / risk
+        for q, f in enumerate(FEES): out[k, q] = R - f * TICK / risk
+    return out
+
+def evaluate(b, Bb, specs, seg=None):
+    """Tra ve (recs, outc, sides, tt): recs[ten] = DataFrame moi su kien (side,cat 1=co bong,i,j,rev,R0,R1,R2,col)."""
+    n = len(b); tt = b.datetime.values.astype('datetime64[m]').astype(np.int64)
+    sg, dg = sessions(b)
+    sides = {1: Side(b, Bb, 1), -1: Side(b, Bb, -1)}
+    outc = {s: Outcome(sides[s], tt, seg) for s in sides}
+    recs = {}
+    for name, sp in specs.items():
+        rows = []
+        for s in (1, -1):
+            sw = sp['fn'](sides[s], tt, seg, (sg, dg))
+            w, nb = build_events(sides[s], sw, 'next2', sp['tol'], seg)
+            for cat, E in ((1, w), (0, nb)):
+                if not E: continue
+                js = np.array([e['j'] for e in E]); R = er_ev(sides[s], tt, E, seg)
+                rows.append(pd.DataFrame(dict(side=s, cat=cat, i=[e['i'] for e in E], j=js, rev=outc[s].df[js],
+                                              R0=R[:, 0], R1=R[:, 1], R2=R[:, 2], L=[s * e['L'] for e in E],
+                                              col=[e['strong'][1] if cat else '' for e in E])))
+        recs[name] = pd.concat(rows, ignore_index=True)
+    return recs, outc, sides, tt, dg
+
+def zprop(p1, n1, p2, n2):
+    if n1 < 2 or n2 < 2: return float('nan')
+    pp = (p1 * n1 + p2 * n2) / (n1 + n2)
+    return (p1 - p2) / math.sqrt(max(pp * (1 - pp), 1e-9) * (1 / n1 + 1 / n2))
+
+def summarize(rec, outc, lab, dg, label):
+    """Gop theo nhan nua/nam. lab = mang nhan theo nen. Tra ve dict."""
+    m = (lab == label)
+    days = (pd.Series(np.ones(len(lab))[m]).groupby(dg[m]).count() >= 600).sum() if m.any() else 0
+    r = rec[lab[rec.j.values] == label]
+    base = {s: np.nanmean(outc[s].df[m]) for s in (1, -1)}
+    w, nb = r[r.cat == 1], r[r.cat == 0]
+    out = dict(days=int(days), nw=len(w), nn=len(nb), perday=len(w) / max(days, 1))
+    wr, nr = w.rev.dropna(), nb.rev.dropna()
+    out['rw'] = wr.mean() if len(wr) else float('nan'); out['rn'] = nr.mean() if len(nr) else float('nan')
+    out['nrw'], out['nrn'] = len(wr), len(nr)
+    bw = np.mean([base[s] for s in w.side[w.rev.notna()]]) if len(wr) else float('nan')
+    out['basew'] = bw
+    out['zbase'] = (out['rw'] - bw) / math.sqrt(max(bw * (1 - bw), 1e-9) / len(wr)) if len(wr) > 1 else float('nan')
+    out['gap'] = (out['rw'] - out['rn']) * 100 if len(wr) and len(nr) else float('nan')
+    out['zgap'] = zprop(out['rw'], len(wr), out['rn'], len(nr))
+    out['e1'] = ms(w.R1.dropna())[:2] if w.R1.notna().sum() > 1 else (float('nan'), float('nan'))
+    out['e1n'] = ms(nb.R1.dropna())[0] if nb.R1.notna().sum() > 1 else float('nan')
+    return out
+
+def fmt3(o):
+    return (f"n={o['nw']:5d} /ngay={o['perday']:5.1f} | dao chieu CO {o['rw']*100:5.1f}% (co so {o['basew']*100:4.1f}%, z={o['zbase']:+.1f}) "
+            f"KHONG {o['rn']*100:5.1f}% (n={o['nn']}) | CHENH {o['gap']:+5.1f}pp z={o['zgap']:+.1f} | E[R]@1 {o['e1'][0]:+.3f}±{o['e1'][1]:.3f} (khong bong {o['e1n']:+.3f})")
+
+def gt_hits(b, recs, name):
+    tstr = b.datetime.astype(str).str[:16].values
+    tpos = {t: i for i, t in enumerate(tstr)}
+    res = {}
+    for g in GT[:2]:
+        s = 1 if g[1] == 'top' else -1
+        i0, i1 = tpos[g[2]], tpos[g[3]]
+        r = recs[name]; h = r[(r.cat == 1) & (r.side == s) & (r.i >= i0) & (r.i <= i1)]
+        res[g[0][:3]] = ('HIT L=%.1f' % h.L.iloc[0]) if len(h) else 'miss'
+    return res
+
+def v3():
+    out = []
+    def P(*a):
+        t = ' '.join(str(x) for x in a); print(t); out.append(t)
+    b, Bb = load()
+    half = np.where(b.datetime >= SPLIT, 'H2', 'H1')
+    VV = V3C if '--c' in sys.argv else (V3B if '--b' in sys.argv else V3)
+    specs = {**REFS, **VV}
+    recs, outc, sides, tt, dg = evaluate(b, Bb, specs)
+    P(f'VONG 3 - file 90 ngay GCZ26, {len(b)} nen; nua 1 < {SPLIT.date()}.')
+    P('Tin hieu = CO BONG; "CHENH" = dao chieu (CO BONG - KHONG BONG) theo diem phan tram; GT1/GT2 = vi du CORVEN (cua so nua 2)')
+    for name in specs:
+        gh = gt_hits(b, recs, name)
+        P(f'--- {name}   GT1: {gh["GT1"]}   GT2: {gh["GT2"]}')
+        for lb in ('H1', 'H2'):
+            P(f'   {lb}: ' + fmt3(summarize(recs[name], outc, half, dg, lb)))
+        allh = np.full(len(b), 'ALL')
+        P(f'   ALL: ' + fmt3(summarize(recs[name], outc, allh, dg, 'ALL')))
+    P(''); P('CHON (khai bao truoc): R1-R8, nua 1: perday<=12, bat GT1 va GT2, max z chenh dao chieu')
+    cand = []
+    for name in VV:
+        o = summarize(recs[name], outc, half, dg, 'H1'); gh = gt_hits(b, recs, name)
+        ok = o['perday'] <= 12 and (('--c' in sys.argv) or (gh['GT1'].startswith('HIT') and gh['GT2'].startswith('HIT')))
+        P(f'  {name:28s} perday {o["perday"]:5.1f} GT1 {gh["GT1"][:3]} GT2 {gh["GT2"][:3]} zgap {o["zgap"]:+.2f} -> {"du dieu kien" if ok else "loai"}')
+        if ok: cand.append((o['zgap'], name))
+    cand.sort(reverse=True)
+    P('  CHON: ' + (cand[0][1] if cand else 'KHONG CO BIEN THE NAO'))
+    open(SCR2 + r'\v3_results.txt', 'w', encoding='utf-8').write('\n'.join(out))
+
+# ---------------------------------------------------------------- holdout (file 2 nam) --------------------------
+def load_hold():
+    pk = SCR2 + r'\hold_data.pkl'
+    if os.path.exists(pk): return pickle.load(open(pk, 'rb'))
+    b = pd.read_csv(HOLD_BARS, parse_dates=['datetime'], usecols=['bar_idx', 'datetime', 'open', 'high', 'low', 'close', 'volume', 'delta'])
+    b = b[b.datetime < HOLD_END].reset_index(drop=True)
+    mx = b.bar_idx.max()
+    parts = []
+    for ch in pd.read_csv(HOLD_LVL, usecols=['bar_idx', 'price', 'bid_vol', 'ask_vol', 'volume'], chunksize=2_000_000):
+        ch = ch[(ch.bar_idx <= mx) & (ch.volume > 0)]
+        if not len(ch): continue
+        tk = (ch.price * 10).round().astype(int)
+        ch = ch.assign(row=(tk - 1) // 2)
+        parts.append(ch.groupby(['bar_idx', 'row'], as_index=False).agg(bid=('bid_vol', 'sum'), ask=('ask_vol', 'sum'), vol=('volume', 'sum')))
+    R = pd.concat(parts).groupby(['bar_idx', 'row'], as_index=False).sum()
+    b2, Bb = bubbles_from_levels_agg(b, R)
+    pickle.dump((b2, Bb), open(pk, 'wb'))
+    return b2, Bb
+
+def bubbles_from_levels_agg(b, R):
+    g = R.groupby('bar_idx').vol.agg(['sum', 'count'])
+    bm = (g['sum'] / g['count']).reindex(b.bar_idx).values
+    Bv = pd.Series(bm).shift(1).rolling(NB, min_periods=5).mean().values
+    pos = pd.Series(np.arange(len(b)), index=b.bar_idx.values)
+    R = R.copy(); R['p'] = pos.reindex(R.bar_idx).values
+    R = R[R.p.notna()].copy(); R['p'] = R.p.astype(int)
+    R['B'] = Bv[R.p.values]; R['cen'] = (R.row * 2 + 1.5) / 10.0
+    R['side'] = R[['bid', 'ask']].max(axis=1); R['weak'] = R[['bid', 'ask']].min(axis=1)
+    Bb = R[(R.B > 0) & (R.side >= RATIO * R.B) & (R.side >= FLOOR)].copy()
+    Bb['col'] = np.where((Bb.weak >= RATIO * Bb.B) & (Bb.weak >= WEAK_FLOOR), 'tim', np.where(Bb.ask >= Bb.bid, 'xanh', 'do'))
+    return b, Bb[['p', 'cen', 'bid', 'ask', 'col']]
+
+def holdout():
+    out = []
+    def P(*a):
+        t = ' '.join(str(x) for x in a); print(t); out.append(t)
+    names = [a.split('=', 1)[1] for a in sys.argv if a.startswith('--pick=')]
+    b, Bb = load_hold()
+    n = len(b)
+    # cat chuoi o khoang cach > 5 phut hoac nhay gia > 8 (nghi chi noi hop dong); moi cua so vat qua se bi loai
+    dtm = np.r_[0, np.diff(b.datetime.values.astype('datetime64[m]').astype(np.int64))]
+    gap = np.r_[0, np.abs(b.open.values[1:] - b.close.values[:-1])]
+    brk = (dtm > 5) | (gap > 8)
+    seg = np.cumsum(brk)
+    P(f'HOLDOUT: {n} nen M1 truoc {HOLD_END.date()}, {b.datetime.min()} -> {b.datetime.max()}; {int(brk.sum())} diem cat chuoi ({int(((gap > 8) & (dtm <= 5)).sum())} nhay gia > 8 giua phien nghi noi hop dong), {int(seg.max())+1} doan')
+    P(f'Hang bong: {len(Bb)} ({len(Bb)/n:.3f}/nen). Bong/nen theo nua nam:')
+    y = b.datetime.dt.year.values; h = np.where(b.datetime.dt.month.values <= 6, 'H1', 'H2')
+    lab = np.array([f'{a}{c}' for a, c in zip(y, h)])
+    cnt = pd.Series(lab[Bb.p.values]).value_counts()
+    P('   ' + ', '.join(f'{k}: {cnt.get(k,0)/ (lab==k).sum():.3f}' for k in sorted(set(lab))))
+    specs = {k: v for k, v in {**REFS, **V3, **V3B, **V3C}.items() if (not names) or k in names}
+    recs, outc, sides, tt, dg = evaluate(b, Bb, specs, seg)
+    labs = sorted(set(lab))
+    for name in specs:
+        P(f'--- {name}')
+        for lb in labs:
+            P(f'   {lb}: ' + fmt3(summarize(recs[name], outc, lab, dg, lb)))
+        P(f'   ALL : ' + fmt3(summarize(recs[name], outc, np.full(n, 'ALL'), dg, 'ALL')))
+        for yy in ('2024', '2025', '2026'):
+            ly = np.where(np.char.startswith(lab.astype(str), yy), 'Y', 'N')
+            P(f'   nam {yy}: ' + fmt3(summarize(recs[name], outc, ly, dg, 'Y')))
+    open(SCR2 + r'\holdout_results.txt', 'w', encoding='utf-8').write('\n'.join(out))
+
 if __name__ == '__main__':
-    main()
+    if '--v3' in sys.argv: v3()
+    elif '--holdout' in sys.argv: holdout()
+    else: main()

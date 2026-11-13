@@ -24,11 +24,12 @@ static class StopHuntTests
         public StopHuntDetector D;
         public int Idx;
         public long Min = 1_000_000;
+        public long Step = 1;
         public Feed(StopHuntSettings s = null) { D = new StopHuntDetector(s ?? new StopHuntSettings(), Tick); }
         public List<StopHuntSignal> Bar(double lo, double hi, double close, params ShCell[] cells)
         {
             var r = D.OnBarClosed(Idx, hi, lo, close, Min, cells);
-            Idx++; Min++;
+            Idx++; Min += Step;
             return r;
         }
         // n nến đi ngang mẫu (đỉnh top), bắt đầu ở vị trí k0
@@ -153,6 +154,26 @@ static class StopHuntTests
         var g3 = Two();
         var u3 = g3.Bar(101.4, 102.2, 101.8, Cell(102.05, 3, 18));    // đóng 101,8: <= 102,0 nhưng > 101,6
         Check(u3.Count == 1 && Math.Abs(u3[0].Level - 102.0) < 1e-9, "dong 101,8: fail break voi muc 102,0 (khong voi 101,6)");
+
+        // --- 11) chu kỳ nến: M5 (cách nhau 5 phút) vẫn phải ra dấu; hộp liên tục tính theo N x chu kỳ x 1,5 ---
+        var five = new StopHuntSettings { BarMinutes = 5 };
+        f = new Feed(five) { Step = 5 }; f.Warm(120);
+        Check(f.Bar(101.4, 102.2, 101.0, Cell(102.05, 3, 18)).Count == 1, "M5 khai bao BarMinutes=5 -> ra dau");
+        f = new Feed(new StopHuntSettings()) { Step = 5 }; f.Warm(120);   // BarMinutes = 0: tự ước từ khoảng cách nến
+        Check(f.Bar(101.4, 102.2, 101.0, Cell(102.05, 3, 18)).Count == 1, "M5 tu uoc chu ky (BarMinutes=0) -> ra dau");
+        f = new Feed(new StopHuntSettings { BarMinutes = 1 }) { Step = 5 }; f.Warm(120);
+        Check(f.Bar(101.4, 102.2, 101.0, Cell(102.05, 3, 18)).Count == 0, "M5 nhung ep chu ky 1 phut -> khong lien tuc -> khong dau");
+        f = new Feed(five) { Step = 5 }; f.Warm(110); f.Min += 1000; f.Warm(10, 102.0, 110);
+        Check(f.Bar(101.4, 102.2, 101.0, Cell(102.05, 3, 18)).Count == 0, "M5: nghi 1000 phut giua hop -> van khong hop le");
+
+        // --- 12) bộ dò chỉ dùng danh sách bóng được cấp (bóng bị lọc khỏi hiển thị thì không được dùng) ---
+        f = new Feed(); f.Warm(120);
+        var shown = new List<ShCell> { Cell(101.2, 50, 2, -1) };   // bóng hiển thị nằm ngoài vùng mốc - 3 tick
+        Check(f.Bar(101.4, 102.2, 101.0, shown.ToArray()).Count == 0, "danh sach bong cap vao khong co bong gan moc -> khong dau");
+        f = new Feed(); f.Warm(120);
+        var shown2 = new List<ShCell> { Cell(101.2, 50, 2, -1), Cell(102.0, 5, 9, 1), Cell(101.9, 7, 30, 1) };
+        var q = f.Bar(101.4, 102.2, 101.0, shown2.ToArray());
+        Check(q.Count == 1 && q[0].Ask == 30 && q[0].Bid == 7, "chon bong manh nhat trong danh sach cap vao (Ask 30)");
 
         Console.WriteLine(_fail == 0 ? "  [StopHunt] PASS" : $"  [StopHunt] {_fail} FAIL");
         return _fail;

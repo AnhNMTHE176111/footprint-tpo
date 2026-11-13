@@ -5,7 +5,7 @@
 //  stop hunt = giá QUÉT qua cạnh range quan trọng (>= 1 tick) + có bóng Ô Bid/Ask lớn (bất kỳ màu) trong chính nến quét
 //              + FAIL BREAK (nến quét hoặc 1-2 nến kế đóng cửa quay lại trong mức). Dấu đặt ở nến fail break (lúc nến ĐÓNG).
 //  Mốc = cạnh hộp range của HAI hộp (hợp): 20 và 60 nến đóng trước nến đang xét. Hộp hợp lệ khi: liên tục
-//  (tt[i] - tt[i-N] <= 1,5 x N phút), cao <= X x trung vị(high-low) của 100 nến đóng trước, mỗi cạnh có >= 2 lần chạm
+//  (tt[i] - tt[i-N] <= 1,5 x N x chu kỳ nến), cao <= X x trung vị(high-low) của 100 nến đóng trước, mỗi cạnh có >= 2 lần chạm
 //  (cụm nến chạm vùng 25% chiều cao hộp, hai cụm cách nhau >= 3 nến).
 //  Cooldown 5 nến mỗi phía. Một mã cho cả hai phía: đáy = lật dấu giá (hi' = -low, lo' = -high, cl' = -close).
 //  ⚠ ĐÂY LÀ DẤU ĐỂ ĐỌC CHART, KHÔNG PHẢI TÍN HIỆU VÀO LỆNH: sau phí 1 tick chưa có lợi thế (xem file research).
@@ -35,6 +35,7 @@ namespace OrderFlowBubbles
         public int MedianBars = 100;
         public double TouchZone = 0.25;
         public int MinTouches = 2;
+        public double BarMinutes = 0;   // chu kỳ nến (phút); 0 = tự ước = khoảng cách dương nhỏ nhất giữa hai nến liền nhau đã thấy (chưa có -> 1)
     }
 
     public struct StopHuntSignal
@@ -63,6 +64,7 @@ namespace OrderFlowBubbles
 
         private readonly SideData _top = new SideData(), _bot = new SideData();
         private readonly List<long> _tt = new List<long>();   // phút (UTC) của từng nến đóng
+        private long _estPeriod = long.MaxValue;               // ước chu kỳ nến (phút) khi BarMinutes = 0
         private long _pos;                                    // vị trí tuyệt đối của nến sắp thêm
 
         public StopHuntDetector(StopHuntSettings s, double tick) { _s = s ?? new StopHuntSettings(); _tick = tick; }
@@ -70,7 +72,7 @@ namespace OrderFlowBubbles
         public void Reset()
         {
             foreach (var sd in new[] { _top, _bot }) { sd.Hi.Clear(); sd.Lo.Clear(); sd.Cl.Clear(); sd.Pending.Clear(); sd.LastSignalPos = -1000000000L; }
-            _tt.Clear(); _pos = 0;
+            _tt.Clear(); _pos = 0; _estPeriod = long.MaxValue;
         }
 
         public static long ToMinutes(long ticks) => CellBigLogic.FloorDiv(ticks, TimeSpan.TicksPerMinute);
@@ -83,6 +85,7 @@ namespace OrderFlowBubbles
             for (int k = 0; k < cellArr.Length; k++) cellArr[k] = cells[k];
             Side(true, _top, idx, high, low, close, timeMinutes, cellArr, res);
             Side(false, _bot, idx, -low, -high, -close, timeMinutes, cellArr, res);
+            if (_tt.Count > 0) { long d = timeMinutes - _tt[_tt.Count - 1]; if (d > 0 && d < _estPeriod) _estPeriod = d; }
             _tt.Add(timeMinutes);
             _pos++;
             const int keep = 600;
@@ -146,7 +149,8 @@ namespace OrderFlowBubbles
             double top = double.NegativeInfinity;
             for (int k = n - N; k < n; k++) if (sd.Hi[k] > top) top = sd.Hi[k];
             if (!(curHi >= top + _tick - Eps)) return;
-            if (!(t - _tt[n - N] <= N * 1.5)) return;
+            double per = _s.BarMinutes > 0 ? _s.BarMinutes : (_estPeriod == long.MaxValue ? 1.0 : _estPeriod);
+            if (!(t - _tt[n - N] <= N * per * 1.5)) return;
             double bot = double.PositiveInfinity;
             for (int k = n - N; k < n; k++) if (sd.Lo[k] < bot) bot = sd.Lo[k];
             double h = top - bot;

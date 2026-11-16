@@ -16,3 +16,12 @@
   trên giá = sell, dưới giá = buy, giá trong vùng = xám. Week: tuần này + tuần trước, chồng nhau thì gộp
   (CORVEN). Day: hôm nay + N ngày, chồng nhau thì giữ 1 khung uy tín nhất (ghi số ngày).
   Bản trong `hvn-handoff/` là bản cũ lúc bàn giao.
+  Vùng **LVN** (bật/tắt riêng, viền nét đứt; dưới giá xanh nhạt, trên giá cam): khe mỏng giữa 2 cụm thật
+  (mỗi cụm ≥ 8% volume, đỉnh ≥ 25% POC), đáy khe ≤ 50% đỉnh nhỏ hơn, vùng = phần mỏng nhất của khe.
+  Week: tuần này + tuần trước; 2 LVN chồng nhau thì gộp thành 1 vùng phủ cả hai (ghi "· 2 tuần").
+  Day: hôm nay + hôm qua, cùng luật. LVN tuần trước bị tuần này lấp giữa bằng cụm volume thì bỏ; chạm HVN
+  thì HVN thắng (LVN bị cắt phần chồng).
+  Đo GCZ26 T8–T10/2026 (giá rời ≥ 0,5u rồi quay lại chạm, trong 8 h: bật lại 1u hay xuyên qua 1u, so vùng
+  ngẫu nhiên cùng độ rộng): LVN tuần bật lại 44% vs ngẫu nhiên 59%, xuyên qua 37% vs 31% (n = 43, chưa đủ
+  ý nghĩa thống kê) — nghiêng về "giá trượt qua LVN" như CORVEN, **không** dùng LVN như vùng bật như HVN.
+  LVN ngày ≈ ngẫu nhiên (n = 31).

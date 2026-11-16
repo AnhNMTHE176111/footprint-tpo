@@ -1,5 +1,5 @@
 // Benzo Volume Profile — Settings: Overlay ON (main chart), Precision = symbol's.
-// Week / Day volume profile, HVN zones and an anchored VWAP with three σ bands, all built from
+// Week / Day volume profile, HVN / LVN zones and an anchored VWAP with three σ bands, all built from
 // one 1-minute series fetched independently of the chart, so every timeframe draws the same.
 
 const RES_MS = { '1m': 60000, '5m': 300000, '15m': 900000, '30m': 1800000, '1h': 3600000 };
@@ -177,27 +177,33 @@ function smoothProfile(vr, sigma) {
   return sm;
 }
 
-// Volume clusters of one profile window. The profile is cut into clusters at its LVN valleys;
-// a cluster counts as an HVN when it is a well-formed auction: a large share of the week's
-// volume, price accepted there for a good part of the week, and a D-shaped bulge (peak in the
-// body, volume tapering to both sides). The zone drawn is the cluster's dense core.
-// The POC cluster is always kept (CORVEN: the POC is an HVN too).
-function detectHvnZones(h, l, v, from, to, unit, rowFrac = HVN.rowFrac, minRows = HVN.minRows) {
-  if (to - from < 30 || !(unit > 0)) return [];
+// LVN (low volume node): the thin valley between two volume clusters, where price moved fast.
+const LVN = {
+  maxValley: 0.5,         // the valley holds <= 50% of the smaller neighbouring peak (a gap, not a dent)
+  edgeFrac: 0.25,         // zone = rows below valley + 25% of the way up to the smaller peak
+  minSideShare: 0.08,     // both neighbouring clusters hold >= 8% of the window's volume
+  minSidePeakOfPoc: 0.25, //   and peak >= 25% of the POC row: the LVN separates two real auctions
+  minWidthU: 0.1,         // after clipping by HVN zones, slivers thinner than 0.1 x 1h range are dropped
+};
+
+// Profile of one window on a fixed price grid, smoothed, with its cluster peaks and the lowest
+// row (the cut) between each pair of neighbouring peaks. Shared by HVN and LVN detection.
+function nodeProfile(h, l, v, from, to, unit, rowFrac, minRows) {
+  if (to - from < 30 || !(unit > 0)) return null;
   let top = -Infinity;
   let bot = Infinity;
   for (let k = from; k < to; k++) {
     if (h[k] > top) top = h[k];
     if (l[k] < bot) bot = l[k];
   }
-  if (!(top > bot)) return [];
+  if (!(top > bot)) return null;
   let rowSize = Math.min(unit * rowFrac, (top - bot) / minRows);
   let rows = Math.ceil((top - bot) / rowSize);
   if (rows > HVN.maxRows) { rows = HVN.maxRows; rowSize = (top - bot) / rows; }
   // Rows sit on a fixed price grid, so a new week low does not shift every row.
   bot = Math.floor(bot / rowSize) * rowSize;
   rows = Math.ceil((top - bot) / rowSize);
-  if (rows < 8) return [];
+  if (rows < 8) return null;
 
   const vr = new Float64Array(rows);
   let total = 0;
@@ -210,12 +216,12 @@ function detectHvnZones(h, l, v, from, to, unit, rowFrac = HVN.rowFrac, minRows 
     for (let r = rB; r <= rT; r++) vr[r] += ve;
     total += vol;
   }
-  if (!(total > 0)) return [];
+  if (!(total > 0)) return null;
   const sm = smoothProfile(vr, HVN.smoothSigma);
   let pocRow = 0;
   for (let r = 1; r < rows; r++) if (sm[r] > sm[pocRow]) pocRow = r;
 
-  // 1. Cluster peaks: local maxima with a real dip (LVN) on both sides.
+  // Cluster peaks: local maxima with a real dip (LVN) on both sides.
   const peaks = [];
   for (let r = 0; r < rows; r++) {
     const p = sm[r];
@@ -227,8 +233,7 @@ function detectHvnZones(h, l, v, from, to, unit, rowFrac = HVN.rowFrac, minRows 
     for (let j = r + 1; j < rows && sm[j] <= p; j++) if (sm[j] < rMin) rMin = sm[j];
     if (r === pocRow || p - Math.max(lMin, rMin) >= HVN.promOwn * p) peaks.push(r);
   }
-
-  // 2. Cut the profile at the lowest row between neighbouring peaks.
+  // cuts[i] (0 < i < peaks.length) is the lowest row between peaks[i - 1] and peaks[i].
   const cuts = [0];
   for (let i = 1; i < peaks.length; i++) {
     let m = peaks[i - 1];
@@ -236,7 +241,13 @@ function detectHvnZones(h, l, v, from, to, unit, rowFrac = HVN.rowFrac, minRows 
     cuts.push(m);
   }
   cuts.push(rows - 1);
+  return { bot, rowSize, rows, vr, sm, total, pocRow, peaks, cuts };
+}
 
+// Every volume cluster of the window (one per peak, bounded by the cuts), with its dense core and
+// the measures that tell a finished D-shaped auction from a flat block or a ramp.
+function clustersOf(P, h, l, from, to) {
+  const { bot, rowSize, vr, sm, total, pocRow, peaks, cuts } = P;
   const cands = [];
   for (let i = 0; i < peaks.length; i++) {
     const r = peaks[i];
@@ -263,24 +274,69 @@ function detectHvnZones(h, l, v, from, to, unit, rowFrac = HVN.rowFrac, minRows 
     for (let j = ba; j <= bb; j++) { bodySum += sm[j]; if (sm[j] >= p * HVN.edgeFrac) coreRows++; }
     const bodyRows = bb - ba + 1;
     cands.push({
-      lo: bot + a * rowSize, hi: bot + (b + 1) * rowSize, peak: bot + (r + 0.5) * rowSize,
+      lo: bot + a * rowSize, hi: bot + (b + 1) * rowSize, peak: bot + (r + 0.5) * rowSize, peakRow: r,
       vol: segVol, volShare: segVol / total, shape: segVol > 0 ? below / segVol : 0.5, isPoc: r === pocRow, timeShare: 0,
       peakOfPoc: p / sm[pocRow], peakedness: p / (bodySum / bodyRows), coreOfBody: coreRows / bodyRows,
       taper: Math.min(r - ba, bb - r) / Math.max(1, r - ba, bb - r),
     });
   }
-
-  // 3. Time accepted inside each core (share of the window's bars that traded there).
+  // Time accepted inside each core (share of the window's bars that traded there).
   const bars = to - from;
   for (let k = from; k < to; k++) {
     for (const z of cands) if (l[k] <= z.hi && h[k] >= z.lo) z.timeShare += 1 / bars;
   }
-
   for (const z of cands) z.score = z.volShare + z.timeShare;
-  // Every cluster, the POC one included, must be a finished D-shaped auction to be drawn.
-  return cands.filter((z) => isDShaped(z) && (z.isPoc || (
+  return cands;
+}
+
+// A cluster counts as an HVN when it is a well-formed auction: a large share of the window's
+// volume, price accepted there for a good part of it, and a D-shaped bulge. The POC cluster is
+// exempt from the size tests (CORVEN: the POC is an HVN too) but must still be D-shaped.
+function isHvnCluster(z) {
+  return isDShaped(z) && (z.isPoc || (
     z.volShare >= HVN.minVolShare && z.timeShare >= HVN.minTimeShare && z.peakOfPoc >= HVN.minPeakOfPoc
-  )));
+  ));
+}
+
+// LVNs of the window: the valley between two neighbouring real clusters, when it is deep enough;
+// the zone is its thinnest part.
+function lvnOf(P, clusters) {
+  const { bot, rowSize, sm, cuts } = P;
+  const isSide = (z) => z.volShare >= LVN.minSideShare && z.peakOfPoc >= LVN.minSidePeakOfPoc;
+  const out = [];
+  for (let i = 1; i < clusters.length; i++) {
+    const L = clusters[i - 1];
+    const R = clusters[i];
+    if (!isSide(L) || !isSide(R)) continue;
+    const m = cuts[i];
+    const low = Math.min(sm[L.peakRow], sm[R.peakRow]);
+    const val = sm[m];
+    if (!(val <= LVN.maxValley * low)) continue;
+    const thr = val + LVN.edgeFrac * (low - val);
+    let a = m;
+    while (a - 1 > L.peakRow && sm[a - 1] <= thr) a--;
+    let b = m;
+    while (b + 1 < R.peakRow && sm[b + 1] <= thr) b++;
+    out.push({ lo: bot + a * rowSize, hi: bot + (b + 1) * rowSize, depth: val / low });
+  }
+  return out;
+}
+
+// HVN zones, LVN zones and the cores of every sizeable cluster (areas price has filled) of one
+// profile window. Arrays h, l, v are parallel; [from, to) is the window.
+function detectVolumeNodes(h, l, v, from, to, unit, rowFrac = HVN.rowFrac, minRows = HVN.minRows) {
+  const P = nodeProfile(h, l, v, from, to, unit, rowFrac, minRows);
+  if (!P) return { hvn: [], lvn: [], cores: [] };
+  const clusters = clustersOf(P, h, l, from, to);
+  return {
+    hvn: clusters.filter(isHvnCluster),
+    lvn: lvnOf(P, clusters),
+    cores: clusters.filter((z) => z.peakOfPoc >= HVN.minPeakOfPoc),
+  };
+}
+
+function detectHvnZones(h, l, v, from, to, unit, rowFrac = HVN.rowFrac, minRows = HVN.minRows) {
+  return detectVolumeNodes(h, l, v, from, to, unit, rowFrac, minRows).hvn;
 }
 
 function isDShaped(z) {
@@ -334,6 +390,47 @@ function pickReputableZones(zones, unit) {
       out.push(z);
     }
   }
+  return out;
+}
+// Zone z trimmed where a blocking range overlaps its edge. A blocker inside it (splitting it in two)
+// means price has built volume in the middle of the gap, so the zone is gone; so are slivers under minW.
+function clipZone(z, blockers, minW) {
+  let pieces = [[z.lo, z.hi]];
+  for (const b of blockers) {
+    const next = [];
+    for (const [lo, hi] of pieces) {
+      if (b.hi <= lo || b.lo >= hi) { next.push([lo, hi]); continue; }
+      if (b.lo > lo) next.push([lo, b.lo]);
+      if (b.hi < hi) next.push([b.hi, hi]);
+    }
+    if (next.length > pieces.length) return [];
+    pieces = next;
+  }
+  return pieces.filter(([lo, hi]) => hi - lo >= minW).map(([lo, hi]) => ({ ...z, lo, hi }));
+}
+
+// LVNs of the current and the previous period. An old LVN that the current period has since
+// filled with a cluster is gone; overlapping LVNs merge into one zone spanning both; an HVN
+// wins over an LVN where they overlap. `periods` counts the periods that found an LVN there.
+function mergeLvnZones(prevLvn, curLvn, curCores, hvnZones, unit) {
+  const minW = LVN.minWidthU * unit;
+  const zones = [];
+  for (const z of prevLvn) for (const piece of clipZone(z, curCores, minW)) zones.push({ ...piece, periods: new Set([z.fromIndex]) });
+  for (const z of curLvn) zones.push({ ...z, periods: new Set([z.fromIndex]) });
+  zones.sort((x, y) => x.lo - y.lo);
+  const merged = [];
+  for (const z of zones) {
+    const last = merged[merged.length - 1];
+    if (last && z.lo <= last.hi) {
+      last.hi = Math.max(last.hi, z.hi);
+      last.fromIndex = Math.min(last.fromIndex, z.fromIndex);
+      for (const p of z.periods) last.periods.add(p);
+    } else {
+      merged.push(z);
+    }
+  }
+  const out = [];
+  for (const z of merged) for (const piece of clipZone(z, hvnZones, minW)) out.push({ ...piece, periods: z.periods.size });
   return out;
 }
 // ==HVN-CORE-END==
@@ -479,49 +576,59 @@ function chartSpan(dataList, tStart, tEnd) {
   return { from: Math.max(0, chartIndexAt(dataList, tStart)), to };
 }
 
-// HVN zones of the current and the previous week, merged (CORVEN). Built from closed base bars
-// only (the forming one is left out) and rebuilt only when a new bar closes, on one row grid sized
-// from the finished previous week, so they do not jitter. Side follows the live price: above =
-// sell, below = buy, price inside = not tradable yet.
-function buildHvnWeek(B, weeks, cache) {
+// HVN and LVN zones of the current and the previous week, merged (CORVEN). Built from closed base
+// bars only (the forming one is left out) and rebuilt only when a new bar closes, on one row grid
+// sized from the finished previous week, so they do not jitter. Side follows the live price:
+// above = sell, below = buy, price inside = not tradable yet.
+function buildZonesWeek(B, weeks, cache) {
   const cur = weeks[weeks.length - 1];
   const prev = weeks.length > 1 ? weeks[weeks.length - 2] : null;
   const end = B.n - 1;
   const key = `W|${B.t[(prev || cur)[0]]}|${B.t[end - 1]}|${end}`;
-  if (cache.hvnKey !== key) {
-    const zones = [];
+  if (cache.zoneKey !== key) {
     const unit = prev ? hourlyRangeUnit(B.h, B.l, B.t, prev[0], prev[1]) : hourlyRangeUnit(B.h, B.l, B.t, cur[0], end);
     // fromIndex carries the session start time until it is mapped to a chart bar in calc;
-    // mergeHvnZones keeps the earliest one of merged zones.
-    if (prev) for (const z of detectHvnZones(B.h, B.l, B.v, prev[0], prev[1], unit)) zones.push({ ...z, fromIndex: B.t[prev[0]] });
-    for (const z of detectHvnZones(B.h, B.l, B.v, cur[0], Math.min(cur[1], end), unit)) zones.push({ ...z, fromIndex: B.t[cur[0]] });
-    cache.hvnKey = key;
-    cache.hvnZones = mergeHvnZones(zones, unit);
+    // merged zones keep the earliest one.
+    const tag = (zs, from) => zs.map((z) => ({ ...z, fromIndex: from }));
+    const p = prev ? detectVolumeNodes(B.h, B.l, B.v, prev[0], prev[1], unit) : { hvn: [], lvn: [] };
+    const c = detectVolumeNodes(B.h, B.l, B.v, cur[0], Math.min(cur[1], end), unit);
+    const pFrom = prev ? B.t[prev[0]] : 0;
+    const cFrom = B.t[cur[0]];
+    const hvn = mergeHvnZones([...tag(p.hvn, pFrom), ...tag(c.hvn, cFrom)], unit);
+    cache.zoneKey = key;
+    cache.zones = { hvn, lvn: mergeLvnZones(tag(p.lvn, pFrom), tag(c.lvn, cFrom), c.cores, hvn, unit) };
   }
-  return cache.hvnZones;
+  return cache.zones;
 }
 
 // Daily HVN zones from the last nDays finished days plus today (closed bars only); overlapping
-// days keep their most convincing zone.
-function buildHvnDay(B, days, nDays, cache) {
+// days keep their most convincing zone. Daily LVNs from yesterday and today, merged like weekly ones.
+function buildZonesDay(B, days, nDays, cache) {
   const first = Math.max(0, days.length - 1 - nDays);
   const end = B.n - 1;
   const key = `D|${B.t[days[first][0]]}|${B.t[end - 1]}|${end}`;
-  if (cache.hvnKey !== key) {
+  if (cache.zoneKey !== key) {
     const cur = days[days.length - 1];
     const doneEnd = first < days.length - 1 ? cur[0] : end;
     const unit = hourlyRangeUnit(B.h, B.l, B.t, days[first][0], doneEnd > days[first][0] ? doneEnd : end);
-    const zones = [];
+    const hvnAll = [];
+    const lvnByDay = [];
+    let todayCores = [];
     for (let d = first; d < days.length; d++) {
       const [a, b] = days[d];
-      for (const z of detectHvnZones(B.h, B.l, B.v, a, Math.min(b, end), unit, HVN.dayRowFrac, HVN.dayMinRows)) {
-        zones.push({ ...z, fromIndex: B.t[a] });   // day start time identifies the day
-      }
+      const nodes = detectVolumeNodes(B.h, B.l, B.v, a, Math.min(b, end), unit, HVN.dayRowFrac, HVN.dayMinRows);
+      // the day's start time identifies the day
+      for (const z of nodes.hvn) hvnAll.push({ ...z, fromIndex: B.t[a] });
+      lvnByDay.push(nodes.lvn.map((z) => ({ ...z, fromIndex: B.t[a] })));
+      if (d === days.length - 1) todayCores = nodes.cores;
     }
-    cache.hvnKey = key;
-    cache.hvnZones = pickReputableZones(zones, unit);
+    const hvn = pickReputableZones(hvnAll, unit);
+    const today = lvnByDay[lvnByDay.length - 1] || [];
+    const yesterday = lvnByDay.length > 1 ? lvnByDay[lvnByDay.length - 2] : [];
+    cache.zoneKey = key;
+    cache.zones = { hvn, lvn: mergeLvnZones(yesterday, today, todayCores, hvn, unit) };
   }
-  return cache.hvnZones;
+  return cache.zones;
 }
 
 function priceOf(name, B) {
@@ -644,12 +751,13 @@ return {
       showBand2 = false, bandMult2 = 2.0, bandLine2 = '#ab47bc80', bandFill2 = '#ab47bc12',
       showBand3 = false, bandMult3 = 3.0, bandLine3 = '#ab47bc59', bandFill3 = '#ab47bc0d',
       showHVN = true, hvnBuyColor = '#26a69a', hvnSellColor = '#ef5350', hvnInsideColor = '#9e9e9e',
+      showLVN = true, lvnBuyColor = '#29b6f6', lvnSellColor = '#ffa726',
     } = indicator.extendData?.inputs || {};
     const n = dataList.length;
     const res = new Array(n);
     for (let i = 0; i < n; i++) res[i] = {};
     if (n === 0) return res;
-    if (!indicator._benzoCache) indicator._benzoCache = { hist: null, B: null, bKey: '', sess: null, sessAnchor: '', vwapSeries: null, profiles: new Map(), dayKey: '', days: null, hvnKey: '', hvnZones: [], res: null };
+    if (!indicator._benzoCache) indicator._benzoCache = { hist: null, B: null, bKey: '', sess: null, sessAnchor: '', vwapSeries: null, profiles: new Map(), dayKey: '', days: null, zoneKey: '', zones: null, res: null };
     const cache = indicator._benzoCache;
     // While a data request is in flight, keep showing the last result instead of a blank frame.
     const keepLast = () => {
@@ -717,27 +825,36 @@ return {
     for (const key of cache.profiles.keys()) if (!usedKeys.has(key)) cache.profiles.delete(key);
 
     const vwap = showVWAP ? vwapOnChart(dataList, B, vwapSeries(B, days, o, cache, sameBars), o, res, barMs) : null;
-    let hvn = [];
-    if (showHVN) {
-      const zones = isDay ? buildHvnDay(B, sess, sessions, cache) : buildHvnWeek(B, sess, cache);
+    // HVN and LVN zones, each across the pane from its session's start. Above the live price =
+    // sell, below = buy, price inside = gray (not tradable yet).
+    const zones = [];
+    if (showHVN || showLVN) {
+      const found = isDay ? buildZonesDay(B, sess, sessions, cache) : buildZonesWeek(B, sess, cache);
       const price = dataList[n - 1].close;
-      hvn = zones.map((z) => ({
-        ...z,
-        fromIndex: Math.max(0, chartIndexAt(dataList, z.fromIndex)),   // zone's session start, on the chart
-        side: z.hi < price ? 1 : z.lo > price ? -1 : 0,
-      }));
-    }
-    const hvnRgb = {
-      1: parseRgb(hvnBuyColor, [38, 166, 154]),
-      '-1': parseRgb(hvnSellColor, [239, 83, 80]),
-      0: parseRgb(hvnInsideColor, [158, 158, 158]),
-    };
-    for (const z of hvn) {
-      const rgb = hvnRgb[z.side];
-      z.fill = rgba(rgb, z.side ? 0.18 : 0.10);
-      z.line = rgba(rgb, z.side ? 0.95 : 0.6);
-      z.name = z.side > 0 ? 'HVN Buy' : z.side < 0 ? 'HVN Sell' : 'HVN (giá đang trong vùng)';
-      z.suffix = z.days > 1 ? ` · ${z.days} ngày` : '';
+      const insideRgb = parseRgb(hvnInsideColor, [158, 158, 158]);
+      const kinds = [];
+      if (showHVN) kinds.push({ list: found.hvn, kind: 'HVN', buy: parseRgb(hvnBuyColor, [38, 166, 154]), sell: parseRgb(hvnSellColor, [239, 83, 80]) });
+      if (showLVN) kinds.push({ list: found.lvn, kind: 'LVN', buy: parseRgb(lvnBuyColor, [41, 182, 246]), sell: parseRgb(lvnSellColor, [255, 167, 38]) });
+      const unitName = isDay ? 'ngày' : 'tuần';
+      for (const { list, kind, buy, sell } of kinds) {
+        for (const z of list) {
+          const side = z.hi < price ? 1 : z.lo > price ? -1 : 0;
+          const rgb = side > 0 ? buy : side < 0 ? sell : insideRgb;
+          const count = kind === 'HVN' ? z.days || 0 : z.periods || 0;
+          zones.push({
+            lo: z.lo,
+            hi: z.hi,
+            fromIndex: Math.max(0, chartIndexAt(dataList, z.fromIndex)),   // zone's session start, on the chart
+            side,
+            fill: rgba(rgb, side ? 0.18 : 0.10),
+            line: rgba(rgb, side ? 0.95 : 0.6),
+            // HVN edges solid, LVN edges dashed; price inside: dotted
+            dash: side === 0 ? [2, 3] : kind === 'LVN' ? [6, 4] : [],
+            label: `${kind}${side > 0 ? ' Buy' : side < 0 ? ' Sell' : ' (giá đang trong vùng)'}`,
+            suffix: count > 1 ? ` · ${count} ${unitName}` : '',
+          });
+        }
+      }
     }
 
     const pocRgb = parseRgb(colPOC, [91, 100, 114]);
@@ -754,7 +871,7 @@ return {
       vwapColor: colVWAP,
       vwapWidth,
       bands,
-      hvn,
+      zones,
     };
     cache.res = res;
     return res;
@@ -877,9 +994,9 @@ return {
       }
     }
 
-    // 4. HVN bands across the whole pane (below the profile, above the VWAP zones).
+    // 4. HVN / LVN bands across the whole pane (below the profile, above the VWAP zones).
     const { width: paneW } = bv.bounds(args);
-    for (const z of st.hvn) {
+    for (const z of st.zones) {
       const y1 = Y(z.hi);
       const y2 = Y(z.lo);
       const x0 = Math.max(0, X(z.fromIndex) - bv.halfBar(args, z.fromIndex));
@@ -904,20 +1021,20 @@ return {
       }
     }
 
-    // HVN edge lines and labels on top of the candles, so the levels stay easy to find.
+    // Zone edge lines and labels on top of the candles, so the levels stay easy to find.
     ctx.globalCompositeOperation = 'source-over';
-    if (st.hvn.length) {
+    if (st.zones.length) {
       ctx.lineWidth = 1;
       ctx.font = bv.font(args, { size: 10 }).css;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'bottom';
-      for (const z of st.hvn) {
+      for (const z of st.zones) {
         const y1 = Math.round(Y(z.hi)) + 0.5;
         const y2 = Math.round(Y(z.lo)) + 0.5;
         const x0 = Math.max(0, X(z.fromIndex) - bv.halfBar(args, z.fromIndex));
         if (!Number.isFinite(y1) || !Number.isFinite(y2) || !Number.isFinite(x0) || x0 >= paneW) continue;
         ctx.strokeStyle = z.line;
-        ctx.setLineDash(z.side ? [] : [4, 4]);
+        ctx.setLineDash(z.dash);
         ctx.beginPath();
         ctx.moveTo(x0, y1);
         ctx.lineTo(paneW, y1);
@@ -925,7 +1042,7 @@ return {
         ctx.lineTo(paneW, y2);
         ctx.stroke();
         ctx.fillStyle = z.line;
-        ctx.fillText(`${z.name} ${bv.priceText(args, z.lo)} – ${bv.priceText(args, z.hi)}${z.suffix}`, paneW - 6, y1 - 2);
+        ctx.fillText(`${z.label} ${bv.priceText(args, z.lo)} – ${bv.priceText(args, z.hi)}${z.suffix}`, paneW - 6, y1 - 2);
       }
       ctx.setLineDash([]);
     }

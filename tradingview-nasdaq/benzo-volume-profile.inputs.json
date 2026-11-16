@@ -19,6 +19,7 @@
   {"id": "showBand3", "name": "Band #3", "type": "bool", "defval": false},
   {"id": "bandMult3", "name": "Band #3 Multiplier (σ)", "type": "float", "defval": 3.0, "min": 0.1, "max": 5.0, "step": 0.1},
   {"id": "showHVN", "name": "HVN Zones", "type": "bool", "defval": true},
+  {"id": "showLVN", "name": "LVN Zones", "type": "bool", "defval": true},
   {"id": "colBuy", "name": "Week Profile Buy (up) Volume Color", "type": "color", "defval": "#90bff9", "tab": "style"},
   {"id": "colSell", "name": "Week Profile Sell (down) Volume Color", "type": "color", "defval": "#b39ddb", "tab": "style"},
   {"id": "colDayBuy", "name": "Day Profile Buy (up) Volume Color", "type": "color", "defval": "#c9a43c", "tab": "style"},
@@ -34,5 +35,7 @@
   {"id": "bandFill3", "name": "Band #3 Zone Fill", "type": "color", "defval": "#ab47bc0d", "tab": "style"},
   {"id": "hvnBuyColor", "name": "HVN Buy Zone Color", "type": "color", "defval": "#26a69a", "tab": "style"},
   {"id": "hvnSellColor", "name": "HVN Sell Zone Color", "type": "color", "defval": "#ef5350", "tab": "style"},
-  {"id": "hvnInsideColor", "name": "HVN Color (price inside zone)", "type": "color", "defval": "#9e9e9e", "tab": "style"}
+  {"id": "hvnInsideColor", "name": "HVN / LVN Color (price inside zone)", "type": "color", "defval": "#9e9e9e", "tab": "style"},
+  {"id": "lvnBuyColor", "name": "LVN Buy Zone Color", "type": "color", "defval": "#29b6f6", "tab": "style"},
+  {"id": "lvnSellColor", "name": "LVN Sell Zone Color", "type": "color", "defval": "#ffa726", "tab": "style"}
 ]

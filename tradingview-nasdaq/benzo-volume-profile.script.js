@@ -1,9 +1,12 @@
 // Benzo Volume Profile — Settings: Overlay ON (main chart), Precision = symbol's.
-// Session volume profile (built from lower-timeframe bars so the POC is the same on M1 / M15)
-// plus an anchored VWAP with three optional standard-deviation bands.
+// Week / Day volume profile, HVN zones and an anchored VWAP with three σ bands, all built from
+// one 1-minute series fetched independently of the chart, so every timeframe draws the same.
 
-const ANCHOR_TF = { '1h': '60', '4h': '240', '1D': '1D', '1W': '1W', '1M': '1M' };
 const RES_MS = { '1m': 60000, '5m': 300000, '15m': 900000, '30m': 1800000, '1h': 3600000 };
+const DAY_MS = 86400000;
+const HOUR_MS_ = 3600000;
+const ANCHOR_SPAN_MIN = { '1h': 60, '4h': 240, '1D': 1440, '1W': 10080, '1M': 44640 };
+const MAX_HISTORY_BARS = 120000;   // the platform allows 200k lower-timeframe bars per script
 // Row transparency (Pine 0..100) runs from G_EDGE (lowest volume) to G_PEAK (POC).
 const G_PEAK = 3;
 const G_EDGE = 68;
@@ -28,37 +31,6 @@ function rgba(rgb, alpha) {
   return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
 }
 
-function priceSource(name) {
-  switch (name) {
-    case 'close': return (b) => b.close;
-    case 'open': return (b) => b.open;
-    case 'high': return (b) => b.high;
-    case 'low': return (b) => b.low;
-    case 'hl2': return (b) => (b.high + b.low) / 2;
-    case 'ohlc4': return (b) => (b.open + b.high + b.low + b.close) / 4;
-    case 'hlcc4': return (b) => (b.high + b.low + b.close + b.close) / 4;
-    default: return (b) => (b.high + b.low + b.close) / 3;
-  }
-}
-
-// First chart-bar index of every anchor period (Pine timeframe.change), from the
-// timestamp of the higher-timeframe bar that contains each chart bar.
-function periodStarts(keys, n) {
-  const starts = [0];
-  let last = keys[0];
-  for (let i = 1; i < n; i++) {
-    const k = keys[i];
-    if (k === undefined || k === null) continue;
-    if (last !== undefined && last !== null && k !== last) starts.push(i);
-    last = k;
-  }
-  return starts;
-}
-
-function anchorKeys(label) {
-  return bv.security({ timeframe: ANCHOR_TF[label] || '1D', lookahead: true }, (bars) => bars.map((b) => b.timestamp));
-}
-
 // Value area grown outward from the POC one row at a time (higher side wins ties).
 function valueAreaOf(vr, valueArea) {
   const rows = vr.length;
@@ -80,56 +52,40 @@ function valueAreaOf(vr, valueArea) {
   return { pIdx, up, dn };
 }
 
-function buildProfile(dataList, ltf, s, e, o) {
-  // Pass 1: session high / low from the profile-resolution bars.
+// Profile of base bars [a, b), drawn over chart bars from..to.
+function buildProfile(B, a, b, from, to, o) {
   let top = -Infinity;
   let bot = Infinity;
-  for (let i = s; i <= e; i++) {
-    const intra = ltf ? ltf[i] : null;
-    if (intra && intra.length) {
-      for (let k = 0; k < intra.length; k++) {
-        if (intra[k].high > top) top = intra[k].high;
-        if (intra[k].low < bot) bot = intra[k].low;
-      }
-    } else {
-      if (dataList[i].high > top) top = dataList[i].high;
-      if (dataList[i].low < bot) bot = dataList[i].low;
-    }
+  for (let k = a; k < b; k++) {
+    if (B.h[k] > top) top = B.h[k];
+    if (B.l[k] < bot) bot = B.l[k];
   }
   if (!Number.isFinite(top) || !Number.isFinite(bot)) return null;
 
-  // Pass 2: spread each bar's volume evenly over the rows its high-low range touches.
+  // Spread each bar's volume evenly over the rows its high-low range touches.
   const rows = o.rows;
   const rh = (top - bot) / rows;
   const vr = new Float64Array(rows);
   const dr = new Float64Array(rows);
-  const addBar = (b) => {
-    const v = b.volume;
-    if (!Number.isFinite(v)) return;
-    // Clamp into [0, rows-1]: a bar touching the session top maps to bin == rows.
-    const rB = Math.min(rows - 1, Math.max(0, Math.floor((b.low - bot) / rh)));
-    const rT = Math.min(rows - 1, Math.max(0, Math.floor((b.high - bot) / rh)));
-    const ve = v / (rT - rB + 1);
-    const isDown = b.close < b.open;
-    for (let r = rB; r <= rT; r++) {
-      vr[r] += ve;
-      if (isDown) dr[r] += ve;
-    }
-  };
   if (rh > 0) {
-    for (let i = s; i <= e; i++) {
-      const intra = ltf ? ltf[i] : null;
-      if (intra && intra.length) {
-        for (let k = 0; k < intra.length; k++) addBar(intra[k]);
-      } else {
-        addBar(dataList[i]);
+    for (let k = a; k < b; k++) {
+      const v = B.v[k];
+      if (!Number.isFinite(v)) continue;
+      // Clamp into [0, rows-1]: a bar touching the session top maps to bin == rows.
+      const rB = Math.min(rows - 1, Math.max(0, Math.floor((B.l[k] - bot) / rh)));
+      const rT = Math.min(rows - 1, Math.max(0, Math.floor((B.h[k] - bot) / rh)));
+      const ve = v / (rT - rB + 1);
+      const isDown = B.c[k] < B.o[k];
+      for (let r = rB; r <= rT; r++) {
+        vr[r] += ve;
+        if (isDown) dr[r] += ve;
       }
     }
   }
 
   const { pIdx, up, dn } = valueAreaOf(vr, o.valueArea);
   const maxV = vr[pIdx];
-  const nBars = e - s + 1;
+  const nBars = to - from + 1;
   const wMax = Math.min(o.maxWidthBar, Math.max(3, Math.trunc(nBars * o.widthPct)));
   const rowList = [];
   if (maxV > 0 && rh > 0) {
@@ -152,7 +108,7 @@ function buildProfile(dataList, ltf, s, e, o) {
     }
   }
   const poc = bot + (pIdx + 0.5) * rh;
-  return { from: s, to: e, right: Math.max(e, s + wMax), wMax, rows: rowList, poc, pocTop: poc + rh * 0.5, pocBot: poc - rh * 0.5 };
+  return { from, to, right: Math.max(to, from + wMax), wMax, rows: rowList, poc, pocTop: poc + rh * 0.5, pocBot: poc - rh * 0.5 };
 }
 
 // ==HVN-CORE-BEGIN==
@@ -382,159 +338,287 @@ function pickReputableZones(zones, unit) {
 }
 // ==HVN-CORE-END==
 
-// Profile-resolution bars of chart bars [s, e) as flat arrays (chart bar when no intrabars).
-// dropLast leaves out the newest (still forming) bar, so HVN zones are built from closed
-// 1-minute bars only and come out the same on M1, M5, M15...
-function flattenBars(dataList, ib, s, e, dropLast = false) {
-  let size = 0;
-  for (let i = s; i < e; i++) size += ib && ib[i] && ib[i].length ? ib[i].length : 1;
-  if (dropLast && size > 0) size--;
-  const f = { h: new Float64Array(size), l: new Float64Array(size), v: new Float64Array(size), t: new Float64Array(size), chartStart: new Int32Array(Math.max(1, e - s)) };
-  let k = 0;
-  const put = (b) => { if (k < size) { f.h[k] = b.high; f.l[k] = b.low; f.v[k] = b.volume; f.t[k] = b.timestamp; k++; } };
-  for (let i = s; i < e; i++) {
-    f.chartStart[i - s] = k;
-    const intra = ib ? ib[i] : null;
-    if (intra && intra.length) for (let j = 0; j < intra.length; j++) put(intra[j]);
-    else put(dataList[i]);
-  }
-  return f;
+// ---------------------------------------------------------------------------------------------
+// Base data. The chart only holds the bars scrolled into view (a few hours on M1, weeks on M30),
+// so building from chart bars draws something different on every timeframe. Profiles, HVN and
+// VWAP are built instead from one series of profile-resolution bars covering the whole look-back,
+// fetched independently of the chart: the same input on M1, M5, M15...
+
+// History: `count` bars of `res`, captured from the requested series itself (bv.security hands
+// the expression every requested bar, including those older than the chart's first bar).
+function requestHistory(res, count, cache) {
+  let got = null;
+  const r = bv.security({ timeframe: res, calcBarsCount: count }, (bars) => {
+    got = bars;
+    // The values are not used; one shared array avoids a 100k allocation on every tick.
+    if (!cache.zeros || cache.zeros.length !== bars.length) cache.zeros = new Array(bars.length).fill(0);
+    return cache.zeros;
+  });
+  if (got && got.length) cache.hist = got;
+  return r !== undefined || cache.hist !== null;
 }
 
-// Open time of the newest closed profile-resolution bar.
-function lastClosedTime(dataList, ib) {
-  const n = dataList.length;
-  const last = ib ? ib[n - 1] : null;
-  if (last && last.length > 1) return last[last.length - 2].timestamp;
-  if (n < 2) return 0;
-  const prev = ib ? ib[n - 2] : null;
-  return prev && prev.length ? prev[prev.length - 1].timestamp : dataList[n - 2].timestamp;
-}
-
-function intrabarCount(ib, s, e) {
-  let c = 0;
-  for (let i = s; i < e; i++) c += ib && ib[i] ? ib[i].length : 0;
-  return c;
-}
-
-// Intrabars of chart bars [from, n). A closed bar keeps the intrabars it had once loaded, so a
-// momentary gap in the lower-timeframe feed does not reshape the profile for one tick.
-function stableIntrabars(dataList, ltf, from, cache) {
-  const n = dataList.length;
-  const out = new Array(n);
-  for (let i = from; i < n; i++) {
-    const ts = dataList[i].timestamp;
+// Newest bars from the chart itself (live): its own bars on a chart of the profile resolution,
+// otherwise the intrabars of the last couple of days of chart bars.
+function liveBars(dataList, ltf) {
+  if (!ltf) return dataList;
+  const out = [];
+  for (let i = 0; i < dataList.length; i++) {
     const a = ltf[i];
-    if (a && a.length) {
-      out[i] = a;
-      if (i < n - 1) cache.set(ts, a);
-    } else if (cache.has(ts)) {
-      out[i] = cache.get(ts);
-    }
-  }
-  if (cache.size > 2 * (n - from) + 100) {
-    const keepFrom = dataList[from].timestamp;
-    for (const ts of cache.keys()) if (ts < keepFrom) cache.delete(ts);
+    if (a) for (let k = 0; k < a.length; k++) out.push(a[k]);
   }
   return out;
 }
 
-// HVN zones of the current and the previous week, merged. They are rebuilt only when a chart bar
-// closes (the forming bar is left out), on one row grid sized from the finished previous week,
-// so they do not jitter tick by tick. Side follows the live price: zone above price = sell,
-// below = buy, price inside = not tradable yet (CORVEN).
-function buildHvn(dataList, ib, weekKeys, cache) {
-  const n = dataList.length;
-  const starts = periodStarts(weekKeys, n);
-  const curStart = starts[starts.length - 1];
-  const prevStart = starts.length > 1 ? starts[starts.length - 2] : curStart;
-  const key = `W|${dataList[prevStart].timestamp}|${lastClosedTime(dataList, ib)}|${intrabarCount(ib, prevStart, n)}`;
+// Both series merged by time into flat arrays (oldest first); on the same timestamp the live
+// copy wins because it is the freshest.
+function mergeBars(hist, live) {
+  const cap = hist.length + live.length;
+  const B = { t: new Float64Array(cap), o: new Float64Array(cap), h: new Float64Array(cap), l: new Float64Array(cap), c: new Float64Array(cap), v: new Float64Array(cap), n: 0 };
+  const put = (x) => {
+    const k = B.n++;
+    B.t[k] = x.timestamp; B.o[k] = x.open; B.h[k] = x.high; B.l[k] = x.low; B.c[k] = x.close; B.v[k] = x.volume;
+  };
+  let i = 0;
+  let j = 0;
+  while (i < hist.length || j < live.length) {
+    const ti = i < hist.length ? hist[i].timestamp : Infinity;
+    const tj = j < live.length ? live[j].timestamp : Infinity;
+    if (tj <= ti) {
+      put(live[j++]);
+      if (tj === ti) i++;
+    } else {
+      put(hist[i++]);
+    }
+  }
+  return B;
+}
+
+// Trading day (Pine time_tradingday) and session start of every base bar, from the symbol's
+// exchange session, so a day / week starts where the chart's own D / W bars start.
+function sessionDays(B, cache) {
+  const key = `${B.n}|${B.t[0]}|${B.t[B.n - 1]}`;
+  if (cache.dayKey === key) return cache.days;
+  const info = bv.syminfo() || {};
+  const sess = info.session || '24x7';
+  const tz = info.timezone || 'UTC';
+  const day = new Float64Array(B.n);
+  const start = new Float64Array(B.n);
+  let ok = 0;
+  for (let k = 0; k < B.n; k++) {
+    const s = bv.session(B.t[k], sess, tz);
+    if (s) { day[k] = s.tradingDay; start[k] = s.start; ok++; } else { day[k] = NaN; start[k] = NaN; }
+  }
+  if (ok < B.n / 2) {
+    // No usable session: roll the day at 22:00 UTC, the FX / CME daily break.
+    for (let k = 0; k < B.n; k++) {
+      day[k] = Math.floor((B.t[k] + 2 * HOUR_MS_) / DAY_MS) * DAY_MS;
+      start[k] = day[k] - 2 * HOUR_MS_;
+    }
+  } else {
+    // A bar outside the session (e.g. in the daily break) keeps the previous bar's day.
+    let first = 0;
+    while (first < B.n && !Number.isFinite(day[first])) first++;
+    for (let k = 0; k < B.n; k++) {
+      if (Number.isFinite(day[k])) continue;
+      const from = k < first ? first : k - 1;
+      day[k] = day[from];
+      start[k] = start[from];
+    }
+  }
+  cache.dayKey = key;
+  cache.days = { day, start };
+  return cache.days;
+}
+
+function periodKey(days, B, k, anchor) {
+  const d = days.day[k];
+  switch (anchor) {
+    case '1W': return Math.floor((d / DAY_MS + 3) / 7);   // weeks start on Monday's trading day
+    case '1M': { const dt = new Date(d); return dt.getUTCFullYear() * 12 + dt.getUTCMonth(); }
+    case '1h':
+    case '4h': {
+      const p = ANCHOR_SPAN_MIN[anchor] * 60000;
+      return days.start[k] + Math.floor((B.t[k] - days.start[k]) / p) * p;
+    }
+    default: return d;
+  }
+}
+
+// Base-bar ranges [a, b) of every anchor period, oldest first.
+function periodsOf(B, days, anchor) {
+  const out = [];
+  if (!B.n) return out;
+  let a = 0;
+  let key = periodKey(days, B, 0, anchor);
+  for (let k = 1; k < B.n; k++) {
+    const kk = periodKey(days, B, k, anchor);
+    if (kk !== key) { out.push([a, k]); a = k; key = kk; }
+  }
+  out.push([a, B.n]);
+  return out;
+}
+
+// Chart bar holding time t (the last bar opened at or before t), or -1 before the first bar.
+function chartIndexAt(dataList, t) {
+  let lo = 0;
+  let hi = dataList.length - 1;
+  if (hi < 0 || t < dataList[0].timestamp) return -1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (dataList[mid].timestamp <= t) lo = mid; else hi = mid - 1;
+  }
+  return lo;
+}
+
+// Chart span [from, to] of a period; from is clamped to the first loaded bar, null if the whole
+// period lies before the loaded chart.
+function chartSpan(dataList, tStart, tEnd) {
+  const to = chartIndexAt(dataList, tEnd);
+  if (to < 0) return null;
+  return { from: Math.max(0, chartIndexAt(dataList, tStart)), to };
+}
+
+// HVN zones of the current and the previous week, merged (CORVEN). Built from closed base bars
+// only (the forming one is left out) and rebuilt only when a new bar closes, on one row grid sized
+// from the finished previous week, so they do not jitter. Side follows the live price: above =
+// sell, below = buy, price inside = not tradable yet.
+function buildHvnWeek(B, weeks, cache) {
+  const cur = weeks[weeks.length - 1];
+  const prev = weeks.length > 1 ? weeks[weeks.length - 2] : null;
+  const end = B.n - 1;
+  const key = `W|${B.t[(prev || cur)[0]]}|${B.t[end - 1]}|${end}`;
   if (cache.hvnKey !== key) {
-    const f = flattenBars(dataList, ib, prevStart, n, true);
-    const total = f.h.length;
-    const curFrom = Math.min(total, f.chartStart[curStart - prevStart]);
-    const unit = hourlyRangeUnit(f.h, f.l, f.t, 0, curFrom > 0 ? curFrom : total);
     const zones = [];
-    // fromIndex holds 0 = previous week, 1 = current week until mapped to chart bars below.
-    if (curFrom > 0) for (const z of detectHvnZones(f.h, f.l, f.v, 0, curFrom, unit)) zones.push({ ...z, fromIndex: 0 });
-    for (const z of detectHvnZones(f.h, f.l, f.v, curFrom, total, unit)) zones.push({ ...z, fromIndex: 1 });
+    const unit = prev ? hourlyRangeUnit(B.h, B.l, B.t, prev[0], prev[1]) : hourlyRangeUnit(B.h, B.l, B.t, cur[0], end);
+    // fromIndex carries the session start time until it is mapped to a chart bar in calc;
+    // mergeHvnZones keeps the earliest one of merged zones.
+    if (prev) for (const z of detectHvnZones(B.h, B.l, B.v, prev[0], prev[1], unit)) zones.push({ ...z, fromIndex: B.t[prev[0]] });
+    for (const z of detectHvnZones(B.h, B.l, B.v, cur[0], Math.min(cur[1], end), unit)) zones.push({ ...z, fromIndex: B.t[cur[0]] });
     cache.hvnKey = key;
     cache.hvnZones = mergeHvnZones(zones, unit);
   }
-  const price = dataList[n - 1].close;
-  return cache.hvnZones.map((z) => ({
-    ...z,
-    fromIndex: z.fromIndex === 0 ? prevStart : curStart,
-    side: z.hi < price ? 1 : z.lo > price ? -1 : 0,
-  }));
+  return cache.hvnZones;
 }
 
-// Daily HVN zones from the last `nDays` finished days plus today (closed bars only), rebuilt
-// when a chart bar closes. One row grid sized from the finished days keeps them steady.
-function buildHvnDay(dataList, ib, dayStarts, nDays, cache) {
-  const n = dataList.length;
-  const first = Math.max(0, dayStarts.length - 1 - nDays);
-  const base = dayStarts[first];
-  const curStart = dayStarts[dayStarts.length - 1];
-  const key = `D|${dataList[base].timestamp}|${lastClosedTime(dataList, ib)}|${intrabarCount(ib, base, n)}`;
+// Daily HVN zones from the last nDays finished days plus today (closed bars only); overlapping
+// days keep their most convincing zone.
+function buildHvnDay(B, days, nDays, cache) {
+  const first = Math.max(0, days.length - 1 - nDays);
+  const end = B.n - 1;
+  const key = `D|${B.t[days[first][0]]}|${B.t[end - 1]}|${end}`;
   if (cache.hvnKey !== key) {
-    const f = flattenBars(dataList, ib, base, n, true);
-    const total = f.h.length;
-    const at = (i) => Math.min(total, f.chartStart[i - base]);
-    const doneEnd = at(curStart);
-    const unit = hourlyRangeUnit(f.h, f.l, f.t, 0, doneEnd > 0 ? doneEnd : total);
+    const cur = days[days.length - 1];
+    const doneEnd = first < days.length - 1 ? cur[0] : end;
+    const unit = hourlyRangeUnit(B.h, B.l, B.t, days[first][0], doneEnd > days[first][0] ? doneEnd : end);
     const zones = [];
-    // fromIndex holds the day's offset from `first` until mapped to chart bars below.
-    for (let d = first; d < dayStarts.length; d++) {
-      const a = at(dayStarts[d]);
-      const b = d + 1 < dayStarts.length ? at(dayStarts[d + 1]) : total;
-      for (const z of detectHvnZones(f.h, f.l, f.v, a, b, unit, HVN.dayRowFrac, HVN.dayMinRows)) zones.push({ ...z, fromIndex: d - first });
+    for (let d = first; d < days.length; d++) {
+      const [a, b] = days[d];
+      for (const z of detectHvnZones(B.h, B.l, B.v, a, Math.min(b, end), unit, HVN.dayRowFrac, HVN.dayMinRows)) {
+        zones.push({ ...z, fromIndex: B.t[a] });   // day start time identifies the day
+      }
     }
     cache.hvnKey = key;
     cache.hvnZones = pickReputableZones(zones, unit);
   }
-  const price = dataList[n - 1].close;
-  return cache.hvnZones.map((z) => ({
-    ...z,
-    fromIndex: dayStarts[Math.min(dayStarts.length - 1, first + z.fromIndex)],
-    side: z.hi < price ? 1 : z.lo > price ? -1 : 0,
-  }));
+  return cache.hvnZones;
 }
 
-function buildVwap(dataList, keys, o, res) {
-  const n = dataList.length;
-  const starts = periodStarts(keys, n);
-  const firstKept = Math.max(0, starts.length - 1 - o.vwapKeep);
-  const base = starts[firstKept];
-  const m = new Float64Array(n - base).fill(NaN);
-  const sd = new Float64Array(n - base).fill(NaN);
-  const src = priceSource(o.vwapSrc);
-  let next = 1;
-  let sV = 0;
-  let sPV = 0;
-  let sP2V = 0;
-  for (let i = 0; i < n; i++) {
-    if (next < starts.length && starts[next] === i) { sV = 0; sPV = 0; sP2V = 0; next++; }
-    const bar = dataList[i];
-    const p = src(bar);
-    const v = bar.volume;
+function priceOf(name, B) {
+  switch (name) {
+    case 'close': return (k) => B.c[k];
+    case 'open': return (k) => B.o[k];
+    case 'high': return (k) => B.h[k];
+    case 'low': return (k) => B.l[k];
+    case 'hl2': return (k) => (B.h[k] + B.l[k]) / 2;
+    case 'ohlc4': return (k) => (B.o[k] + B.h[k] + B.l[k] + B.c[k]) / 4;
+    case 'hlcc4': return (k) => (B.h[k] + B.l[k] + B.c[k] + B.c[k]) / 4;
+    default: return (k) => (B.h[k] + B.l[k] + B.c[k]) / 3;
+  }
+}
+
+// Anchored VWAP and its standard deviation over the base bars. Between bar closes only the forming
+// (last) bar changes, so the series is kept and just its last value is recomputed.
+function vwapSeries(B, days, o, cache, sameBars) {
+  const key = `${o.vwapAnchor}|${o.vwapSrc}`;
+  const src = priceOf(o.vwapSrc, B);
+  const last = B.n - 1;
+  let vs = cache.vwapSeries;
+  if (sameBars && vs && vs.key === key) {
+    const p = src(last);
+    const v = B.v[last];
+    let { sV, sPV, sP2V } = vs.before;
     if (Number.isFinite(p) && Number.isFinite(v)) { sV += v; sPV += p * v; sP2V += p * p * v; }
     if (sV > 0) {
-      const w = sPV / sV;
-      res[i] = { vwap: w };
-      if (i >= base) {
-        m[i - base] = w;
-        sd[i - base] = Math.sqrt(Math.max(0, sP2V / sV - w * w));   // Pine ta.vwap stdev
+      vs.w[last] = sPV / sV;
+      vs.sdv[last] = Math.sqrt(Math.max(0, sP2V / sV - vs.w[last] * vs.w[last]));
+    }
+    return vs;
+  }
+  const periods = periodsOf(B, days, o.vwapAnchor);
+  const w = new Float64Array(B.n).fill(NaN);
+  const sdv = new Float64Array(B.n).fill(NaN);
+  let before = { sV: 0, sPV: 0, sP2V: 0 };
+  for (const [a, b] of periods) {
+    let sV = 0;
+    let sPV = 0;
+    let sP2V = 0;
+    for (let k = a; k < b; k++) {
+      if (k === last) before = { sV, sPV, sP2V };   // sums the forming bar is added to
+      const p = src(k);
+      const v = B.v[k];
+      if (Number.isFinite(p) && Number.isFinite(v)) { sV += v; sPV += p * v; sP2V += p * p * v; }
+      if (sV > 0) {
+        w[k] = sPV / sV;
+        sdv[k] = Math.sqrt(Math.max(0, sP2V / sV - w[k] * w[k]));   // Pine ta.vwap stdev
       }
-    } else {
-      res[i] = {};
     }
   }
-  const periods = [];
-  for (let k = firstKept; k < starts.length; k++) {
-    periods.push([starts[k], k + 1 < starts.length ? starts[k + 1] - 1 : n - 1]);
+  vs = { key, periods, w, sdv, before };
+  cache.vwapSeries = vs;
+  return vs;
+}
+
+// Each chart bar takes the VWAP of its own last base bar, so the line is the same on every
+// timeframe. Only the last vwapKeep finished periods plus the current one are drawn.
+function vwapOnChart(dataList, B, vs, o, res, barMs) {
+  const n = dataList.length;
+  const firstKept = Math.max(0, vs.periods.length - 1 - o.vwapKeep);
+  const spans = [];
+  for (let p = firstKept; p < vs.periods.length; p++) {
+    const [a, b] = vs.periods[p];
+    const span = chartSpan(dataList, B.t[a], B.t[b - 1]);
+    if (span) spans.push([span.from, span.to]);
   }
-  return { base, m, sd, periods };
+  const base = spans.length ? spans[0][0] : n;
+  const m = new Float64Array(n - base).fill(NaN);
+  const sd = new Float64Array(n - base).fill(NaN);
+  let k = -1;
+  for (let i = 0; i < n; i++) {
+    const end = dataList[i].timestamp + barMs;
+    while (k + 1 < B.n && B.t[k + 1] < end) k++;
+    if (k >= 0 && Number.isFinite(vs.w[k])) {
+      res[i] = { vwap: vs.w[k] };
+      if (i >= base) { m[i - base] = vs.w[k]; sd[i - base] = vs.sdv[k]; }
+    }
+  }
+  return { base, m, sd, periods: spans };
+}
+
+// The merged base series, rebuilt only when a bar is added; on a tick only the forming bar is
+// patched in place.
+function baseSeries(hist, live, cache) {
+  const newest = live.length ? live[live.length - 1] : hist[hist.length - 1];
+  const key = `${hist.length}|${hist.length ? `${hist[0].timestamp}|${hist[hist.length - 1].timestamp}` : ''}|${live.length}|${live.length ? `${live[0].timestamp}|${newest.timestamp}` : ''}`;
+  const B = cache.B;
+  if (cache.bKey === key && B && newest && B.t[B.n - 1] === newest.timestamp) {
+    const k = B.n - 1;
+    B.o[k] = newest.open; B.h[k] = newest.high; B.l[k] = newest.low; B.c[k] = newest.close; B.v[k] = newest.volume;
+    return { B, sameBars: true };
+  }
+  cache.B = mergeBars(hist, live);
+  cache.bKey = key;
+  return { B: cache.B, sameBars: false };
 }
 
 return {
@@ -565,7 +649,7 @@ return {
     const res = new Array(n);
     for (let i = 0; i < n; i++) res[i] = {};
     if (n === 0) return res;
-    if (!indicator._benzoCache) indicator._benzoCache = { intrabars: new Map(), profiles: new Map(), hvnKey: '', hvnZones: [], res: null };
+    if (!indicator._benzoCache) indicator._benzoCache = { hist: null, B: null, bKey: '', sess: null, sessAnchor: '', vwapSeries: null, profiles: new Map(), dayKey: '', days: null, hvnKey: '', hvnZones: [], res: null };
     const cache = indicator._benzoCache;
     // While a data request is in flight, keep showing the last result instead of a blank frame.
     const keepLast = () => {
@@ -576,57 +660,73 @@ return {
     };
 
     const isDay = profileMode === 'Day';
-    const profKeys = anchorKeys(isDay ? '1D' : '1W');
-    const vwapKeys = showVWAP ? anchorKeys(vwapAnchor) : null;
-    const weekKeys = showHVN && !isDay ? profKeys : null;
-    // Profile from lower-timeframe bars only when that timeframe is below the chart's.
-    const useLowerTf = (RES_MS[profileRes] || 60000) < bv.detectBarMs(dataList);
-    const ltf = useLowerTf ? bv.securityLowerTf({ timeframe: profileRes }, (bars) => bars) : null;
-    if (!profKeys || (showVWAP && !vwapKeys) || (useLowerTf && !ltf)) return keepLast();
+    const barMs = bv.detectBarMs(dataList);
+    const resMs = RES_MS[profileRes] || 60000;
+    // Look-back the base series must cover: kept sessions (+ the week before, for weekly HVN) and
+    // the kept VWAP periods. Counted in calendar minutes, so it over-covers weekends and breaks.
+    const sessions = Math.max(1, Math.trunc(maxSessions));
+    const profileMin = (sessions + 2) * (isDay ? 1440 : 10080);
+    const vwapMin = showVWAP ? (Math.max(1, Math.trunc(vwapKeep)) + 1) * (ANCHOR_SPAN_MIN[vwapAnchor] || 1440) : 0;
+    const histCount = Math.min(MAX_HISTORY_BARS, Math.ceil(Math.max(profileMin, vwapMin) * 60000 / resMs));
+    const histReady = requestHistory(profileRes, histCount, cache);
+    // Live newest bars: the chart's own bars when it is on the profile resolution, otherwise the
+    // last two days of intrabars.
+    const useLowerTf = resMs < barMs;
+    const ltf = useLowerTf ? bv.securityLowerTf({ timeframe: profileRes, calcBarsCount: 2 * 1440 * 60000 / resMs }, (bars) => bars) : null;
+    if (!histReady || (useLowerTf && !ltf)) return keepLast();
+    const { B, sameBars } = baseSeries(cache.hist || [], resMs <= barMs ? liveBars(dataList, ltf) : [], cache);
+    if (B.n < 2) return keepLast();
+    const days = sessionDays(B, cache);
 
     const o = {
       rows: Math.max(1, Math.trunc(profileRows)), valueArea, widthPct, maxWidthBar, vaBoost,
       buyRgb: isDay ? parseRgb(colDayBuy, [201, 164, 60]) : parseRgb(colBuy, [144, 191, 249]),
       sellRgb: isDay ? parseRgb(colDaySell, [47, 95, 216]) : parseRgb(colSell, [179, 157, 219]),
-      vwapSrc, vwapKeep: Math.max(1, Math.trunc(vwapKeep)),
+      vwapSrc, vwapAnchor, vwapKeep: Math.max(1, Math.trunc(vwapKeep)),
     };
 
     // Completed sessions (last maxSessions) plus the developing one.
-    const starts = periodStarts(profKeys, n);
-    const nSess = starts.length;
-    const firstSess = Math.max(0, nSess - 1 - maxSessions);
-    // Weekly HVN needs the previous week even when fewer sessions are kept.
-    const ibFrom = showHVN && !isDay ? Math.min(starts[firstSess], starts[Math.max(0, nSess - 2)]) : starts[firstSess];
-    const ib = ltf ? stableIntrabars(dataList, ltf, ibFrom, cache.intrabars) : null;
+    const sessAnchor = isDay ? '1D' : '1W';
+    if (!sameBars || cache.sessAnchor !== sessAnchor) { cache.sess = periodsOf(B, days, sessAnchor); cache.sessAnchor = sessAnchor; }
+    const sess = cache.sess;
+    const nSess = sess.length;
     // A finished session never changes: its profile is built once and reused on every tick.
     const profKey = [profileMode, profileRows, valueArea, widthPct, maxWidthBar, vaBoost, colBuy, colSell, colDayBuy, colDaySell, profileRes].join('|');
     const usedKeys = new Set();
     const profiles = [];
-    for (let k = firstSess; k < nSess; k++) {
+    for (let k = Math.max(0, nSess - 1 - sessions); k < nSess; k++) {
       const isLive = k === nSess - 1;
       if (isLive && !showLive) continue;
-      const s = starts[k];
-      const e = isLive ? n - 1 : starts[k + 1] - 1;
+      const [a, b] = sess[k];
+      const span = chartSpan(dataList, B.t[a], B.t[b - 1]);
+      if (!span) continue;
       if (isLive) {
-        const p = buildProfile(dataList, ib, s, e, o);
+        const p = buildProfile(B, a, b, span.from, span.to, o);
         if (p) profiles.push(p);
         continue;
       }
-      // The intrabar count is in the key so a session whose history finished loading is rebuilt.
-      const key = `${dataList[s].timestamp}|${dataList[e].timestamp}|${intrabarCount(ib, s, e + 1)}|${profKey}`;
+      const key = `${B.t[a]}|${B.t[b - 1]}|${b - a}|${span.from}|${span.to}|${profKey}`;
       usedKeys.add(key);
       let p = cache.profiles.get(key);
       if (p === undefined) {
-        p = buildProfile(dataList, ib, s, e, o);
+        p = buildProfile(B, a, b, span.from, span.to, o);
         cache.profiles.set(key, p);
       }
-      if (p) profiles.push({ ...p, from: s, to: e, right: Math.max(e, s + p.wMax) });
+      if (p) profiles.push(p);
     }
     for (const key of cache.profiles.keys()) if (!usedKeys.has(key)) cache.profiles.delete(key);
 
-    const vwap = showVWAP ? buildVwap(dataList, vwapKeys, o, res) : null;
+    const vwap = showVWAP ? vwapOnChart(dataList, B, vwapSeries(B, days, o, cache, sameBars), o, res, barMs) : null;
     let hvn = [];
-    if (showHVN) hvn = isDay ? buildHvnDay(dataList, ib, starts, Math.max(1, Math.trunc(maxSessions)), cache) : buildHvn(dataList, ib, weekKeys, cache);
+    if (showHVN) {
+      const zones = isDay ? buildHvnDay(B, sess, sessions, cache) : buildHvnWeek(B, sess, cache);
+      const price = dataList[n - 1].close;
+      hvn = zones.map((z) => ({
+        ...z,
+        fromIndex: Math.max(0, chartIndexAt(dataList, z.fromIndex)),   // zone's session start, on the chart
+        side: z.hi < price ? 1 : z.lo > price ? -1 : 0,
+      }));
+    }
     const hvnRgb = {
       1: parseRgb(hvnBuyColor, [38, 166, 154]),
       '-1': parseRgb(hvnSellColor, [239, 83, 80]),

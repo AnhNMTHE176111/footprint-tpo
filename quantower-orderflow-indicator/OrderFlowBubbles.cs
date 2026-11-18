@@ -117,6 +117,7 @@ namespace OrderFlowBubbles
             public bool CellBig;        // true = bóng Ô Bid/Ask lớn (Price = tâm bóng); stop hunt đọc đúng các bóng này
             public double CellBid, CellAsk;  // Ô lớn: Bid (sell chủ động) / Ask (buy chủ động) của hàng
             public int CellSide;        // Ô lớn: +1 xanh (Ask trội), -1 đỏ (Bid trội); 0 chỉ còn ở bản ghi niêm phong cũ (vàng, đã bỏ). KHÔNG đổi khi thành stop hunt
+            public bool CellDot;        // true = bậc Dot (chấm nhỏ đặc); false = bậc Big (vòng mờ lớn). Chỉ có nghĩa khi CellBig
             public bool StopHunt;       // true = bóng thuộc nến quét của một stop hunt đã xác nhận -> vẽ màu tím (Color), tooltip "Stop hunt ..."
         }
 
@@ -238,6 +239,15 @@ namespace OrderFlowBubbles
         public double CellBigRatio { get; set; } = 1.25;
 
         public int CellBigBaselineBars { get; set; } = 20;
+
+        // Độ đậm của vòng tròn lớn (bậc Big), phần trăm (35 = mờ ~35%). Chỉ ảnh hưởng cách vẽ.
+        public int CellBigOpacity { get; set; } = 35;
+
+        // Bậc Dot: chấm Bid/Ask nhỏ đặc. Bên áp đảo của hàng >= CellDotRatio x mức trung bình volume mỗi hàng của 20 nến trước và >= sàn 9; không đòi mất cân bằng.
+        [InputParameter("Chấm Bid/Ask nhỏ · Bật", 26)]
+        public bool CellDotEnabled { get; set; } = true;
+
+        public double CellDotRatio { get; set; } = 1.5;
 
         public double CellBigMinSide { get; set; } = 9;
 
@@ -542,7 +552,7 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
-                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigMinImbalance, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v14",
+                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigMinImbalance, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, CellDotEnabled, CellDotRatio, "cellbig-v15",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
@@ -555,7 +565,7 @@ namespace OrderFlowBubbles
                 ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun, ImbMinVolume,
                 DivergenceEnabled, DivSwingLookback, DivVolPartic, DivCooldown,
                 SweepEnabled, SweepLookback, UnfinishedEnabled,
-                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v4");
+                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v5");
         }
 
         private void InitBaselines()
@@ -910,19 +920,22 @@ namespace OrderFlowBubbles
                 {
                     if (r.Buy + r.Sell <= 0) continue;
                     var dec = CellBigLogic.Decide(r.Buy, r.Sell, cellB, hasCellB, CellBigRatio, CellBigMinSide, CellBigMinImbalance,
-                                                  UseFixedThreshold, FixedThresholdContracts);
+                                                  UseFixedThreshold, FixedThresholdContracts, CellDotEnabled ? CellDotRatio : 0);
                     if (!dec.Hit) continue;
                     double cp = CellBigLogic.RowCenterPrice(r.RowId, CellBigRowTicks, CellBigRowOffset, tick);
                     var col2 = dec.Side > 0 ? BuyColor : SellColor;
                     // định dạng người dùng chốt 2026-11-12: "Sell - n Bid m Ask | ..." ; 2026-11-18: k = NGƯỠNG NỔ thật
                     // = max(Ratio x B, sàn MinSide 9) (chế độ cố định: max(ngưỡng cố định, sàn)) — không còn hiện B trần (vd 6.2 < 9)
-                    string side = dec.Side > 0 ? "Buy" : "Sell";
+                    // 2026-11-18: hai bậc — Big (vòng mờ lớn, "{Buy|Sell} lớn") dùng ngưỡng ratio x B; Dot (chấm nhỏ đặc) dùng dotRatio x B
+                    bool isDot = dec.Tier == CellBigLogic.TierDot;
+                    string side = (dec.Side > 0 ? "Buy" : "Sell") + (isDot ? "" : " lớn");
+                    double tierRatio = isDot ? CellDotRatio : CellBigRatio;
                     double fireLvl = UseFixedThreshold ? Math.Max(FixedThresholdContracts, CellBigMinSide)
-                                                       : Math.Max(CellBigRatio * cellB, CellBigMinSide);
+                                                       : Math.Max(tierRatio * cellB, CellBigMinSide);
                     string tip2 = $"{side} - {r.Sell:0} Bid {r.Buy:0} Ask | Ngưỡng nổ {fireLvl.ToString("0.#", inv)}";
                     var b2 = Solid(cp, Shape.Ellipse, col2, true, tip2);
                     b2.SizeFrac = dec.SizeFrac;
-                    b2.CellBig = true; b2.CellBid = r.Sell; b2.CellAsk = r.Buy; b2.CellSide = dec.Side;
+                    b2.CellBig = true; b2.CellDot = isDot; b2.CellBid = r.Sell; b2.CellAsk = r.Buy; b2.CellSide = dec.Side;
                     cellBigCands.Add((b2, Math.Max(r.Buy, r.Sell), r.LoTick, r.HiTick));
                 }
             }
@@ -1151,6 +1164,8 @@ namespace OrderFlowBubbles
 
             var mouse = args.MousePosition;
             string hoverTip = null; int hoverX = 0, hoverY = 0; Color hoverCol = Color.White;
+            string dotHoverTip = null; int dotHoverX = 0, dotHoverY = 0; Color dotHoverCol = Color.White;
+            var dotDraw = new List<(Bubble b, float cx, float cy, int size)>();
 
             var prevClip = gr.ClipBounds;
             gr.SetClip(clip);
@@ -1256,7 +1271,20 @@ namespace OrderFlowBubbles
                             // là bóng RỘNG HƠN thân nến lúc zoom bé (đè sang nến bên cạnh). Người dùng
                             // xác nhận ưu tiên "không bao giờ che rộng hơn thân nến" hơn "luôn nhìn thấy
                             // rõ khi zoom bé" (2026-09-15).
-                            int drawSize = b.UseBarWidth ? Math.Max(1, (int)Math.Round(barsW * (b.SizeFrac > 0 ? b.SizeFrac : 1.0))) : b.Size;
+                            int drawSize = b.CellBig ? CellDrawSize(b, (float)barsW)
+                                         : b.UseBarWidth ? Math.Max(1, (int)Math.Round(barsW * (b.SizeFrac > 0 ? b.SizeFrac : 1.0))) : b.Size;
+                            if (b.CellBig && b.CellDot)
+                            {
+                                // chấm Dot vẽ SAU CÙNG (trên mọi vòng mờ, kể cả của nến bên cạnh) và được ưu tiên khi rê chuột
+                                dotDraw.Add((b, cx, y, drawSize));
+                                if (dotHoverTip == null)
+                                {
+                                    float ddx = mouse.X - cx, ddy = mouse.Y - y;
+                                    float dr = Math.Max(drawSize / 2f, 6f);
+                                    if (ddx * ddx + ddy * ddy <= dr * dr) { dotHoverTip = ShortTip(b); dotHoverX = (int)cx; dotHoverY = (int)y; dotHoverCol = b.Color; }
+                                }
+                                continue;
+                            }
                             DrawShape(gr, b, cx, y, drawSize, (float)barsW);
 
                             if (hoverTip == null)
@@ -1292,6 +1320,9 @@ namespace OrderFlowBubbles
                     }
                 }
 
+                foreach (var dd in dotDraw) DrawShape(gr, dd.b, dd.cx, dd.cy, dd.size, (float)barsW);
+                if (dotHoverTip != null) { hoverTip = dotHoverTip; hoverX = dotHoverX; hoverY = dotHoverY; hoverCol = dotHoverCol; }
+
                 if (hoverTip == null)   // bóng được ưu tiên; không trúng bóng thì xét vùng (vùng vẽ sau = trên cùng)
                     for (int zi = zoneHits.Count - 1; zi >= 0; zi--)
                         if (zoneHits[zi].r.Contains(mouse.X, mouse.Y)) { hoverTip = zoneHits[zi].tip; hoverCol = zoneHits[zi].c; hoverX = mouse.X; hoverY = mouse.Y; break; }
@@ -1315,6 +1346,14 @@ namespace OrderFlowBubbles
                 }
             }
             finally { gr.SetClip(prevClip); }
+        }
+
+        // Cỡ (px) của bóng Ô lớn: Big = SizeFrac x bề ngang nến (1,0..2,5), sàn 8 px, trần 80 px; Dot = 45% bề ngang nến kẹp [5, 10] px.
+        private static int CellDrawSize(Bubble b, float barsW)
+        {
+            if (b.CellDot) return Math.Clamp((int)Math.Round(barsW * CellBigLogic.DotSizeFrac), 5, 10);
+            double f = b.SizeFrac > 0 ? b.SizeFrac : 1.0;
+            return Math.Clamp((int)Math.Round(barsW * f), 8, 80);
         }
 
         private void DrawShape(Graphics gr, Bubble b, float cx, float cy, int size, float barsW)
@@ -1355,6 +1394,26 @@ namespace OrderFlowBubbles
                     gr.FillPolygon(fb, pts);
                     using var dp = new Pen(Color.FromArgb(Math.Min(255, fa + 40), col), 1f);
                     gr.DrawPolygon(dp, pts);
+                }
+                return;
+            }
+
+            // Ô Bid/Ask lớn (2026-11-18): Big = vòng tròn MỜ (độ đậm CellBigOpacity) + viền mảnh đậm hơn một chút; Dot = chấm nhỏ ĐẶC
+            if (b.CellBig)
+            {
+                float cr = size / 2f;
+                if (b.CellDot)
+                {
+                    using var db = new SolidBrush(Color.FromArgb(255, b.Color));
+                    gr.FillEllipse(db, cx - cr, cy - cr, size, size);
+                }
+                else
+                {
+                    int fa = Math.Clamp((int)Math.Round(255 * CellBigOpacity / 100.0), 10, 255);
+                    using var cb = new SolidBrush(Color.FromArgb(fa, b.Color));
+                    gr.FillEllipse(cb, cx - cr, cy - cr, size, size);
+                    using var cpn = new Pen(Color.FromArgb(Math.Min(255, fa + 70), b.Color), 1f);
+                    gr.DrawEllipse(cpn, cx - cr, cy - cr, size, size);
                 }
                 return;
             }
@@ -1705,7 +1764,7 @@ namespace OrderFlowBubbles
                         Transparency = b.Transparency, Halo = b.Halo, UseBarWidth = b.UseBarWidth, SizeFrac = b.SizeFrac,
                         Tooltip = b.Tooltip, Confirm = b.Confirm, Confirmable = b.Confirmable,
                         PriceHi = b.PriceHi, ZoneSide = b.ZoneSide, ZoneWeak = b.ZoneWeak,
-                        CellBig = b.CellBig, CellBid = b.CellBid, CellAsk = b.CellAsk, CellSide = b.CellSide, StopHunt = b.StopHunt
+                        CellBig = b.CellBig, CellDot = b.CellDot, CellBid = b.CellBid, CellAsk = b.CellAsk, CellSide = b.CellSide, StopHunt = b.StopHunt
                     });
             return d;
         }
@@ -1720,7 +1779,7 @@ namespace OrderFlowBubbles
                     Transparency = cb.Transparency, Halo = cb.Halo, UseBarWidth = cb.UseBarWidth, SizeFrac = cb.SizeFrac,
                     Tooltip = cb.Tooltip, Confirm = cb.Confirm, Confirmable = cb.Confirmable,
                     PriceHi = cb.PriceHi, ZoneSide = cb.ZoneSide, ZoneWeak = cb.ZoneWeak,
-                    CellBig = cb.CellBig, CellBid = cb.CellBid, CellAsk = cb.CellAsk, CellSide = cb.CellSide, StopHunt = cb.StopHunt
+                    CellBig = cb.CellBig, CellDot = cb.CellDot, CellBid = cb.CellBid, CellAsk = cb.CellAsk, CellSide = cb.CellSide, StopHunt = cb.StopHunt
                 });
             return list;
         }

@@ -5,12 +5,12 @@ var t = typeof(OrderFlowBubbles.OrderFlowBubbles);
 var props = t.GetProperties(BindingFlags.Public|BindingFlags.Instance).Where(p => p.GetCustomAttributes().Any(a => a.GetType().Name=="InputParameterAttribute")).ToList();
 Console.WriteLine($"InputParameter count = {props.Count}");
 foreach (var p in props) Console.WriteLine("  " + p.Name);
-int fail = props.Count == 12 ? 0 : 1;
+int fail = props.Count == 13 ? 0 : 1;
 object o = null; try { o = Activator.CreateInstance(t); } catch (Exception e) { Console.WriteLine("Khong tao duoc instance: " + e.GetType().Name); }
 if (o != null) {
   void chk(string n, object exp){ var v=t.GetProperty(n).GetValue(o); bool ok=Equals(v,exp); if(!ok) fail++; Console.WriteLine($"  {(ok?"OK  ":"FAIL")} {n} = {v} (mong doi {exp})"); }
   chk("DeltaFontSize",7); chk("DeltaYOffsetPx",8); chk("DLineEnabled",false); chk("DeltaMinBarWidthPx",6);
-  chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhMinWickTicks",3); chk("ExhSumLevels",3); chk("ExhSumRel",0.5); chk("BigTradeAbsFloor",50.0); chk("CellBigRatio",1.25); chk("CellBigMinImbalance",3.0); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellBigRowTicks",2); chk("CellBigRowOffset",1); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("AbsScoreMin",4); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true);
+  chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhMinWickTicks",3); chk("ExhSumLevels",3); chk("ExhSumRel",0.5); chk("BigTradeAbsFloor",50.0); chk("CellBigRatio",1.25); chk("CellBigMinImbalance",3.0); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellBigRowTicks",2); chk("CellDotRatio",1.5); chk("CellDotEnabled",true); chk("CellBigOpacity",35); chk("CellBigRowOffset",1); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("AbsScoreMin",4); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true);
   chk("StopHuntEnabled",true); chk("StopHuntBoxSmall",60); chk("StopHuntBoxLarge",60); chk("StopHuntBoxMaxMult",8.0); chk("StopHuntTolTicks",3); chk("StopHuntConfirmBars",2); chk("StopHuntCooldown",5);
   chk("CellBigStopHuntColor",System.Drawing.Color.MediumOrchid);
   { bool gone = t.GetProperty("StopHuntLookback") == null; if(!gone) fail++; Console.WriteLine($"  {(gone?"OK  ":"FAIL")} StopHuntLookback da bo"); }

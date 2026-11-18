@@ -16,6 +16,8 @@
 //      Điều kiện (3) loại các hàng cân bằng (vd 100 Bid x 101 Ask) mà CORVEN không đánh bóng. Màu: xanh khi Ask trội, đỏ khi Bid trội
 //      (Side = +1 nếu ask > bid, ngược lại -1; sau điều kiện (3) hai bên không thể bằng nhau trừ khi tắt điều kiện, khi đó hoà tính là -1).
 //      KHÔNG còn bóng vàng "cả hai bên đều lớn" (CORVEN không có). Bóng TÍM chỉ còn nghĩa stop hunt, do OrderFlowBubbles.cs tô.
+//    HAI BẬC (2026-11-18, sau khi so chart M5 của CORVEN có hai loại dấu): Big = vòng tròn lớn MỜ (luật trên); Dot = chấm nhỏ ĐẶC khi bên áp đảo của hàng
+//      >= CellDotRatio (1,5) x mức trung bình đó và >= sàn 9, KHÔNG đòi mất cân bằng, chỉ xét khi không phải Big. Chế độ ngưỡng cố định: Dot = bên áp đảo >= max(ngưỡng cố định, sàn).
 //    Đo trên 27 nến M5 (12:15-14:25 UTC 18/11): CORVEN 24 bóng; luật cũ (1,3 x, sàn 9, không điều kiện (3)) ra 123 bóng, F1 0,16;
 //    luật mới 17 bóng, F1 0,39 theo vị trí, 11/15 nến có bóng của CORVEN trùng. Mật độ 9 ngày M5: 2,87 -> 0,73 bóng/nến (CORVEN ~0,9).
 //    Đánh đổi: so với các chấm M1 cũ của CORVEN (Meet 5-6/11), F1 giảm 0,835 -> 0,572. Người học chọn kiểu M5. Chỉ MỘT biểu đồ, 27 nến,
@@ -32,33 +34,49 @@ namespace OrderFlowBubbles
 {
     public struct CellBigDecision
     {
-        public bool Hit;
+        public bool Hit;        // true = có dấu (Big hoặc Dot)
+        public int Tier;        // CellBigLogic.TierBig (1) / TierDot (2); 0 nếu không nổ
         public int Side;        // +1 = buy (Ask) trội, -1 = sell (Bid) trội (hoà -> -1). Hit=false thì 0. Không còn bóng vàng/cân bằng.
         public double Mult;     // sideVol / B (0 nếu chưa có B)
-        public double SizeFrac; // 0..1 (tỉ lệ so với bề ngang nến)
+        public double SizeFrac; // Big: 1,0..2,5; Dot: 0,45 (tỉ lệ so với bề ngang nến)
     }
 
     public static class CellBigLogic
     {
         public const int MinHistoryBars = 5;
-        public const double SizeMinFrac = 0.45;   // cỡ ở ngưỡng
+        public const double SizeMinFrac = 1.0;    // cỡ Big ở ngưỡng (= 1,0 x bề ngang nến)
+        public const double SizeMaxFrac = 2.5;    // cỡ Big tối đa (= 2,5 x bề ngang nến; vòng mờ được phép lớn hơn nến)
+        public const double DotSizeFrac = 0.45;   // cỡ chấm Dot (tỉ lệ bề ngang nến, kẹp [5,10] px khi vẽ)
         public const double SizeFullMult = 6.0;   // từ tỉ lệ này trở lên = 100% bề ngang nến
 
-        // minImbalance: bên áp đảo phải >= minImbalance x bên yếu (bên yếu 0 thì qua; <= 0 tắt điều kiện). Áp cho cả chế độ ngưỡng cố định.
+        // Hai bậc (2026-11-18, chart M5 của CORVEN có HAI loại dấu):
+        //   Big = vòng tròn lớn MỜ: bên áp đảo >= ratio x B, >= sàn minSide, và >= minImbalance x bên yếu (bên yếu 0 thì qua; <= 0 tắt điều kiện).
+        //   Dot = chấm nhỏ ĐẶC: bên áp đảo >= dotRatio x B và >= sàn minSide, KHÔNG đòi mất cân bằng; chỉ xét khi không phải Big. dotRatio <= 0 = tắt Dot.
+        // Chế độ ngưỡng cố định: Big dùng ngưỡng cố định + sàn + mất cân bằng; Dot dùng bên áp đảo >= max(ngưỡng cố định, sàn), không mất cân bằng.
+        public const int TierNone = 0, TierBig = 1, TierDot = 2;
+
         public static CellBigDecision Decide(double buy, double sell, double baseline, bool hasBaseline,
-            double ratio, double minSide, double minImbalance, bool fixedMode, double fixedThreshold)
+            double ratio, double minSide, double minImbalance, bool fixedMode, double fixedThreshold, double dotRatio = 0)
         {
             var d = new CellBigDecision();
             double side = Math.Max(buy, sell), weak = Math.Min(buy, sell);
             if (side <= 0) return d;
             d.Mult = hasBaseline && baseline > 0 ? side / baseline : 0;
-            if (fixedMode) d.Hit = side >= fixedThreshold;
-            else d.Hit = hasBaseline && baseline > 0 && side >= ratio * baseline;
-            if (side < minSide) d.Hit = false;
-            if (minImbalance > 0 && side < minImbalance * weak) d.Hit = false;
-            if (!d.Hit) return d;
+            bool big, dot;
+            if (fixedMode) { big = side >= fixedThreshold; dot = dotRatio > 0 && side >= fixedThreshold; }
+            else
+            {
+                big = hasBaseline && baseline > 0 && side >= ratio * baseline;
+                dot = dotRatio > 0 && hasBaseline && baseline > 0 && side >= dotRatio * baseline;
+            }
+            if (side < minSide) { big = false; dot = false; }
+            if (minImbalance > 0 && side < minImbalance * weak) big = false;
+            if (big) d.Tier = TierBig;
+            else if (dot) d.Tier = TierDot;
+            else return d;
+            d.Hit = true;
             d.Side = buy > sell ? 1 : -1;
-            d.SizeFrac = Size(d.Mult, ratio);
+            d.SizeFrac = d.Tier == TierBig ? Size(d.Mult, ratio) : DotSizeFrac;
             return d;
         }
 
@@ -146,14 +164,14 @@ namespace OrderFlowBubbles
             return n > 0 && tot > 0;
         }
 
-        // cỡ to dần theo mult (nén sqrt): SizeMinFrac ở mult = ratio → 1,0 ở mult >= SizeFullMult
+        // cỡ Big to dần theo mult (nén sqrt): SizeMinFrac (1,0) ở mult = ratio → SizeMaxFrac (2,5) ở mult >= SizeFullMult; đơn vị = bề ngang nến
         public static double Size(double mult, double ratio)
         {
-            if (mult <= 0) return 1.0;   // chế độ ngưỡng cố định không có tỉ lệ → cỡ đầy đủ
+            if (mult <= 0) return 1.5;   // chế độ ngưỡng cố định không có tỉ lệ → cỡ giữa (1,5 x bề ngang nến)
             double lo = Math.Sqrt(Math.Max(ratio, 1e-9)), hi = Math.Sqrt(Math.Max(SizeFullMult, ratio + 1e-6));
             double t = (Math.Sqrt(mult) - lo) / (hi - lo);
             t = Math.Min(1.0, Math.Max(0.0, t));
-            return SizeMinFrac + (1.0 - SizeMinFrac) * t;
+            return SizeMinFrac + (SizeMaxFrac - SizeMinFrac) * t;
         }
 
         // volume trung bình mỗi ô giá CÓ giao dịch trong nến; trả false nếu nến rỗng

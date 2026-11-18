@@ -1,6 +1,7 @@
 // Đối chiếu C# (CellBigLogic + ExhaustionLogic) với script Python research/corven_m5_2026-11-18/ trên 27 nến M5 THẬT
 // (12:15-14:25 UTC ngày 18/11/2026, file data-export/data-footprint/fp_GCZ26_XCEC_Time_20261108-20261118_9d16h*.csv).
-// Mong đợi (Python, luật đã chọn): 17 bóng Ô lớn / 8 trùng vị trí CORVEN; 23 dấu kiệt sức / 9 trùng CORVEN.
+// Mong đợi (Python, luật đã chọn): 17 bóng Ô lớn (Big) / 8 trùng vị trí CORVEN; 23 dấu kiệt sức / 9 trùng CORVEN;
+// chấm nhỏ (Dot, fit_dots_m5.py in 'Dot (ngoai Big)'): 79 trên 26 nến 12:15-14:20 (Python bỏ nến 14:25 đang chạy dở).
 // Không có file dữ liệu (chưa commit / máy khác) thì bỏ qua, không tính là lỗi.
 using System;
 using System.Collections.Generic;
@@ -71,6 +72,7 @@ static class CorvenM5ParityTests
         var bl = new CellBigBaseline(20);
         var bubbles = new Dictionary<string, List<(double pos, double bid, double ask)>>();
         var exh = new List<(string t, bool top)>();
+        int dots26 = 0, dots27 = 0, bigs26 = 0;
         var times = new HashSet<string>();
         for (int h = 12; h <= 14; h++) for (int m = 0; m < 60; m += 5) if (string.CompareOrdinal($"{h:00}:{m:00}", "12:15") >= 0 && string.CompareOrdinal($"{h:00}:{m:00}", "14:25") <= 0) times.Add($"2026-11-18 {h:00}:{m:00}");
         var s = new ExhSettings();
@@ -82,8 +84,10 @@ static class CorvenM5ParityTests
             {
                 foreach (var r in rows)
                 {
-                    var d = CellBigLogic.Decide(r.Buy, r.Sell, B, has, 1.25, 9, 3.0, false, 0);
-                    if (!d.Hit) continue;
+                    var d = CellBigLogic.Decide(r.Buy, r.Sell, B, has, 1.25, 9, 3.0, false, 0, 1.5);
+                    if (d.Hit && d.Tier == CellBigLogic.TierDot) { dots27++; if (!key.EndsWith("14:25")) dots26++; }
+                    if (!d.Hit || d.Tier != CellBigLogic.TierBig) continue;
+                    if (!key.EndsWith("14:25")) bigs26++;
                     string t = key.Substring(11);
                     if (!bubbles.TryGetValue(t, out var lst)) bubbles[t] = lst = new();
                     lst.Add((CellBigLogic.RowCenterPrice(r.RowId, 2, 1, 0.1), r.Sell, r.Buy));
@@ -114,6 +118,7 @@ static class CorvenM5ParityTests
             var ua = new HashSet<int>(); var ub = new HashSet<int>();
             foreach (var p in pairs) { if (ua.Contains(p.i) || ub.Contains(p.j)) continue; ua.Add(p.i); ub.Add(p.j); hit++; }
         }
+        Check(dots26 == 79, "cham nho (Dot, ngoai Big) tren 26 nen: 79 (nhu Python)", $"{dots26} (27 nen: {dots27}; Big 26 nen: {bigs26})");
         Check(hit == 8, "bong trung vi tri CORVEN: 8", hit.ToString());
         Check(gtBarsWith == 15 && bothBars == 11, "11/15 nen co bong CORVEN cung co bong cua minh", $"{bothBars}/{gtBarsWith}");
 

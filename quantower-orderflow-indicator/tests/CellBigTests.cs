@@ -66,10 +66,36 @@ static class CellBigTests
         double prev = -1; bool mono = true;
         for (double m = 1.5; m <= 10; m += 0.25) { double s = CellBigLogic.Size(m, 1.5); if (s < prev - 1e-12) mono = false; prev = s; }
         Check(mono, "co don dieu khong giam theo ty le");
-        Check(Math.Abs(CellBigLogic.Size(1.5, 1.5) - 0.45) < 1e-9, "o nguong: 45% be ngang nen");
-        Check(Math.Abs(CellBigLogic.Size(6, 1.5) - 1.0) < 1e-9 && CellBigLogic.Size(20, 1.5) == 1.0, "ty le >= 6: 100%");
-        Check(CellBigLogic.Size(3, 1.5) > 0.45 && CellBigLogic.Size(3, 1.5) < 1.0, "ty le 3: o giua 45%..100%");
-        Check(Math.Abs(D(15, 0).SizeFrac - 0.45) < 1e-9, "Decide tra SizeFrac 0,45 o nguong");
+        Check(Math.Abs(CellBigLogic.Size(1.5, 1.5) - 1.0) < 1e-9, "o nguong: 1,0 x be ngang nen");
+        Check(Math.Abs(CellBigLogic.Size(6, 1.5) - 2.5) < 1e-9 && CellBigLogic.Size(20, 1.5) == 2.5, "ty le >= 6: 2,5 x be ngang nen");
+        Check(CellBigLogic.Size(3, 1.5) > 1.0 && CellBigLogic.Size(3, 1.5) < 2.5, "ty le 3: o giua 1,0..2,5");
+        Check(Math.Abs(D(15, 0).SizeFrac - 1.0) < 1e-9, "Decide tra SizeFrac 1,0 o nguong (Big)");
+        // ---- 2026-11-18: hai bac Big / Dot ----
+        Console.WriteLine("[CellBig] hai bac Big (vong mo) / Dot (cham dac)");
+        static CellBigDecision T(double buy, double sell, double B = 20, double dot = 1.5, double imb = 3.0, double floor = 9)
+            => CellBigLogic.Decide(buy, sell, B, true, 1.25, floor, imb, false, 0, dot);
+        Check(T(25, 0).Tier == CellBigLogic.TierBig && T(25, 0).Hit, "25 x 0, B 20: >= 1,25 B, ben yeu 0 -> Big");
+        Check(T(24.9, 0).Tier == CellBigLogic.TierNone && !T(24.9, 0).Hit, "24,9 < 1,25 B va < 1,5 B -> khong co gi");
+        Check(T(29.9, 10).Tier == CellBigLogic.TierNone, "29,9 x 10: < 1,5 B (30) va can bang < 3 -> khong co gi");
+        Check(T(30, 10).Tier == CellBigLogic.TierBig, "30 x 10: >= 1,5 B va can bang = 3 -> Big (Big thang Dot)");
+        Check(T(30, 20).Tier == CellBigLogic.TierDot, "30 x 20, B 20: >= 1,5 B nhung can bang 1,5 < 3 -> Dot");
+        Check(T(29.9, 20).Tier == CellBigLogic.TierNone && T(26, 20).Tier == CellBigLogic.TierNone, "ben troi giua 1,25 B va 1,5 B ma can bang < 3 -> khong co gi");
+        Check(T(100, 101).Tier == CellBigLogic.TierDot && T(100, 101).Side == -1 && T(101, 100).Side == 1, "100 x 101 (can bang) lon hon 1,5 B -> Dot; Side theo ben troi");
+        Check(T(9, 0, B: 2).Tier == CellBigLogic.TierBig && T(8, 0, B: 2).Tier == CellBigLogic.TierNone, "san 9 ap cho ca hai bac: 9 co, 8 khong (B = 2)");
+        Check(T(8, 8, B: 2).Tier == CellBigLogic.TierNone && T(9, 9, B: 2).Tier == CellBigLogic.TierDot, "san 9 cho Dot: 8 x 8 khong, 9 x 9 Dot");
+        Check(T(40, 0, dot: 0).Tier == CellBigLogic.TierBig && T(30, 20, dot: 0).Tier == CellBigLogic.TierNone, "dotRatio 0 = tat Dot: hang Dot thanh khong co gi, Big giu nguyen");
+        Check(T(30, 20).SizeFrac == CellBigLogic.DotSizeFrac && T(25, 0).SizeFrac >= 1.0, "SizeFrac: Dot = 0,45; Big >= 1,0");
+        Check(CellBigLogic.Decide(15, 0, 0, false, 1.25, 9, 3, true, 10, 1.5).Tier == CellBigLogic.TierBig, "fixed: 15 x 0 -> Big");
+        var fx = CellBigLogic.Decide(15, 14, 0, false, 1.25, 9, 3, true, 10, 1.5);
+        Check(fx.Tier == CellBigLogic.TierDot && fx.Hit, "fixed: 15 x 14 (can bang) >= nguong co dinh 10 -> Dot");
+        Check(CellBigLogic.Decide(9, 8, 0, false, 1.25, 9, 3, true, 5, 1.5).Tier == CellBigLogic.TierDot && CellBigLogic.Decide(8, 7, 0, false, 1.25, 9, 3, true, 5, 1.5).Tier == CellBigLogic.TierNone, "fixed: Dot dung max(nguong co dinh, san 9)");
+        Check(CellBigLogic.Decide(30, 20, 0, false, 1.25, 9, 3, true, 10, 0).Tier == CellBigLogic.TierNone, "fixed + dotRatio 0: can bang -> khong co gi");
+        // niêm phong: bản ghi cũ (không có CellDot) nạp ra Big; Dot ghi/đọc lại đúng
+        var oldRec = System.Text.Json.JsonSerializer.Deserialize("{\"TimeTicks\":1,\"Bubbles\":[{\"Price\":1.5,\"CellBig\":true,\"CellSide\":1}]}", SignalCacheJson.Default.CachedBarData);
+        Check(oldRec != null && oldRec.Bubbles[0].CellBig && !oldRec.Bubbles[0].CellDot, "ban ghi cu khong co CellDot -> nap ra Big");
+        var dotRec = new CachedBarData { TimeTicks = 2 }; dotRec.Bubbles.Add(new CachedBubbleData { CellBig = true, CellDot = true });
+        var back = System.Text.Json.JsonSerializer.Deserialize(System.Text.Json.JsonSerializer.Serialize(dotRec, SignalCacheJson.Default.CachedBarData), SignalCacheJson.Default.CachedBarData);
+        Check(back.Bubbles[0].CellDot, "CellDot ghi roi doc lai van true");
         // MergeAdjacent (gop o lien ke)
         static string K(System.Collections.Generic.List<int> l) { l.Sort(); return string.Join(",", l); }
         var c3 = new System.Collections.Generic.List<(long, double)> { (10, 20), (11, 50), (12, 30) };

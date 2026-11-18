@@ -52,6 +52,7 @@ namespace OrderFlowBubbles
         public int ZoneSide { get; set; }     // vùng Stacked Imbalance: +1 buy / −1 sell; 0 = không phải vùng
         public bool ZoneWeak { get; set; }    // vùng Stacked Imbalance: nằm ở râu ngược chiều (bị rút râu)
         public bool CellBig { get; set; }     // Ô Bid/Ask lớn (bản ghi cũ = false)
+        public bool CellDot { get; set; }     // bậc Dot (chấm nhỏ đặc); false = bậc Big (bản ghi cũ = Big)
         public double CellBid { get; set; }
         public double CellAsk { get; set; }
         public int CellSide { get; set; }     // +1 xanh / -1 đỏ (0 = bản ghi cũ từng là vàng, đã bỏ; vẫn nạp an toàn)

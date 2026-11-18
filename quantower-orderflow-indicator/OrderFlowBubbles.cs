@@ -75,7 +75,7 @@
 //    • Big Delta line  = GẠCH NGANG (rộng = nến), xanh(buy)/đỏ(sell).
 //    • Nến delta lớn   = TÔ THÂN NẾN xanh(+delta)/đỏ(−delta).
 //    • Số delta        = chữ dưới đáy nến, xanh/đỏ theo dấu.
-//    • Kiệt sức = tam giác vàng chỉ xuống ở đỉnh / xanh chỉ lên ở đáy (rỗng khi bị râu quét qua);
+//    • Kiệt sức = tam giác vàng chỉ xuống ở đỉnh / xanh chỉ lên ở đáy (nền mờ khi bị râu quét qua);
 //    • Divergence/Sweep = tam giác;  Unfinished = ngoặc.
 //    • Stacked Imbalance = VÙNG CHỮ NHẬT xanh lơ(buy)/hồng(sell) kéo sang phải (xem StackedImbalance.cs).
 //  Vẽ tay bằng GDI+ trong OnPaintChart (Quantower không có PriceSelectionValue).
@@ -390,7 +390,7 @@ namespace OrderFlowBubbles
 
         // ---------- 4) Exhaustion — KIỆT SỨC thuần theo CORVEN (Meet 2026-11-07, xem ExhaustionLogic.cs) ----------
         //  Đỉnh soi ASK, đáy soi BID, chỉ lấy ở RÂU nến; "nhỏ, hoặc giảm dần về 0". Vô hiệu khi một nến
-        //  sau đó chỉ cần RÂU quét qua mức đó (không cần đóng nến) → vẽ rỗng/mờ (hoặc ẩn).
+        //  sau đó chỉ cần RÂU quét qua mức đó (không cần đóng nến) → tô nền mờ (hoặc ẩn).
         //  Đã BỎ định nghĩa cũ (volume nến ≤ × nến trước, delta co khỏi đỉnh intrabar, lookback swing).
         //  Luật 2026-11-18 (fit chart M5 CORVEN, xem ExhaustionLogic.cs): râu >= 3 tick và tổng bên soi trên 3 tick từ cực trị <= 0,5 x TB volume/mức.
         //  ⚠️ Công cụ ĐÁNH DẤU để đọc chart, CHƯA kiểm định lợi thế.
@@ -408,6 +408,9 @@ namespace OrderFlowBubbles
         public int ExhSweepTicks { get; set; } = 1;
 
         public bool ExhHideInvalidated { get; set; } = false;
+
+        // độ đậm (%) của tam giác kiệt sức ĐÃ HẾT HIỆU LỰC so với tam giác còn hiệu lực (tô đặc, chỉ mờ đi)
+        public int ExhDeadOpacity { get; set; } = 35;
 
         public Color ExhTopColor { get; set; } = Color.FromArgb(0xFF, 0xC8, 0x00);
 
@@ -1328,7 +1331,7 @@ namespace OrderFlowBubbles
             }
 
             // KIỆT SỨC (kiểu chart CORVEN): đỉnh = tam giác VÀNG mũi chỉ XUỐNG, cạnh đáy nằm ở giá cao nhất;
-            // đáy = tam giác XANH mũi chỉ LÊN, cạnh nằm ở giá thấp nhất. Bị râu quét qua → rỗng + mờ (hoặc ẩn).
+            // đáy = tam giác XANH mũi chỉ LÊN, cạnh nằm ở giá thấp nhất. Bị râu quét qua → tô nền mờ (hoặc ẩn).
             if (b.Shape == Shape.ExhTop || b.Shape == Shape.ExhBottom)
             {
                 bool dead = b.Confirm < 0;
@@ -1346,7 +1349,11 @@ namespace OrderFlowBubbles
                 }
                 else
                 {
-                    using var dp = new Pen(Color.FromArgb(Math.Max(40, alpha / 3), col), 1f);
+                    // hết hiệu lực: vẫn TÔ ĐẶC nhưng nền mờ (người học 2026-11-18: viền rỗng khó nhìn)
+                    int fa = Math.Clamp(alpha * ExhDeadOpacity / 100, 25, 255);
+                    using var fb = new SolidBrush(Color.FromArgb(fa, col));
+                    gr.FillPolygon(fb, pts);
+                    using var dp = new Pen(Color.FromArgb(Math.Min(255, fa + 40), col), 1f);
                     gr.DrawPolygon(dp, pts);
                 }
                 return;

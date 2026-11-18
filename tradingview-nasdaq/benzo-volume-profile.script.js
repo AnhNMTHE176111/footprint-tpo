@@ -1,5 +1,5 @@
 // Benzo Volume Profile — Settings: Overlay ON (main chart), Precision = symbol's.
-// Week / Day volume profile, HVN / LVN zones and an anchored VWAP with three σ bands, all built from
+// Week / Day volume profiles (or both at once), HVN / LVN zones and an anchored VWAP with three σ bands, all built from
 // one 1-minute series fetched independently of the chart, so every timeframe draws the same.
 
 const RES_MS = { '1m': 60000, '5m': 300000, '15m': 900000, '30m': 1800000, '1h': 3600000 };
@@ -743,7 +743,7 @@ return {
 
   calc(dataList, indicator) {
     const {
-      profileMode = 'Week', profileRows = 200, valueArea = 70, maxSessions = 5, widthPct = 1,
+      profileMode = 'Week', showDayProfile = true, profileRows = 200, valueArea = 70, maxSessions = 5, widthPct = 1,
       maxWidthBar = 90, showLive = true, profileRes = '1m', vaBoost = 1.18,
       colBuy = '#90bff9', colSell = '#b39ddb', colDayBuy = '#c9a43c', colDaySell = '#2f5fd8', colPOC = '#5b6472', colVWAP = '#ab47bc', vwapWidth = 2,
       showVWAP = true, vwapSrc = 'hlc3', vwapAnchor = '1D', vwapKeep = 5,
@@ -757,7 +757,7 @@ return {
     const res = new Array(n);
     for (let i = 0; i < n; i++) res[i] = {};
     if (n === 0) return res;
-    if (!indicator._benzoCache) indicator._benzoCache = { hist: null, B: null, bKey: '', sess: null, sessAnchor: '', vwapSeries: null, profiles: new Map(), dayKey: '', days: null, zoneKey: '', zones: null, res: null };
+    if (!indicator._benzoCache) indicator._benzoCache = { hist: null, B: null, bKey: '', sessBy: null, vwapSeries: null, profiles: new Map(), dayKey: '', days: null, zoneKey: '', zones: null, res: null };
     const cache = indicator._benzoCache;
     // While a data request is in flight, keep showing the last result instead of a blank frame.
     const keepLast = () => {
@@ -788,40 +788,50 @@ return {
 
     const o = {
       rows: Math.max(1, Math.trunc(profileRows)), valueArea, widthPct, maxWidthBar, vaBoost,
-      buyRgb: isDay ? parseRgb(colDayBuy, [201, 164, 60]) : parseRgb(colBuy, [144, 191, 249]),
-      sellRgb: isDay ? parseRgb(colDaySell, [47, 95, 216]) : parseRgb(colSell, [179, 157, 219]),
       vwapSrc, vwapAnchor, vwapKeep: Math.max(1, Math.trunc(vwapKeep)),
     };
+    const weekRgb = { buyRgb: parseRgb(colBuy, [144, 191, 249]), sellRgb: parseRgb(colSell, [179, 157, 219]) };
+    const dayRgb = { buyRgb: parseRgb(colDayBuy, [201, 164, 60]), sellRgb: parseRgb(colDaySell, [47, 95, 216]) };
 
-    // Completed sessions (last maxSessions) plus the developing one.
-    const sessAnchor = isDay ? '1D' : '1W';
-    if (!sameBars || cache.sessAnchor !== sessAnchor) { cache.sess = periodsOf(B, days, sessAnchor); cache.sessAnchor = sessAnchor; }
-    const sess = cache.sess;
-    const nSess = sess.length;
-    // A finished session never changes: its profile is built once and reused on every tick.
-    const profKey = [profileMode, profileRows, valueArea, widthPct, maxWidthBar, vaBoost, colBuy, colSell, colDayBuy, colDaySell, profileRes].join('|');
+    // Session ranges per anchor ('1W' / '1D'), recomputed only when a base bar is added.
+    if (!sameBars || !cache.sessBy) cache.sessBy = {};
+    const sessionsOf = (anchor) => cache.sessBy[anchor] || (cache.sessBy[anchor] = periodsOf(B, days, anchor));
+    const sess = sessionsOf(isDay ? '1D' : '1W');
+
+    // Completed sessions (last maxSessions) plus the developing one. A finished session never
+    // changes: its profile is built once and reused on every tick.
+    const profKey = [profileRows, valueArea, widthPct, maxWidthBar, vaBoost, colBuy, colSell, colDayBuy, colDaySell, profileRes].join('|');
     const usedKeys = new Set();
+    const sessionProfiles = (anchor, rgb) => {
+      const ps = sessionsOf(anchor);
+      const po = { ...o, ...rgb };
+      const out = [];
+      for (let k = Math.max(0, ps.length - 1 - sessions); k < ps.length; k++) {
+        const isLive = k === ps.length - 1;
+        if (isLive && !showLive) continue;
+        const [a, b] = ps[k];
+        const span = chartSpan(dataList, B.t[a], B.t[b - 1]);
+        if (!span) continue;
+        if (isLive) {
+          const p = buildProfile(B, a, b, span.from, span.to, po);
+          if (p) out.push(p);
+          continue;
+        }
+        const key = `${anchor}|${B.t[a]}|${B.t[b - 1]}|${b - a}|${span.from}|${span.to}|${profKey}`;
+        usedKeys.add(key);
+        let p = cache.profiles.get(key);
+        if (p === undefined) {
+          p = buildProfile(B, a, b, span.from, span.to, po);
+          cache.profiles.set(key, p);
+        }
+        if (p) out.push(p);
+      }
+      return out;
+    };
+    // Day profiles first: draw paints the list top-most first, so they sit above the week's.
     const profiles = [];
-    for (let k = Math.max(0, nSess - 1 - sessions); k < nSess; k++) {
-      const isLive = k === nSess - 1;
-      if (isLive && !showLive) continue;
-      const [a, b] = sess[k];
-      const span = chartSpan(dataList, B.t[a], B.t[b - 1]);
-      if (!span) continue;
-      if (isLive) {
-        const p = buildProfile(B, a, b, span.from, span.to, o);
-        if (p) profiles.push(p);
-        continue;
-      }
-      const key = `${B.t[a]}|${B.t[b - 1]}|${b - a}|${span.from}|${span.to}|${profKey}`;
-      usedKeys.add(key);
-      let p = cache.profiles.get(key);
-      if (p === undefined) {
-        p = buildProfile(B, a, b, span.from, span.to, o);
-        cache.profiles.set(key, p);
-      }
-      if (p) profiles.push(p);
-    }
+    if (isDay || showDayProfile) profiles.push(...sessionProfiles('1D', dayRgb));
+    if (!isDay) profiles.push(...sessionProfiles('1W', weekRgb));
     for (const key of cache.profiles.keys()) if (!usedKeys.has(key)) cache.profiles.delete(key);
 
     const vwap = showVWAP ? vwapOnChart(dataList, B, vwapSeries(B, days, o, cache, sameBars), o, res, barMs) : null;

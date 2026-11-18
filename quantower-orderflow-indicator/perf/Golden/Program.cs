@@ -66,29 +66,43 @@ namespace GoldenPerf
             return mode == "bench" ? Bench(bars, work, baseline) : Golden(args, bars, work, baseline, perfDir);
         }
 
-        // ---------------------------------------------------------------- danh sách stop hunt (so với research/stophunt_corven.py --spec)
-        // Chạy nạp NGUỘI cấu hình mặc định rồi ghi mọi dấu stop hunt (tooltip bắt đầu "Stop hunt") ra CSV: fail_time,side,level,colour,bid,ask
+        // ---------------------------------------------------------------- danh sách stop hunt (2026-11-18: bóng TÍM)
+        // Chạy nạp NGUỘI cấu hình mặc định, rồi ghi mọi bóng Ô lớn đã tô tím vì stop hunt (field StopHunt) ra CSV:
+        // sweep_time,side,level,bid,ask,orig_side. Một stop hunt = một cặp (nến quét, phía). In thống kê/ngày: số stop hunt, bóng tím, bóng vàng.
         static int StopHuntList(List<HistoryItemBar> bars, string work, string outFile)
         {
             string c = Path.Combine(work, "SH.jsonl"); if (File.Exists(c)) File.Delete(c);
             var r = Make(bars, 0, bars.Count, c, null); r.Ind.VolumeAnalysisData_Loaded();
             var bubbles = (IDictionary)typeof(Ind).GetField("_bubbles", NP).GetValue(r.Ind);
             var rows = new List<string>();
+            var signals = new HashSet<string>();
+            int purple = 0, yellow = 0, cellBig = 0, bad = 0;
+            var days = new HashSet<string>();
+            foreach (var bar in bars) days.Add(bar.TimeLeft.ToString("yyyy-MM-dd"));
             foreach (int k in bubbles.Keys.Cast<int>().OrderBy(x => x))
                 foreach (var b in (IEnumerable)bubbles[k])
                 {
-                    string tip = (string)b.GetType().GetField("Tooltip", NP).GetValue(b);
-                    if (tip == null || !tip.StartsWith("Stop hunt")) continue;
-                    // "Stop hunt đỉnh - quét 4090.3 | Tím 22 Bid 20 Ask → fail break"
-                    var m = System.Text.RegularExpressions.Regex.Match(tip, @"^Stop hunt (đỉnh|đáy) - quét (\S+) \| (\S+) (\d+) Bid (\d+) Ask");
-                    if (!m.Success) throw new Exception("tooltip la: " + tip);
-                    string side = m.Groups[1].Value == "đỉnh" ? "dinh" : "day";
-                    string col = m.Groups[3].Value == "Xanh" ? "Xanh" : m.Groups[3].Value == "Đỏ" ? "Do" : "Tim";
-                    rows.Add($"{bars[k].TimeLeft:yyyy-MM-dd HH:mm},{side},{m.Groups[2].Value},{col},{m.Groups[4].Value},{m.Groups[5].Value}");
+                    var t = b.GetType();
+                    bool big = (bool)t.GetField("CellBig", NP).GetValue(b);
+                    if (!big) continue;
+                    cellBig++;
+                    int side = (int)t.GetField("CellSide", NP).GetValue(b);
+                    bool sh = (bool)t.GetField("StopHunt", NP).GetValue(b);
+                    string tip = (string)t.GetField("Tooltip", NP).GetValue(b);
+                    var col = (Color)t.GetField("Color", NP).GetValue(b);
+                    if (!sh) { if (side == 0) { yellow++; if (col.ToArgb() != Color.Gold.ToArgb()) bad++; } if (tip.StartsWith("Stop hunt")) bad++; continue; }
+                    purple++;
+                    // "Stop hunt đỉnh - quét 4090.3 | 22 Bid 20 Ask → fail break"
+                    var m = System.Text.RegularExpressions.Regex.Match(tip, @"^Stop hunt (đỉnh|đáy) - quét (\S+) \| (\d+) Bid (\d+) Ask → fail break$");
+                    if (!m.Success || col.ToArgb() != Color.MediumOrchid.ToArgb()) { bad++; Console.WriteLine("  LOI bong tim: " + tip); continue; }
+                    string sd = m.Groups[1].Value == "đỉnh" ? "dinh" : "day";
+                    signals.Add(k + "|" + sd);
+                    rows.Add($"{bars[k].TimeLeft:yyyy-MM-dd HH:mm},{sd},{m.Groups[2].Value},{m.Groups[3].Value},{m.Groups[4].Value},{side}");
                 }
-            File.WriteAllLines(outFile, rows.Prepend("fail_time,side,level,colour,bid,ask"));
-            Console.WriteLine($"stop hunt: {rows.Count} dau -> {outFile}");
-            return 0;
+            File.WriteAllLines(outFile, rows.Prepend("sweep_time,side,level,bid,ask,orig_side"));
+            double nd = Math.Max(1, days.Count);
+            Console.WriteLine($"stop hunt: {signals.Count} dau ({signals.Count / nd:0.00}/ngay), bong tim {purple} ({purple / nd:0.00}/ngay), bong vang {yellow} ({yellow / nd:0.0}/ngay), tong o lon {cellBig}, {days.Count} ngay lich, loi dinh dang/mau {bad} -> {outFile}");
+            return bad == 0 ? 0 : 1;
         }
 
         // ---------------------------------------------------------------- nạp dữ liệu

@@ -115,7 +115,8 @@ namespace OrderFlowBubbles
             public bool ZoneWeak;       // Shape.Zone: buy ở râu trên / sell ở râu dưới (bị rút râu)
             public bool CellBig;        // true = bóng Ô Bid/Ask lớn (Price = tâm bóng); stop hunt đọc đúng các bóng này
             public double CellBid, CellAsk;  // Ô lớn: Bid (sell chủ động) / Ask (buy chủ động) của hàng
-            public int CellSide;        // Ô lớn: +1 xanh, -1 đỏ, 0 tím
+            public int CellSide;        // Ô lớn: +1 xanh, -1 đỏ, 0 vàng (cả hai bên đều lớn). KHÔNG đổi khi thành stop hunt (bộ dò đọc đúng bên gốc)
+            public bool StopHunt;       // true = bóng thuộc nến quét của một stop hunt đã xác nhận -> vẽ màu tím (Color), tooltip "Stop hunt ..."
         }
 
         // vùng Stacked Imbalance đang theo dõi (kéo sang phải tới khi kết thúc)
@@ -227,7 +228,7 @@ namespace OrderFlowBubbles
         // LUẬT 2026-11-11 (CellBigLogic.cs): MÔ PHỎNG HIỂN THỊ của CORVEN (Sierra) — gom 2 tick/hàng, bóng ở tâm
         // hàng; bên áp đảo của hàng (max buy,sell) >= 1,3 x B, B = TB 20 nến TRƯỚC của volume TB mỗi hàng có giao
         // dịch; F1 0,844 (885 bóng CORVEN 5-6/11). KHÔNG phải lợi thế đã kiểm định; không giới hạn số bóng/nến.
-        // Màu: tím khi bên yếu cũng vượt ngưỡng nổ (cả Bid lẫn Ask đều đủ nổ), xanh buy, đỏ sell. Cỡ to dần theo độ lớn (45%..100%
+        // Màu: VÀNG khi bên yếu cũng vượt ngưỡng nổ (cả Bid lẫn Ask đều đủ nổ), xanh buy, đỏ sell; TÍM = bóng của nến quét trong một stop hunt (2026-11-18). Cỡ to dần theo độ lớn (45%..100%
         // bề ngang nến, nén sqrt, đầy ở >= 6 lần B). Khác Absorption: KHÔNG đòi gần cực trị / sau swing / chấm điểm.
         [InputParameter("Ô Bid/Ask lớn (đại diện chính) · Bật", 25)]
         public bool CellBigEnabled { get; set; } = true;
@@ -240,10 +241,13 @@ namespace OrderFlowBubbles
 
         public double CellBigMinSide { get; set; } = 9;
 
-        // sàn cho BÊN YẾU khi xét bóng tím (tách khỏi sàn nổ bên áp đảo)
+        // sàn cho BÊN YẾU khi xét bóng vàng "cả hai bên đều lớn" (tách khỏi sàn nổ bên áp đảo)
         public double CellBigPurpleMinWeak { get; set; } = 3;
 
-        public Color CellBigBalancedColor { get; set; } = Color.MediumOrchid;
+        public Color CellBigBalancedColor { get; set; } = Color.Gold;
+
+        // màu bóng Ô lớn thuộc nến quét của stop hunt đã xác nhận (thay cho tam giác cũ)
+        public Color CellBigStopHuntColor { get; set; } = Color.MediumOrchid;
 
         // 0 = KHÔNG giới hạn số bóng/nến (CORVEN có nến 10+ bóng)
         public int CellBigTopN { get; set; } = 0;
@@ -469,7 +473,7 @@ namespace OrderFlowBubbles
         [InputParameter("Stop-hunt · Bật", 130)]
         public bool StopHuntEnabled { get; set; } = true;
 
-        public int StopHuntBoxSmall { get; set; } = 20;      // hộp nhỏ (nến đóng trước)
+        public int StopHuntBoxSmall { get; set; } = 60;      // hộp nhỏ (nến đóng trước); 2026-11-18: chỉ dùng hộp 60 (= hộp lớn thì bộ dò bỏ qua bản trùng)
         public int StopHuntBoxLarge { get; set; } = 60;      // hộp lớn
         public double StopHuntBoxMaxMult { get; set; } = 8;  // hộp hợp lệ khi cao <= k x trung vị biên độ 100 nến trước
         public int StopHuntTolTicks { get; set; } = 3;       // bóng phải có tâm >= mốc - tol x tick
@@ -536,7 +540,7 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
-                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigPurpleMinWeak, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v11",
+                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigPurpleMinWeak, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v12",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
@@ -549,7 +553,7 @@ namespace OrderFlowBubbles
                 ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun, ImbMinVolume,
                 DivergenceEnabled, DivSwingLookback, DivVolPartic, DivCooldown,
                 SweepEnabled, SweepLookback, UnfinishedEnabled,
-                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v2");
+                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v3");
         }
 
         private void InitBaselines()
@@ -1241,7 +1245,6 @@ namespace OrderFlowBubbles
                         {
                             if (b.Shape == Shape.Zone) continue;   // vùng stacked imbalance đã vẽ ở trên
                             float y = (float)conv.GetChartY(b.Price);
-                            if (IsStopHuntMark(b)) y += StopHuntIsTop(b) ? -(b.Size * 0.8f + 3f) : (b.Size * 0.8f + 3f);   // dấu nằm NGOÀI nến: trên đỉnh / dưới đáy
                             // absorption dùng bề rộng nến, nhưng có SÀN px: khi zoom hẹp nó từng nhỏ
                             // hơn cả halo Big Trade nên gần như vô hình.
                             // UseBarWidth = luôn ĐÚNG BẰNG bề ngang nến, KHÔNG có sàn tối thiểu — trước
@@ -1348,18 +1351,6 @@ namespace OrderFlowBubbles
                 return;
             }
 
-            // STOP HUNT: đỉnh = tam giác mũi chỉ XUỐNG (nằm trên đỉnh nến), đáy = mũi chỉ LÊN (nằm dưới đáy nến)
-            if (IsStopHuntMark(b))
-            {
-                float hf = Math.Max(1, size) / 2f, dir = StopHuntIsTop(b) ? 1f : -1f;
-                var spts = new[] { new PointF(cx - hf, cy - dir * hf), new PointF(cx + hf, cy - dir * hf), new PointF(cx, cy + dir * hf) };
-                using var sfb = new SolidBrush(Color.FromArgb(alpha, b.Color));
-                gr.FillPolygon(sfb, spts);
-                using var sop = new Pen(Color.FromArgb(Math.Min(alpha, 160), Color.Black), 1f);
-                gr.DrawPolygon(sop, spts);
-                return;
-            }
-
             // mức đã VỠ → làm mờ hẳn (giữ lại để học, không gây nhiễu mắt)
             if (b.Confirm < 0) alpha = Math.Max(30, alpha / 3);
 
@@ -1399,8 +1390,6 @@ namespace OrderFlowBubbles
         //  HELPERS
         // ================================================================
         private const string StopHuntTipTop = "Stop hunt đỉnh", StopHuntTipBot = "Stop hunt đáy";
-        private static bool IsStopHuntMark(Bubble b) => b.Shape == Shape.Triangle && b.Tooltip != null && b.Tooltip.StartsWith("Stop hunt", StringComparison.Ordinal);
-        private static bool StopHuntIsTop(Bubble b) => b.Tooltip.StartsWith(StopHuntTipTop, StringComparison.Ordinal);
 
         // Stop hunt CORVEN: nạp nến i (ĐÃ ĐÓNG) vào bộ dò; nếu có fail break thì gắn dấu vào nến i. Chạy cho cả nến tính mới lẫn nến khôi phục
         // từ niêm phong (bộ dò cần đủ lịch sử); dấu cũ trong niêm phong được thay bằng kết quả tính lại (tất định) và ghi đè niêm phong nếu khác.
@@ -1425,31 +1414,30 @@ namespace OrderFlowBubbles
             }
 
             var sigs = _stopHunt.OnBarClosed(idx, bar.High, bar.Low, bar.Close, StopHuntDetector.ToMinutes(bar.TimeLeft.Ticks), cells);
+            if (sigs.Count == 0) return;
+            // Stop hunt xác nhận (fail break ở nến idx) -> tô TÍM các bóng Ô lớn của NẾN QUÉT (sweepIdx <= idx) nằm ở/vượt mốc bị quét
+            // (đúng các bóng đã đủ điều kiện quét: tâm >= mốc - tol x tick, phía đáy lật dấu). CellSide/CellBid/CellAsk giữ nguyên bên gốc.
             var inv = System.Globalization.CultureInfo.InvariantCulture;
-            var marks = new List<Bubble>();
-            foreach (var sg in sigs)
-            {
-                string colour = sg.Colour > 0 ? "Xanh" : sg.Colour < 0 ? "Đỏ" : "Tím";
-                string tip = (sg.Top ? StopHuntTipTop : StopHuntTipBot) + " - quét " + sg.Level.ToString("0.0", inv)
-                           + " | " + colour + " " + sg.Bid.ToString("0", inv) + " Bid " + sg.Ask.ToString("0", inv) + " Ask → fail break";
-                marks.Add(new Bubble { Price = sg.Top ? bar.High : bar.Low, Shape = Shape.Triangle, Color = sg.Top ? SellColor : BuyColor, Size = MidSize(), Transparency = SolidTransparency, Tooltip = tip });
-            }
-            bool changed = false;
+            var touched = new HashSet<int>();
             lock (_sync)
             {
-                _bubbles.TryGetValue(idx, out var list);
-                var old = list == null ? new List<Bubble>() : list.Where(IsStopHuntMark).ToList();
-                if (old.Count != marks.Count) changed = true;
-                else for (int k = 0; k < old.Count; k++) if (old[k].Tooltip != marks[k].Tooltip || old[k].Price != marks[k].Price) { changed = true; break; }
-                if (changed)
+                foreach (var sg in sigs)
                 {
-                    if (list == null) { list = new List<Bubble>(); _bubbles[idx] = list; }
-                    list.RemoveAll(IsStopHuntMark);
-                    list.AddRange(marks);
-                    if (list.Count == 0) _bubbles.Remove(idx);
+                    if (!_bubbles.TryGetValue(sg.SweepIdx, out var list)) continue;
+                    double sgn = sg.Top ? 1.0 : -1.0;
+                    foreach (var b in list)
+                    {
+                        if (!b.CellBig || b.StopHunt) continue;
+                        if (!(sgn * b.Price >= sgn * sg.Level - StopHuntTolTicks * tick - StopHuntDetector.Eps)) continue;
+                        b.StopHunt = true;
+                        b.Color = CellBigStopHuntColor;
+                        b.Tooltip = (sg.Top ? StopHuntTipTop : StopHuntTipBot) + " - quét " + sg.Level.ToString("0.0", inv)
+                                  + " | " + b.CellBid.ToString("0", inv) + " Bid " + b.CellAsk.ToString("0", inv) + " Ask → fail break";
+                        touched.Add(sg.SweepIdx);
+                    }
                 }
             }
-            if (changed) RePersistBar(idx);
+            foreach (int k in touched) RePersistBar(k);   // ghi đè niêm phong của nến quét để nạp lại vẫn tím
         }
 
         // Chu kỳ nến (phút) cho kiểm tra liên tục của hộp. Khung thời gian: lấy từ HistoricalData; không rõ: bộ dò ước từ khoảng cách nhỏ nhất
@@ -1709,7 +1697,7 @@ namespace OrderFlowBubbles
                         Transparency = b.Transparency, Halo = b.Halo, UseBarWidth = b.UseBarWidth, SizeFrac = b.SizeFrac,
                         Tooltip = b.Tooltip, Confirm = b.Confirm, Confirmable = b.Confirmable,
                         PriceHi = b.PriceHi, ZoneSide = b.ZoneSide, ZoneWeak = b.ZoneWeak,
-                        CellBig = b.CellBig, CellBid = b.CellBid, CellAsk = b.CellAsk, CellSide = b.CellSide
+                        CellBig = b.CellBig, CellBid = b.CellBid, CellAsk = b.CellAsk, CellSide = b.CellSide, StopHunt = b.StopHunt
                     });
             return d;
         }
@@ -1724,7 +1712,7 @@ namespace OrderFlowBubbles
                     Transparency = cb.Transparency, Halo = cb.Halo, UseBarWidth = cb.UseBarWidth, SizeFrac = cb.SizeFrac,
                     Tooltip = cb.Tooltip, Confirm = cb.Confirm, Confirmable = cb.Confirmable,
                     PriceHi = cb.PriceHi, ZoneSide = cb.ZoneSide, ZoneWeak = cb.ZoneWeak,
-                    CellBig = cb.CellBig, CellBid = cb.CellBid, CellAsk = cb.CellAsk, CellSide = cb.CellSide
+                    CellBig = cb.CellBig, CellBid = cb.CellBid, CellAsk = cb.CellAsk, CellSide = cb.CellSide, StopHunt = cb.StopHunt
                 });
             return list;
         }

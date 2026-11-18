@@ -37,7 +37,7 @@ static class CellBigTests
         // màu
         Check(D(30, 0).Side == 1, "buy troi -> xanh (+1)");
         Check(D(0, 30).Side == -1, "sell troi -> do (-1)");
-        Check(D(30, 18).Side == 0, "ben yeu 18 >= 15 -> tim (0)");
+        Check(D(30, 18).Side == 0, "ben yeu 18 >= 15 -> Side 0 (2026-11-18: ve mau VANG; tim danh rieng cho bong cua nen quet stop hunt)");
         Check(D(30, 14).Side == 1, "ben yeu 14 < 15 -> van xanh");
         Check(D(14, 30).Side == -1, "sell troi, ben yeu 14 < 15 -> do");
         Check(D(25, 25).Side == 0, "hai ben bang nhau -> tim");

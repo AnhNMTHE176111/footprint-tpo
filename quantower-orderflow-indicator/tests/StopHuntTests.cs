@@ -144,10 +144,16 @@ static class StopHuntTests
 
         // --- 10) hợp hai hộp: chọn mức CAO nhất thoả bóng + fail break ---
         // 100 nến đầu: đỉnh 102,0; 20 nến cuối: đỉnh 101,6
-        Feed Two() { var g = new Feed(); g.Warm(100, 102.0, 0); g.Warm(20, 101.6, 100); return g; }
+        Feed Two(StopHuntSettings st = null) { var g = new Feed(st ?? new StopHuntSettings { BoxSmall = 20, BoxLarge = 60 }); g.Warm(100, 102.0, 0); g.Warm(20, 101.6, 100); return g; }
         var g1 = Two();
         var u1 = g1.Bar(101.4, 102.2, 101.0, Cell(101.5, 3, 18));     // chỉ đủ cho mức 101,6 (>= 101,3), không đủ cho 102,0 (>= 101,7)
         Check(u1.Count == 1 && Math.Abs(u1[0].Level - 101.6) < 1e-9, "hop 20 (101,6) + hop 60 (102,0): bong tam 101,5 chi thoa muc 101,6", u1.Count > 0 ? u1[0].Level.ToString() : "0");
+        // 2026-11-18: mặc định CHỈ hộp 60 (BoxSmall = BoxLarge = 60) -> cùng ca đó, bóng tâm 101,5 không đủ cho 102,0 => không dấu
+        var d0 = new StopHuntSettings();
+        Check(d0.BoxSmall == 60 && d0.BoxLarge == 60, "mac dinh chi hop 60 (BoxSmall = BoxLarge = 60)");
+        Check(Two(d0).Bar(101.4, 102.2, 101.0, Cell(101.5, 3, 18)).Count == 0, "mac dinh hop 60: bong tam 101,5 < 101,7 -> khong dau (hop 20 khong con dung)");
+        var ud = Two(d0).Bar(101.4, 102.2, 101.0, Cell(102.05, 3, 18));
+        Check(ud.Count == 1 && Math.Abs(ud[0].Level - 102.0) < 1e-9, "mac dinh hop 60: bong 102,05 -> dau o muc 102,0 (khong trung lap)", ud.Count.ToString());
         var g2 = Two();
         var u2 = g2.Bar(101.4, 102.2, 101.0, Cell(102.05, 3, 18));
         Check(u2.Count == 1 && Math.Abs(u2[0].Level - 102.0) < 1e-9, "bong tam 102,05 thoa ca hai muc -> chi 1 dau, muc cao 102,0", u2.Count.ToString());

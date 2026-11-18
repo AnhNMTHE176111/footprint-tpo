@@ -391,3 +391,14 @@ Người dùng xác nhận file 2 năm `fp_GC_XCEC_Time_20240801-20260819_748d9h
 | hộp 60, tol 3 | 11,7 | 52,6% | 44,3% | +8,3 pp (z 1,5) |
 
 Cùng chiều tháng trước (10/09–10/10: hộp 60 +10,7 đến +16 pp; ship +8,5 pp). Fail break KHÔNG bóng hay đi tiếp; có bóng chỉ nhỉnh hơn cơ sở. 1 tháng chưa đủ ý nghĩa thống kê; E[R] sau phí ~0.
+
+## Vòng 5 (2026-11-18) — stop hunt thành BÓNG TÍM, màu vàng cho bóng "cả hai bên đều lớn", chỉ hộp 60
+
+Người học chốt ba thay đổi:
+- **Bóng vàng:** bóng Ô lớn mà cả cột Bid lẫn cột Ask đều đủ nổ (trước đây tô tím) nay tô **vàng** (Color.Gold). Luật chọn bóng không đổi, chỉ đổi màu.
+- **Stop hunt = bóng tím, không còn tam giác.** Khi bộ dò xác nhận fail break, các bóng Ô lớn của **nến quét** (có thể sớm hơn nến xác nhận tới 2 nến) nằm ở/vượt mốc bị quét (tâm >= mốc - 3 tick, phía đáy lật dấu) được tô tím. Chữ khi rê chuột: `Stop hunt đỉnh - quét 4090.3 | 22 Bid 20 Ask → fail break`. Bên gốc (CellSide/Bid/Ask) giữ nguyên để bộ dò vẫn đọc đúng; cờ stop hunt lưu riêng và ghi vào niêm phong của nến quét (nạp lại vẫn tím: golden nạp ấm == nạp nguội).
+- **Chỉ dùng hộp 60 nến** (BoxSmall = BoxLarge = 60).
+
+Đo trên 90 ngày GCZ26 M1 (78 ngày có nến), cấu hình mặc định: **764 stop hunt (9,8/ngày), 2.098 bóng tím (26,9/ngày)**, 24.768 bóng vàng (317/ngày) trên tổng 120.576 bóng Ô lớn. Số stop hunt giảm mạnh so với bản hộp 20+60 (1.890 dấu).
+**Hai ca CORVEN (06/11 09:21 UTC đỉnh 4090.3; 05/11 20:45 UTC đáy 4108.4) KHÔNG còn được đánh dấu** với riêng hộp 60 — đây là hệ quả của quyết định bỏ hộp 20 (chưa kiểm từng ca xem mốc của chúng thuộc hộp nào). Muốn thử bắt lại: chỉnh StopHuntBoxSmall = 20.
+Kiểm chứng: vị trí/cỡ/số lượng bóng Ô lớn không đổi (120.576 = 120.576); sau khi bỏ tam giác và bỏ qua màu/chữ/cờ stop hunt của bóng Ô lớn, digest cũ và mới trùng từng dòng ở bốn kịch bản (S1, S4, S5, S7).

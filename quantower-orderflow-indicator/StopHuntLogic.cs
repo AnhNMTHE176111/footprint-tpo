@@ -26,7 +26,7 @@ namespace OrderFlowBubbles
 
     public sealed class StopHuntSettings
     {
-        public int BoxSmall = 20;
+        public int BoxSmall = 60;
         public int BoxLarge = 60;
         public double BoxMaxMult = 8;
         public int TolTicks = 3;

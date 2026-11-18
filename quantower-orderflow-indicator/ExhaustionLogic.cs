@@ -10,17 +10,15 @@
 //   • "Đỉnh = không còn người mua (kiệt sức buy), đáy = không còn người bán (kiệt sức sell)."
 //   • "Giá phải QUÉT QUA được mức đó thì kiệt sức mới bị VÔ HIỆU — quét qua là được, không cần đóng nến."
 //
-//  Định lượng (đo trên GCZ26 M1, 90 ngày 2026-07-23 → 10-21, 86.333 nến, xem báo cáo commit):
-//   • Ask tại đỉnh / Bid tại đáy có TRUNG VỊ chỉ 1 hợp đồng, 58% nến ≤ 1 → ngưỡng tuyệt đối "≤ 1-2"
-//     đánh dấu một nửa số nến, vô nghĩa. Vì vậy "nhỏ" phải TƯƠNG ĐỐI với chính cây nến:
-//       NHỎ      : giá trị ở cực trị ≤ SmallRel × (volume trung bình mỗi mức giá của nến)  [mặc định 0,10]
-//                  (nến mỏng TB ~4/mức → thực chất đòi = 0; nến dày TB 50/mức → ≤ 5 vẫn là "nhỏ")
-//       GIẢM DẦN : FadeLevels mức trên cùng của râu (đều phải nằm trong RÂU) giảm NGẶT về phía cực trị
-//                  và mức cuối ≤ FadeEndRel × TB/mức                                [mặc định 3 mức, 0,25]
-//   • Bắt buộc có râu ≥ 1 tick ở phía đang xét: nến đóng ngay tại đỉnh/đáy thì mức cực trị là THÂN,
-//     CORVEN dặn không lấy ở thân.
-//  ⚠️ Đây là ĐÁNH DẤU để đọc chart, KHÔNG phải tín hiệu đã kiểm định lợi thế: đo cho thấy mức kiệt sức
-//     bị quét qua với tỷ lệ gần như bằng nến bất kỳ (44%/70%/84% sau 1/5/20 nến, nến bất kỳ 46/72/85%).
+//  LUẬT HIỆN TẠI (2026-11-18, fit trên chart M5 của CORVEN ngày 18/11, xem research/corven_m5_2026-11-18/README.md):
+//   • RÂU nến ở phía đang xét phải dài >= MinWickTicks (3) tick (CORVEN dặn không lấy ở thân nến).
+//   • TỔNG volume của bên đang soi (Ask ở đỉnh, Bid ở đáy) trên SumLevels (3) tick tính từ cực trị đi vào trong
+//     phải <= SumRel (0,5) x volume trung bình mỗi mức giá có giao dịch của nến. Mức giá trống (giá nhảy cóc) tính 0;
+//     nến có ít mức hơn SumLevels thì dùng số mức hiện có.
+//   Đo trên 27 nến M5 (12:15-14:25 UTC 18/11): CORVEN đánh 11 dấu; luật cũ (cực trị <= 0,10 x trung bình mỗi mức, hoặc 3 mức giảm dần,
+//   râu >= 1 tick) ra 30 dấu, 6 trùng, F1 0,29; luật mới 23 dấu, 9 trùng, F1 0,53. Mật độ: M1 ngày 05/11 0,28 dấu/nến, M5 ngày 17/11 0,48 dấu/nến.
+//   ⚠️ Chỉ MỘT biểu đồ, 27 nến, nguồn dữ liệu của CORVEN khác nguồn mình. Đây là ĐÁNH DẤU để đọc chart, KHÔNG phải tín hiệu đã kiểm định lợi thế:
+//   mức kiệt sức bị quét qua với tỷ lệ gần như nến bất kỳ (44%/70%/84% sau 1/5/20 nến, nến bất kỳ 46/72/85%).
 // ============================================================================
 
 using System;
@@ -28,14 +26,14 @@ using System.Collections.Generic;
 
 namespace OrderFlowBubbles
 {
-    public enum ExhKind { None = 0, Small = 1, Fade = 2 }
+    // Small = có dấu kiệt sức (tên giữ lại cho tương thích; nhánh "giảm dần" cũ đã bỏ 2026-11-18)
+    public enum ExhKind { None = 0, Small = 1 }
 
     public sealed class ExhSettings
     {
-        public double SmallRel = 0.10;    // "nhỏ": cực trị ≤ SmallRel × TB volume/mức (0 = phải đúng bằng 0)
-        public int FadeLevels = 3;        // "giảm dần về 0": số mức râu xét (< 2 = tắt nhánh này)
-        public double FadeEndRel = 0.25;  // mức cuối của chuỗi giảm dần ≤ FadeEndRel × TB volume/mức
-        public bool RequireWick = true;   // chỉ lấy ở râu nến (CORVEN) — tắt chỉ để thử nghiệm
+        public int MinWickTicks = 3;      // râu >= số tick này (<= 0: không đòi râu)
+        public int SumLevels = 3;         // số mức giá xét, tính từ cực trị đi vào trong
+        public double SumRel = 0.5;       // tổng bên soi trên SumLevels mức <= SumRel x TB volume/mức của nến
     }
 
     public readonly struct ExhLevel
@@ -55,7 +53,7 @@ namespace OrderFlowBubbles
         public readonly long Tick;           // mức cực trị (đỉnh/đáy nến)
         public readonly double ExtremeVol;   // Ask ở đỉnh / Bid ở đáy
         public readonly double MeanLevelVol; // volume trung bình mỗi mức giá của nến
-        public readonly double[] Seq;        // giá trị bên soi, từ TRONG râu ra CỰC TRỊ (để ghi tooltip)
+        public readonly double[] Seq;        // giá trị bên soi trên SumLevels mức, từ TRONG ra CỰC TRỊ
         public bool Hit => Kind != ExhKind.None;
         public ExhResult(ExhKind kind, bool top, long tick, double ext, double mean, double[] seq)
         { Kind = kind; Top = top; Tick = tick; ExtremeVol = ext; MeanLevelVol = mean; Seq = seq; }
@@ -83,7 +81,7 @@ namespace OrderFlowBubbles
 
             long bodyEdge = top ? Math.Max(openTick, closeTick) : Math.Min(openTick, closeTick);
             long wick = top ? highTick - bodyEdge : bodyEdge - lowTick;   // số tick râu ở phía này
-            if (s.RequireWick && wick < 1) return none;
+            if (s.MinWickTicks > 0 && wick < s.MinWickTicks) return none;
 
             var byTick = new Dictionary<long, ExhLevel>(levels.Count);
             foreach (var l in levels) byTick[l.Tick] = l;
@@ -91,34 +89,21 @@ namespace OrderFlowBubbles
 
             int step = top ? -1 : 1;                  // đi từ cực trị VÀO trong nến
             int span = (int)(highTick - lowTick) + 1; // số mức của cả nến
-            int want = Math.Min(Math.Max(1, s.FadeLevels), span);
+            int want = Math.Min(Math.Max(1, s.SumLevels), span);
             var fromExt = new double[want];           // [0] = cực trị
+            double sum = 0;
             for (int j = 0; j < want; j++)
             {
                 byTick.TryGetValue(ext + step * j, out var l);   // mức trống (giá nhảy cóc) = 0
                 fromExt[j] = top ? l.Ask : l.Bid;
+                sum += fromExt[j];
             }
-            double extVol = fromExt[0];
+            if (!(sum <= s.SumRel * mean + 1e-9)) return none;
 
-            // tooltip: chuỗi từ trong ra cực trị, chỉ lấy phần nằm trong râu (tối đa 'want' mức)
-            int inWick = (int)Math.Min(want, s.RequireWick ? wick : want);
-            if (inWick < 1) inWick = 1;
-            var seq = new double[inWick];
-            for (int j = 0; j < inWick; j++) seq[j] = fromExt[inWick - 1 - j];
-
-            if (extVol <= s.SmallRel * mean + 1e-9)
-                return new ExhResult(ExhKind.Small, top, ext, extVol, mean, seq);
-
-            int n = s.FadeLevels;
-            if (n >= 2 && span >= n && (!s.RequireWick || wick >= n))
-            {
-                bool strictlyFading = true;
-                for (int j = 0; j < n - 1; j++)
-                    if (!(fromExt[j] < fromExt[j + 1])) { strictlyFading = false; break; }
-                if (strictlyFading && extVol <= s.FadeEndRel * mean + 1e-9)
-                    return new ExhResult(ExhKind.Fade, top, ext, extVol, mean, seq);
-            }
-            return none;
+            // tooltip/Seq: chuỗi giá trị bên soi từ TRONG ra CỰC TRỊ
+            var seq = new double[want];
+            for (int j = 0; j < want; j++) seq[j] = fromExt[want - 1 - j];
+            return new ExhResult(ExhKind.Small, top, ext, fromExt[0], mean, seq);
         }
 
         // VÔ HIỆU (CORVEN 0:54): một nến SAU đó chỉ cần RÂU quét qua mức kiệt sức là đủ, không cần đóng nến.

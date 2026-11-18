@@ -21,88 +21,95 @@ static class ExhaustionTests
     static List<ExhLevel> Lv(params (long t, double bid, double ask)[] xs)
         => xs.Select(x => new ExhLevel(x.t, x.bid, x.ask)).ToList();
 
-    static readonly ExhSettings Def = new ExhSettings();   // mac dinh: 0,10 / 3 muc / 0,25
+    static readonly ExhSettings Def = new ExhSettings();   // mac dinh moi (2026-11-18): rau >= 3 tick, tong 3 muc <= 0,5 x TB/muc
 
     static ExhResult Top(long o, long h, long l, long c, List<ExhLevel> lv, ExhSettings s = null)
         => ExhaustionLogic.Detect(true, o, h, l, c, lv, s ?? Def);
     static ExhResult Bot(long o, long h, long l, long c, List<ExhLevel> lv, ExhSettings s = null)
         => ExhaustionLogic.Detect(false, o, h, l, c, lv, s ?? Def);
 
+    // nen mau: 100..106, than 101-103 (open 101, close 103), rau tren 104-106 (3 tick), rau duoi 100 (1 tick).
+    // Cac muc 100-103 = 10/10 (vol 20). Rau tren: Bid 6, Ask = a104/a105/a106.
+    static List<ExhLevel> Wick3(double a104, double a105, double a106)
+        => Lv((100, 10, 10), (101, 10, 10), (102, 10, 10), (103, 10, 10), (104, 6, a104), (105, 6, a105), (106, 6, a106));
+
     public static int Run()
     {
-        Console.WriteLine("[E1] Dinh: Ask tai dinh = 0, co rau -> kiet suc buy (Nho)");
+        Console.WriteLine("[E0] Mac dinh: MinWickTicks 3, SumLevels 3, SumRel 0,5");
+        Check(Def.MinWickTicks == 3 && Def.SumLevels == 3 && Math.Abs(Def.SumRel - 0.5) < 1e-12, "mac dinh dung");
+
+        Console.WriteLine("[E1] Dinh: tong Ask 3 muc tren cung nho, rau 3 tick -> kiet suc buy");
         {
-            // nen 100..106, than 101-103, rau tren 104-106; Ask o 106 = 0
-            var lv = Lv((100, 5, 3), (101, 8, 9), (102, 10, 12), (103, 9, 8), (104, 4, 6), (105, 3, 2), (106, 7, 0));
+            var lv = Wick3(2, 1, 0);   // tong Ask 3 tick = 3; TB/muc ~ 14,7 -> nguong 7,4
             var r = Top(101, 106, 100, 103, lv);
-            Check(r.Hit && r.Kind == ExhKind.Small && r.Top && r.Tick == 106 && r.ExtremeVol == 0, "dinh 106, Ask=0 -> Small", $"kind={r.Kind}");
+            Check(r.Hit && r.Kind == ExhKind.Small && r.Top && r.Tick == 106 && r.ExtremeVol == 0, "dinh 106 -> co", $"kind={r.Kind}");
+            Check(r.Seq.Length == 3 && r.Seq[0] == 2 && r.Seq[1] == 1 && r.Seq[2] == 0, "Seq tu trong ra cuc tri: 2,1,0", string.Join(",", r.Seq));
         }
 
         Console.WriteLine("[E2] Dinh soi ASK chu khong soi BID");
         {
-            // Bid o dinh rat lon (sell chu dong dap vao) nhung Ask = 0 -> VAN la kiet suc buy
-            var a = Lv((100, 5, 5), (101, 5, 5), (102, 5, 5), (103, 60, 0));
-            Check(Top(100, 103, 100, 101, a).Hit, "Bid dinh 60 / Ask dinh 0 -> co kiet suc");
-            // nguoc lai: Bid dinh 0 nhung Ask dinh lon -> KHONG
-            var b = Lv((100, 5, 5), (101, 5, 5), (102, 5, 5), (103, 0, 20));
-            Check(!Top(100, 103, 100, 101, b).Hit, "Bid dinh 0 / Ask dinh 20 -> khong kiet suc");
+            var a = Lv((100, 5, 5), (101, 5, 5), (102, 5, 5), (103, 5, 5), (104, 60, 0), (105, 60, 0), (106, 60, 0));
+            Check(Top(101, 106, 100, 103, a).Hit, "Bid rau tren 60 / Ask 0 -> co kiet suc");
+            var b = Lv((100, 5, 5), (101, 5, 5), (102, 5, 5), (103, 5, 5), (104, 0, 20), (105, 0, 20), (106, 0, 20));
+            Check(!Top(101, 106, 100, 103, b).Hit, "Bid 0 / Ask 20 o rau tren -> khong kiet suc");
         }
 
         Console.WriteLine("[E3] Day soi BID chu khong soi ASK");
         {
-            var a = Lv((100, 0, 40), (101, 6, 6), (102, 6, 6), (103, 6, 6));
-            var r = Bot(103, 103, 100, 102, a);
+            var a = Lv((100, 0, 40), (101, 0, 40), (102, 0, 40), (103, 6, 6), (104, 6, 6), (105, 6, 6), (106, 6, 6));
+            var r = Bot(105, 106, 100, 103, a);   // open 105, close 103 -> than tu 103, rau duoi 100-102 = 3 tick
             Check(r.Hit && !r.Top && r.Tick == 100 && r.Kind == ExhKind.Small, "Bid day 0 / Ask day 40 -> kiet suc sell");
-            var b = Lv((100, 20, 0), (101, 6, 6), (102, 6, 6), (103, 6, 6));
-            Check(!Bot(103, 103, 100, 102, b).Hit, "Bid day 20 / Ask day 0 -> khong kiet suc");
+            Check(r.Seq.Length == 3 && r.Seq[2] == 0, "Seq day: cuoi = Bid o day", string.Join(",", r.Seq));
+            var b = Lv((100, 40, 0), (101, 40, 0), (102, 40, 0), (103, 6, 6), (104, 6, 6), (105, 6, 6), (106, 6, 6));
+            Check(!Bot(105, 106, 100, 103, b).Hit, "Bid day 40 / Ask day 0 -> khong kiet suc");
         }
 
-        Console.WriteLine("[E4] Giam dan ve 0 (3 muc rau giam NGAT, muc cuoi <= 0,25 x TB)");
+        Console.WriteLine("[E4] Rau 2 tick khong du, 3 tick du (bien MinWickTicks)");
         {
-            // TB/muc = (10+10+...)/7; dat sao cho Ask dinh = 2 (khong 'nho' vi > 0,1*TB) nhung giam 9 -> 5 -> 2
-            var lv = Lv((100, 10, 10), (101, 10, 10), (102, 10, 10), (103, 10, 10), (104, 6, 9), (105, 6, 5), (106, 6, 2));
-            double mean = ExhaustionLogic.MeanLevelVolume(lv);
-            var r = Top(101, 106, 100, 103, lv);
-            Check(r.Hit && r.Kind == ExhKind.Fade, "9 -> 5 -> 2 tai dinh -> Fade", $"kind={r.Kind} mean={mean:0.0}");
-            Check(r.Seq.Length == 3 && r.Seq[0] == 9 && r.Seq[2] == 2, "Seq ghi tu trong ra dinh: 9,5,2", string.Join(",", r.Seq));
+            var lv = Wick3(0, 0, 0);   // tong = 0 -> neu rau du thi chac chan co
+            Check(!Top(101, 106, 100, 104, lv).Hit, "rau tren 2 tick (than toi 104, high 106) -> khong");
+            Check(Top(101, 106, 100, 103, lv).Hit, "rau tren 3 tick (than toi 103) -> co");
+            var s2 = new ExhSettings { MinWickTicks = 2 };
+            Check(Top(101, 106, 100, 104, lv, s2).Hit, "MinWickTicks = 2 thi rau 2 tick duoc");
+            var s0 = new ExhSettings { MinWickTicks = 0 };
+            Check(Top(100, 106, 100, 106, lv, s0).Hit, "MinWickTicks = 0 -> khong doi rau (close = high van co)");
+            Check(!Top(100, 106, 100, 106, lv).Hit, "close = high (khong rau) -> khong");
         }
 
-        Console.WriteLine("[E5] Khong giam NGAT (5 -> 5 -> 2) -> khong Fade");
+        Console.WriteLine("[E5] Bien tong 3 muc <= 0,5 x TB/muc");
         {
-            var lv = Lv((100, 10, 10), (101, 10, 10), (102, 10, 10), (103, 10, 10), (104, 6, 5), (105, 6, 5), (106, 6, 2));
-            Check(!Top(101, 106, 100, 103, lv).Hit, "5,5,2 -> khong kiet suc");
+            // Bid rau = 6 -> TB = (4x20 + 3x(6 + a))/7 = (98 + 3a)/7 ; tong = 3a <= (98 + 3a)/14 <=> a <= 2,5128
+            Check(Top(101, 106, 100, 103, Wick3(2.5, 2.5, 2.5)).Hit, "a = 2,5 (tong 7,5 <= 0,5 x TB 15,2) -> co");
+            Check(!Top(101, 106, 100, 103, Wick3(2.6, 2.6, 2.6)).Hit, "a = 2,6 (tong 7,8 > 0,5 x TB 15,3) -> khong");
+            var lv = Wick3(2, 1, 0);   // tong 3
+            double m = ExhaustionLogic.MeanLevelVolume(lv);
+            var exact = new ExhSettings { SumRel = 3.0 / m };
+            Check(Top(101, 106, 100, 103, lv, exact).Hit, "tong == SumRel x TB (bien dung) -> co", $"sum=3 mean={m:0.000}");
+            var tighter = new ExhSettings { SumRel = 3.0 / m - 0.001 };
+            Check(!Top(101, 106, 100, 103, lv, tighter).Hit, "SumRel nho hon bien -> khong");
         }
 
-        Console.WriteLine("[E6] Giam dan nhung muc cuoi con LON -> khong Fade");
+        Console.WriteLine("[E6] Chi tinh SumLevels muc tu cuc tri; muc ben trong khong tinh");
         {
-            // TB ~ 30/muc; 40 -> 25 -> 15 giam ngat nhung 15 > 0,25*TB
-            var lv = Lv((100, 20, 20), (101, 20, 20), (102, 20, 20), (103, 20, 20), (104, 10, 40), (105, 10, 25), (106, 10, 15));
-            var r = Top(101, 106, 100, 103, lv);
-            Check(!r.Hit, "40,25,15 voi TB lon -> khong kiet suc", $"mean={ExhaustionLogic.MeanLevelVolume(lv):0.0}");
+            Check(!Top(101, 106, 100, 103, Wick3(50, 0, 0)).Hit, "muc thu 3 tu cuc tri lon (50) -> khong");
+            var lv = Lv((100, 10, 10), (101, 10, 10), (102, 10, 10), (103, 10, 80), (104, 6, 1), (105, 6, 1), (106, 6, 0));
+            Check(Top(101, 106, 100, 103, lv).Hit, "Ask 80 o muc 103 (ngoai 3 muc) -> khong anh huong");
+            Check(!Top(101, 106, 100, 103, lv, new ExhSettings { SumLevels = 4 }).Hit, "SumLevels = 4 -> muc 103 (80) vao tong -> khong");
         }
 
-        Console.WriteLine("[E7] Lay o RAU, khong lay o THAN: nen dong ngay tai dinh -> khong co kiet suc dinh");
+        Console.WriteLine("[E7] Muc thieu (gia nhay coc) tinh = 0; nen it muc hon SumLevels dung so muc co");
         {
-            var lv = Lv((100, 5, 5), (101, 5, 5), (102, 5, 5), (103, 4, 0));
-            Check(!Top(100, 103, 100, 103, lv).Hit, "close = high (khong rau tren), Ask dinh 0 -> KHONG");
-            Check(!Bot(103, 103, 100, 100, Lv((100, 0, 4), (101, 5, 5), (102, 5, 5), (103, 5, 5))).Hit,
-                  "close = low (khong rau duoi), Bid day 0 -> KHONG");
-            // tat RequireWick (chi de thu nghiem) thi lai bat duoc
-            var s = new ExhSettings { RequireWick = false };
-            Check(Top(100, 103, 100, 103, lv, s).Hit, "RequireWick=false -> bat duoc (chi thu nghiem)");
+            var lv = Lv((100, 10, 10), (101, 10, 10), (102, 10, 10), (103, 10, 10), (106, 6, 3));
+            Check(Top(101, 106, 100, 103, lv).Hit, "104, 105 trong -> tinh 0, tong Ask = 3 <= 0,5 x TB", $"mean={ExhaustionLogic.MeanLevelVolume(lv):0.0}");
+            var s = new ExhSettings { MinWickTicks = 1 };
+            var two = Lv((100, 8, 8), (101, 9, 0));   // nen 2 muc; than = 100, rau tren 1 tick; tong Ask 0 + 8 = 8 > 0,5 x 12,5
+            Check(!Top(100, 101, 100, 100, two, s).Hit, "span 2 muc: dung 2 muc (tong 8 > 6,25) -> khong");
+            var two2 = Lv((100, 8, 2), (101, 9, 0));  // tong 2 <= 0,5 x 9,5
+            var r2 = Top(100, 101, 100, 100, two2, s);
+            Check(r2.Hit && r2.Seq.Length == 2, "span 2 muc: tong 2 <= 0,5 x TB -> co, Seq 2 phan tu");
         }
 
-        Console.WriteLine("[E8] Giam dan doi DU so muc NAM TRONG RAU");
-        {
-            // rau tren chi 2 tick (105,106) nhung chuoi giam lay 3 muc (104 la than) -> khong Fade
-            var lv = Lv((100, 10, 10), (101, 10, 10), (102, 10, 10), (103, 10, 10), (104, 6, 9), (105, 6, 5), (106, 6, 2));
-            Check(!Top(101, 106, 100, 104, lv).Hit, "rau 2 tick, chuoi 3 muc lan vao than -> khong");
-            // FadeLevels=2 thi 2 muc rau 5 -> 2 du dieu kien
-            var s2 = new ExhSettings { FadeLevels = 2 };
-            Check(Top(101, 106, 100, 104, lv, s2).Kind == ExhKind.Fade, "FadeLevels=2: 5 -> 2 trong rau -> Fade");
-        }
-
-        Console.WriteLine("[E9] Nen 1 muc gia / du lieu rong -> khong co gi");
+        Console.WriteLine("[E8] Nen 1 muc gia / du lieu rong / settings null -> khong co gi");
         {
             var one = Lv((100, 0, 0));
             Check(!Top(100, 100, 100, 100, one).Hit && !Bot(100, 100, 100, 100, one).Hit, "nen 1 muc gia -> khong");
@@ -110,36 +117,18 @@ static class ExhaustionTests
             Check(!ExhaustionLogic.Detect(true, 100, 102, 100, 101, Lv((100, 1, 1), (102, 0, 0)), null).Hit, "settings null -> khong (khong crash)");
         }
 
-        Console.WriteLine("[E10] 'Nho' la TUONG DOI theo TB/muc cua chinh nen");
+        Console.WriteLine("[E9] Nguong theo TB/muc cua chinh nen (day hon -> nguong cao hon)");
         {
-            // nen day: TB ~ 60/muc, Ask dinh 5 <= 6 -> Nho
-            var heavy = Lv((100, 60, 60), (101, 60, 60), (102, 60, 60), (103, 60, 60), (104, 40, 5));
-            Check(Top(101, 104, 100, 102, heavy).Kind == ExhKind.Small, "nen day, Ask dinh 5 -> Nho", $"mean={ExhaustionLogic.MeanLevelVolume(heavy):0.0}");
-            // nen mong: TB ~ 4/muc, Ask dinh 1 > 0,4 -> khong
-            var thin = Lv((100, 2, 2), (101, 2, 2), (102, 2, 2), (103, 2, 2), (104, 3, 1));
-            Check(!Top(101, 104, 100, 102, thin).Hit, "nen mong, Ask dinh 1 -> khong");
-            // SmallRel = 0 -> phai dung bang 0
-            var s0 = new ExhSettings { SmallRel = 0, FadeLevels = 0 };
-            Check(!Top(101, 104, 100, 102, heavy, s0).Hit, "SmallRel=0: Ask dinh 5 -> khong");
-            var zero = Lv((100, 60, 60), (101, 60, 60), (102, 60, 60), (103, 60, 60), (104, 40, 0));
-            Check(Top(101, 104, 100, 102, zero, s0).Hit, "SmallRel=0: Ask dinh 0 -> co");
+            var heavy = Lv((100, 60, 60), (101, 60, 60), (102, 60, 60), (103, 60, 60), (104, 40, 8), (105, 40, 8), (106, 40, 8));
+            Check(Top(101, 106, 100, 103, heavy).Hit, "nen day, tong Ask 24 <= 0,5 x TB 89 -> co");
+            var thin = Lv((100, 2, 2), (101, 2, 2), (102, 2, 2), (103, 2, 2), (104, 3, 1), (105, 3, 1), (106, 3, 1));
+            Check(!Top(101, 106, 100, 103, thin).Hit, "nen mong, tong Ask 3 > 0,5 x TB 4 -> khong");
         }
 
-        Console.WriteLine("[E11] Muc trong (gia nhay coc) trong rau tinh = 0");
+        Console.WriteLine("[E10] Mot nen co CA kiet suc dinh lan day");
         {
-            // khong co dong cho 105; chuoi tu trong ra: 104=9, 105=0, 106=3 -> khong giam ngat (3 < 0 sai)
-            var lv = Lv((100, 10, 10), (101, 10, 10), (102, 10, 10), (103, 10, 10), (104, 6, 9), (106, 6, 3));
-            var r = Top(101, 106, 100, 103, lv);
-            Check(!r.Hit, "9, [trong], 3 -> khong Fade, Ask dinh 3 > 0,1*TB", $"kind={r.Kind}");
-            // muc trong NGAY tai rau giua, chuoi 9 -> [0] la cuc tri? khong: cuc tri luon co giao dich.
-            var lv2 = Lv((100, 10, 10), (101, 10, 10), (102, 10, 10), (103, 10, 10), (105, 6, 3), (106, 6, 0));
-            Check(Top(101, 106, 100, 103, lv2).Kind == ExhKind.Small, "104 trong, Ask dinh 0 -> Small binh thuong");
-        }
-
-        Console.WriteLine("[E12] Mot nen co CA kiet suc dinh lan day (nhu nen 22:52 tren chart CORVEN)");
-        {
-            var lv = Lv((100, 0, 3), (101, 8, 8), (102, 9, 9), (103, 8, 8), (104, 3, 0));
-            Check(Top(102, 104, 100, 102, lv).Hit && Bot(102, 104, 100, 102, lv).Hit, "doji 2 rau, Ask dinh 0 & Bid day 0 -> ca 2");
+            var lv = Lv((99, 0, 3), (100, 0, 3), (101, 0, 3), (102, 8, 8), (103, 9, 9), (104, 3, 0), (105, 3, 0), (106, 3, 0));
+            Check(Top(102, 106, 99, 103, lv).Hit && Bot(102, 106, 99, 103, lv).Hit, "nen 2 rau 3 tick, Ask dinh 0 & Bid day 0 -> ca 2");
         }
 
         Console.WriteLine("[E13] VO HIEU: nen sau chi can RAU quet qua (khong can dong nen)");
@@ -165,10 +154,10 @@ static class ExhaustionTests
 
         Console.WriteLine("[E15] Tooltip ngan: Kiet suc buy/sell");
         {
-            var lv = Lv((100, 10, 10), (101, 10, 10), (102, 10, 10), (103, 10, 10), (104, 6, 9), (105, 6, 5), (106, 6, 2));
+            var lv = Wick3(2, 1, 0);
             string t = ExhaustionLogic.Describe(Top(101, 106, 100, 103, lv));
             Check(t == "Kiệt sức buy", "tooltip dinh ngan gon", t);
-            string tb = ExhaustionLogic.Describe(Bot(103, 103, 100, 102, Lv((100, 0, 40), (101, 6, 6), (102, 6, 6), (103, 6, 6))));
+            string tb = ExhaustionLogic.Describe(Bot(105, 106, 100, 103, Lv((100, 0, 40), (101, 0, 40), (102, 0, 40), (103, 6, 6), (104, 6, 6), (105, 6, 6), (106, 6, 6))));
             Check(tb == "Kiệt sức sell", "tooltip day ngan gon", tb);
             Check(ExhaustionLogic.Describe(default) == "", "khong kiet suc -> tooltip rong");
         }

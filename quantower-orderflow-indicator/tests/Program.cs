@@ -267,6 +267,7 @@ static class Tests
         _fail += PerfTests.Run();
         _fail += ExhaustionTests.Run();
         _fail += CellBigTests.Run();
+        _fail += CorvenM5ParityTests.Run();
         _fail += StopHuntTests.Run();
         StackedImbalanceTests.RunAll();
         _fail += StackedImbalanceTests.Fail;

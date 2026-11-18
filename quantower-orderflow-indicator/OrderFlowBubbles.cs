@@ -46,12 +46,13 @@
 //  ⇒ Bubble là công cụ ĐÁNH DẤU để đọc bằng mắt. "Điểm" là độ đậm hiển thị, KHÔNG phải xác suất.
 //
 //  ---- Ô BID/ASK LỚN (mục 1.5, viết lại 2026-11-11, xem CellBigLogic.cs) -------------
-//  Luật mô phỏng hiển thị của CORVEN, khớp F1 0,83 trên 2 phiên 5-6/11 (recall 87%, precision 80%):
-//  Chart CORVEN (Sierra) gộp 2 tick thành 1 HÀNG (hàng = tick lẻ + tick chẵn kế, row = floor((tickIdx-1)/2)),
-//  bóng đặt ở TÂM hàng. Hàng: bid = Σ sell, ask = Σ buy. Nổ khi max(bid,ask) của hàng >= 1,3 x B (B = TB 20 nến
-//  trước của volume TB mỗi HÀNG có giao dịch), sàn 3, không giới hạn số bóng/nến. Màu tím khi bên yếu cũng vượt ngưỡng nổ.
-//  Ghép 1-1 ±1 tick với 885 bóng CORVEN 5-6/11: mình 972, trúng 784, thừa 19%, sót 11%, F1 0,844; ngày 06/11:
-//  319 vs 302. (Bản gộp ô liền kề ±1 tick cũ: thừa 24%, sót 20%, F1 0,78 — CellBigMergeTicks giữ nhưng mặc định 0.)
+//  Luật mô phỏng hiển thị của CORVEN. Chart CORVEN (Sierra) gộp 2 tick thành 1 HÀNG (hàng = tick lẻ + tick chẵn kế,
+//  row = floor((tickIdx-1)/2)), bóng đặt ở TÂM hàng. Hàng: bid = Σ sell, ask = Σ buy. LUẬT 2026-11-18 (fit trên chart M5
+//  của CORVEN ngày 18/11): bóng nổ khi bên áp đảo của hàng >= 1,25 x mức trung bình volume mỗi hàng có giao dịch của 20 nến
+//  đã đóng trước, VÀ >= sàn 9 hợp đồng, VÀ >= 3 x bên yếu (CellBigMinImbalance; bên yếu bằng 0 thì qua). Không còn bóng vàng
+//  (hàng cân bằng không nổ). Trên 27 nến M5 mẫu: CORVEN 24 bóng, luật cũ 123 (F1 0,16), luật mới 17 (F1 0,39); mật độ 9 ngày
+//  M5 từ 2,87 xuống 0,73 bóng/nến. Chỉ một biểu đồ nên chưa phải kiểm định. Chi tiết: research/corven_m5_2026-11-18/README.md.
+//  (Số liệu luật cũ M1 5-6/11: F1 0,844; luật mới trên dữ liệu M1 đó F1 0,572 — người học chấp nhận để giống kiểu M5.)
 //  ⚠ Pha hàng đo trên GC (tick 0,1) chart CORVEN; mã khác chưa kiểm. KHÔNG phải lợi thế đã kiểm định.
 //
 //  ---- NIÊM PHONG TÍN HIỆU (2026-09-15, xem SignalCache.cs) --------------------
@@ -115,7 +116,7 @@ namespace OrderFlowBubbles
             public bool ZoneWeak;       // Shape.Zone: buy ở râu trên / sell ở râu dưới (bị rút râu)
             public bool CellBig;        // true = bóng Ô Bid/Ask lớn (Price = tâm bóng); stop hunt đọc đúng các bóng này
             public double CellBid, CellAsk;  // Ô lớn: Bid (sell chủ động) / Ask (buy chủ động) của hàng
-            public int CellSide;        // Ô lớn: +1 xanh, -1 đỏ, 0 vàng (cả hai bên đều lớn). KHÔNG đổi khi thành stop hunt (bộ dò đọc đúng bên gốc)
+            public int CellSide;        // Ô lớn: +1 xanh (Ask trội), -1 đỏ (Bid trội); 0 chỉ còn ở bản ghi niêm phong cũ (vàng, đã bỏ). KHÔNG đổi khi thành stop hunt
             public bool StopHunt;       // true = bóng thuộc nến quét của một stop hunt đã xác nhận -> vẽ màu tím (Color), tooltip "Stop hunt ..."
         }
 
@@ -146,7 +147,7 @@ namespace OrderFlowBubbles
         // ===================== baseline ROBUST (median + MAD) =====================
         private RollingRobust _rLvlVol;       // per-level Volume (chỉ top-K ô/nến nếu BaselineTopLevels>0)
         private StopHuntDetector _stopHunt;     // stop hunt CORVEN (chỉ nạp nến ĐÃ ĐÓNG, đúng 1 lần/nến)
-        private CellBigBaseline _cellBigBase;   // B của Ô lớn: TB 20 nến đóng TRƯỚC
+        private CellBigBaseline _cellBigBase;   // mức trung bình volume mỗi hàng của Ô lớn: TB 20 nến đóng TRƯỚC
         private RollingRobust _rLvlAbsDelta;  // per-level |Delta| — CHỈ nạp khi DLineEnabled (chỉ Big Delta line đọc nó)
         private bool _trackAbsDelta;          // DLineEnabled tại lúc InitBaselines (ResetState)
         private RollingRobust _rLvlMot;       // per-level MaxOneTradeVolume (chỉ khi feed điền)
@@ -225,26 +226,23 @@ namespace OrderFlowBubbles
         public double FixedThresholdContracts { get; set; } = 10;
 
         // ---------- 1.5) Ô BID/ASK LỚN — BÓNG ĐẠI DIỆN CHÍNH (2026-09-15) ----------
-        // LUẬT 2026-11-11 (CellBigLogic.cs): MÔ PHỎNG HIỂN THỊ của CORVEN (Sierra) — gom 2 tick/hàng, bóng ở tâm
-        // hàng; bên áp đảo của hàng (max buy,sell) >= 1,3 x B, B = TB 20 nến TRƯỚC của volume TB mỗi hàng có giao
-        // dịch; F1 0,844 (885 bóng CORVEN 5-6/11). KHÔNG phải lợi thế đã kiểm định; không giới hạn số bóng/nến.
-        // Màu: VÀNG khi bên yếu cũng vượt ngưỡng nổ (cả Bid lẫn Ask đều đủ nổ), xanh buy, đỏ sell; TÍM = bóng của nến quét trong một stop hunt (2026-11-18). Cỡ to dần theo độ lớn (45%..100%
-        // bề ngang nến, nén sqrt, đầy ở >= 6 lần B). Khác Absorption: KHÔNG đòi gần cực trị / sau swing / chấm điểm.
+        // LUẬT 2026-11-18 (CellBigLogic.cs): MÔ PHỎNG HIỂN THỊ của CORVEN — gom 2 tick/hàng, bóng ở tâm hàng; bên áp đảo của
+        // hàng >= 1,25 x mức trung bình volume mỗi hàng có giao dịch của 20 nến đóng trước, >= sàn 9 hợp đồng, và >= 3 x bên yếu.
+        // KHÔNG phải lợi thế đã kiểm định; không giới hạn số bóng/nến. Màu: xanh buy, đỏ sell (không còn vàng);
+        // TÍM = bóng của nến quét trong một stop hunt (2026-11-18). Cỡ to dần theo độ lớn (45%..100% bề ngang nến, nén sqrt,
+        // đầy ở >= 6 lần mức trung bình). Khác Absorption: KHÔNG đòi gần cực trị / sau swing / chấm điểm.
         [InputParameter("Ô Bid/Ask lớn (đại diện chính) · Bật", 25)]
         public bool CellBigEnabled { get; set; } = true;
 
-        // Luật mô phỏng hiển thị của CORVEN (F1 0,844 trên 2 phiên 5-6/11): bên áp đảo của HÀNG >= Ratio x B,
-        // B = TB 20 nến TRƯỚC của "volume TB mỗi hàng có giao dịch". KHÔNG phải lợi thế đã kiểm định.
-        public double CellBigRatio { get; set; } = 1.3;
+        // Bên áp đảo của HÀNG >= Ratio x mức trung bình volume mỗi hàng có giao dịch của 20 nến TRƯỚC (đổi 1,3 -> 1,25 ngày 2026-11-18).
+        public double CellBigRatio { get; set; } = 1.25;
 
         public int CellBigBaselineBars { get; set; } = 20;
 
         public double CellBigMinSide { get; set; } = 9;
 
-        // sàn cho BÊN YẾU khi xét bóng vàng "cả hai bên đều lớn" (tách khỏi sàn nổ bên áp đảo)
-        public double CellBigPurpleMinWeak { get; set; } = 3;
-
-        public Color CellBigBalancedColor { get; set; } = Color.Gold;
+        // Bên áp đảo phải >= số này x bên yếu (bên yếu 0 thì qua; 0 = tắt điều kiện). Loại hàng cân bằng như 100 Bid x 101 Ask (2026-11-18).
+        public double CellBigMinImbalance { get; set; } = 3.0;
 
         // màu bóng Ô lớn thuộc nến quét của stop hunt đã xác nhận (thay cho tam giác cũ)
         public Color CellBigStopHuntColor { get; set; } = Color.MediumOrchid;
@@ -394,17 +392,18 @@ namespace OrderFlowBubbles
         //  Đỉnh soi ASK, đáy soi BID, chỉ lấy ở RÂU nến; "nhỏ, hoặc giảm dần về 0". Vô hiệu khi một nến
         //  sau đó chỉ cần RÂU quét qua mức đó (không cần đóng nến) → vẽ rỗng/mờ (hoặc ẩn).
         //  Đã BỎ định nghĩa cũ (volume nến ≤ × nến trước, delta co khỏi đỉnh intrabar, lookback swing).
-        //  Đo GCZ26 M1 90 ngày: Ask đỉnh/Bid đáy trung vị = 1 hợp đồng → "nhỏ" phải TƯƠNG ĐỐI theo TB
-        //  volume/mức của chính nến. Mặc định dưới đây ≈ 14 dấu/60 nến (đếm trên chart CORVEN: 2-14/60).
+        //  Luật 2026-11-18 (fit chart M5 CORVEN, xem ExhaustionLogic.cs): râu >= 3 tick và tổng bên soi trên 3 tick từ cực trị <= 0,5 x TB volume/mức.
         //  ⚠️ Công cụ ĐÁNH DẤU để đọc chart, CHƯA kiểm định lợi thế.
         [InputParameter("Kiệt sức · Bật", 80)]
         public bool ExhaustionEnabled { get; set; } = true;
 
-        public double ExhSmallRel { get; set; } = 0.10;
+        // 2026-11-18: râu >= ExhMinWickTicks tick VÀ tổng bên soi (Ask ở đỉnh, Bid ở đáy) trên ExhSumLevels tick từ cực trị vào trong
+        // <= ExhSumRel x volume trung bình mỗi mức giá của nến (thay luật "nhỏ/giảm dần" cũ).
+        public int ExhMinWickTicks { get; set; } = 3;
 
-        public int ExhFadeLevels { get; set; } = 3;
+        public int ExhSumLevels { get; set; } = 3;
 
-        public double ExhFadeEndRel { get; set; } = 0.25;
+        public double ExhSumRel { get; set; } = 0.5;
 
         public int ExhSweepTicks { get; set; } = 1;
 
@@ -540,7 +539,7 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
-                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigPurpleMinWeak, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v13",
+                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigMinImbalance, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v14",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
@@ -549,11 +548,11 @@ namespace OrderFlowBubbles
                 WNoResult, WProminent, WDivergence, WTwoSided, WMulti, WSwing,
                 BigTradeEnabled, BigZ, BigVolMult, BigTradeTopN, BigTradeRequireRealTrades, BigTradeSkipOnAbsorption, BigTradeFixedContracts, BigTradeAbsFloor,
                 DLineEnabled, DLineFloor, DLineZ, DLineTopN,
-                ExhaustionEnabled, ExhSmallRel, ExhFadeLevels, ExhFadeEndRel, ExhSweepTicks,
+                ExhaustionEnabled, ExhMinWickTicks, ExhSumLevels, ExhSumRel, ExhSweepTicks, "exh-v2",
                 ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun, ImbMinVolume,
                 DivergenceEnabled, DivSwingLookback, DivVolPartic, DivCooldown,
                 SweepEnabled, SweepLookback, UnfinishedEnabled,
-                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v3");
+                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v4");
         }
 
         private void InitBaselines()
@@ -907,14 +906,14 @@ namespace OrderFlowBubbles
                 foreach (var r in rows)
                 {
                     if (r.Buy + r.Sell <= 0) continue;
-                    var dec = CellBigLogic.Decide(r.Buy, r.Sell, cellB, hasCellB, CellBigRatio, CellBigMinSide, CellBigPurpleMinWeak,
+                    var dec = CellBigLogic.Decide(r.Buy, r.Sell, cellB, hasCellB, CellBigRatio, CellBigMinSide, CellBigMinImbalance,
                                                   UseFixedThreshold, FixedThresholdContracts);
                     if (!dec.Hit) continue;
                     double cp = CellBigLogic.RowCenterPrice(r.RowId, CellBigRowTicks, CellBigRowOffset, tick);
-                    var col2 = dec.Side == 0 ? CellBigBalancedColor : dec.Side > 0 ? BuyColor : SellColor;
+                    var col2 = dec.Side > 0 ? BuyColor : SellColor;
                     // định dạng người dùng chốt 2026-11-12: "Sell - n Bid m Ask | ..." ; 2026-11-18: k = NGƯỠNG NỔ thật
                     // = max(Ratio x B, sàn MinSide 9) (chế độ cố định: max(ngưỡng cố định, sàn)) — không còn hiện B trần (vd 6.2 < 9)
-                    string side = dec.Side > 0 ? "Buy" : dec.Side < 0 ? "Sell" : "Buy + Sell";
+                    string side = dec.Side > 0 ? "Buy" : "Sell";
                     double fireLvl = UseFixedThreshold ? Math.Max(FixedThresholdContracts, CellBigMinSide)
                                                        : Math.Max(CellBigRatio * cellB, CellBigMinSide);
                     string tip2 = $"{side} - {r.Sell:0} Bid {r.Buy:0} Ask | Ngưỡng nổ {fireLvl.ToString("0.#", inv)}";
@@ -1008,7 +1007,7 @@ namespace OrderFlowBubbles
             var levels = new List<ExhLevel>(va.PriceLevels.Count);
             foreach (var kv in va.PriceLevels)   // Bid = SellVolume (khớp ở Bid), Ask = BuyVolume (khớp ở Ask)
                 levels.Add(new ExhLevel((long)Math.Round(kv.Key / tick), kv.Value.SellVolume, kv.Value.BuyVolume, kv.Value.Volume));
-            var s = new ExhSettings { SmallRel = ExhSmallRel, FadeLevels = ExhFadeLevels, FadeEndRel = ExhFadeEndRel };
+            var s = new ExhSettings { MinWickTicks = ExhMinWickTicks, SumLevels = ExhSumLevels, SumRel = ExhSumRel };
             long o = (long)Math.Round(bar.Open / tick), h = (long)Math.Round(bar.High / tick);
             long l = (long)Math.Round(bar.Low / tick), c = (long)Math.Round(bar.Close / tick);
             foreach (bool top in new[] { true, false })

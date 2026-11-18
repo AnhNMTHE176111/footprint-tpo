@@ -54,7 +54,7 @@ namespace OrderFlowBubbles
         public bool CellBig { get; set; }     // Ô Bid/Ask lớn (bản ghi cũ = false)
         public double CellBid { get; set; }
         public double CellAsk { get; set; }
-        public int CellSide { get; set; }     // +1 xanh / -1 đỏ / 0 vàng (cả hai bên đều lớn)
+        public int CellSide { get; set; }     // +1 xanh / -1 đỏ (0 = bản ghi cũ từng là vàng, đã bỏ; vẫn nạp an toàn)
         public bool StopHunt { get; set; }    // bóng thuộc nến quét của stop hunt đã xác nhận (vẽ tím; bản ghi cũ = false)
     }
 

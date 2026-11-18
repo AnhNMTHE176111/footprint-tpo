@@ -1,19 +1,27 @@
 // ============================================================================
 //  Ô Bid/Ask lớn (CellBig) — logic THUẦN (không phụ thuộc Quantower) để unit test.
-//  Luật MÔ PHỎNG HIỂN THỊ của CORVEN (Sierra), fit trên 885 bóng / 11.796 ô, 2 phiên 5-6/11/2026
-//  (GCZ26 M1): F1 0,83, recall 87%, precision 80%. KHÔNG phải lợi thế đã kiểm định.
+//  Luật MÔ PHỎNG HIỂN THỊ của CORVEN (Sierra). Cơ chế gom hàng fit trên 885 bóng, 2 phiên 5-6/11/2026 (GCZ26 M1, F1 0,83);
+//  ngưỡng nổ chỉnh lại 2026-11-18 theo chart M5 (xem bên dưới). KHÔNG phải lợi thế đã kiểm định.
 //    GOM MỨC GIÁ THÀNH HÀNG (2026-11-11, reverse-engineer chart Sierra của CORVEN): chart CORVEN gộp 2 tick
 //    thành 1 hàng (0,2 giá với GC), hàng = (tick lẻ, tick chẵn kế tiếp): row = floor((tickIndex - 1) / 2).
 //    Bóng đặt ở TÂM hàng. Bằng chứng: khoảng cách giữa các bóng kề nhau chủ yếu 2 tick; lệch pha hàng
 //    (x.0,x.1) trúng 400/885, pha (x.1,x.2) trúng 784/885. ⚠ Pha hàng đo trên GC (tick 0,1) chart CORVEN;
 //    mã khác chưa kiểm.
 //    hàng: bid = tổng SellVolume, ask = tổng BuyVolume, vol = tổng Volume các mức trong hàng.
-//    bên áp đảo của hàng = max(ask, bid) >= Ratio (1,3) x B  (và >= sàn nổ 9 hợp đồng, 2026-11-12; tím: bên yếu >= 1,3 x B và >= sàn riêng 3)
+//    LUẬT HIỆN TẠI (2026-11-18, fit trên chart M5 của CORVEN ngày 18/11, xem research/corven_m5_2026-11-18/README.md):
+//      bên áp đảo của hàng (bên có volume lớn hơn) phải thoả CẢ BA điều kiện:
+//        (1) >= CellBigRatio (1,25) x mức trung bình volume mỗi hàng có giao dịch của 20 nến đã đóng liền trước (cần >= 5 nến);
+//        (2) >= sàn nổ 9 hợp đồng;
+//        (3) >= CellBigMinImbalance (3) x bên yếu (bên yếu bằng 0 thì qua; đặt 0 để tắt điều kiện này).
+//      Điều kiện (3) loại các hàng cân bằng (vd 100 Bid x 101 Ask) mà CORVEN không đánh bóng. Màu: xanh khi Ask trội, đỏ khi Bid trội
+//      (Side = +1 nếu ask > bid, ngược lại -1; sau điều kiện (3) hai bên không thể bằng nhau trừ khi tắt điều kiện, khi đó hoà tính là -1).
+//      KHÔNG còn bóng vàng "cả hai bên đều lớn" (CORVEN không có). Bóng TÍM chỉ còn nghĩa stop hunt, do OrderFlowBubbles.cs tô.
+//    Đo trên 27 nến M5 (12:15-14:25 UTC 18/11): CORVEN 24 bóng; luật cũ (1,3 x, sàn 9, không điều kiện (3)) ra 123 bóng, F1 0,16;
+//    luật mới 17 bóng, F1 0,39 theo vị trí, 11/15 nến có bóng của CORVEN trùng. Mật độ 9 ngày M5: 2,87 -> 0,73 bóng/nến (CORVEN ~0,9).
+//    Đánh đổi: so với các chấm M1 cũ của CORVEN (Meet 5-6/11), F1 giảm 0,835 -> 0,572. Người học chọn kiểu M5. Chỉ MỘT biểu đồ, 27 nến,
+//    nguồn dữ liệu của CORVEN khác nguồn mình (delta lệch) nên khớp vị trí bị chặn trần. KHÔNG phải lợi thế đã kiểm định.
 //    B = trung bình của N nến ĐÃ ĐÓNG TRƯỚC của "volume TB mỗi HÀNG có giao dịch" (cần >= 5 nến)
-//    Màu (luật 2026-11-12, màu đúng 93,6% trên 879 bóng): tím khi BÊN YẾU CŨNG tự vượt ngưỡng nổ (cả cột Bid lẫn
-//    cột Ask đều đủ nổ bóng); còn lại xanh = ask trội, đỏ = bid trội.
-//    Fit ngày 05/11, kiểm ngày 06/11 — ghép 1-1 ±1 tick với 885 bóng CORVEN (580 nến 5-6/11): mình 972 bóng,
-//    trúng 784, thừa 188 (19%), sót 101 (11%), F1 0,844; ngày 06/11: 319 vs 302, F1 0,870; màu đúng 88%.
+//    (Luật cũ 2026-11-12 có thêm màu tím/vàng khi bên yếu cũng vượt ngưỡng nổ — đã bỏ hẳn.)
 //    RowTicks = 1 -> hành vi theo từng tick như bản cũ. Gộp ô liền kề ±1 tick (MergeAdjacent) giữ lại nhưng
 //    mặc định TẮT (xấp xỉ sai vị trí, đã thay bằng gom hàng).
 // ============================================================================
@@ -25,7 +33,7 @@ namespace OrderFlowBubbles
     public struct CellBigDecision
     {
         public bool Hit;
-        public int Side;        // +1 = buy (Ask) trội, -1 = sell (Bid) trội, 0 = bên yếu cũng đủ nổ (tím)
+        public int Side;        // +1 = buy (Ask) trội, -1 = sell (Bid) trội (hoà -> -1). Hit=false thì 0. Không còn bóng vàng/cân bằng.
         public double Mult;     // sideVol / B (0 nếu chưa có B)
         public double SizeFrac; // 0..1 (tỉ lệ so với bề ngang nến)
     }
@@ -36,8 +44,9 @@ namespace OrderFlowBubbles
         public const double SizeMinFrac = 0.45;   // cỡ ở ngưỡng
         public const double SizeFullMult = 6.0;   // từ tỉ lệ này trở lên = 100% bề ngang nến
 
+        // minImbalance: bên áp đảo phải >= minImbalance x bên yếu (bên yếu 0 thì qua; <= 0 tắt điều kiện). Áp cho cả chế độ ngưỡng cố định.
         public static CellBigDecision Decide(double buy, double sell, double baseline, bool hasBaseline,
-            double ratio, double minSide, double purpleMinWeak, bool fixedMode, double fixedThreshold)
+            double ratio, double minSide, double minImbalance, bool fixedMode, double fixedThreshold)
         {
             var d = new CellBigDecision();
             double side = Math.Max(buy, sell), weak = Math.Min(buy, sell);
@@ -46,10 +55,9 @@ namespace OrderFlowBubbles
             if (fixedMode) d.Hit = side >= fixedThreshold;
             else d.Hit = hasBaseline && baseline > 0 && side >= ratio * baseline;
             if (side < minSide) d.Hit = false;
+            if (minImbalance > 0 && side < minImbalance * weak) d.Hit = false;
             if (!d.Hit) return d;
-            bool weakBig = fixedMode ? weak >= fixedThreshold : (hasBaseline && baseline > 0 && weak >= ratio * baseline);
-            weakBig = weakBig && weak >= purpleMinWeak;
-            d.Side = weakBig ? 0 : (buy >= sell ? 1 : -1);
+            d.Side = buy > sell ? 1 : -1;
             d.SizeFrac = Size(d.Mult, ratio);
             return d;
         }

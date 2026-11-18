@@ -21,7 +21,7 @@ namespace OrderFlowBubbles
     {
         public double Centre;    // giá tâm bóng
         public double Bid, Ask;  // Bid = sell chủ động, Ask = buy chủ động trong hàng
-        public int Side;         // +1 xanh (Ask trội), -1 đỏ (Bid trội), 0 tím
+        public int Side;         // +1 xanh (Ask trội), -1 đỏ (Bid trội); 0 chỉ từ bản ghi cũ
     }
 
     public sealed class StopHuntSettings

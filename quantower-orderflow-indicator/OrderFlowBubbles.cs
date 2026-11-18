@@ -540,7 +540,7 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
-                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigPurpleMinWeak, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v12",
+                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigPurpleMinWeak, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, "cellbig-v13",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
@@ -912,10 +912,12 @@ namespace OrderFlowBubbles
                     if (!dec.Hit) continue;
                     double cp = CellBigLogic.RowCenterPrice(r.RowId, CellBigRowTicks, CellBigRowOffset, tick);
                     var col2 = dec.Side == 0 ? CellBigBalancedColor : dec.Side > 0 ? BuyColor : SellColor;
-                    // định dạng người dùng chốt 2026-11-12: "Sell - n Bid m Ask | Trung bình k" (k = B, mức TB hiện tại)
+                    // định dạng người dùng chốt 2026-11-12: "Sell - n Bid m Ask | ..." ; 2026-11-18: k = NGƯỠNG NỔ thật
+                    // = max(Ratio x B, sàn MinSide 9) (chế độ cố định: max(ngưỡng cố định, sàn)) — không còn hiện B trần (vd 6.2 < 9)
                     string side = dec.Side > 0 ? "Buy" : dec.Side < 0 ? "Sell" : "Buy + Sell";
-                    string tip2 = $"{side} - {r.Sell:0} Bid {r.Buy:0} Ask"
-                                + (dec.Mult > 0 ? $" | Trung bình {cellB.ToString("0.0", inv)}" : "");
+                    double fireLvl = UseFixedThreshold ? Math.Max(FixedThresholdContracts, CellBigMinSide)
+                                                       : Math.Max(CellBigRatio * cellB, CellBigMinSide);
+                    string tip2 = $"{side} - {r.Sell:0} Bid {r.Buy:0} Ask | Ngưỡng nổ {fireLvl.ToString("0.#", inv)}";
                     var b2 = Solid(cp, Shape.Ellipse, col2, true, tip2);
                     b2.SizeFrac = dec.SizeFrac;
                     b2.CellBig = true; b2.CellBid = r.Sell; b2.CellAsk = r.Buy; b2.CellSide = dec.Side;

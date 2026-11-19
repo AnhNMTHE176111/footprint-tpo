@@ -736,7 +736,12 @@ const CACHES = {};
 const CACHE_IDS = [];
 const MAX_CACHES = 6;
 function newCache() {
-  return { hist: null, B: null, bKey: '', sessBy: null, vwapSeries: null, profiles: {}, dayKey: '', days: null, zoneKey: '', zones: null, res: null, zeros: null };
+  return { series: {}, profiles: {}, res: null };
+}
+// Everything derived from one base series (one bar timeframe): its bars, trading days, sessions,
+// zones and VWAP. Switching the timeframe starts a fresh one.
+function newSeriesCache() {
+  return { hist: null, zeros: null, B: null, bKey: '', dayKey: '', days: null, sessBy: null, zoneKey: '', zones: null, vwapSeries: null };
 }
 function cacheOf(indicator) {
   let id = indicator._benzoCacheId;
@@ -799,22 +804,36 @@ return {
     // HVN / LVN zones come from the week profile while it is shown, otherwise from the day profile.
     const isDay = showDayProfile && !showWeekProfile;
     const barMs = bv.detectBarMs(dataList);
-    const resMs = RES_MS[profileRes] || 60000;
-    // Look-back the base series must cover: kept sessions (+ the week before, for weekly HVN) and
+    const resKey = RES_MS[profileRes] ? profileRes : '1m';
+    // Look-back each base series must cover: kept sessions (+ the week before, for weekly HVN) and
     // the kept VWAP periods. Counted in calendar minutes, so it over-covers weekends and breaks.
     const sessions = Math.max(1, Math.trunc(maxSessions));
-    const profileMin = (sessions + 2) * (isDay ? 1440 : 10080);
+    const profileMin = (sessions + 2) * (showWeekProfile || !showDayProfile ? 10080 : 1440);
     const vwapMin = showVWAP ? (Math.max(1, Math.trunc(vwapKeep)) + 1) * (ANCHOR_SPAN_MIN[vwapAnchor] || 1440) : 0;
-    const histCount = Math.min(MAX_HISTORY_BARS, Math.ceil(Math.max(profileMin, vwapMin) * 60000 / resMs));
-    const histReady = requestHistory(profileRes, histCount, cache);
-    // Live newest bars: the chart's own bars when it is on the profile resolution, otherwise the
-    // last two days of intrabars.
-    const useLowerTf = resMs < barMs;
-    const ltf = useLowerTf ? bv.securityLowerTf({ timeframe: profileRes, calcBarsCount: 2 * 1440 * 60000 / resMs }, (bars) => bars) : null;
-    if (!histReady || (useLowerTf && !ltf)) return keepLast();
-    const { B, sameBars } = baseSeries(cache.hist || [], resMs <= barMs ? liveBars(dataList, ltf) : [], cache);
-    if (B.n < 2) return keepLast();
-    const days = sessionDays(B, cache);
+    // One base series of `res` bars: history fetched independently of the chart plus the newest
+    // bars live from the chart (its own bars on a chart of that timeframe, otherwise two days of
+    // intrabars). null while the data is still loading.
+    const usedSeries = new Set();
+    const loadSeries = (res, minutes) => {
+      usedSeries.add(res);
+      const ms = RES_MS[res];
+      const c = cache.series[res] || (cache.series[res] = newSeriesCache());
+      const ready = requestHistory(res, Math.min(MAX_HISTORY_BARS, Math.ceil(minutes * 60000 / ms)), c);
+      const useLowerTf = ms < barMs;
+      const ltf = useLowerTf ? bv.securityLowerTf({ timeframe: res, calcBarsCount: 2 * 1440 * 60000 / ms }, (bars) => bars) : null;
+      if (!ready || (useLowerTf && !ltf)) return null;
+      const { B, sameBars } = baseSeries(c.hist || [], ms <= barMs ? liveBars(dataList, ltf) : [], c);
+      if (B.n < 2) return null;
+      return { B, sameBars, days: sessionDays(B, c), c };
+    };
+    // Profiles and zones use the chosen data timeframe; the VWAP always runs on 1m bars, so the line
+    // is smooth and exact whatever that timeframe is.
+    const main = loadSeries(resKey, resKey === '1m' ? Math.max(profileMin, vwapMin) : profileMin);
+    const vw1m = !showVWAP || resKey === '1m' ? main : loadSeries('1m', vwapMin);
+    for (const key of Object.keys(cache.series)) if (!usedSeries.has(key)) delete cache.series[key];
+    if (!main || !vw1m) return keepLast();
+    const { B, sameBars, days } = main;
+    const sc = main.c;
 
     const o = {
       rows: Math.max(1, Math.trunc(profileRows)), valueArea, widthPct, maxWidthBar, vaBoost,
@@ -824,8 +843,8 @@ return {
     const dayRgb = { buyRgb: parseRgb(colDayBuy, [201, 164, 60]), sellRgb: parseRgb(colDaySell, [47, 95, 216]) };
 
     // Session ranges per anchor ('1W' / '1D'), recomputed only when a base bar is added.
-    if (!sameBars || !cache.sessBy) cache.sessBy = {};
-    const sessionsOf = (anchor) => cache.sessBy[anchor] || (cache.sessBy[anchor] = periodsOf(B, days, anchor));
+    if (!sameBars || !sc.sessBy) sc.sessBy = {};
+    const sessionsOf = (anchor) => sc.sessBy[anchor] || (sc.sessBy[anchor] = periodsOf(B, days, anchor));
     const sess = sessionsOf(isDay ? '1D' : '1W');
 
     // Completed sessions (last maxSessions) plus the developing one. A finished session never
@@ -864,12 +883,12 @@ return {
     if (showWeekProfile) profiles.push(...sessionProfiles('1W', weekRgb));
     for (const key of Object.keys(cache.profiles)) if (!usedKeys.has(key)) delete cache.profiles[key];
 
-    const vwap = showVWAP ? vwapOnChart(dataList, B, vwapSeries(B, days, o, cache, sameBars), o, res, barMs) : null;
+    const vwap = showVWAP ? vwapOnChart(dataList, vw1m.B, vwapSeries(vw1m.B, vw1m.days, o, vw1m.c, vw1m.sameBars), o, res, barMs) : null;
     // HVN and LVN zones, each across the pane from its session's start. Above the live price =
     // sell, below = buy, price inside = gray (not tradable yet).
     const zones = [];
     if (showHVN || showLVN) {
-      const found = isDay ? buildZonesDay(B, sess, sessions, cache) : buildZonesWeek(B, sess, cache);
+      const found = isDay ? buildZonesDay(B, sess, sessions, sc) : buildZonesWeek(B, sess, sc);
       const price = dataList[n - 1].close;
       const insideRgb = parseRgb(hvnInsideColor, [158, 158, 158]);
       const kinds = [];

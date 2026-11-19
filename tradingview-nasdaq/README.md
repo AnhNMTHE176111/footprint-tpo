@@ -12,7 +12,7 @@
 - `benzo-volume-profile.inputs.json` + `benzo-volume-profile.script.js` — bản **thefreechart.com**
   (Build Indicators → New Indicator: dán JSON vào tab Inputs, JS vào tab Script; Overlay bật).
   Profile tuần và profile ngày bật/tắt độc lập ("Show Week Profile", "Show Day Profile"; ngày màu xanh dương
-  + vàng; "Profile Data Timeframe" chọn nến 1m / 5m / 15m / 30m để dựng profile, HVN/LVN, VWAP). HVN/LVN lấy theo tuần khi profile tuần bật, chỉ bật profile ngày thì theo ngày; "Hide Candles" ẩn nến bằng barColor trong suốt,
+  + vàng; "Profile Data Timeframe" chọn nến 1m / 5m / 15m / 30m để dựng profile + HVN/LVN; VWAP luôn tính từ nến 1m, mặc định neo theo ngày). HVN/LVN lấy theo tuần khi profile tuần bật, chỉ bật profile ngày thì theo ngày; "Hide Candles" ẩn nến bằng barColor trong suốt,
   chỉ còn profile + các vùng/đường đang bật), POC + VA, VWAP + 3 dải σ, vùng **HVN** tự nhận diện:
   cụm chữ D (loại khối chữ nhật, cụm volume thấp, cụm lệch một phía), vùng = lõi dày ≥ 70% đỉnh,
   trên giá = sell, dưới giá = buy, giá trong vùng = xám. Week: tuần này + tuần trước, chồng nhau thì gộp

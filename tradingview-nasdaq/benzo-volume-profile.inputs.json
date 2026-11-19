@@ -1,4 +1,5 @@
 [
+  {"id": "hideCandles", "name": "Hide Candles (show only the profile)", "type": "bool", "defval": false},
   {"id": "profileMode", "name": "Profile Mode", "type": "select", "options": ["Week", "Day"], "defval": "Week"},
   {"id": "showDayProfile", "name": "Also Show Day Profiles in Week Mode", "type": "bool", "defval": true},
   {"id": "profileRows", "name": "Rows per Profile", "type": "int", "defval": 200, "min": 8, "max": 200, "step": 1},

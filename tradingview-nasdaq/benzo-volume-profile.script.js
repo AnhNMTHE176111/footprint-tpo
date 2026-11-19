@@ -6,7 +6,8 @@ const RES_MS = { '1m': 60000, '5m': 300000, '15m': 900000, '30m': 1800000, '1h':
 const DAY_MS = 86400000;
 const HOUR_MS_ = 3600000;
 const ANCHOR_SPAN_MIN = { '1h': 60, '4h': 240, '1D': 1440, '1W': 10080, '1M': 44640 };
-const MAX_HISTORY_BARS = 120000;   // the platform allows 200k lower-timeframe bars per script
+const MAX_HISTORY_BARS = 120000;
+const TRANSPARENT = 'rgba(0, 0, 0, 0)';   // the platform allows 200k lower-timeframe bars per script
 // Row transparency (Pine 0..100) runs from G_EDGE (lowest volume) to G_PEAK (POC).
 const G_PEAK = 3;
 const G_EDGE = 68;
@@ -743,7 +744,7 @@ return {
 
   calc(dataList, indicator) {
     const {
-      profileMode = 'Week', showDayProfile = true, profileRows = 200, valueArea = 70, maxSessions = 5, widthPct = 1,
+      hideCandles = false, profileMode = 'Week', showDayProfile = true, profileRows = 200, valueArea = 70, maxSessions = 5, widthPct = 1,
       maxWidthBar = 90, showLive = true, profileRes = '1m', vaBoost = 1.18,
       colBuy = '#90bff9', colSell = '#b39ddb', colDayBuy = '#c9a43c', colDaySell = '#2f5fd8', colPOC = '#5b6472', colVWAP = '#ab47bc', vwapWidth = 2,
       showVWAP = true, vwapSrc = 'hlc3', vwapAnchor = '1D', vwapKeep = 5,
@@ -760,11 +761,19 @@ return {
     if (!indicator._benzoCache) indicator._benzoCache = { hist: null, B: null, bKey: '', sessBy: null, vwapSeries: null, profiles: new Map(), dayKey: '', days: null, zoneKey: '', zones: null, res: null };
     const cache = indicator._benzoCache;
     // While a data request is in flight, keep showing the last result instead of a blank frame.
+    // Hide-candles mode: the chart paints every candle in a transparent colour (barColor), so only
+    // the indicator's drawings stay; the rows are reused across calls, so the colour is also cleared.
+    const withCandleColor = (rows) => {
+      for (const row of rows) {
+        if (hideCandles) row.barColor = TRANSPARENT;
+        else if (row.barColor) delete row.barColor;
+      }
+      return rows;
+    };
     const keepLast = () => {
       const prev = cache.res;
-      if (!prev) return res;
-      for (let i = 0; i < n && i < prev.length; i++) res[i] = prev[i];
-      return res;
+      if (prev) for (let i = 0; i < n && i < prev.length; i++) res[i] = prev[i];
+      return withCandleColor(res);
     };
 
     const isDay = profileMode === 'Day';
@@ -884,7 +893,7 @@ return {
       zones,
     };
     cache.res = res;
-    return res;
+    return withCandleColor(res);
   },
 
   draw(args) {

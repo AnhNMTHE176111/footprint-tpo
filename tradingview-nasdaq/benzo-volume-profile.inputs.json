@@ -1,10 +1,10 @@
 [
   {"id": "hideCandles", "name": "Hide Candles (show only the profile)", "type": "bool", "defval": false},
-  {"id": "profileMode", "name": "Profile Mode", "type": "select", "options": ["Week", "Day"], "defval": "Week"},
-  {"id": "showDayProfile", "name": "Also Show Day Profiles in Week Mode", "type": "bool", "defval": true},
+  {"id": "showWeekProfile", "name": "Show Week Profile", "type": "bool", "defval": true},
+  {"id": "showDayProfile", "name": "Show Day Profile", "type": "bool", "defval": true},
   {"id": "profileRows", "name": "Rows per Profile", "type": "int", "defval": 200, "min": 8, "max": 200, "step": 1},
   {"id": "valueArea", "name": "Value Area %", "type": "float", "defval": 70, "min": 50, "max": 95, "step": 1},
-  {"id": "maxSessions", "name": "Historical Sessions to Keep (also days used for Day HVN)", "type": "int", "defval": 5, "min": 1, "max": 10, "step": 1},
+  {"id": "maxSessions", "name": "Historical Sessions to Keep (weeks / days per profile)", "type": "int", "defval": 5, "min": 1, "max": 10, "step": 1},
   {"id": "widthPct", "name": "Profile Width (% of session)", "type": "float", "defval": 1, "min": 0.05, "max": 1.0, "step": 0.02},
   {"id": "maxWidthBar", "name": "Max Profile Width (bars)", "type": "int", "defval": 90, "min": 10, "max": 300, "step": 1},
   {"id": "showLive", "name": "Show Developing (current) Profile", "type": "bool", "defval": true},

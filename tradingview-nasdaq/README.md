@@ -11,8 +11,8 @@
   Gộp volume profile + VWAP trong 1 indicator để vừa giới hạn 2 indicator/chart của gói miễn phí.
 - `benzo-volume-profile.inputs.json` + `benzo-volume-profile.script.js` — bản **thefreechart.com**
   (Build Indicators → New Indicator: dán JSON vào tab Inputs, JS vào tab Script; Overlay bật).
-  Profile Week/Day (Day màu xanh dương + vàng; mode Week mặc định vẽ thêm profile Day cùng lúc, tắt bằng
-  "Also Show Day Profiles in Week Mode" — HVN/LVN vẫn theo tuần; "Hide Candles" ẩn nến bằng barColor trong suốt,
+  Profile tuần và profile ngày bật/tắt độc lập ("Show Week Profile", "Show Day Profile"; ngày màu xanh dương
+  + vàng). HVN/LVN lấy theo tuần khi profile tuần bật, chỉ bật profile ngày thì theo ngày; "Hide Candles" ẩn nến bằng barColor trong suốt,
   chỉ còn profile + các vùng/đường đang bật), POC + VA, VWAP + 3 dải σ, vùng **HVN** tự nhận diện:
   cụm chữ D (loại khối chữ nhật, cụm volume thấp, cụm lệch một phía), vùng = lõi dày ≥ 70% đỉnh,
   trên giá = sell, dưới giá = buy, giá trong vùng = xám. Week: tuần này + tuần trước, chồng nhau thì gộp

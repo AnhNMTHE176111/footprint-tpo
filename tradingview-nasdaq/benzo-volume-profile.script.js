@@ -765,7 +765,7 @@ return {
 
   calc(dataList, indicator) {
     const {
-      hideCandles = false, profileMode = 'Week', showDayProfile = true, profileRows = 200, valueArea = 70, maxSessions = 5, widthPct = 1,
+      hideCandles = false, showWeekProfile = true, showDayProfile = true, profileRows = 200, valueArea = 70, maxSessions = 5, widthPct = 1,
       maxWidthBar = 90, showLive = true, profileRes = '1m', vaBoost = 1.18,
       colBuy = '#90bff9', colSell = '#b39ddb', colDayBuy = '#c9a43c', colDaySell = '#2f5fd8', colPOC = '#5b6472', colVWAP = '#ab47bc', vwapWidth = 2,
       showVWAP = true, vwapSrc = 'hlc3', vwapAnchor = '1D', vwapKeep = 5,
@@ -796,7 +796,8 @@ return {
       return withCandleColor(res);
     };
 
-    const isDay = profileMode === 'Day';
+    // HVN / LVN zones come from the week profile while it is shown, otherwise from the day profile.
+    const isDay = showDayProfile && !showWeekProfile;
     const barMs = bv.detectBarMs(dataList);
     const resMs = RES_MS[profileRes] || 60000;
     // Look-back the base series must cover: kept sessions (+ the week before, for weekly HVN) and
@@ -859,8 +860,8 @@ return {
     };
     // Day profiles first: draw paints the list top-most first, so they sit above the week's.
     const profiles = [];
-    if (isDay || showDayProfile) profiles.push(...sessionProfiles('1D', dayRgb));
-    if (!isDay) profiles.push(...sessionProfiles('1W', weekRgb));
+    if (showDayProfile) profiles.push(...sessionProfiles('1D', dayRgb));
+    if (showWeekProfile) profiles.push(...sessionProfiles('1W', weekRgb));
     for (const key of Object.keys(cache.profiles)) if (!usedKeys.has(key)) delete cache.profiles[key];
 
     const vwap = showVWAP ? vwapOnChart(dataList, B, vwapSeries(B, days, o, cache, sameBars), o, res, barMs) : null;

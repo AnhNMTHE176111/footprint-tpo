@@ -50,7 +50,7 @@ từng dòng, Load đường nhanh == đọc kiểu cũ (dòng hỏng/ghi dở/C
 
 ## Build DLL
 
-`./perf/build-dll.sh` → `dist/OrderFlowBubbles.dll` (6 file nguồn, csproj tạm). Deploy: copy vào
+`./perf/build-dll.sh` → `dist/OrderFlowBubbles.dll` (7 file nguồn, csproj tạm). Deploy: copy vào
 `C:\OptimusFLOW\Settings\Scripts\Indicators\OrderFlowBubbles\` (đóng Optimus Flow trước nếu file bị khoá).
 
 ## Kết quả đo trước/sau (2026-11-11, 20 lõi, .NET 10.0.12, 87.362 nến M1 GCZ26, lõi THẬT qua `Golden bench`)

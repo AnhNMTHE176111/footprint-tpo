@@ -13,20 +13,21 @@
 
 ## Luật chốt (tất cả theo từng tick, không gom hàng)
 
-Ký hiệu cho mỗi ô giá có giao dịch của một nến: bên trội = bên lớn hơn giữa Bid và Ask; bên yếu = bên còn lại; số lệnh = số lệnh đã khớp tại ô đó. Màu: Ask trội thì xanh (buy), ngược lại đỏ (sell).
+Ký hiệu cho mỗi ô giá có giao dịch của một nến: Bid = lượng sell chủ động, Ask = lượng buy chủ động tại ô đó. Chấm đỏ (sell) xét **riêng Bid**, chấm xanh (buy) xét **riêng Ask**; không còn khái niệm "bên trội".
 
-Mức nền, chỉ tính từ **20 nến đã đóng liền trước** (cần ít nhất 5 nến): volume trung bình mỗi ô có giao dịch = trung bình, trên 20 nến trước, của (volume trung bình mỗi ô có giao dịch của nến đó).
+Mức nền, chỉ tính từ **20 nến đã đóng liền trước** (cần ít nhất 5 nến): **trung vị** volume của các ô có giao dịch trong một nến, rồi lấy trung bình trung vị đó trên 20 nến trước. Kiệt sức vẫn dùng mức nền cũ (volume trung bình mỗi ô).
 
 | Dấu | Điều kiện |
 |---|---|
-| Chấm nhỏ đặc | số lệnh ≥ 2,4 × volume trung bình mỗi ô; **và** bên trội lớn hơn hẳn bên trội của mọi tick khác trong ±3 tick (tick vắng tính 0, bằng nhau thì không nổ); **và** bên trội ≥ 9 hợp đồng |
+| Chấm đỏ (sell) | Bid tại tick ≥ **2,8 ×** mức nền (trung vị); **và** Bid tại tick lớn hơn hẳn Bid của mọi tick khác trong ±**4** tick cùng nến (tick vắng tính 0, bằng nhau thì không nổ); **và** Bid ≥ 9 hợp đồng |
+| Chấm xanh (buy) | như chấm đỏ nhưng xét Ask. Một tick có thể có cả chấm đỏ lẫn chấm xanh. **Bị che (không vẽ)** nếu cùng nến có chấm đỏ cách ≤ **6** tick (CORVEN vẽ đỏ đè xanh) |
 | Kiệt sức | râu phía đó ≥ 3 tick; **và** tổng volume bên soi (Ask ở đỉnh, Bid ở đáy) trên 6 tick từ cực trị đi vào trong ≤ 1,1 × volume trung bình mỗi ô của 20 nến trước (mức nền lịch sử, không phải trung bình của chính nến) |
 | Vòng tròn mờ (Big Trade) | một lệnh đơn lớn nhất tại mức giá ≥ 10 hợp đồng (xem mục dưới); không còn là luật dựa trên volume của ô |
 
-- Chấm luôn vẽ trên cùng, đè lên vòng mờ.
-- Sàn tuyệt đối 9 hợp đồng cho bên trội của chấm (đã đo: sàn này không đổi kết quả trên 26 nến mẫu).
+- Chấm luôn vẽ trên cùng, đè lên vòng mờ; trong các chấm, xanh vẽ trước và đỏ vẽ sau nên đỏ nằm trên xanh.
+- Sàn tuyệt đối 9 hợp đồng cho Bid (chấm đỏ) hoặc Ask (chấm xanh) (đã đo: sàn này không đổi kết quả trên 26 nến mẫu).
 - Cỡ chấm: 45% bề ngang nến, kẹp trong 5 đến 10 px. Bóng của nến quét trong một stop hunt được tô tím, cả chấm lẫn vòng Big Trade.
-- Chế độ ngưỡng cố định (giữ để tương thích): chấm dùng bên trội ≥ ngưỡng cố định thay cho điều kiện số lệnh; các điều kiện còn lại giữ nguyên. Chế độ này chưa được fit với chart nào.
+- Chế độ ngưỡng cố định (giữ để tương thích): chấm đỏ dùng Bid ≥ max(ngưỡng cố định, sàn 9), chấm xanh dùng Ask tương tự, thay cho điều kiện 2,8 × trung vị; điều kiện cực đại trong ±4 tick và luật che giữ nguyên. Chế độ này chưa được fit với chart nào.
 
 ## Big Trade: vòng mờ là một lệnh đơn lớn (chốt 19/11/2026, chiều)
 
@@ -57,7 +58,7 @@ Chart M5 của CORVEN ngày 18/11 có khoảng 0,96 vòng mờ mỗi nến (25 v
 | Dấu | Của mình | CORVEN | Trùng |
 |---|---|---|---|
 | Vòng tròn mờ | không còn so sánh | 25 | luật cũ dựa trên volume ô chỉ trùng 7 vị trí (F1 0,30) nên đã bỏ; nay là Big Trade từ lệnh đơn, lịch sử không có số liệu để so |
-| Chấm nhỏ đặc | 37 chấm (30 cụm) | 16 cụm (khoảng 33 chấm) | 10 cụm trùng, 19 thừa, 6 sót; F1 theo điểm ảnh 0,43 |
+| Chấm nhỏ đặc (luật theo từng bên, 19/11 chiều muộn) | 33 chấm (10 xanh + 23 đỏ; 30 cụm) | 16 cụm (khoảng 33 chấm) | 7 cụm trùng, 20 thừa, 9 sót; F1 theo điểm ảnh 0,33 (luật cũ "bên trội, số lệnh": 37 chấm, 10 cụm trùng, F1 0,43) |
 | Kiệt sức | 13 | 11 | 11 trùng, 2 thừa, 0 sót; F1 0,917 |
 
 Cách đọc đúng các con số này:
@@ -72,14 +73,32 @@ Cách đọc đúng các con số này:
 | Đại lượng | Luật gom hàng cũ (18/11) | Luật theo từng tick (19/11 sáng) | Big Trade từ lệnh đơn (19/11 chiều) |
 |---|---|---|---|
 | Vòng tròn mờ | 58.766 | 35.506 (theo volume ô) | **0** (lịch sử không có lệnh đơn) |
-| Chấm nhỏ đặc | 49.505 | 32.140 | 32.140 |
+| Chấm nhỏ đặc | 49.505 | 32.140 | 32.140 (luật bên trội) → **40.590** (luật từng bên: 25.094 đỏ + 15.496 xanh; trước đó 16.373 đỏ + 15.767 xanh) |
 | Dấu kiệt sức | 16.048 | 12.594 | 12.594 |
-| Dấu stop hunt | 748 | 634 | 496 |
-| Bóng tím | 1.924 (vòng 945, chấm 979) | 1.130 (vòng 506, chấm 624) | 660 (chỉ chấm) |
+| Dấu stop hunt | 748 | 634 | 496 → **568** (luật từng bên) |
+| Bóng tím | 1.924 (vòng 945, chấm 979) | 1.130 (vòng 506, chấm 624) | 660 (chỉ chấm) → **715** (luật từng bên) |
 
 Số dấu stop hunt giảm từ 634 xuống 496 vì bóng ở nến quét nay chỉ còn là chấm (lịch sử không có vòng Big Trade). Trên chart sống, vòng Big Trade cũng được tính, nên số dấu sẽ nhiều hơn. Chạy thử với lệnh đơn giả lập (bằng bên trội của ô, chỉ để kiểm đường mã, không phải số liệu thật) đã cho thấy vòng Big Trade được nhận và tô tím đúng.
 
 Luật được chỉnh theo chart M5 nên trên M1 số dấu mỗi nến khác xa M5; không dùng các con số M1 này để so với CORVEN. Stop hunt chấp nhận bóng ở cả hai loại dấu (chấm và vòng Big Trade) tại nến quét.
+
+## Chấm xét riêng từng bên (chốt 19/11/2026, chiều muộn)
+
+Người học nhận thấy ở các nến giảm, chart CORVEN vẽ nhiều chấm đỏ nhưng luật cũ (bên trội, số lệnh) cho nhiều chấm xanh. Luật mới (`perside_dots.py`): Bid và Ask xét độc lập, ngưỡng 2,8 × trung vị mức nền, cực đại ±4 tick, sàn 9, che chấm xanh khi có chấm đỏ cách ≤ 6 tick.
+
+Màu chấm ở các nến giảm (12:35, 12:40, 12:45, 12:50, 12:55):
+
+| Luật | Chấm xanh | Chấm đỏ |
+|---|---|---|
+| CORVEN (đếm trên ảnh) | 1 | 17 |
+| Luật cũ (bên trội, số lệnh ≥ 2,4 × mức nền, ±3 tick) | 9 | 10 |
+| Luật mới, từng bên (sau luật che) | 4 | 10 |
+
+Tổng 26 nến: 33 chấm (10 xanh, 23 đỏ). Không che thì 38 chấm (15 xanh, 23 đỏ).
+
+Cách đọc đúng: luật mới giảm số chấm xanh nhưng vẫn chưa khớp với CORVEN (4 so với 1 ở các nến giảm; số chấm đỏ 10 so với 17 vì cực đại ±4 tick gộp các chấm sát nhau). Trùng ở mức điểm ảnh còn thấp hơn luật cũ (F1 0,33 so với 0,43), nên đây là lựa chọn của người học theo cách nhìn màu, không phải luật khớp hơn về số điểm. Chỉ một biểu đồ, tham số chọn trên chính 26 nến này.
+
+Lưu ý về lần chạy đầu của `perside()`: bản gốc nối hai bảng Ask và Bid mà không đặt lại nhãn dòng, nên khi lọc theo nhãn, chấm xanh trùng tick với chấm đỏ vẫn lọt qua luật che (đếm ra 36 = 13 xanh + 23 đỏ). Đã sửa (đặt lại nhãn dòng) và số đúng là 33 = 10 xanh + 23 đỏ; C# trùng Python từng điểm.
 
 ## Đối chiếu C# với Python
 

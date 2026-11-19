@@ -8,7 +8,7 @@
 //
 //  Mỗi kịch bản xuất 2 dấu vân tay SHA-256:
 //    state = mọi bóng (_bubbles: giá, hình, màu, cỡ, SizeFrac, tooltip, Confirm, PriceHi...), _barTint, vùng stacked
-//            (_zones: Idx/EndIdx/End), _absRecs, _exhRecs, _cvd
+//            (_zones: Idx/EndIdx/End), _exhRecs, _cvd
 //    cache = nội dung file niêm phong SAU KHI nạp lại (mỗi nến bản ghi thắng cuối, sắp theo thời gian, serialize lại)
 //  So với perf/golden-expected.txt. Dùng:
 //    dotnet run -c Release --project perf/Golden -- golden [--work DIR] [--baseline DIR] [--write-expected] [--dump]
@@ -76,7 +76,7 @@ namespace GoldenPerf
             var bubbles = (IDictionary)typeof(Ind).GetField("_bubbles", NP).GetValue(r.Ind);
             var rows = new List<string>();
             var signals = new HashSet<string>();
-            int purple = 0, cellBig = 0, bad = 0, dots = 0, purpleDots = 0, exhCount = 0;
+            int purple = 0, cellBig = 0, bad = 0, dots = 0, purpleDots = 0, exhCount = 0, dotsRed = 0, dotsBlue = 0;
             var days = new HashSet<string>();
             foreach (var bar in bars) days.Add(bar.TimeLeft.ToString("yyyy-MM-dd"));
             foreach (int k in bubbles.Keys.Cast<int>().OrderBy(x => x))
@@ -89,8 +89,8 @@ namespace GoldenPerf
                     if (!big) continue;
                     cellBig++;
                     bool isDot = (bool)t.GetField("CellDot", NP).GetValue(b);
-                    if (isDot) dots++;
                     int side = (int)t.GetField("CellSide", NP).GetValue(b);
+                    if (isDot) { dots++; if (side < 0) dotsRed++; else dotsBlue++; }
                     bool sh = (bool)t.GetField("StopHunt", NP).GetValue(b);
                     string tip = (string)t.GetField("Tooltip", NP).GetValue(b);
                     var col = (Color)t.GetField("Color", NP).GetValue(b);
@@ -106,7 +106,7 @@ namespace GoldenPerf
                 }
             File.WriteAllLines(outFile, rows.Prepend("sweep_time,side,level,bid,ask,orig_side"));
             double nd = Math.Max(1, days.Count);
-            Console.WriteLine($"stop hunt: {signals.Count} dau ({signals.Count / nd:0.00}/ngay), bong tim {purple} ({purple / nd:0.00}/ngay), tong o lon {cellBig} (Big {cellBig - dots}, Dot {dots}; tim: Big {purple - purpleDots}, Dot {purpleDots}), {days.Count} ngay lich, kiet suc {exhCount}, loi dinh dang/mau {bad} -> {outFile}");
+            Console.WriteLine($"stop hunt: {signals.Count} dau ({signals.Count / nd:0.00}/ngay), bong tim {purple} ({purple / nd:0.00}/ngay), tong o lon {cellBig} (Big {cellBig - dots}, Dot {dots} = do {dotsRed} + xanh {dotsBlue}; tim: Big {purple - purpleDots}, Dot {purpleDots}), {days.Count} ngay lich, kiet suc {exhCount}, loi dinh dang/mau {bad} -> {outFile}");
             return bad == 0 ? 0 : 1;
         }
 
@@ -219,7 +219,6 @@ namespace GoldenPerf
             var tint = (IDictionary)F("_barTint");
             foreach (int k in tint.Keys.Cast<int>().OrderBy(x => x)) d.Line($"T {k} {tint[k]}");
             foreach (var z in (IEnumerable)F("_zones")) d.Line("Z " + V(z));
-            foreach (var z in (IEnumerable)F("_absRecs")) d.Line("A " + V(z));
             foreach (var z in (IEnumerable)F("_exhRecs")) d.Line("E " + V(z));
             int ci = 0; foreach (var c in (IEnumerable)F("_cvd")) d.Line($"C {ci++} {V(c)}");
             return d.Final();
@@ -281,9 +280,9 @@ namespace GoldenPerf
             for (int k = sub - 799; k <= sub; k++) { r4.Ind.TestBarCount = k; r4.Process(); r4.Process(); r4.Process(); }
             Report("S4-incremental", r4, c4);
 
-            // S5: mọi tính năng bật (DLine/Divergence/Sweep/Unfinished/StopHunt), BaselineTopLevels=0 — 40.000 nến cuối
+            // S5: mọi tính năng bật (DLine/Divergence/Sweep/Unfinished/StopHunt) — 40.000 nến cuối
             int sub5 = 40000, off5 = N - sub5;
-            var cfgB = new Dictionary<string, object> { ["DLineEnabled"] = true, ["DivergenceEnabled"] = true, ["SweepEnabled"] = true, ["UnfinishedEnabled"] = true, ["StopHuntEnabled"] = true, ["BaselineTopLevels"] = 0 };
+            var cfgB = new Dictionary<string, object> { ["DLineEnabled"] = true, ["DivergenceEnabled"] = true, ["SweepEnabled"] = true, ["UnfinishedEnabled"] = true, ["StopHuntEnabled"] = true };
             string c5 = Fresh("S5");
             var r5 = Make(bars, off5, sub5, c5, cfgB); r5.Ind.VolumeAnalysisData_Loaded();
             Report("S5-allfeatures", r5, c5);

@@ -47,7 +47,7 @@ namespace OrderFlowBubbles
         public double SizeFrac { get; set; }  // Ô lớn: tỉ lệ cỡ 0..1 (bản ghi cũ = 0 = đầy đủ)
         public string Tooltip { get; set; }
         public int Confirm { get; set; }      // 0=đang chờ, +1=giữ mức, -1=vỡ mức
-        public bool Confirmable { get; set; } // true = bubble này thuộc luồng Absorption (được theo dõi Confirm)
+        public bool Confirmable { get; set; } // CHỈ ĐỌC bản ghi cũ: true = bóng Hấp thụ (đã gỡ 2026-11-19) -> bị bỏ khi nạp lại; bản mới không bao giờ ghi true
         public double PriceHi { get; set; }   // vùng Stacked Imbalance: mép trên (Price = mép dưới); bản ghi cũ = 0
         public int ZoneSide { get; set; }     // vùng Stacked Imbalance: +1 buy / −1 sell; 0 = không phải vùng
         public bool ZoneWeak { get; set; }    // vùng Stacked Imbalance: nằm ở râu ngược chiều (bị rút râu)

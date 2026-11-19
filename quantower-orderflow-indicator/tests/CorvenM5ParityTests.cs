@@ -2,7 +2,7 @@
 // trên 26 nến M5 THẬT (12:15-14:20 UTC ngày 18/11/2026, file data-export/data-footprint/fp_GCZ26_XCEC_Time_20261108-20261118_9d16h*.csv).
 // Mức nền (20 nến đã đóng trước) được làm nóng từ MỌI nến trước đó trong file, giống Python.
 // Python xuất dấu ra research/corven_m5_2026-11-18/marks_python_26bars.csv (export_marks.py); test đòi TẬP (nến, tick, loại, màu) giống HỆT.
-// Mong đợi: Dot 37, kiệt sức 13 (không so vòng mờ nữa: nay là Big Trade từ lệnh đơn, lịch sử không có số liệu). Không có file dữ liệu (chưa commit / máy khác) thì bỏ qua, không tính là lỗi.
+// Mong đợi: Dot 33 (10 xanh + 23 đỏ sau luật che), kiệt sức 13 (không so vòng mờ nữa: nay là Big Trade từ lệnh đơn, lịch sử không có số liệu). Không có file dữ liệu (chưa commit / máy khác) thì bỏ qua, không tính là lỗi.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -62,18 +62,19 @@ static class CorvenM5ParityTests
         for (int k = 0; k < 26; k++) sample.Add($"2026-11-18 {12 + (15 + 5 * k) / 60:00}:{(15 + 5 * k) % 60:00}");
 
         var bl = new CellBigBaseline(20);
-        var set = new CellBigSettings();   // mặc định: 2,4 / 3 / sàn 9
+        var set = new CellBigSettings();   // mặc định: 2,8 x trung vị / ±4 tick / che 6 / sàn 9
         var ex = new ExhSettings();         // mặc định: râu 3 / 6 mức / 1,1
         var cs = new HashSet<string>();
         int nDot = 0, nExh = 0, seen = 0;
         foreach (var key in order)
         {
             bool hasB = bl.TryGet(out double mean);
+            bl.TryGetMedian(out double median);
             if (sample.Contains(key))
             {
                 seen++;
                 string t = key.Substring(11);
-                foreach (var m in CellBigLogic.Evaluate(lv[key], hasB, mean, set))
+                foreach (var m in CellBigLogic.Evaluate(lv[key], bl.TryGetMedian(out double medB), medB, set))
                 {
                     string col = m.Side > 0 ? "B" : "S";
                     nDot++; cs.Add($"{t},{m.Tick},dot,{col}");
@@ -88,7 +89,7 @@ static class CorvenM5ParityTests
                     }
                 }
             }
-            if (CellBigLogic.BarStats(lv[key], out double bm)) bl.Add(bm);
+            if (CellBigLogic.BarStats(lv[key], out double bm, out double bmd)) bl.Add(bm, bmd);
         }
 
         var py = new HashSet<string>();
@@ -100,7 +101,8 @@ static class CorvenM5ParityTests
         }
 
         Check(seen == 26, "26 nen mau co trong file", seen.ToString());
-        Check(nDot == 37, "Dot: 37 (nhu Python)", nDot.ToString());
+        Check(nDot == 33, "Dot: 33 (nhu Python)", nDot.ToString());
+        Check(cs.Count(x => x.Contains(",dot,B")) == 10 && cs.Count(x => x.Contains(",dot,S")) == 23, "10 xanh + 23 do", "");
         Check(nExh == 13, "kiet suc: 13 (nhu Python)", nExh.ToString());
         var onlyCs = cs.Except(py).OrderBy(x => x).ToList();
         var onlyPy = py.Except(cs).OrderBy(x => x).ToList();

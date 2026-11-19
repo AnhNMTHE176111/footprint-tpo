@@ -5,15 +5,15 @@ var t = typeof(OrderFlowBubbles.OrderFlowBubbles);
 var props = t.GetProperties(BindingFlags.Public|BindingFlags.Instance).Where(p => p.GetCustomAttributes().Any(a => a.GetType().Name=="InputParameterAttribute")).ToList();
 Console.WriteLine($"InputParameter count = {props.Count}");
 foreach (var p in props) Console.WriteLine("  " + p.Name);
-int fail = props.Count == 13 ? 0 : 1;
+int fail = props.Count == 12 ? 0 : 1;
 object o = null; try { o = Activator.CreateInstance(t); } catch (Exception e) { Console.WriteLine("Khong tao duoc instance: " + e.GetType().Name); }
 if (o != null) {
   void chk(string n, object exp){ var v=t.GetProperty(n).GetValue(o); bool ok=Equals(v,exp); if(!ok) fail++; Console.WriteLine($"  {(ok?"OK  ":"FAIL")} {n} = {v} (mong doi {exp})"); }
   chk("DeltaFontSize",7); chk("DeltaYOffsetPx",8); chk("DLineEnabled",false); chk("DeltaMinBarWidthPx",6);
-  chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhMinWickTicks",3); chk("ExhSumLevels",6); chk("ExhSumHistRatio",1.1); chk("AbsorptionEnabled",false); chk("BigTradeMinContracts",10.0); chk("BigTradeOpacity",35); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellDotTradesRatio",2.4); chk("CellDotLocalTicks",3); chk("CellDotEnabled",true); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("AbsScoreMin",4); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true);
+  chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhMinWickTicks",3); chk("ExhSumLevels",6); chk("ExhSumHistRatio",1.1); chk("BigTradeMinContracts",10.0); chk("BigTradeOpacity",35); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellDotMedianRatio",2.8); chk("CellDotLocalTicks",4); chk("CellDotHideBuyNearSellTicks",6); chk("CellDotEnabled",true); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true);
   chk("StopHuntEnabled",true); chk("StopHuntBoxSmall",60); chk("StopHuntBoxLarge",60); chk("StopHuntBoxMaxMult",8.0); chk("StopHuntTolTicks",3); chk("StopHuntConfirmBars",2); chk("StopHuntCooldown",5);
   chk("CellBigStopHuntColor",System.Drawing.Color.MediumOrchid);
-  foreach (var gn in new[] { "CellBigRowTicks", "CellBigRowOffset", "CellBigRatio", "CellDotRatio", "ExhSumRel", "CellBigMaxSideRatio", "CellBigLocalTicks", "CellBigMinImbalance", "CellBigOpacity", "BigZ", "BigVolMult", "BigTradeTopN", "BigTradeRequireRealTrades", "BigTradeSkipOnAbsorption", "BigTradeFixedContracts", "BigTradeAbsFloor", "HaloTransparency" }) { bool g2 = t.GetProperty(gn) == null; if(!g2) fail++; Console.WriteLine($"  {(g2?"OK  ":"FAIL")} {gn} da bo"); }
+  foreach (var gn in new[] { "CellBigRowTicks", "CellBigRowOffset", "CellBigRatio", "CellDotRatio", "ExhSumRel", "CellBigMaxSideRatio", "CellBigLocalTicks", "CellBigMinImbalance", "CellBigOpacity", "BigZ", "BigVolMult", "BigTradeTopN", "BigTradeRequireRealTrades", "BigTradeSkipOnAbsorption", "CellDotTradesRatio", "AbsorptionEnabled", "AbsEffortZ", "AbsScoreMin", "AbsMaxDisplaceTicks", "AbsorptionTopN", "AbsRangeRatio", "AbsImpactZ", "AbsSwingPeriod", "AbsPocProminence", "AbsDivergencePct", "AbsTwoSidedPct", "AbsMultiBarLookback", "AbsConfirmBars", "AbsBreakTicks", "WNoResult", "WProminent", "WDivergence", "WTwoSided", "WMulti", "WSwing", "CellBigSkipOnAbsorption", "BaselineTopLevels", "BigTradeFixedContracts", "BigTradeAbsFloor", "HaloTransparency" }) { bool g2 = t.GetProperty(gn) == null; if(!g2) fail++; Console.WriteLine($"  {(g2?"OK  ":"FAIL")} {gn} da bo"); }
   { bool gone = t.GetProperty("StopHuntLookback") == null; if(!gone) fail++; Console.WriteLine($"  {(gone?"OK  ":"FAIL")} StopHuntLookback da bo"); }
 }
 
@@ -25,6 +25,21 @@ if (o != null) {
     void d(bool dot, double fr, float w, int exp){ int v=(int)cds.Invoke(null,new object[]{dot,fr,w}); if(v!=exp) fail++; Console.WriteLine($"  {(v==exp?"OK  ":"FAIL")} CellDrawSize(dot={dot}, {fr}, {w}) = {v} (mong doi {exp})"); }
     d(false,1.0,20f,20); d(false,2.5,20f,50); d(false,1.0,4f,8); d(false,2.5,60f,80); d(false,1.75,20f,35);
     d(true,0.45,40f,10); d(true,0.45,5f,5); d(true,0.45,16f,7);
+  }
+}
+
+
+// ---- Bản ghi niêm phong cũ có bóng Hấp thụ (Confirmable = true) phải bị BỎ khi nạp lại, không vẽ ----
+{
+  var fm = t.GetMethod("FromCachedBarData", BindingFlags.NonPublic|BindingFlags.Static);
+  if (fm == null) { Console.WriteLine("FAIL khong thay FromCachedBarData"); fail++; }
+  else {
+    var cd = new OrderFlowBubbles.CachedBarData { TimeTicks = 1 };
+    cd.Bubbles.Add(new OrderFlowBubbles.CachedBubbleData { Price = 1, Shape = 0, Confirmable = true, Confirm = 1, Tooltip = "Hap thu dinh" });
+    cd.Bubbles.Add(new OrderFlowBubbles.CachedBubbleData { Price = 2, Shape = 0, CellBig = true, CellDot = true, CellSide = -1 });
+    var res = (System.Collections.IList)fm.Invoke(null, new object[]{cd});
+    bool ok = res.Count == 1; if(!ok) fail++;
+    Console.WriteLine($"  {(ok?"OK  ":"FAIL")} nap ban ghi cu: bong Hap thu (Confirmable) bi bo, con {res.Count}/2 bong");
   }
 }
 

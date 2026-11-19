@@ -3,11 +3,12 @@
 //  Luật MÔ PHỎNG HIỂN THỊ của CORVEN, fit trên chart M5 ngày 18/11/2026 (research/corven_m5_2026-11-18/, rules.py + final_eval.py là bản Python gốc).
 //  KHÔNG phải lợi thế đã kiểm định. TẤT CẢ xét THEO TỪNG TICK (không gộp hàng), bóng đặt đúng giá khớp của ô.
 //
-//  1) CHẤM ĐẶC NHỎ (Dot): ô giá có giao dịch của một nến, bid, ask, side = max(bid, ask) (bên trội), trades = số lệnh khớp.
-//     Mức nền = trung bình, trên 20 nến ĐÃ ĐÓNG trước (cần >= 5 nến), của (volume trung bình mỗi ô có giao dịch của nến đó).
-//     Dot nổ khi trades >= CellDotTradesRatio (2,4) x mức nền, VÀ side lớn hơn hẳn side của mọi tick khác trong ±CellDotLocalTicks (3) tick
-//     cùng nến (tick vắng = 0; bằng nhau không tính là lớn hơn), VÀ side >= sàn CellBigMinSide (9). Màu: Ask > Bid -> xanh (buy), ngược lại -> đỏ (sell).
-//     Chế độ ngưỡng cố định (UseFixedThreshold): Dot dùng side >= ngưỡng cố định thay cho điều kiện số lệnh (vẫn cần lớn hơn hẳn trong ±3 tick và sàn).
+//  1) CHẤM ĐẶC NHỎ (Dot), xét RIÊNG TỪNG BÊN (chốt 2026-11-19, research/corven_m5_2026-11-18/perside_dots.py): Bid và Ask được xét độc lập tại mọi tick.
+//     Mức nền = trung bình, trên 20 nến ĐÃ ĐÓNG trước (cần >= 5 nến), của TRUNG VỊ volume mỗi ô có giao dịch của nến đó (ô volume > 0).
+//     Chấm ĐỎ (sell) tại tick p nổ khi bid(p) >= CellDotMedianRatio (2,8) x mức nền VÀ bid(p) lớn hơn hẳn bid của mọi tick khác trong ±CellDotLocalTicks (4) tick
+//     cùng nến (tick vắng = 0; bằng nhau không tính là lớn hơn) VÀ bid(p) >= sàn CellBigMinSide (9). Chấm XANH (buy) tương tự với ask. Một tick có thể có cả hai.
+//     Luật che (CORVEN vẽ đỏ đè xanh): chấm xanh bị bỏ nếu cùng nến có chấm đỏ cách <= CellDotHideBuyNearSellTicks (6) tick. Danh sách trả về: xanh trước, đỏ sau (đỏ vẽ sau = nằm trên).
+//     Chế độ ngưỡng cố định (UseFixedThreshold): giá trị của bên >= max(ngưỡng cố định, sàn), vẫn cần lớn hơn hẳn trong ±4 tick và áp luật che.
 //  2) BIG TRADE (vòng tròn mờ) — KHÔNG còn suy từ volume của ô (bản 07efb1f đã bỏ): đó là MỘT lệnh đơn chủ động rất lớn
 //     (MaxOneTradeVolume của mức giá, chỉ feed SỐNG mới cấp). Nổ khi MaxOneTradeVolume >= BigTradeMinContracts (mặc định 10). Xem BigTradeLogic.
 //  Bóng TÍM chỉ còn nghĩa stop hunt, do OrderFlowBubbles.cs tô.
@@ -29,9 +30,10 @@ namespace OrderFlowBubbles
     public sealed class CellBigSettings
     {
         public bool DotEnabled = true;
-        public double DotTradesRatio = 2.4;   // Dot: trades >= số này x volume trung bình mỗi ô của 20 nến trước
-        public int DotLocalTicks = 3;         // Dot: side phải lớn hơn hẳn mọi tick khác trong ± số tick này
-        public double MinSide = 9;            // sàn tuyệt đối cho side (Dot)
+        public double DotMedianRatio = 2.8;   // Dot: bid (hoặc ask) >= số này x trung vị volume mỗi ô của 20 nến trước
+        public int DotLocalTicks = 4;         // Dot: bên đang xét phải lớn hơn hẳn cùng bên của mọi tick khác trong ± số tick này
+        public int DotHideBuyNearSellTicks = 6; // chấm xanh bị che (bỏ) nếu cùng nến có chấm đỏ cách <= số tick này (< 0 = tắt che)
+        public double MinSide = 9;            // sàn tuyệt đối cho giá trị của bên đang xét (Dot)
         public bool FixedMode;                // true: dùng FixedThreshold thay cho các mức nền
         public double FixedThreshold = 10;
     }
@@ -40,11 +42,11 @@ namespace OrderFlowBubbles
     {
         public long Tick;
         public int Tier;        // CellBigLogic.TierDot
-        public int Side;        // +1 = buy (Ask trội), -1 = sell
-        public double Buy, Sell, Trades;
-        public double Mult;     // trades / volume trung bình mỗi ô (0 nếu chế độ cố định)
+        public int Side;        // +1 = chấm xanh buy (xét Ask), -1 = chấm đỏ sell (xét Bid)
+        public double Buy, Sell;// Ask và Bid của ô (bên đang xét = Buy nếu Side > 0, Sell nếu Side < 0)
+        public double Mult;     // giá trị bên đang xét / trung vị mức nền (0 nếu chế độ cố định)
         public double SizeFrac; // DotSizeFrac
-        public double Threshold;// ngưỡng thực đã vượt (trades, hoặc side ở chế độ cố định) — dùng cho tooltip
+        public double Threshold;// ngưỡng thực đã vượt (2,8 x mức nền, ít nhất sàn; hoặc max(ngưỡng cố định, sàn)) — dùng cho tooltip
     }
 
     public static class CellBigLogic
@@ -61,49 +63,64 @@ namespace OrderFlowBubbles
             return q;
         }
 
-        /// <summary>Thống kê một nến cho mức nền: volume TB mỗi ô có giao dịch. false nếu nến rỗng.</summary>
-        public static bool BarStats(IEnumerable<CellLevel> levels, out double meanLevelVol)
+        /// <summary>Thống kê một nến cho mức nền: volume TB và TRUNG VỊ mỗi ô có giao dịch (ô volume > 0). false nếu nến rỗng.</summary>
+        public static bool BarStats(IEnumerable<CellLevel> levels, out double meanLevelVol, out double medianLevelVol)
         {
-            double tot = 0; int n = 0;
+            var vols = new List<double>();
+            double tot = 0;
             if (levels != null)
                 foreach (var l in levels)
-                    if (l.Vol > 0) { tot += l.Vol; n++; }
+                    if (l.Vol > 0) { tot += l.Vol; vols.Add(l.Vol); }
+            int n = vols.Count;
             meanLevelVol = n > 0 ? tot / n : 0;
+            medianLevelVol = 0;
+            if (n > 0)
+            {
+                vols.Sort();
+                medianLevelVol = (n % 2 == 1) ? vols[n / 2] : (vols[n / 2 - 1] + vols[n / 2]) / 2.0;
+            }
             return n > 0 && tot > 0;
         }
 
         /// <summary>
-        /// Xét từng ô của một nến, chỉ ra các chấm Dot. avgLevelVol = mức nền từ các nến đã đóng trước (hasBaseline false = chưa đủ 5 nến -> chỉ chế độ cố định chạy).
-        /// Trả các dấu theo tick tăng dần.
+        /// Xét từng ô của một nến, chỉ ra các chấm Dot THEO TỪNG BÊN. medianBaseline = mức nền (trung vị) từ các nến đã đóng trước (hasBaseline false = chưa đủ 5 nến -> chỉ chế độ cố định chạy).
+        /// Trả xanh (tick tăng dần) rồi tới đỏ (tick tăng dần): thứ tự vẽ, đỏ nằm trên.
         /// </summary>
-        public static List<CellMark> Evaluate(IReadOnlyList<CellLevel> levels, bool hasBaseline, double avgLevelVol, CellBigSettings s)
+        public static List<CellMark> Evaluate(IReadOnlyList<CellLevel> levels, bool hasBaseline, double medianBaseline, CellBigSettings s)
         {
             var res = new List<CellMark>();
             if (levels == null || levels.Count == 0 || s == null) return res;
-            var side = new Dictionary<long, double>(levels.Count);
+            var askAt = new Dictionary<long, double>(levels.Count);
+            var bidAt = new Dictionary<long, double>(levels.Count);
             var sorted = new List<CellLevel>(levels.Count);
-            foreach (var l in levels) if (l.Vol > 0) { side[l.Tick] = Math.Max(l.Buy, l.Sell); sorted.Add(l); }
+            foreach (var l in levels) if (l.Vol > 0) { askAt[l.Tick] = l.Buy; bidAt[l.Tick] = l.Sell; sorted.Add(l); }
             sorted.Sort((a, b) => a.Tick.CompareTo(b.Tick));
 
-            bool canDot = s.DotEnabled && (s.FixedMode || (hasBaseline && avgLevelVol > 0));
-            double dotThr = s.FixedMode ? s.FixedThreshold : s.DotTradesRatio * avgLevelVol;
+            bool canDot = s.DotEnabled && (s.FixedMode || (hasBaseline && medianBaseline > 0));
+            if (!canDot) return res;
+            double thr = Math.Max(s.FixedMode ? s.FixedThreshold : s.DotMedianRatio * medianBaseline, s.MinSide);
 
+            var reds = new List<CellMark>();
+            var blues = new List<CellMark>();
             foreach (var l in sorted)
             {
-                double sd = Math.Max(l.Buy, l.Sell);
-                if (sd < s.MinSide) continue;
-                int dir = l.Buy > l.Sell ? 1 : -1;
-                if (canDot && (s.FixedMode ? sd >= dotThr : l.Trades >= dotThr) && LocalMax(side, l.Tick, sd, s.DotLocalTicks))
-                {
-                    res.Add(new CellMark { Tick = l.Tick, Tier = TierDot, Side = dir, Buy = l.Buy, Sell = l.Sell, Trades = l.Trades,
-                        Mult = s.FixedMode || avgLevelVol <= 0 ? 0 : l.Trades / avgLevelVol, SizeFrac = DotSizeFrac,
-                        Threshold = s.FixedMode ? Math.Max(dotThr, s.MinSide) : dotThr });
-                }
+                if (l.Sell > 0 && l.Sell >= thr && LocalMax(bidAt, l.Tick, l.Sell, s.DotLocalTicks))
+                    reds.Add(Mark(l, -1, l.Sell, medianBaseline, thr, s));
+                if (l.Buy > 0 && l.Buy >= thr && LocalMax(askAt, l.Tick, l.Buy, s.DotLocalTicks))
+                    blues.Add(Mark(l, 1, l.Buy, medianBaseline, thr, s));   // luật che áp sau, khi đã biết hết chấm đỏ
             }
+            if (s.DotHideBuyNearSellTicks >= 0)
+                blues.RemoveAll(bm => reds.Exists(rm => Math.Abs(rm.Tick - bm.Tick) <= s.DotHideBuyNearSellTicks));
+            res.AddRange(blues);
+            res.AddRange(reds);
             return res;
         }
 
-        // true khi sd LỚN HƠN HẲN side của mọi tick khác trong ±w tick (tick vắng = 0)
+        static CellMark Mark(CellLevel l, int dir, double sideVal, double medianBaseline, double thr, CellBigSettings s)
+            => new CellMark { Tick = l.Tick, Tier = TierDot, Side = dir, Buy = l.Buy, Sell = l.Sell,
+                              Mult = s.FixedMode || medianBaseline <= 0 ? 0 : sideVal / medianBaseline, SizeFrac = DotSizeFrac, Threshold = thr };
+
+        // true khi sd LỚN HƠN HẲN giá trị cùng bên của mọi tick khác trong ±w tick (tick vắng = 0)
         public static bool LocalMax(Dictionary<long, double> side, long tick, double sd, int w)
         {
             for (int o = 1; o <= w; o++)
@@ -143,26 +160,30 @@ namespace OrderFlowBubbles
     }
 
     // Mức nền: trung bình cuốn của N nến ĐÃ ĐÓNG. Người gọi chỉ Add mỗi nến đóng ĐÚNG 1 lần.
-    // Chuỗi: volume TB mỗi ô có giao dịch của nến. Cần >= 5 nến.
+    // Hai chuỗi: volume TB mỗi ô có giao dịch (kiệt sức dùng) và TRUNG VỊ volume mỗi ô (chấm dùng). Cần >= 5 nến.
     public sealed class CellBigBaseline
     {
         private readonly int _n;
         private readonly Queue<double> _mean = new Queue<double>();
+        private readonly Queue<double> _median = new Queue<double>();
         public CellBigBaseline(int n) { _n = Math.Max(CellBigLogic.MinHistoryBars, n); }
         public int Count => _mean.Count;
-        public void Add(double barMeanLevelVol)
+        public void Add(double barMeanLevelVol, double barMedianLevelVol)
         {
-            _mean.Enqueue(barMeanLevelVol);
-            while (_mean.Count > _n) _mean.Dequeue();
+            _mean.Enqueue(barMeanLevelVol); _median.Enqueue(barMedianLevelVol);
+            while (_mean.Count > _n) { _mean.Dequeue(); _median.Dequeue(); }
         }
         /// <summary>Volume TB mỗi ô có giao dịch (trung bình 20 nến trước).</summary>
-        public bool TryGet(out double avgLevelVol)
+        public bool TryGet(out double avgLevelVol) => Avg(_mean, out avgLevelVol);
+        /// <summary>Trung vị volume mỗi ô có giao dịch, lấy trung bình của 20 nến trước.</summary>
+        public bool TryGetMedian(out double avgMedianLevelVol) => Avg(_median, out avgMedianLevelVol);
+        private static bool Avg(Queue<double> q, out double v)
         {
-            avgLevelVol = 0;
-            if (_mean.Count < CellBigLogic.MinHistoryBars) return false;
-            double s = 0; foreach (var v in _mean) s += v;
-            avgLevelVol = s / _mean.Count;
-            return avgLevelVol > 0;
+            v = 0;
+            if (q.Count < CellBigLogic.MinHistoryBars) return false;
+            double s = 0; foreach (var x in q) s += x;
+            v = s / q.Count;
+            return v > 0;
         }
     }
 

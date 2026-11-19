@@ -74,7 +74,7 @@ static class Tests
     }
 
     // [3] Dòng ghi SAU (Confirm chốt: đang chờ -> giữ/vỡ mức) phải ĐÈ dòng ghi TRƯỚC cùng thời gian
-    //     — đây là ca RePersistBar() khi UpdateAbsorptionConfirms() chốt xong.
+    //     — đây là ca RePersistBar() khi kiệt sức/xác nhận chốt xong (bản ghi cũ).
     static void LaterWriteOverrides()
     {
         Console.WriteLine("[3] Ghi de: Confirm chot sau phai thang ban ghi cho truoc");

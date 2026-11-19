@@ -76,13 +76,15 @@ namespace GoldenPerf
             var bubbles = (IDictionary)typeof(Ind).GetField("_bubbles", NP).GetValue(r.Ind);
             var rows = new List<string>();
             var signals = new HashSet<string>();
-            int purple = 0, cellBig = 0, bad = 0, dots = 0, purpleDots = 0;
+            int purple = 0, cellBig = 0, bad = 0, dots = 0, purpleDots = 0, exhCount = 0;
             var days = new HashSet<string>();
             foreach (var bar in bars) days.Add(bar.TimeLeft.ToString("yyyy-MM-dd"));
             foreach (int k in bubbles.Keys.Cast<int>().OrderBy(x => x))
                 foreach (var b in (IEnumerable)bubbles[k])
                 {
                     var t = b.GetType();
+                    string shp = t.GetField("Shape", NP).GetValue(b).ToString();
+                    if (shp == "ExhTop" || shp == "ExhBottom") exhCount++;
                     bool big = (bool)t.GetField("CellBig", NP).GetValue(b);
                     if (!big) continue;
                     cellBig++;
@@ -104,7 +106,7 @@ namespace GoldenPerf
                 }
             File.WriteAllLines(outFile, rows.Prepend("sweep_time,side,level,bid,ask,orig_side"));
             double nd = Math.Max(1, days.Count);
-            Console.WriteLine($"stop hunt: {signals.Count} dau ({signals.Count / nd:0.00}/ngay), bong tim {purple} ({purple / nd:0.00}/ngay), tong o lon {cellBig} (Big {cellBig - dots}, Dot {dots}; tim: Big {purple - purpleDots}, Dot {purpleDots}), {days.Count} ngay lich, loi dinh dang/mau {bad} -> {outFile}");
+            Console.WriteLine($"stop hunt: {signals.Count} dau ({signals.Count / nd:0.00}/ngay), bong tim {purple} ({purple / nd:0.00}/ngay), tong o lon {cellBig} (Big {cellBig - dots}, Dot {dots}; tim: Big {purple - purpleDots}, Dot {purpleDots}), {days.Count} ngay lich, kiet suc {exhCount}, loi dinh dang/mau {bad} -> {outFile}");
             return bad == 0 ? 0 : 1;
         }
 

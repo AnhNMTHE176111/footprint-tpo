@@ -10,14 +10,13 @@
 //   • "Đỉnh = không còn người mua (kiệt sức buy), đáy = không còn người bán (kiệt sức sell)."
 //   • "Giá phải QUÉT QUA được mức đó thì kiệt sức mới bị VÔ HIỆU — quét qua là được, không cần đóng nến."
 //
-//  LUẬT HIỆN TẠI (2026-11-18, fit trên chart M5 của CORVEN ngày 18/11, xem research/corven_m5_2026-11-18/README.md):
+//  LUẬT HIỆN TẠI (2026-11-18, fit lại trên chart M5 của CORVEN ngày 18/11, xem research/corven_m5_2026-11-18/README.md; bản Python gốc: rules.py exh_rule):
 //   • RÂU nến ở phía đang xét phải dài >= MinWickTicks (3) tick (CORVEN dặn không lấy ở thân nến).
-//   • TỔNG volume của bên đang soi (Ask ở đỉnh, Bid ở đáy) trên SumLevels (3) tick tính từ cực trị đi vào trong
-//     phải <= SumRel (0,5) x volume trung bình mỗi mức giá có giao dịch của nến. Mức giá trống (giá nhảy cóc) tính 0;
-//     nến có ít mức hơn SumLevels thì dùng số mức hiện có.
-//   Đo trên 27 nến M5 (12:15-14:25 UTC 18/11): CORVEN đánh 11 dấu; luật cũ (cực trị <= 0,10 x trung bình mỗi mức, hoặc 3 mức giảm dần,
-//   râu >= 1 tick) ra 30 dấu, 6 trùng, F1 0,29; luật mới 23 dấu, 9 trùng, F1 0,53. Mật độ: M1 ngày 05/11 0,28 dấu/nến, M5 ngày 17/11 0,48 dấu/nến.
-//   ⚠️ Chỉ MỘT biểu đồ, 27 nến, nguồn dữ liệu của CORVEN khác nguồn mình. Đây là ĐÁNH DẤU để đọc chart, KHÔNG phải tín hiệu đã kiểm định lợi thế:
+//   • TỔNG volume của bên đang soi (Ask ở đỉnh, Bid ở đáy) trên SumLevels (6) tick tính từ cực trị đi vào trong
+//     phải <= SumHistRatio (1,1) x volume trung bình mỗi mức giá có giao dịch của 20 nến ĐÃ ĐÓNG TRƯỚC (mức nền lịch sử, KHÔNG phải trung bình
+//     của chính nến này; cần >= 5 nến lịch sử, chưa đủ thì không đánh dấu). Mức giá trống (giá nhảy cóc) tính 0.
+//   Đo trên 26 nến M5 (12:15-14:20 UTC 18/11): CORVEN đánh 11 dấu; luật này ra 13 dấu, trùng 11, thừa 2, sót 0 (F1 0,917).
+//   ⚠️ Chỉ MỘT biểu đồ, 26 nến, nguồn dữ liệu của CORVEN khác nguồn mình. Đây là ĐÁNH DẤU để đọc chart, KHÔNG phải tín hiệu đã kiểm định lợi thế:
 //   mức kiệt sức bị quét qua với tỷ lệ gần như nến bất kỳ (44%/70%/84% sau 1/5/20 nến, nến bất kỳ 46/72/85%).
 // ============================================================================
 
@@ -32,8 +31,8 @@ namespace OrderFlowBubbles
     public sealed class ExhSettings
     {
         public int MinWickTicks = 3;      // râu >= số tick này (<= 0: không đòi râu)
-        public int SumLevels = 3;         // số mức giá xét, tính từ cực trị đi vào trong
-        public double SumRel = 0.5;       // tổng bên soi trên SumLevels mức <= SumRel x TB volume/mức của nến
+        public int SumLevels = 6;         // số mức giá xét, tính từ cực trị đi vào trong
+        public double SumHistRatio = 1.1; // tổng bên soi trên SumLevels mức <= số này x TB volume/mức của 20 nến đã đóng trước (mức nền lịch sử)
     }
 
     public readonly struct ExhLevel
@@ -52,7 +51,7 @@ namespace OrderFlowBubbles
         public readonly bool Top;            // true = đỉnh (kiệt sức buy), false = đáy (kiệt sức sell)
         public readonly long Tick;           // mức cực trị (đỉnh/đáy nến)
         public readonly double ExtremeVol;   // Ask ở đỉnh / Bid ở đáy
-        public readonly double MeanLevelVol; // volume trung bình mỗi mức giá của nến
+        public readonly double MeanLevelVol; // mức nền: volume trung bình mỗi mức giá của 20 nến đã đóng trước
         public readonly double[] Seq;        // giá trị bên soi trên SumLevels mức, từ TRONG ra CỰC TRỊ
         public bool Hit => Kind != ExhKind.None;
         public ExhResult(ExhKind kind, bool top, long tick, double ext, double mean, double[] seq)
@@ -73,11 +72,13 @@ namespace OrderFlowBubbles
 
         // Dò kiệt sức ở MỘT phía của nến. highTick/lowTick/openTick/closeTick là chỉ số tick.
         public static ExhResult Detect(bool top, long openTick, long highTick, long lowTick, long closeTick,
-                                       IReadOnlyList<ExhLevel> levels, ExhSettings s)
+                                       IReadOnlyList<ExhLevel> levels, ExhSettings s,
+                                       bool hasHist, double histMeanLevelVol)
         {
             long ext = top ? highTick : lowTick;
             var none = new ExhResult(ExhKind.None, top, ext, 0, 0, Array.Empty<double>());
             if (s == null || levels == null || levels.Count == 0 || highTick <= lowTick) return none;
+            if (!hasHist || !(histMeanLevelVol > 0)) return none;   // chưa đủ nến lịch sử để có mức nền
 
             long bodyEdge = top ? Math.Max(openTick, closeTick) : Math.Min(openTick, closeTick);
             long wick = top ? highTick - bodyEdge : bodyEdge - lowTick;   // số tick râu ở phía này
@@ -85,11 +86,10 @@ namespace OrderFlowBubbles
 
             var byTick = new Dictionary<long, ExhLevel>(levels.Count);
             foreach (var l in levels) byTick[l.Tick] = l;
-            double mean = MeanLevelVolume(levels);
+            double mean = histMeanLevelVol;
 
             int step = top ? -1 : 1;                  // đi từ cực trị VÀO trong nến
-            int span = (int)(highTick - lowTick) + 1; // số mức của cả nến
-            int want = Math.Min(Math.Max(1, s.SumLevels), span);
+            int want = Math.Max(1, s.SumLevels);
             var fromExt = new double[want];           // [0] = cực trị
             double sum = 0;
             for (int j = 0; j < want; j++)
@@ -98,7 +98,7 @@ namespace OrderFlowBubbles
                 fromExt[j] = top ? l.Ask : l.Bid;
                 sum += fromExt[j];
             }
-            if (!(sum <= s.SumRel * mean + 1e-9)) return none;
+            if (!(sum <= s.SumHistRatio * mean)) return none;
 
             // tooltip/Seq: chuỗi giá trị bên soi từ TRONG ra CỰC TRỊ
             var seq = new double[want];

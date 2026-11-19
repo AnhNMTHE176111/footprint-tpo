@@ -45,15 +45,13 @@
 //  báo mức SẮP BỊ XUYÊN → gắn nhãn "⚠ Mức DỄ VỠ" (vàng), không gọi là hấp thụ.
 //  ⇒ Bubble là công cụ ĐÁNH DẤU để đọc bằng mắt. "Điểm" là độ đậm hiển thị, KHÔNG phải xác suất.
 //
-//  ---- Ô BID/ASK LỚN (mục 1.5, viết lại 2026-11-11, xem CellBigLogic.cs) -------------
-//  Luật mô phỏng hiển thị của CORVEN. Chart CORVEN (Sierra) gộp 2 tick thành 1 HÀNG (hàng = tick lẻ + tick chẵn kế,
-//  row = floor((tickIdx-1)/2)), bóng đặt ở TÂM hàng. Hàng: bid = Σ sell, ask = Σ buy. LUẬT 2026-11-18 (fit trên chart M5
-//  của CORVEN ngày 18/11): bóng nổ khi bên áp đảo của hàng >= 1,25 x mức trung bình volume mỗi hàng có giao dịch của 20 nến
-//  đã đóng trước, VÀ >= sàn 9 hợp đồng, VÀ >= 3 x bên yếu (CellBigMinImbalance; bên yếu bằng 0 thì qua). Không còn bóng vàng
-//  (hàng cân bằng không nổ). Trên 27 nến M5 mẫu: CORVEN 24 bóng, luật cũ 123 (F1 0,16), luật mới 17 (F1 0,39); mật độ 9 ngày
-//  M5 từ 2,87 xuống 0,73 bóng/nến. Chỉ một biểu đồ nên chưa phải kiểm định. Chi tiết: research/corven_m5_2026-11-18/README.md.
-//  (Số liệu luật cũ M1 5-6/11: F1 0,844; luật mới trên dữ liệu M1 đó F1 0,572 — người học chấp nhận để giống kiểu M5.)
-//  ⚠ Pha hàng đo trên GC (tick 0,1) chart CORVEN; mã khác chưa kiểm. KHÔNG phải lợi thế đã kiểm định.
+//  ---- Ô BID/ASK LỚN (mục 1.5, xem CellBigLogic.cs) -------------
+//  Luật mô phỏng hiển thị của CORVEN, fit lại 2026-11-19 trên chart M5 ngày 18/11, TẤT CẢ THEO TỪNG TICK (không gom hàng), bóng ở đúng giá khớp.
+//  Hai loại dấu: VÒNG TRÒN LỚN MỜ (bên trội >= 0,5 x bên trội lớn nhất trung bình 20 nến trước, lớn hơn hẳn mọi tick trong ±5 tick, >= 4 x bên yếu)
+//  và CHẤM ĐẶC NHỎ (số lệnh >= 2,4 x volume trung bình mỗi ô của 20 nến trước, bên trội lớn hơn hẳn mọi tick trong ±3 tick); sàn 9 hợp đồng.
+//  Kiệt sức: râu >= 3 tick và tổng bên soi trên 6 tick từ cực trị <= 1,1 x volume trung bình mỗi ô của 20 nến trước (ExhaustionLogic.cs).
+//  Trên 26 nến M5 mẫu: Big 22, Dot 37, kiệt sức 13 (CORVEN: 25 vòng, 16 cụm chấm, 11 kiệt sức). Chỉ một biểu đồ nên chưa phải kiểm định.
+//  Chi tiết + bản Python gốc: research/corven_m5_2026-11-18/. KHÔNG phải lợi thế đã kiểm định.
 //
 //  ---- NIÊM PHONG TÍN HIỆU (2026-09-15, xem SignalCache.cs) --------------------
 //  Sự cố: Quantower gọi lại VolumeAnalysisData_Loaded() → ResetState() nhiều lần trong 1 phiên
@@ -148,7 +146,7 @@ namespace OrderFlowBubbles
         // ===================== baseline ROBUST (median + MAD) =====================
         private RollingRobust _rLvlVol;       // per-level Volume (chỉ top-K ô/nến nếu BaselineTopLevels>0)
         private StopHuntDetector _stopHunt;     // stop hunt CORVEN (chỉ nạp nến ĐÃ ĐÓNG, đúng 1 lần/nến)
-        private CellBigBaseline _cellBigBase;   // mức trung bình volume mỗi hàng của Ô lớn: TB 20 nến đóng TRƯỚC
+        private CellBigBaseline _cellBigBase;   // mức nền Ô lớn + kiệt sức (volume TB mỗi ô, bên trội lớn nhất): TB 20 nến đóng TRƯỚC
         private RollingRobust _rLvlAbsDelta;  // per-level |Delta| — CHỈ nạp khi DLineEnabled (chỉ Big Delta line đọc nó)
         private bool _trackAbsDelta;          // DLineEnabled tại lúc InitBaselines (ResetState)
         private RollingRobust _rLvlMot;       // per-level MaxOneTradeVolume (chỉ khi feed điền)
@@ -226,33 +224,35 @@ namespace OrderFlowBubbles
         // chiều thật, nổ trên 12,0% nến bất kỳ) — xem chi tiết trong hội thoại/README nghiên cứu.
         public double FixedThresholdContracts { get; set; } = 10;
 
-        // ---------- 1.5) Ô BID/ASK LỚN — BÓNG ĐẠI DIỆN CHÍNH (2026-09-15) ----------
-        // LUẬT 2026-11-18 (CellBigLogic.cs): MÔ PHỎNG HIỂN THỊ của CORVEN — gom 2 tick/hàng, bóng ở tâm hàng; bên áp đảo của
-        // hàng >= 1,25 x mức trung bình volume mỗi hàng có giao dịch của 20 nến đóng trước, >= sàn 9 hợp đồng, và >= 3 x bên yếu.
-        // KHÔNG phải lợi thế đã kiểm định; không giới hạn số bóng/nến. Màu: xanh buy, đỏ sell (không còn vàng);
-        // TÍM = bóng của nến quét trong một stop hunt (2026-11-18). Cỡ to dần theo độ lớn (45%..100% bề ngang nến, nén sqrt,
-        // đầy ở >= 6 lần mức trung bình). Khác Absorption: KHÔNG đòi gần cực trị / sau swing / chấm điểm.
+        // ---------- 1.5) Ô BID/ASK LỚN — BÓNG ĐẠI DIỆN CHÍNH (2026-09-15; luật theo TỪNG TICK 2026-11-19) ----------
+        // Xem CellBigLogic.cs. Vòng tròn lớn mờ: bên trội >= CellBigMaxSideRatio x bên trội lớn nhất trung bình của 20 nến đóng trước, lớn hơn hẳn
+        // mọi tick trong ±CellBigLocalTicks tick, >= CellBigMinImbalance x max(bên yếu, 1), >= sàn CellBigMinSide.
+        // Chấm nhỏ đặc: số lệnh >= CellDotTradesRatio x volume trung bình mỗi ô của 20 nến trước, bên trội lớn hơn hẳn mọi tick trong ±CellDotLocalTicks tick.
+        // KHÔNG phải lợi thế đã kiểm định; không giới hạn số bóng/nến. Màu: xanh buy, đỏ sell; TÍM = bóng của nến quét trong một stop hunt.
         [InputParameter("Ô Bid/Ask lớn (đại diện chính) · Bật", 25)]
         public bool CellBigEnabled { get; set; } = true;
 
-        // Bên áp đảo của HÀNG >= Ratio x mức trung bình volume mỗi hàng có giao dịch của 20 nến TRƯỚC (đổi 1,3 -> 1,25 ngày 2026-11-18).
-        public double CellBigRatio { get; set; } = 1.25;
+        public double CellBigMaxSideRatio { get; set; } = 0.5;
+
+        public int CellBigLocalTicks { get; set; } = 5;
 
         public int CellBigBaselineBars { get; set; } = 20;
 
         // Độ đậm của vòng tròn lớn (bậc Big), phần trăm (35 = mờ ~35%). Chỉ ảnh hưởng cách vẽ.
         public int CellBigOpacity { get; set; } = 35;
 
-        // Bậc Dot: chấm Bid/Ask nhỏ đặc. Bên áp đảo của hàng >= CellDotRatio x mức trung bình volume mỗi hàng của 20 nến trước và >= sàn 9; không đòi mất cân bằng.
         [InputParameter("Chấm Bid/Ask nhỏ · Bật", 26)]
         public bool CellDotEnabled { get; set; } = true;
 
-        public double CellDotRatio { get; set; } = 1.5;
+        public double CellDotTradesRatio { get; set; } = 2.4;
 
+        public int CellDotLocalTicks { get; set; } = 3;
+
+        // sàn tuyệt đối cho bên trội (cả vòng lớn và chấm nhỏ)
         public double CellBigMinSide { get; set; } = 9;
 
-        // Bên áp đảo phải >= số này x bên yếu (bên yếu 0 thì qua; 0 = tắt điều kiện). Loại hàng cân bằng như 100 Bid x 101 Ask (2026-11-18).
-        public double CellBigMinImbalance { get; set; } = 3.0;
+        // Bên trội phải >= số này x max(bên yếu, 1) (chỉ vòng lớn; 0 = tắt điều kiện).
+        public double CellBigMinImbalance { get; set; } = 4.0;
 
         // màu bóng Ô lớn thuộc nến quét của stop hunt đã xác nhận (thay cho tam giác cũ)
         public Color CellBigStopHuntColor { get; set; } = Color.MediumOrchid;
@@ -264,13 +264,6 @@ namespace OrderFlowBubbles
 
         // Gộp ô liền kề trong cùng nến: giữ ô lớn nhất, bỏ ô cách nó <= số tick này. 0 = tắt gộp.
         public int CellBigMergeTicks { get; set; } = 0;
-
-        // Gom mức giá thành HÀNG: số tick/hàng (CORVEN/Sierra gộp 2 tick = 0,2 giá với GC) và lệch pha:
-        // row = floorDiv(tickIndex - RowOffset, RowTicks). Offset 1 => hàng (tick lẻ, tick chẵn kế tiếp), vd 4124.1+4124.2.
-        // 1 = hành vi theo từng tick như cũ (offset không ảnh hưởng). ⚠ Pha hàng đo trên GC (tick 0,1) chart CORVEN; mã khác chưa kiểm.
-        public int CellBigRowTicks { get; set; } = 2;
-
-        public int CellBigRowOffset { get; set; } = 1;
 
         // ---------- Nến delta lớn (dominant-delta candle) ----------
         [InputParameter("Nến delta · Bật (tô thân nến)", 20)]
@@ -302,7 +295,7 @@ namespace OrderFlowBubbles
         //  Ngưỡng dưới đây là TẠM (chưa có footprint per-level thật để calibrate) —
         //  chạy research/calibrate_perlevel.py trên file export rồi điền lại.
         [InputParameter("Absorption · Bật", 40)]
-        public bool AbsorptionEnabled { get; set; } = true;
+        public bool AbsorptionEnabled { get; set; } = false;   // 2026-11-19: mặc định TẮT (chart CORVEN không có vòng đặc này, nó còn che bóng mờ cùng mức)
 
         public double AbsEffortZ { get; set; } = 2.5;
 
@@ -402,18 +395,16 @@ namespace OrderFlowBubbles
         //  Đỉnh soi ASK, đáy soi BID, chỉ lấy ở RÂU nến; "nhỏ, hoặc giảm dần về 0". Vô hiệu khi một nến
         //  sau đó chỉ cần RÂU quét qua mức đó (không cần đóng nến) → tô nền mờ (hoặc ẩn).
         //  Đã BỎ định nghĩa cũ (volume nến ≤ × nến trước, delta co khỏi đỉnh intrabar, lookback swing).
-        //  Luật 2026-11-18 (fit chart M5 CORVEN, xem ExhaustionLogic.cs): râu >= 3 tick và tổng bên soi trên 3 tick từ cực trị <= 0,5 x TB volume/mức.
+        //  Luật 2026-11-19 (fit chart M5 CORVEN, xem ExhaustionLogic.cs): râu >= 3 tick và tổng bên soi trên 6 tick từ cực trị <= 1,1 x volume TB mỗi ô của 20 nến đóng trước.
         //  ⚠️ Công cụ ĐÁNH DẤU để đọc chart, CHƯA kiểm định lợi thế.
         [InputParameter("Kiệt sức · Bật", 80)]
         public bool ExhaustionEnabled { get; set; } = true;
 
-        // 2026-11-18: râu >= ExhMinWickTicks tick VÀ tổng bên soi (Ask ở đỉnh, Bid ở đáy) trên ExhSumLevels tick từ cực trị vào trong
-        // <= ExhSumRel x volume trung bình mỗi mức giá của nến (thay luật "nhỏ/giảm dần" cũ).
         public int ExhMinWickTicks { get; set; } = 3;
 
-        public int ExhSumLevels { get; set; } = 3;
+        public int ExhSumLevels { get; set; } = 6;
 
-        public double ExhSumRel { get; set; } = 0.5;
+        public double ExhSumHistRatio { get; set; } = 1.1;
 
         public int ExhSweepTicks { get; set; } = 1;
 
@@ -545,6 +536,13 @@ namespace OrderFlowBubbles
         internal static bool ShouldArmVa(bool vaLoaded, VolumeAnalysisCalculationState? state)
             => !vaLoaded && state == VolumeAnalysisCalculationState.Finished;
 
+        private CellBigSettings CellSettings() => new CellBigSettings
+        {
+            MaxSideRatio = CellBigMaxSideRatio, LocalTicks = CellBigLocalTicks, MinImbalance = CellBigMinImbalance,
+            DotEnabled = CellDotEnabled, DotTradesRatio = CellDotTradesRatio, DotLocalTicks = CellDotLocalTicks,
+            MinSide = CellBigMinSide, FixedMode = UseFixedThreshold, FixedThreshold = FixedThresholdContracts
+        };
+
         private string ComputeSettingsFingerprint()
         {
             // Chỉ cần liệt kê tham số ẢNH HƯỞNG TỚI QUYẾT ĐỊNH nổ bóng (không cần màu sắc/kích
@@ -552,7 +550,7 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
-                CellBigEnabled, CellBigRatio, CellBigBaselineBars, CellBigMinSide, CellBigMinImbalance, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellBigRowTicks, CellBigRowOffset, CellDotEnabled, CellDotRatio, "cellbig-v15",
+                CellBigEnabled, CellBigMaxSideRatio, CellBigLocalTicks, CellBigBaselineBars, CellBigMinSide, CellBigMinImbalance, CellBigTopN, CellBigSkipOnAbsorption, CellBigMergeTicks, CellDotEnabled, CellDotTradesRatio, CellDotLocalTicks, "cellbig-v16",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, BaselineTopLevels,
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 AbsorptionEnabled, AbsEffortZ, AbsScoreMin, AbsMaxDisplaceTicks, AbsorptionTopN,
@@ -561,11 +559,11 @@ namespace OrderFlowBubbles
                 WNoResult, WProminent, WDivergence, WTwoSided, WMulti, WSwing,
                 BigTradeEnabled, BigZ, BigVolMult, BigTradeTopN, BigTradeRequireRealTrades, BigTradeSkipOnAbsorption, BigTradeFixedContracts, BigTradeAbsFloor,
                 DLineEnabled, DLineFloor, DLineZ, DLineTopN,
-                ExhaustionEnabled, ExhMinWickTicks, ExhSumLevels, ExhSumRel, ExhSweepTicks, "exh-v2",
+                ExhaustionEnabled, ExhMinWickTicks, ExhSumLevels, ExhSumHistRatio, CellBigBaselineBars, ExhSweepTicks, "exh-v3",
                 ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun, ImbMinVolume,
                 DivergenceEnabled, DivSwingLookback, DivVolPartic, DivCooldown,
                 SweepEnabled, SweepLookback, UnfinishedEnabled,
-                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v5");
+                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v6");
         }
 
         private void InitBaselines()
@@ -819,7 +817,7 @@ namespace OrderFlowBubbles
                     }
                 }
 
-                // 1.5) Ô BID/ASK LỚN: xét theo HÀNG (RowTicks tick/hàng), sau vòng ô — xem khối "Ô lớn theo hàng" bên dưới.
+                // 1.5) Ô BID/ASK LỚN: xét theo từng tick, sau vòng ô — xem khối "Ô lớn theo từng tick" bên dưới.
 
                 // 2) BIG TRADE — bóng TRÒN MỜ, TO RA theo độ lớn lệnh đơn (không còn fallback ô
                 //    volume cao làm mặc định — xem ghi chú ở InputParameter). Điều kiện z VÀ ×median.
@@ -906,37 +904,30 @@ namespace OrderFlowBubbles
                 }
             }
 
-            // ---- Ô LỚN THEO HÀNG (mục 1.5): gom mức giá thành hàng CellBigRowTicks tick (lệch pha CellBigRowOffset),
-            //      xét TỪNG BÊN (bên nào áp đảo), KHÔNG xét tổng. Baseline B = TB 20 nến đóng TRƯỚC của volume TB mỗi
-            //      hàng có giao dịch (nến hiện tại chưa nạp — AddToBaseline chạy SAU ComputeBar). Cần >=5 nến.
+            // ---- Ô LỚN THEO TỪNG TICK (mục 1.5, CellBigLogic.Evaluate): mức nền = TB 20 nến đóng TRƯỚC (nến hiện tại chưa nạp —
+            //      AddToBaseline chạy SAU ComputeBar), cần >= 5 nến. Một tick có thể vừa Big vừa Dot -> hai bóng (Dot thêm sau, vẽ trên cùng).
             if (CellBigEnabled)
             {
-                double cellB = 0; bool hasCellB = _cellBigBase != null && _cellBigBase.TryGet(out cellB);
-                var rows = CellBigLogic.GroupRows(
-                    byTick.Select(kv => (kv.Key, kv.Value.it.BuyVolume, kv.Value.it.SellVolume, kv.Value.it.Volume)),
-                    CellBigRowTicks, CellBigRowOffset);
+                double cellMean = 0, cellMaxSide = 0;
+                bool hasCellB = _cellBigBase != null && _cellBigBase.TryGet(out cellMean) && _cellBigBase.TryGetMaxSide(out cellMaxSide);
+                var cellLevels = new List<CellLevel>(byTick.Count);
+                foreach (var kv in byTick)
+                    cellLevels.Add(new CellLevel(kv.Key, kv.Value.it.BuyVolume, kv.Value.it.SellVolume, kv.Value.it.Volume, kv.Value.it.Trades));
+                var marks = CellBigLogic.Evaluate(cellLevels, hasCellB, cellMean, cellMaxSide, CellSettings());
                 var inv = System.Globalization.CultureInfo.InvariantCulture;
-                foreach (var r in rows)
+                foreach (var m in marks)
                 {
-                    if (r.Buy + r.Sell <= 0) continue;
-                    var dec = CellBigLogic.Decide(r.Buy, r.Sell, cellB, hasCellB, CellBigRatio, CellBigMinSide, CellBigMinImbalance,
-                                                  UseFixedThreshold, FixedThresholdContracts, CellDotEnabled ? CellDotRatio : 0);
-                    if (!dec.Hit) continue;
-                    double cp = CellBigLogic.RowCenterPrice(r.RowId, CellBigRowTicks, CellBigRowOffset, tick);
-                    var col2 = dec.Side > 0 ? BuyColor : SellColor;
-                    // định dạng người dùng chốt 2026-11-12: "Sell - n Bid m Ask | ..." ; 2026-11-18: k = NGƯỠNG NỔ thật
-                    // = max(Ratio x B, sàn MinSide 9) (chế độ cố định: max(ngưỡng cố định, sàn)) — không còn hiện B trần (vd 6.2 < 9)
-                    // 2026-11-18: hai bậc — Big (vòng mờ lớn, "{Buy|Sell} lớn") dùng ngưỡng ratio x B; Dot (chấm nhỏ đặc) dùng dotRatio x B
-                    bool isDot = dec.Tier == CellBigLogic.TierDot;
-                    string side = (dec.Side > 0 ? "Buy" : "Sell") + (isDot ? "" : " lớn");
-                    double tierRatio = isDot ? CellDotRatio : CellBigRatio;
-                    double fireLvl = UseFixedThreshold ? Math.Max(FixedThresholdContracts, CellBigMinSide)
-                                                       : Math.Max(tierRatio * cellB, CellBigMinSide);
-                    string tip2 = $"{side} - {r.Sell:0} Bid {r.Buy:0} Ask | Ngưỡng nổ {fireLvl.ToString("0.#", inv)}";
-                    var b2 = Solid(cp, Shape.Ellipse, col2, true, tip2);
-                    b2.SizeFrac = dec.SizeFrac;
-                    b2.CellBig = true; b2.CellDot = isDot; b2.CellBid = r.Sell; b2.CellAsk = r.Buy; b2.CellSide = dec.Side;
-                    cellBigCands.Add((b2, Math.Max(r.Buy, r.Sell), r.LoTick, r.HiTick));
+                    var col2 = m.Side > 0 ? BuyColor : SellColor;
+                    bool isDot = m.Tier == CellBigLogic.TierDot;
+                    string side = (m.Side > 0 ? "Buy" : "Sell") + (isDot ? "" : " lớn");
+                    // Big: "Sell lớn - n Bid m Ask | Ngưỡng nổ k" (k = max(0,5 x bên trội lớn nhất TB, sàn)); Dot: "Sell - n Bid m Ask | t lệnh, ngưỡng k" (k = 2,4 x volume TB mỗi ô)
+                    string tip2 = isDot
+                        ? $"{side} - {m.Sell:0} Bid {m.Buy:0} Ask | {m.Trades:0} lệnh, ngưỡng {m.Threshold.ToString("0.#", inv)}"
+                        : $"{side} - {m.Sell:0} Bid {m.Buy:0} Ask | Ngưỡng nổ {m.Threshold.ToString("0.#", inv)}";
+                    var b2 = Solid(m.Tick * tick, Shape.Ellipse, col2, true, tip2);
+                    b2.SizeFrac = m.SizeFrac;
+                    b2.CellBig = true; b2.CellDot = isDot; b2.CellBid = m.Sell; b2.CellAsk = m.Buy; b2.CellSide = m.Side;
+                    cellBigCands.Add((b2, Math.Max(m.Buy, m.Sell), m.Tick, m.Tick));
                 }
             }
 
@@ -952,7 +943,7 @@ namespace OrderFlowBubbles
             // nhất; Big Trade/Absorption (đặc thù hơn) vẽ chồng lên trên khi trùng vị trí.
             if (cellBigCands.Count > 0)
             {
-                // gộp hàng liền kề (mặc định TẮT), rồi áp TopN / SkipOnAbsorption
+                // gộp ô liền kề (mặc định TẮT), rồi áp TopN / SkipOnAbsorption
                 var cellMerged = new List<(Bubble b, double magnitude, long lo, long hi)>();
                 var mergeIn = cellBigCands.Select(x => (x.lo, x.magnitude)).ToList();
                 foreach (int mi in CellBigLogic.MergeAdjacent(mergeIn, CellBigMergeTicks)) cellMerged.Add(cellBigCands[mi]);
@@ -1023,12 +1014,13 @@ namespace OrderFlowBubbles
             var levels = new List<ExhLevel>(va.PriceLevels.Count);
             foreach (var kv in va.PriceLevels)   // Bid = SellVolume (khớp ở Bid), Ask = BuyVolume (khớp ở Ask)
                 levels.Add(new ExhLevel((long)Math.Round(kv.Key / tick), kv.Value.SellVolume, kv.Value.BuyVolume, kv.Value.Volume));
-            var s = new ExhSettings { MinWickTicks = ExhMinWickTicks, SumLevels = ExhSumLevels, SumRel = ExhSumRel };
+            var s = new ExhSettings { MinWickTicks = ExhMinWickTicks, SumLevels = ExhSumLevels, SumHistRatio = ExhSumHistRatio };
+            double histMean = 0; bool hasHist = _cellBigBase != null && _cellBigBase.TryGet(out histMean);   // TB 20 nến đóng TRƯỚC
             long o = (long)Math.Round(bar.Open / tick), h = (long)Math.Round(bar.High / tick);
             long l = (long)Math.Round(bar.Low / tick), c = (long)Math.Round(bar.Close / tick);
             foreach (bool top in new[] { true, false })
             {
-                var r = ExhaustionLogic.Detect(top, o, h, l, c, levels, s);
+                var r = ExhaustionLogic.Detect(top, o, h, l, c, levels, s, hasHist, histMean);
                 if (!r.Hit) continue;
                 var b = new Bubble
                 {
@@ -1231,6 +1223,7 @@ namespace OrderFlowBubbles
                     }
                 }
 
+                double guardTick = TickSizeNow;
                 for (int i = li; i <= ri; i++)
                 {
                     if (i < 0 || i >= HistoricalData.Count) continue;
@@ -1263,6 +1256,7 @@ namespace OrderFlowBubbles
                         foreach (var b in bubbles)
                         {
                             if (b.Shape == Shape.Zone) continue;   // vùng stacked imbalance đã vẽ ở trên
+                            if (!BubbleFitsBar(b.Price, bar.High, bar.Low, guardTick)) continue;   // chặn bóng lạc ngoài biên độ nến (± 2 tick)
                             float y = (float)conv.GetChartY(b.Price);
                             // absorption dùng bề rộng nến, nhưng có SÀN px: khi zoom hẹp nó từng nhỏ
                             // hơn cả halo Big Trade nên gần như vô hình.
@@ -1347,6 +1341,10 @@ namespace OrderFlowBubbles
             }
             finally { gr.SetClip(prevClip); }
         }
+
+        // Chốt chặn lúc vẽ: bóng có giá ngoài [thấp nhất - 2 tick, cao nhất + 2 tick] của nến là bóng của nến khác (cache cũ/lệch) -> không vẽ.
+        internal static bool BubbleFitsBar(double price, double high, double low, double tick)
+            => tick <= 0 || (price >= low - 2 * tick && price <= high + 2 * tick);
 
         // Cỡ (px) của bóng Ô lớn: Big = SizeFrac x bề ngang nến (1,0..2,5), sàn 8 px, trần 80 px; Dot = 45% bề ngang nến kẹp [5, 10] px.
         private static int CellDrawSize(Bubble b, float barsW)
@@ -1598,14 +1596,12 @@ namespace OrderFlowBubbles
                 vols = top;
             }
             _rLvlVol.AddBar(vols);
-            // baseline Ô lớn: volume TB mỗi ô giá có giao dịch của nến ĐÃ ĐÓNG (gọi đúng 1 lần/nến đóng)
+            // mức nền Ô lớn + kiệt sức: volume TB mỗi ô giá có giao dịch + bên trội lớn nhất của nến ĐÃ ĐÓNG (gọi đúng 1 lần/nến đóng)
             double tickSz = TickSizeNow;
             if (tickSz > 0)
             {
-                var cbRows = CellBigLogic.GroupRows(
-                    va.PriceLevels.Select(kv => ((long)Math.Round(kv.Key / tickSz), kv.Value.BuyVolume, kv.Value.SellVolume, kv.Value.Volume)),
-                    CellBigRowTicks, CellBigRowOffset);
-                if (CellBigLogic.BarRowMean(cbRows, out double bmean)) _cellBigBase.Add(bmean);
+                var cbLevels = va.PriceLevels.Select(kv => new CellLevel((long)Math.Round(kv.Key / tickSz), kv.Value.BuyVolume, kv.Value.SellVolume, kv.Value.Volume, kv.Value.Trades));
+                if (CellBigLogic.BarStats(cbLevels, out double bmean, out double bmax)) _cellBigBase.Add(bmean, bmax);
             }
             if (ads != null) _rLvlAbsDelta.AddBar(ads);
             if (mots != null) _rLvlMot.AddBar(mots.ToArray());

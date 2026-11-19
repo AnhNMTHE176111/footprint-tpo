@@ -1,5 +1,7 @@
-// Test cho CellBigLogic — Ô Bid/Ask lớn (luật mô phỏng CORVEN, 2026-11-11).
+// Test cho CellBigLogic — Ô Bid/Ask lớn theo TỪNG TICK (luật fit chart M5 của CORVEN, 2026-11-19).
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using OrderFlowBubbles;
 
 static class CellBigTests
@@ -11,178 +13,152 @@ static class CellBigTests
         if (!ok) _fail++;
     }
 
-    static CellBigDecision D(double buy, double sell, double B = 10, bool has = true)
-        => CellBigLogic.Decide(buy, sell, B, has, 1.5, 3, 0, false, 0);
+    // ô: (tick, buy = ask, sell = bid, trades); vol = buy + sell
+    static CellLevel L(long tick, double buy, double sell, int trades = 1) => new CellLevel(tick, buy, sell, buy + sell, trades);
+
+    static CellBigSettings S(Action<CellBigSettings> f = null) { var s = new CellBigSettings { MinSide = 0 }; f?.Invoke(s); return s; }
+
+    static List<CellMark> Ev(CellBigSettings s, double avgLevelVol, double avgMaxSide, params CellLevel[] lv)
+        => CellBigLogic.Evaluate(lv, true, avgLevelVol, avgMaxSide, s);
+
+    static int Count(List<CellMark> m, long tick, int tier) => m.Count(x => x.Tick == tick && x.Tier == tier);
 
     public static int Run()
     {
-        Console.WriteLine("[CellBig] luat o lon");
-        // ngưỡng 1,5 x B = 15
-        Check(D(15, 0).Hit, "bien tren: side = 1,5 x B -> no");
-        Check(!D(14, 0).Hit, "bien duoi: side = 1,4 x B -> khong no");
-        Check(!D(0, 14.9).Hit, "sell 14,9 < 15 -> khong no");
-        Check(D(0, 15).Hit, "sell 15 -> no (xet ben ap dao, khong xet tong)");
-        Check(!D(7, 7).Hit, "buy 7 / sell 7 (tong 14) khong no");
-        // sàn 3
-        Check(!CellBigLogic.Decide(2, 0, 1, true, 1.5, 3, 0, false, 0).Hit, "side 2 < san 3 -> khong no du >= 1,5 B");
-        Check(CellBigLogic.Decide(3, 0, 1, true, 1.5, 3, 0, false, 0).Hit, "side 3 >= san 3 -> no");
-        // sàn nổ 9 (mặc định mới), sàn bên yếu của tím = 3
-        Check(!CellBigLogic.Decide(8, 0, 1, true, 1.3, 9, 0, false, 0).Hit, "san 9: side 8 voi B nho -> khong no");
-        Check(CellBigLogic.Decide(9, 0, 1, true, 1.3, 9, 0, false, 0).Hit, "san 9: side 9 -> no");
-        // chưa đủ lịch sử
-        Check(!D(1000, 0, 10, false).Hit, "chua co B (<5 nen) -> khong no");
-        Check(!CellBigLogic.Decide(1000, 0, 0, true, 1.5, 3, 0, false, 0).Hit, "B = 0 -> khong no");
-        // màu
-        Check(D(30, 0).Side == 1, "buy troi -> xanh (+1)");
-        Check(D(0, 30).Side == -1, "sell troi -> do (-1)");
-        Check(D(30, 14).Side == 1, "ben yeu 14 -> xanh (khong con vang/tim theo ben yeu)");
-        Check(D(30, 18).Side == 1, "ben yeu 18 (>= ngưỡng) van xanh: khong con bong vang");
-        Check(D(14, 30).Side == -1, "sell troi -> do");
-        // ngưỡng cố định
-        Check(CellBigLogic.Decide(12, 0, 0, false, 1.5, 3, 0, true, 10).Hit, "fixed: 12 >= 10 -> no du khong co B");
-        // ---- 2026-11-18: điều kiện cân bằng CellBigMinImbalance, bỏ bóng vàng, ratio 1,25 ----
-        Console.WriteLine("[CellBig] dieu kien can bang (MinImbalance), khong con vang, ratio 1,25, san 9");
-        static CellBigDecision G(double buy, double sell, double B = 10, double imb = 3.0, double ratio = 1.25, double floor = 9)
-            => CellBigLogic.Decide(buy, sell, B, true, ratio, floor, imb, false, 0);
-        Check(G(30, 10).Hit && !G(29.9, 10).Hit, "can bang: ben troi 30 = 3 x ben yeu 10 -> no; 29,9 -> khong (bien dung)");
-        Check(G(0, 30, imb: 3).Hit && G(30, 0).Hit && G(30, 0).Side == 1, "ben yeu 0 -> qua cong (30 Ask, 0 Bid)");
-        Check(!G(100, 101).Hit && !G(101, 100).Hit, "100 Bid x 101 Ask (can bang) -> khong no");
-        Check(G(100, 101, imb: 0).Hit, "imb = 0 tat cong -> 100 x 101 lai no");
-        Check(G(101, 100, imb: 0).Side == 1 && G(100, 101, imb: 0).Side == -1, "Side: ask (buy) > bid (sell) -> +1, nguoc lai -1");
-        Check(G(50, 50, imb: 0).Side == -1, "hoa 50 x 50 (tat cong) -> -1 (quy uoc: ask > bid moi +1)");
-        Check(!G(0, 0, imb: 0).Hit && G(0, 0, imb: 0).Side == 0, "0 x 0 -> khong no, Side 0");
-        // không còn bóng vàng: dù cả hai bên vượt xa ngưỡng nổ thì Side vẫn là +1/-1, không bao giờ 0 khi Hit
-        bool never0 = true;
-        for (double b = 0; b <= 60; b += 4) for (double a = 0; a <= 60; a += 4) { var d = G(a, b, 10, 0); if (d.Hit && d.Side == 0) never0 = false; }
-        Check(never0, "khong con Side 0 (vang) khi no, ke ca khi tat cong can bang");
-        // ratio 1,25: B = 20 -> ngưỡng 25
-        Check(G(25, 0, B: 20).Hit && !G(24.9, 0, B: 20).Hit, "ratio 1,25 x B 20 = 25: 25 no, 24,9 khong");
-        Check(!G(25, 0, B: 20, ratio: 1.3).Hit, "ratio cu 1,3 x 20 = 26: 25 khong no (kiem mac dinh moi khac cu)");
-        // sàn 9 vẫn áp dù B nhỏ
-        Check(!G(8, 0, B: 2).Hit && G(9, 0, B: 2).Hit, "san 9: 8 khong, 9 co (B = 2)");
-        // cổng cân bằng áp cả chế độ ngưỡng cố định
-        Check(!CellBigLogic.Decide(20, 10, 0, false, 1.25, 9, 3, true, 10).Hit && CellBigLogic.Decide(30, 10, 0, false, 1.25, 9, 3, true, 10).Hit, "fixed: cong can bang van ap (20 x 10 khong, 30 x 10 co)");
-        // cỡ đơn điệu
-        double prev = -1; bool mono = true;
-        for (double m = 1.5; m <= 10; m += 0.25) { double s = CellBigLogic.Size(m, 1.5); if (s < prev - 1e-12) mono = false; prev = s; }
-        Check(mono, "co don dieu khong giam theo ty le");
-        Check(Math.Abs(CellBigLogic.Size(1.5, 1.5) - 1.0) < 1e-9, "o nguong: 1,0 x be ngang nen");
-        Check(Math.Abs(CellBigLogic.Size(6, 1.5) - 2.5) < 1e-9 && CellBigLogic.Size(20, 1.5) == 2.5, "ty le >= 6: 2,5 x be ngang nen");
-        Check(CellBigLogic.Size(3, 1.5) > 1.0 && CellBigLogic.Size(3, 1.5) < 2.5, "ty le 3: o giua 1,0..2,5");
-        Check(Math.Abs(D(15, 0).SizeFrac - 1.0) < 1e-9, "Decide tra SizeFrac 1,0 o nguong (Big)");
-        // ---- 2026-11-18: hai bac Big / Dot ----
-        Console.WriteLine("[CellBig] hai bac Big (vong mo) / Dot (cham dac)");
-        static CellBigDecision T(double buy, double sell, double B = 20, double dot = 1.5, double imb = 3.0, double floor = 9)
-            => CellBigLogic.Decide(buy, sell, B, true, 1.25, floor, imb, false, 0, dot);
-        Check(T(25, 0).Tier == CellBigLogic.TierBig && T(25, 0).Hit, "25 x 0, B 20: >= 1,25 B, ben yeu 0 -> Big");
-        Check(T(24.9, 0).Tier == CellBigLogic.TierNone && !T(24.9, 0).Hit, "24,9 < 1,25 B va < 1,5 B -> khong co gi");
-        Check(T(29.9, 10).Tier == CellBigLogic.TierNone, "29,9 x 10: < 1,5 B (30) va can bang < 3 -> khong co gi");
-        Check(T(30, 10).Tier == CellBigLogic.TierBig, "30 x 10: >= 1,5 B va can bang = 3 -> Big (Big thang Dot)");
-        Check(T(30, 20).Tier == CellBigLogic.TierDot, "30 x 20, B 20: >= 1,5 B nhung can bang 1,5 < 3 -> Dot");
-        Check(T(29.9, 20).Tier == CellBigLogic.TierNone && T(26, 20).Tier == CellBigLogic.TierNone, "ben troi giua 1,25 B va 1,5 B ma can bang < 3 -> khong co gi");
-        Check(T(100, 101).Tier == CellBigLogic.TierDot && T(100, 101).Side == -1 && T(101, 100).Side == 1, "100 x 101 (can bang) lon hon 1,5 B -> Dot; Side theo ben troi");
-        Check(T(9, 0, B: 2).Tier == CellBigLogic.TierBig && T(8, 0, B: 2).Tier == CellBigLogic.TierNone, "san 9 ap cho ca hai bac: 9 co, 8 khong (B = 2)");
-        Check(T(8, 8, B: 2).Tier == CellBigLogic.TierNone && T(9, 9, B: 2).Tier == CellBigLogic.TierDot, "san 9 cho Dot: 8 x 8 khong, 9 x 9 Dot");
-        Check(T(40, 0, dot: 0).Tier == CellBigLogic.TierBig && T(30, 20, dot: 0).Tier == CellBigLogic.TierNone, "dotRatio 0 = tat Dot: hang Dot thanh khong co gi, Big giu nguyen");
-        Check(T(30, 20).SizeFrac == CellBigLogic.DotSizeFrac && T(25, 0).SizeFrac >= 1.0, "SizeFrac: Dot = 0,45; Big >= 1,0");
-        Check(CellBigLogic.Decide(15, 0, 0, false, 1.25, 9, 3, true, 10, 1.5).Tier == CellBigLogic.TierBig, "fixed: 15 x 0 -> Big");
-        var fx = CellBigLogic.Decide(15, 14, 0, false, 1.25, 9, 3, true, 10, 1.5);
-        Check(fx.Tier == CellBigLogic.TierDot && fx.Hit, "fixed: 15 x 14 (can bang) >= nguong co dinh 10 -> Dot");
-        Check(CellBigLogic.Decide(9, 8, 0, false, 1.25, 9, 3, true, 5, 1.5).Tier == CellBigLogic.TierDot && CellBigLogic.Decide(8, 7, 0, false, 1.25, 9, 3, true, 5, 1.5).Tier == CellBigLogic.TierNone, "fixed: Dot dung max(nguong co dinh, san 9)");
-        Check(CellBigLogic.Decide(30, 20, 0, false, 1.25, 9, 3, true, 10, 0).Tier == CellBigLogic.TierNone, "fixed + dotRatio 0: can bang -> khong co gi");
-        // niêm phong: bản ghi cũ (không có CellDot) nạp ra Big; Dot ghi/đọc lại đúng
+        Console.WriteLine("[CellBig] mac dinh (CellBigSettings)");
+        var d = new CellBigSettings();
+        Check(d.MaxSideRatio == 0.5 && d.LocalTicks == 5 && d.MinImbalance == 4.0 && d.DotTradesRatio == 2.4 && d.DotLocalTicks == 3 && d.MinSide == 9 && d.DotEnabled && !d.FixedMode, "mac dinh: 0,5 / +-5 / 4 / 2,4 / +-3 / san 9");
+
+        Console.WriteLine("[CellBig] Big: bien ty le bien tren side >= 0,5 x ben troi lon nhat trung binh (avgMaxSide 40 -> 20)");
+        Check(Count(Ev(S(), 100, 40, L(100, 0, 20)), 100, CellBigLogic.TierBig) == 1, "side 20 = 0,5 x 40 -> Big (bien dung)");
+        Check(Count(Ev(S(), 100, 40, L(100, 0, 19)), 100, CellBigLogic.TierBig) == 0, "side 19 < 20 -> khong");
+        Check(Count(Ev(S(), 100, 40, L(100, 21, 0)), 100, CellBigLogic.TierBig) == 1, "buy 21 -> Big (xet ben troi, ben yeu 0)");
+        Check(Ev(S(), 100, 40, L(100, 8, 8)).Count == 0, "8 x 8 (tong 16) khong no: xet ben troi, khong xet tong");
+
+        Console.WriteLine("[CellBig] Big: lon hon HAN moi tick khac trong +-5 tick cung nen");
+        // neighbour side 20 (khong tu thanh Big vi 19.. dung avgMaxSide lon de neighbour khong no): avgMaxSide 40 -> nguong 20; dung neighbour 19 de khong no
+        Check(Count(Ev(S(), 100, 40, L(100, 0, 25), L(105, 0, 19)), 100, CellBigLogic.TierBig) == 1, "tick lang gieng cach 5 co side 19 < 25 -> Big");
+        Check(Count(Ev(S(), 100, 40, L(100, 0, 25), L(105, 0, 25)), 100, CellBigLogic.TierBig) == 0, "tick cach 5 bang 25 (hoa) -> KHONG Big (phai lon hon han)");
+        Check(Count(Ev(S(), 100, 40, L(100, 0, 25), L(95, 0, 26)), 100, CellBigLogic.TierBig) == 0, "tick cach 5 phia duoi lon hon (26) -> khong Big");
+        Check(Count(Ev(S(), 100, 40, L(100, 0, 25), L(106, 0, 25)), 100, CellBigLogic.TierBig) == 1, "tick bang cach 6 (ngoai cua so +-5) -> van Big");
+        Check(Count(Ev(S(), 100, 40, L(100, 0, 25), L(101, 0, 26)), 100, CellBigLogic.TierBig) == 0, "tick ke ben lon hon -> khong Big");
+        var tie = Ev(S(), 100, 40, L(100, 0, 25), L(103, 0, 25));
+        Check(tie.Count(x => x.Tier == CellBigLogic.TierBig) == 0, "hai tick bang nhau trong cua so -> khong tick nao Big");
+        Check(Count(Ev(S(), 100, 40, L(100, 0, 25), L(104, 30, 0)), 100, CellBigLogic.TierBig) == 0, "tick gieng lon hon o BEN KIA (buy 30 vs sell 25) van chan: so side voi side");
+        Check(Count(Ev(S(), 100, 40, L(100, 0, 25)), 100, CellBigLogic.TierBig) == 1, "tick vang (khong co gieng) tinh 0 -> Big");
+        // o gieng volume 0 bi bo (khong lam chan)
+        Check(Count(Ev(S(), 100, 40, L(100, 0, 25), new CellLevel(101, 99, 99, 0, 0)), 100, CellBigLogic.TierBig) == 1, "o co volume 0 bi bo qua, khong chan");
+
+        Console.WriteLine("[CellBig] Big: mat can bang side >= 4 x max(weak, 1)");
+        Check(Count(Ev(S(), 100, 40, L(100, 5, 20)), 100, CellBigLogic.TierBig) == 1, "20 x 5: 20 = 4 x 5 -> Big (bien dung)");
+        Check(Count(Ev(S(), 100, 40, L(100, 5.1, 20)), 100, CellBigLogic.TierBig) == 0, "20 x 5,1: 20 < 20,4 -> khong");
+        Check(Count(Ev(S(), 100, 40, L(100, 0, 20)), 100, CellBigLogic.TierBig) == 1, "20 x 0: weak 0 qua");
+        // weak 0 duoc tinh la 1: side 3 < 4 x 1 -> khong; side 4 -> co (nguong ratio thap)
+        Check(Count(Ev(S(), 100, 2, L(100, 0, 3)), 100, CellBigLogic.TierBig) == 0, "weak 0 tinh la 1: side 3 < 4 -> khong");
+        Check(Count(Ev(S(), 100, 2, L(100, 0, 4)), 100, CellBigLogic.TierBig) == 1, "weak 0 tinh la 1: side 4 = 4 -> Big");
+        Check(Count(Ev(S(s => s.MinImbalance = 0), 100, 2, L(100, 0, 1)), 100, CellBigLogic.TierBig) == 1, "MinImbalance 0 = tat dieu kien");
+        Check(Count(Ev(S(), 100, 40, L(100, 100, 101)), 100, CellBigLogic.TierBig) == 0, "100 x 101 can bang -> khong Big");
+
+        Console.WriteLine("[CellBig] san MinSide 9 ap cho ca Big va Dot");
+        Check(Count(Ev(S(s => s.MinSide = 9), 100, 4, L(100, 0, 8)), 100, CellBigLogic.TierBig) == 0, "side 8 < san 9 -> khong Big (du >= 0,5 x 4)");
+        Check(Count(Ev(S(s => s.MinSide = 9), 100, 4, L(100, 0, 9)), 100, CellBigLogic.TierBig) == 1, "side 9 = san -> Big");
+        Check(Count(Ev(S(s => s.MinSide = 9), 2, 100, L(100, 0, 8, 50)), 100, CellBigLogic.TierDot) == 0, "san 9 cho Dot: side 8 khong du dieu kien lenh van khong Dot");
+        Check(Count(Ev(S(s => s.MinSide = 9), 2, 100, L(100, 0, 9, 50)), 100, CellBigLogic.TierDot) == 1, "san 9 cho Dot: side 9 -> Dot");
+
+        Console.WriteLine("[CellBig] Dot: so lenh >= 2,4 x volume TB moi o (avgLevelVol 10 -> 24)");
+        Check(Count(Ev(S(), 10, 1000, L(100, 5, 5, 24)), 100, CellBigLogic.TierDot) == 1, "24 lenh = 2,4 x 10 -> Dot (bien dung)");
+        Check(Count(Ev(S(), 10, 1000, L(100, 5, 5, 23)), 100, CellBigLogic.TierDot) == 0, "23 lenh < 24 -> khong");
+        Check(Count(Ev(S(), 10, 1000, L(100, 30, 29, 24)), 100, CellBigLogic.TierDot) == 1, "Dot KHONG doi mat can bang (30 x 29)");
+        Check(Count(Ev(S(), 10, 1000, L(100, 5, 5, 24), L(103, 5, 5, 5)), 100, CellBigLogic.TierDot) == 0, "gieng cach 3 co side bang 5 (hoa) -> khong Dot");
+        Check(Count(Ev(S(), 10, 1000, L(100, 5, 5, 24), L(104, 5, 5, 5)), 100, CellBigLogic.TierDot) == 1, "gieng bang cach 4 (ngoai +-3) -> Dot");
+        Check(Count(Ev(S(), 10, 1000, L(100, 6, 5, 24), L(103, 5, 5, 5)), 100, CellBigLogic.TierDot) == 1, "side 6 > gieng cach 3 co side 5 -> Dot");
+        Check(Count(Ev(S(), 10, 1000, L(100, 5, 5, 24), L(98, 6, 5, 1)), 100, CellBigLogic.TierDot) == 0, "gieng cach 2 co side 6 > 5 -> khong Dot");
+        Check(Count(Ev(S(), 10, 1000, L(100, 5, 5, 24), L(98, 5, 5, 24)), 100, CellBigLogic.TierDot) == 0 && Count(Ev(S(), 10, 1000, L(100, 5, 5, 24), L(98, 5, 5, 24)), 98, CellBigLogic.TierDot) == 0, "hai o hoa side va deu du lenh -> khong o nao Dot");
+        Check(Ev(S(s => s.DotEnabled = false), 10, 1000, L(100, 5, 5, 24)).Count == 0, "DotEnabled = false -> khong Dot");
+
+        Console.WriteLine("[CellBig] mot o vua Big vua Dot -> hai dau (Big truoc, Dot sau); mau theo ben troi");
+        var both = Ev(S(), 10, 20, L(100, 0, 30, 30));
+        Check(both.Count == 2 && both[0].Tier == CellBigLogic.TierBig && both[1].Tier == CellBigLogic.TierDot && both.All(x => x.Tick == 100 && x.Side == -1), "30 sell, 30 lenh: Big roi Dot, cung tick 100, Side -1");
+        Check(Ev(S(), 10, 20, L(100, 30, 0, 30))[0].Side == 1, "buy trội -> Side +1");
+        Check(Ev(S(), 10, 1000, L(100, 5, 5, 30))[0].Side == -1, "hoa buy = sell -> Side -1 (nhu Python: ask > bid moi xanh)");
+        var sz = Ev(S(), 10, 20, L(100, 0, 30, 30));
+        Check(sz[1].SizeFrac == CellBigLogic.DotSizeFrac && sz[0].SizeFrac >= 1.0 && sz[0].SizeFrac <= 2.5, "SizeFrac: Dot 0,45; Big 1,0..2,5");
+
+        Console.WriteLine("[CellBig] chua du lich su / chua co muc nen");
+        Check(CellBigLogic.Evaluate(new[] { L(100, 0, 500, 500) }, false, 0, 0, S()).Count == 0, "chua du 5 nen -> khong co gi");
+        Check(CellBigLogic.Evaluate(new[] { L(100, 0, 500, 500) }, true, 0, 0, S()).Count == 0, "muc nen 0 -> khong co gi");
+
+        Console.WriteLine("[CellBig] che do nguong co dinh");
+        var fx = S(s => { s.FixedMode = true; s.FixedThreshold = 10; });
+        Check(Count(CellBigLogic.Evaluate(new[] { L(100, 0, 10) }, false, 0, 0, fx), 100, CellBigLogic.TierBig) == 1, "fixed: 10 >= 10 -> Big khong can nen nen");
+        Check(CellBigLogic.Evaluate(new[] { L(100, 0, 9) }, false, 0, 0, fx).Count == 0, "fixed: 9 < 10 -> khong");
+        Check(Count(CellBigLogic.Evaluate(new[] { L(100, 0, 10) }, false, 0, 0, fx), 100, CellBigLogic.TierDot) == 1, "fixed: Dot dung side >= nguong co dinh");
+        Check(CellBigLogic.Evaluate(new[] { L(100, 15, 14) }, false, 0, 0, fx).All(x => x.Tier == CellBigLogic.TierDot), "fixed: 15 x 14 can bang -> chi Dot (Big can mat can bang)");
+        Check(Math.Abs(CellBigLogic.Evaluate(new[] { L(100, 0, 20) }, false, 0, 0, fx)[0].SizeFrac - 1.5) < 1e-9, "fixed: Big co cỡ giua 1,5");
+        var fx9 = S(s => { s.FixedMode = true; s.FixedThreshold = 5; s.MinSide = 9; });
+        Check(CellBigLogic.Evaluate(new[] { L(100, 0, 8) }, false, 0, 0, fx9).Count == 0 && CellBigLogic.Evaluate(new[] { L(100, 0, 9) }, false, 0, 0, fx9).Count == 2, "fixed + san: dung max(nguong, san 9)");
+
+        Console.WriteLine("[CellBig] cỡ Big (Size) theo side / ben troi lon nhat TB");
+        Check(Math.Abs(CellBigLogic.Size(0.5, 0.5) - 1.0) < 1e-9, "o nguong 0,5: 1,0 x be ngang nen");
+        Check(Math.Abs(CellBigLogic.Size(2, 0.5) - 2.5) < 1e-9 && CellBigLogic.Size(10, 0.5) == 2.5, "tu 2 lan tro len: 2,5 x be ngang nen");
+        bool mono = true; double prev = 0;
+        for (double m = 0.5; m <= 4; m += 0.05) { double v = CellBigLogic.Size(m, 0.5); if (v < prev - 1e-12) mono = false; prev = v; }
+        Check(mono, "Size don dieu khong giam");
+        Check(CellBigLogic.Size(1, 0.5) > 1.0 && CellBigLogic.Size(1, 0.5) < 2.5, "mult 1: o giua");
+        var m1 = Ev(S(), 100, 40, L(100, 0, 40));
+        Check(Math.Abs(m1[0].Mult - 1.0) < 1e-9 && Math.Abs(m1[0].SizeFrac - CellBigLogic.Size(1, 0.5)) < 1e-9, "Mark.Mult = side / avgMaxSide, SizeFrac theo Size");
+
+        Console.WriteLine("[CellBig] BarStats (volume TB moi o co giao dich + ben troi lon nhat)");
+        Check(CellBigLogic.BarStats(new[] { L(1, 3, 4), L(2, 10, 0), L(3, 0, 7) }, out double mean, out double mx) && Math.Abs(mean - 24.0 / 3) < 1e-9 && mx == 10, "mean = 24/3, maxSide 10", $"{mean} {mx}");
+        Check(CellBigLogic.BarStats(new[] { L(1, 10, 10), new CellLevel(2, 0, 0, 0, 0) }, out double m2, out _) && Math.Abs(m2 - 20) < 1e-9, "o volume 0 khong tinh");
+        Check(!CellBigLogic.BarStats(new CellLevel[0], out _, out _), "nen rong -> khong nap");
+
+        Console.WriteLine("[CellBig] baseline: 20 nen DA DONG truoc, can >= 5 nen (hai chuoi)");
+        var bl = new CellBigBaseline(20);
+        for (int i = 0; i < 4; i++) bl.Add(10, 30);
+        Check(!bl.TryGet(out _) && !bl.TryGetMaxSide(out _), "4 nen -> chua co muc nen");
+        bl.Add(10, 30);
+        Check(bl.TryGet(out double b5) && Math.Abs(b5 - 10) < 1e-9 && bl.TryGetMaxSide(out double x5) && Math.Abs(x5 - 30) < 1e-9, "5 nen -> co (10, 30)");
+        bl.Add(1000, 5000);
+        bl.TryGet(out double after); bl.TryGetMaxSide(out double afterMx);
+        Check(after > 10 && afterMx > 30, "nen vua dong moi vao muc nen cua nen SAU");
+        var b2 = new CellBigBaseline(20);
+        for (int i = 0; i < 20; i++) b2.Add(0, 0);
+        for (int i = 0; i < 20; i++) b2.Add(8, 16);
+        b2.TryGet(out double b20); b2.TryGetMaxSide(out double x20);
+        Check(b2.Count == 20 && Math.Abs(b20 - 8) < 1e-9 && Math.Abs(x20 - 16) < 1e-9, "cuon dung 20 nen (ca hai chuoi)");
+        var b3 = new CellBigBaseline(20);
+        for (int i = 0; i < 6; i++) b3.Add(5 + i, 10 + i);
+        b3.TryGet(out double y1); b3.TryGetMaxSide(out double z1);
+        for (int r = 0; r < 50; r++) CellBigLogic.Evaluate(new[] { L(100, 0, 20) }, true, y1, z1, S());
+        b3.TryGet(out double y2);
+        Check(y1 == y2 && b3.Count == 6, "nen live tinh lai nhieu lan khong nap trung muc nen");
+
+        Console.WriteLine("[CellBig] SignalCache: ban ghi cu khong co CellDot nap ra Big; Dot ghi doc lai dung");
         var oldRec = System.Text.Json.JsonSerializer.Deserialize("{\"TimeTicks\":1,\"Bubbles\":[{\"Price\":1.5,\"CellBig\":true,\"CellSide\":1}]}", SignalCacheJson.Default.CachedBarData);
         Check(oldRec != null && oldRec.Bubbles[0].CellBig && !oldRec.Bubbles[0].CellDot, "ban ghi cu khong co CellDot -> nap ra Big");
         var dotRec = new CachedBarData { TimeTicks = 2 }; dotRec.Bubbles.Add(new CachedBubbleData { CellBig = true, CellDot = true });
         var back = System.Text.Json.JsonSerializer.Deserialize(System.Text.Json.JsonSerializer.Serialize(dotRec, SignalCacheJson.Default.CachedBarData), SignalCacheJson.Default.CachedBarData);
         Check(back.Bubbles[0].CellDot, "CellDot ghi roi doc lai van true");
+
         // MergeAdjacent (gop o lien ke)
-        static string K(System.Collections.Generic.List<int> l) { l.Sort(); return string.Join(",", l); }
-        var c3 = new System.Collections.Generic.List<(long, double)> { (10, 20), (11, 50), (12, 30) };
+        static string K(List<int> l) { l.Sort(); return string.Join(",", l); }
+        var c3 = new List<(long, double)> { (10, 20), (11, 50), (12, 30) };
         Check(K(CellBigLogic.MergeAdjacent(c3, 1)) == "1", "cum 3 o lien nhau -> giu o lon nhat", K(CellBigLogic.MergeAdjacent(c3, 1)));
-        var c2 = new System.Collections.Generic.List<(long, double)> { (10, 20), (12, 30) };
+        var c2 = new List<(long, double)> { (10, 20), (12, 30) };
         Check(K(CellBigLogic.MergeAdjacent(c2, 1)) == "0,1", "2 o cach 2 tick, gap 1 -> giu ca hai");
         Check(K(CellBigLogic.MergeAdjacent(c3, 0)) == "0,1,2", "gap 0 -> giu het");
-        var c5 = new System.Collections.Generic.List<(long, double)> { (1, 10), (2, 20), (3, 30), (4, 40), (5, 50) };
+        var c5 = new List<(long, double)> { (1, 10), (2, 20), (3, 30), (4, 40), (5, 50) };
         Check(K(CellBigLogic.MergeAdjacent(c5, 1)) == "0,2,4", "chuoi 5 o side tang: NMS giu 5,3,1", K(CellBigLogic.MergeAdjacent(c5, 1)));
         Check(K(CellBigLogic.MergeAdjacent(c5, 2)) == "1,4", "chuoi 5 o gap 2: giu o 5 va o 2", K(CellBigLogic.MergeAdjacent(c5, 2)));
-        var tie = new System.Collections.Generic.List<(long, double)> { (11, 30), (10, 30) };
-        Check(K(CellBigLogic.MergeAdjacent(tie, 1)) == "1", "hoa side: giu o tick thap hon (tat dinh)");
-        var tie2 = new System.Collections.Generic.List<(long, double)> { (10, 30), (11, 30) };
+        var tie1 = new List<(long, double)> { (11, 30), (10, 30) };
+        Check(K(CellBigLogic.MergeAdjacent(tie1, 1)) == "1", "hoa side: giu o tick thap hon (tat dinh)");
+        var tie2 = new List<(long, double)> { (10, 30), (11, 30) };
         Check(K(CellBigLogic.MergeAdjacent(tie2, 1)) == "0", "hoa side (thu tu dao): van giu tick thap hon");
-        Check(CellBigLogic.MergeAdjacent(new System.Collections.Generic.List<(long, double)>(), 1).Count == 0, "rong -> rong");
-        Console.WriteLine("[CellBig] gom hang (RowTicks/RowOffset)");
-        // RowOf: offset 1, 2 tick/hang -> (1,2)=0, (3,4)=1, (41241,41242)=20620 ; so am: (-1,0)=-1, (-3,-2)=-2
-        Check(CellBigLogic.RowOf(41241, 2, 1) == CellBigLogic.RowOf(41242, 2, 1), "offset 1: tick le 41241 + chan 41242 cung hang");
-        Check(CellBigLogic.RowOf(41242, 2, 1) != CellBigLogic.RowOf(41243, 2, 1), "offset 1: 41242 va 41243 khac hang");
-        Check(CellBigLogic.RowOf(1, 2, 1) == 0 && CellBigLogic.RowOf(2, 2, 1) == 0 && CellBigLogic.RowOf(3, 2, 1) == 1, "offset 1: (1,2)=0, 3=1");
-        Check(CellBigLogic.RowOf(-1, 2, 1) == -1 && CellBigLogic.RowOf(0, 2, 1) == -1 && CellBigLogic.RowOf(-2, 2, 1) == -2 && CellBigLogic.RowOf(-3, 2, 1) == -2, "so am: floor chia dung", $"{CellBigLogic.RowOf(-1,2,1)},{CellBigLogic.RowOf(0,2,1)},{CellBigLogic.RowOf(-2,2,1)},{CellBigLogic.RowOf(-3,2,1)}");
-        Check(CellBigLogic.RowOf(41240, 2, 0) == CellBigLogic.RowOf(41241, 2, 0) && CellBigLogic.RowOf(41241, 2, 0) != CellBigLogic.RowOf(41242, 2, 0), "offset 0: (41240,41241) cung hang");
-        Check(CellBigLogic.RowOf(-1, 2, 0) == -1 && CellBigLogic.RowOf(-2, 2, 0) == -1 && CellBigLogic.RowOf(-3, 2, 0) == -2, "offset 0 so am");
-        Check(CellBigLogic.RowOf(41241, 1, 0) == 41241 && CellBigLogic.RowOf(41241, 1, 1) == 41241 && CellBigLogic.RowOf(-5, 1, 1) == -5, "RowTicks 1: hang = tick, offset khong anh huong");
-        Check(CellBigLogic.RowOf(10, 3, 1) == 3 && CellBigLogic.RowOf(9, 3, 1) == 2, "RowTicks 3");
-        // tâm hàng
-        Check(Math.Abs(CellBigLogic.RowCenterTick(CellBigLogic.RowOf(41241, 2, 1), 2, 1) - 41241.5) < 1e-9, "tam hang (41241,41242) = 41241,5 tick");
-        Check(Math.Abs(CellBigLogic.RowCenterPrice(CellBigLogic.RowOf(41241, 2, 1), 2, 1, 0.1) - 4124.15) < 1e-9, "gia ve = 4124,15 cho hang 4124.1-4124.2");
-        Check(Math.Abs(CellBigLogic.RowCenterTick(CellBigLogic.RowOf(-3, 2, 1), 2, 1) - (-2.5)) < 1e-9, "tam hang so am (-3,-2) = -2,5");
-        Check(Math.Abs(CellBigLogic.RowCenterTick(CellBigLogic.RowOf(41241, 1, 1), 1, 1) - 41241) < 1e-9, "RowTicks 1: tam = chinh tick");
-        // gom mức
-        var lv = new System.Collections.Generic.List<(long, double, double, double)>
-            { (41241, 3, 4, 7), (41242, 5, 1, 6), (41243, 2, 2, 4), (41245, 9, 0, 9) };
-        var rws = CellBigLogic.GroupRows(lv, 2, 1);
-        Check(rws.Count == 3, "gom 4 muc -> 3 hang (41241+41242, 41243, 41245)", rws.Count.ToString());
-        Check(rws[0].Buy == 8 && rws[0].Sell == 5 && rws[0].Vol == 13 && rws[0].LoTick == 41241 && rws[0].HiTick == 41242, "hang 1: buy 8 sell 5 vol 13");
-        Check(rws[1].Buy == 2 && rws[1].Vol == 4 && rws[2].Buy == 9, "hang 2, 3 dung tong");
-        Check(rws[0].RowId < rws[1].RowId && rws[1].RowId < rws[2].RowId, "hang xep theo RowId tang");
-        var rws1 = CellBigLogic.GroupRows(lv, 1, 1);
-        Check(rws1.Count == 4 && rws1[0].Buy == 3 && rws1[0].Sell == 4, "RowTicks 1: moi tick 1 hang");
-        // BarRowMean
-        Check(CellBigLogic.BarRowMean(rws, out double rm) && Math.Abs(rm - 26.0 / 3) < 1e-9, "BarRowMean = tong vol / so hang co vol", rm.ToString());
-        var withZero = new System.Collections.Generic.List<CellBigLogic.Row> { new CellBigLogic.Row { Vol = 10 }, new CellBigLogic.Row { Vol = 0 } };
-        Check(CellBigLogic.BarRowMean(withZero, out double rm2) && Math.Abs(rm2 - 10) < 1e-9, "hang vol 0 khong tinh");
-        Check(!CellBigLogic.BarRowMean(new System.Collections.Generic.List<CellBigLogic.Row>(), out _), "khong hang -> khong nap");
-        // ngưỡng 1,3 x B (điều kiện cân bằng tắt)
-        static CellBigDecision N(double buy, double sell, double B = 10) => CellBigLogic.Decide(buy, sell, B, true, 1.3, 3, 0, false, 0);
-        Check(N(13, 0).Hit && !N(12.9, 0).Hit, "bien 1,3 x B = 13: 13 no, 12,9 khong");
-        Check(N(0, 13).Hit && N(0, 13).Side == -1, "sell 13 no, do");
-        Check(!CellBigLogic.Decide(2, 0, 1, true, 1.3, 3, 0, false, 0).Hit && CellBigLogic.Decide(3, 0, 1, true, 1.3, 3, 0, false, 0).Hit, "san 3 van giu");
-        // RowTicks=1: luật theo hàng = luật theo tick (Decide trên từng mức)
-        bool same = true;
-        foreach (var l in lv)
-        {
-            var r1 = CellBigLogic.GroupRows(new[] { l }, 1, 1)[0];
-            var d1 = N(r1.Buy, r1.Sell, 3); var d2 = N(l.Item2, l.Item3, 3);
-            if (d1.Hit != d2.Hit || d1.Side != d2.Side) same = false;
-        }
-        Check(same, "RowTicks 1 cho ket qua nhu luat theo tick");
+        Check(CellBigLogic.MergeAdjacent(new List<(long, double)>(), 1).Count == 0, "rong -> rong");
 
-        // BarMean
-        Check(CellBigLogic.BarMean(100, 20, out double m1) && Math.Abs(m1 - 5) < 1e-9, "BarMean = tong / so muc gia");
-        Check(!CellBigLogic.BarMean(0, 0, out _), "nen rong -> khong nap");
-
-        Console.WriteLine("[CellBig] baseline B");
-        var bl = new CellBigBaseline(20);
-        for (int i = 0; i < 4; i++) bl.Add(10);
-        Check(!bl.TryGet(out _), "4 nen -> chua co B");
-        bl.Add(10);
-        Check(bl.TryGet(out double b5) && Math.Abs(b5 - 10) < 1e-9, "5 nen -> co B = 10");
-        // nến hiện tại KHÔNG nằm trong B: B xét trước khi Add nến hiện tại
-        bl.TryGet(out double before);
-        bl.Add(1000);   // nen vua dong
-        bl.TryGet(out double after);
-        Check(Math.Abs(before - 10) < 1e-9 && after > before, "B xet nen idx chi gom cac nen truoc idx");
-        // cuốn 20 nến
-        var b2 = new CellBigBaseline(20);
-        for (int i = 0; i < 20; i++) b2.Add(0);   // se bi day ra
-        for (int i = 0; i < 20; i++) b2.Add(8);
-        b2.TryGet(out double b20);
-        Check(b2.Count == 20 && Math.Abs(b20 - 8) < 1e-9, "cuon dung 20 nen");
-        // nến live: tính lại nhiều lần mà không Add -> B không đổi
-        var b3 = new CellBigBaseline(20);
-        for (int i = 0; i < 6; i++) b3.Add(5 + i);
-        b3.TryGet(out double x1); for (int r = 0; r < 50; r++) CellBigLogic.Decide(20, 0, x1, true, 1.5, 3, 0, false, 0);
-        b3.TryGet(out double x2);
-        Check(x1 == x2 && b3.Count == 6, "nen live tinh lai nhieu lan khong nap trung baseline");
+        Console.WriteLine("[CellBig] FloorDiv (StopHuntLogic dung)");
+        Check(CellBigLogic.FloorDiv(7, 2) == 3 && CellBigLogic.FloorDiv(-1, 2) == -1 && CellBigLogic.FloorDiv(-4, 2) == -2, "floor chia dung voi so am");
         return _fail;
     }
 }

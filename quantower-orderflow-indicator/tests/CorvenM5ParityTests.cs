@@ -1,8 +1,8 @@
-// Đối chiếu C# (CellBigLogic + ExhaustionLogic) với script Python research/corven_m5_2026-11-18/ trên 27 nến M5 THẬT
-// (12:15-14:25 UTC ngày 18/11/2026, file data-export/data-footprint/fp_GCZ26_XCEC_Time_20261108-20261118_9d16h*.csv).
-// Mong đợi (Python, luật đã chọn): 17 bóng Ô lớn (Big) / 8 trùng vị trí CORVEN; 23 dấu kiệt sức / 9 trùng CORVEN;
-// chấm nhỏ (Dot, fit_dots_m5.py in 'Dot (ngoai Big)'): 79 trên 26 nến 12:15-14:20 (Python bỏ nến 14:25 đang chạy dở).
-// Không có file dữ liệu (chưa commit / máy khác) thì bỏ qua, không tính là lỗi.
+// Đối chiếu C# (CellBigLogic.Evaluate + ExhaustionLogic.Detect) với script Python research/corven_m5_2026-11-18/ (rules.py + final_eval.py)
+// trên 26 nến M5 THẬT (12:15-14:20 UTC ngày 18/11/2026, file data-export/data-footprint/fp_GCZ26_XCEC_Time_20261108-20261118_9d16h*.csv).
+// Mức nền (20 nến đã đóng trước) được làm nóng từ MỌI nến trước đó trong file, giống Python.
+// Python xuất dấu ra research/corven_m5_2026-11-18/marks_python_26bars.csv (export_marks.py); test đòi TẬP (nến, tick, loại, màu) giống HỆT.
+// Mong đợi: Big 22, Dot 37, kiệt sức 13. Không có file dữ liệu (chưa commit / máy khác) thì bỏ qua, không tính là lỗi.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -19,23 +19,10 @@ static class CorvenM5ParityTests
         if (!ok) _fail++;
     }
 
-    // 24 bóng CORVEN (giờ, giá tâm) — copy từ fit_bubbles_m5.py (cột "P"/"B" là màu CORVEN, không dùng để ghép vị trí)
-    static readonly (string t, double price)[] GT =
+    static string FindUp(string rel)
     {
-        ("12:15",3774.65),("12:30",3768.05),("12:35",3760.95),("12:35",3760.15),("12:45",3754.15),("12:45",3752.45),
-        ("12:50",3750.75),("12:55",3748.95),("13:00",3757.15),("13:00",3755.4),("13:00",3750.6),("13:00",3749.0),
-        ("13:05",3766.3),("13:10",3773.5),("13:10",3770.55),("13:15",3772.15),("13:15",3767.95),("13:20",3770.2),
-        ("13:25",3773.85),("13:30",3782.4),("13:30",3779.8),("13:50",3790.75),("13:50",3788.55),("14:20",3777.95)
-    };
-    // dấu kiệt sức CORVEN (fit_exhaustion_m5.py)
-    static readonly HashSet<string> CTop = new() { "12:35", "12:45", "12:50", "13:30", "13:45" };
-    static readonly HashSet<string> CBot = new() { "12:15", "13:10", "13:20", "13:40", "13:45", "13:50" };
-
-    static string FindCsv()
-    {
-        const string name = "data-export/data-footprint/fp_GCZ26_XCEC_Time_20261108-20261118_9d16h";
         for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
-            if (File.Exists(Path.Combine(d.FullName, name + ".csv"))) return Path.Combine(d.FullName, name);
+            if (File.Exists(Path.Combine(d.FullName, rel))) return Path.Combine(d.FullName, rel);
         return null;
     }
 
@@ -43,88 +30,84 @@ static class CorvenM5ParityTests
 
     public static int Run()
     {
-        string prefix = FindCsv();
-        if (prefix == null || !File.Exists(prefix + "_bars.csv")) { Console.WriteLine("[M5] (bo qua doi chieu CORVEN M5: khong co file fp_..._9d16h.csv)"); return 0; }
-        Console.WriteLine("[M5] Doi chieu C# voi Python tren 27 nen M5 that (CORVEN 18/11)");
+        string levelsCsv = FindUp("data-export/data-footprint/fp_GCZ26_XCEC_Time_20261108-20261118_9d16h.csv");
+        string barsCsv = FindUp("data-export/data-footprint/fp_GCZ26_XCEC_Time_20261108-20261118_9d16h_bars.csv");
+        string pyCsv = FindUp("quantower-orderflow-indicator/research/corven_m5_2026-11-18/marks_python_26bars.csv");
+        if (levelsCsv == null || barsCsv == null || pyCsv == null) { Console.WriteLine("[M5] (bo qua doi chieu CORVEN M5: thieu file fp_..._9d16h.csv hoac marks_python_26bars.csv)"); return 0; }
+        Console.WriteLine("[M5] Doi chieu C# voi Python tren 26 nen M5 that (CORVEN 18/11)");
 
-        // gom per-level theo nến (đúng thứ tự file), tick = round(price x 10)
-        var lv = new Dictionary<string, List<(long tick, double bid, double ask, double vol)>>();
+        // per-level theo nến (đúng thứ tự file), tick = round(price x 10); Python: D = D[volume > 0]
+        var lv = new Dictionary<string, List<CellLevel>>();
         var order = new List<string>();
         bool first = true;
-        foreach (var line in File.ReadLines(prefix + ".csv"))
+        foreach (var line in File.ReadLines(levelsCsv))
         {
             if (first) { first = false; continue; }
             var f = line.Split(',');
-            double vol = P(f[5]); if (vol <= 0) continue;            // Python: D = D[volume > 0]
+            double vol = P(f[5]); if (vol <= 0) continue;
             string key = f[1].Substring(0, 16);
-            if (!lv.TryGetValue(key, out var l)) { l = new(); lv[key] = l; order.Add(key); }
-            l.Add(((long)Math.Round(P(f[2]) * 10), P(f[3]), P(f[4]), vol));
+            if (!lv.TryGetValue(key, out var l)) { l = new List<CellLevel>(); lv[key] = l; order.Add(key); }
+            l.Add(new CellLevel((long)Math.Round(P(f[2]) * 10), P(f[4]), P(f[3]), vol, (int)P(f[7])));   // buy = ask_vol (f[4]), sell = bid_vol (f[3])
         }
         var ohlc = new Dictionary<string, (long o, long h, long l, long c)>();
         first = true;
-        foreach (var line in File.ReadLines(prefix + "_bars.csv"))
+        foreach (var line in File.ReadLines(barsCsv))
         {
             if (first) { first = false; continue; }
             var f = line.Split(',');
             ohlc[f[1].Substring(0, 16)] = ((long)Math.Round(P(f[2]) * 10), (long)Math.Round(P(f[3]) * 10), (long)Math.Round(P(f[4]) * 10), (long)Math.Round(P(f[5]) * 10));
         }
 
+        var sample = new HashSet<string>();
+        for (int k = 0; k < 26; k++) sample.Add($"2026-11-18 {12 + (15 + 5 * k) / 60:00}:{(15 + 5 * k) % 60:00}");
+
         var bl = new CellBigBaseline(20);
-        var bubbles = new Dictionary<string, List<(double pos, double bid, double ask)>>();
-        var exh = new List<(string t, bool top)>();
-        int dots26 = 0, dots27 = 0, bigs26 = 0;
-        var times = new HashSet<string>();
-        for (int h = 12; h <= 14; h++) for (int m = 0; m < 60; m += 5) if (string.CompareOrdinal($"{h:00}:{m:00}", "12:15") >= 0 && string.CompareOrdinal($"{h:00}:{m:00}", "14:25") <= 0) times.Add($"2026-11-18 {h:00}:{m:00}");
-        var s = new ExhSettings();
+        var set = new CellBigSettings();   // mặc định: 0,5 / 5 / 4 / 2,4 / 3 / sàn 9
+        var ex = new ExhSettings();         // mặc định: râu 3 / 6 mức / 1,1
+        var cs = new HashSet<string>();
+        int nBig = 0, nDot = 0, nExh = 0, seen = 0;
         foreach (var key in order)
         {
-            var rows = CellBigLogic.GroupRows(lv[key].Select(x => (x.tick, x.ask, x.bid, x.vol)), 2, 1);   // buy = ask, sell = bid
-            bool has = bl.TryGet(out double B);
-            if (times.Contains(key))
+            bool hasB = bl.TryGet(out double mean) & bl.TryGetMaxSide(out double mxSide);
+            if (sample.Contains(key))
             {
-                foreach (var r in rows)
+                seen++;
+                string t = key.Substring(11);
+                foreach (var m in CellBigLogic.Evaluate(lv[key], hasB, mean, mxSide, set))
                 {
-                    var d = CellBigLogic.Decide(r.Buy, r.Sell, B, has, 1.25, 9, 3.0, false, 0, 1.5);
-                    if (d.Hit && d.Tier == CellBigLogic.TierDot) { dots27++; if (!key.EndsWith("14:25")) dots26++; }
-                    if (!d.Hit || d.Tier != CellBigLogic.TierBig) continue;
-                    if (!key.EndsWith("14:25")) bigs26++;
-                    string t = key.Substring(11);
-                    if (!bubbles.TryGetValue(t, out var lst)) bubbles[t] = lst = new();
-                    lst.Add((CellBigLogic.RowCenterPrice(r.RowId, 2, 1, 0.1), r.Sell, r.Buy));
+                    string col = m.Side > 0 ? "B" : "S";
+                    if (m.Tier == CellBigLogic.TierBig) { nBig++; cs.Add($"{t},{m.Tick},big,{col}"); }
+                    else { nDot++; cs.Add($"{t},{m.Tick},dot,{col}"); }
                 }
                 if (ohlc.TryGetValue(key, out var b))
                 {
-                    var el = lv[key].Select(x => new ExhLevel(x.tick, x.bid, x.ask, x.vol)).ToList();
+                    var el = lv[key].Select(x => new ExhLevel(x.Tick, x.Sell, x.Buy, x.Vol)).ToList();
                     foreach (bool top in new[] { true, false })
-                        if (ExhaustionLogic.Detect(top, b.o, b.h, b.l, b.c, el, s).Hit) exh.Add((key.Substring(11), top));
+                    {
+                        var r = ExhaustionLogic.Detect(top, b.o, b.h, b.l, b.c, el, ex, hasB, mean);
+                        if (r.Hit) { nExh++; cs.Add($"{t},{r.Tick},exh,{(top ? "T" : "B")}"); }
+                    }
                 }
             }
-            if (CellBigLogic.BarRowMean(rows, out double mean)) bl.Add(mean);
+            if (CellBigLogic.BarStats(lv[key], out double bm, out double bx)) bl.Add(bm, bx);
         }
 
-        int nb = bubbles.Values.Sum(x => x.Count);
-        Check(times.Count == 27, "27 nen mau", times.Count.ToString());
-        Check(nb == 17, "bong O lon: 17 (nhu Python)", nb.ToString());
-        // ghép vị trí kiểu Python: theo từng nến, tham lam theo (khoảng cách, i, j), dung sai 0,5 giá
-        int hit = 0, gtBarsWith = 0, bothBars = 0;
-        foreach (var grp in GT.GroupBy(g => g.t))
+        var py = new HashSet<string>();
+        first = true;
+        foreach (var line in File.ReadLines(pyCsv))
         {
-            var gl = grp.ToList(); gtBarsWith++;
-            bubbles.TryGetValue(grp.Key, out var al); al ??= new();
-            if (al.Count > 0) bothBars++;
-            var pairs = new List<(double d, int i, int j)>();
-            for (int i = 0; i < al.Count; i++) for (int j = 0; j < gl.Count; j++) { double dd = Math.Abs(al[i].pos - gl[j].price); if (dd <= 0.5) pairs.Add((dd, i, j)); }
-            pairs.Sort((x, y) => x.d != y.d ? x.d.CompareTo(y.d) : x.i != y.i ? x.i.CompareTo(y.i) : x.j.CompareTo(y.j));
-            var ua = new HashSet<int>(); var ub = new HashSet<int>();
-            foreach (var p in pairs) { if (ua.Contains(p.i) || ub.Contains(p.j)) continue; ua.Add(p.i); ub.Add(p.j); hit++; }
+            if (first) { first = false; continue; }
+            if (line.Trim().Length > 0) py.Add(line.Trim());
         }
-        Check(dots26 == 79, "cham nho (Dot, ngoai Big) tren 26 nen: 79 (nhu Python)", $"{dots26} (27 nen: {dots27}; Big 26 nen: {bigs26})");
-        Check(hit == 8, "bong trung vi tri CORVEN: 8", hit.ToString());
-        Check(gtBarsWith == 15 && bothBars == 11, "11/15 nen co bong CORVEN cung co bong cua minh", $"{bothBars}/{gtBarsWith}");
 
-        int ne = exh.Count, eh = exh.Count(x => x.top ? CTop.Contains(x.t) : CBot.Contains(x.t));
-        Check(ne == 23, "dau kiet suc: 23 (nhu Python)", ne.ToString());
-        Check(eh == 9, "dau kiet suc trung CORVEN: 9", eh.ToString());
+        Check(seen == 26, "26 nen mau co trong file", seen.ToString());
+        Check(nBig == 22, "Big: 22 (nhu Python)", nBig.ToString());
+        Check(nDot == 37, "Dot: 37 (nhu Python)", nDot.ToString());
+        Check(nExh == 13, "kiet suc: 13 (nhu Python)", nExh.ToString());
+        var onlyCs = cs.Except(py).OrderBy(x => x).ToList();
+        var onlyPy = py.Except(cs).OrderBy(x => x).ToList();
+        Check(onlyCs.Count == 0 && onlyPy.Count == 0, $"tap (nen, tick, loai, mau) C# == Python ({cs.Count} / {py.Count})",
+              $"chi C#: [{string.Join(" ; ", onlyCs)}] chi Python: [{string.Join(" ; ", onlyPy)}]");
         Console.WriteLine(_fail == 0 ? "  -> M5: tat ca PASS" : $"  -> M5: {_fail} FAIL");
         return _fail;
     }

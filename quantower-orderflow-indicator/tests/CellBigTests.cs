@@ -74,6 +74,13 @@ static class CellBigTests
         Check(Blues(Ev(P(), 10, L(100, 40, 0), L(103, 0, 90)), 100) == 1, "Bid cua gieng khong ngan Ask");
         Check(Ev(P(s => s.DotLocalTicks = 0), 10, L(100, 0, 40), L(101, 0, 90)).Count == 2, "DotLocalTicks = 0 -> khong xet gieng");
 
+        Console.WriteLine("[CellBig] nen 5 (nguong 14): mac dinh chi cuc dai +-4 tick; DotLocalTicks = 0 (Nổ ở mọi mức giá) -> moi muc >= 14");
+        var ex = new[] { L(1, 9, 5), L(2, 3, 14), L(3, 7, 15), L(4, 12, 16), L(5, 3, 10) };
+        var exD = Ev(P(), 5, ex);
+        Check(exD.Count == 1 && Reds(exD, 4) == 1, "mac dinh: dung 1 cham do o tick 4", string.Join(",", exD.Select(x => x.Side + "@" + x.Tick)));
+        var exA = Ev(P(s => s.DotLocalTicks = 0), 5, ex);
+        Check(exA.Count == 3 && Reds(exA, 2) == 1 && Reds(exA, 3) == 1 && Reds(exA, 4) == 1 && exA.All(x => x.Side < 0), "moi muc: do o tick 2,3,4, khong xanh", string.Join(",", exA.Select(x => x.Side + "@" + x.Tick)));
+
         Console.WriteLine("[CellBig] che: chấm xanh bi bo neu co chấm do cung nen cach <= 6 tick (do khong bi che)");
         static CellBigSettings H(int n) => new CellBigSettings { MinSide = 0, DotHideBuyNearSellTicks = n };
         var h6 = Ev(H(6), 10, L(100, 40, 0), L(106, 0, 40));

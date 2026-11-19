@@ -73,7 +73,7 @@ Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score,
 **Native Quantower nên thêm:** M1 → Cumulative Delta (line) + VWAP; M30 → Volume Profile phiên (VA + HVN/LVN).
 
 ## Bảng cấu hình then chốt (Settings)
-> ⚠️ **Từ 2026-11-08 Settings chỉ còn 12 ô bật/tắt (từ 2026-11-18 thêm ô thứ 13; từ 2026-11-19 gỡ ô Hấp thụ nên còn 12 "Chấm Bid/Ask nhỏ · Bật")** (Nến delta, Ô Bid/Ask lớn, Số Delta,
+> ⚠️ **Từ 2026-11-08 Settings chỉ còn 12 ô bật/tắt (từ 2026-11-18 thêm ô thứ 13; từ 2026-11-19 gỡ ô Hấp thụ nên còn 12 "Chấm Bid/Ask nhỏ · Bật"; sau đó thêm ô "Chấm Bid/Ask nhỏ · Nổ ở mọi mức giá" (mặc định tắt) — bật thì chấm nổ ở MỌI mức vượt ngưỡng, bỏ điều kiện lớn nhất trong ±4 tick; Settings còn 13 ô)** (Nến delta, Ô Bid/Ask lớn, Số Delta,
 > Big Trade, Big Delta line, Kiệt sức, Stacked Imbalance, Divergence, Sweep, Unfinished, Stop-hunt) — người
 > học không bao giờ chỉnh số nên mọi con số/màu bên dưới thành **hằng số mặc định trong code** (bỏ attribute
 > `[InputParameter]`, giữ property). Giá trị chốt theo cấu hình đang chạy trên chart: Số Delta cỡ chữ **7**,

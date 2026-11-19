@@ -196,6 +196,10 @@ namespace OrderFlowBubbles
 
         public int CellDotLocalTicks { get; set; } = 4;
 
+        // Bật = chấm Bid/Ask nổ ở MỌI mức giá vượt ngưỡng (bỏ điều kiện "lớn nhất trong ±CellDotLocalTicks tick"); tắt = như cũ.
+        [InputParameter("Chấm Bid/Ask nhỏ · Nổ ở mọi mức giá (bỏ điều kiện lớn nhất trong ±4 tick)", 27)]
+        public bool CellDotAllLevels { get; set; } = false;
+
         // chấm xanh bị che (không vẽ) nếu cùng nến có chấm đỏ cách <= số tick này (CORVEN vẽ đỏ đè xanh); < 0 = tắt che
         public int CellDotHideBuyNearSellTicks { get; set; } = 6;
 
@@ -408,7 +412,7 @@ namespace OrderFlowBubbles
 
         private CellBigSettings CellSettings() => new CellBigSettings
         {
-            DotEnabled = CellDotEnabled, DotMedianRatio = CellDotMedianRatio, DotLocalTicks = CellDotLocalTicks, DotHideBuyNearSellTicks = CellDotHideBuyNearSellTicks,
+            DotEnabled = CellDotEnabled, DotMedianRatio = CellDotMedianRatio, DotLocalTicks = CellDotAllLevels ? 0 : CellDotLocalTicks, DotHideBuyNearSellTicks = CellDotHideBuyNearSellTicks,
             MinSide = CellBigMinSide, FixedMode = UseFixedThreshold, FixedThreshold = FixedThresholdContracts
         };
 
@@ -419,7 +423,7 @@ namespace OrderFlowBubbles
             // thì thêm vào đây.
             return string.Join("|",
                 UseFixedThreshold, FixedThresholdContracts,
-                CellBigEnabled, CellBigBaselineBars, CellBigMinSide, CellBigTopN, CellBigMergeTicks, CellDotEnabled, CellDotMedianRatio, CellDotLocalTicks, CellDotHideBuyNearSellTicks, "cellbig-v18",
+                CellBigEnabled, CellBigBaselineBars, CellBigMinSide, CellBigTopN, CellBigMergeTicks, CellDotEnabled, CellDotMedianRatio, CellDotLocalTicks, CellDotAllLevels, CellDotHideBuyNearSellTicks, "cellbig-v18",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, "noabs-v1",
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 BigTradeEnabled, BigTradeMinContracts, "bigtrade-v1",

@@ -109,7 +109,10 @@ function buildProfile(B, a, b, from, to, o) {
     }
   }
   const poc = bot + (pIdx + 0.5) * rh;
-  return { from, to, right: Math.max(to, from + wMax), wMax, rows: rowList, poc, pocTop: poc + rh * 0.5, pocBot: poc - rh * 0.5 };
+  return {
+    from, to, right: Math.max(to, from + wMax), wMax, rows: rowList, poc, pocTop: poc + rh * 0.5, pocBot: poc - rh * 0.5,
+    vah: bot + (up + 1) * rh, val: bot + dn * rh,
+  };
 }
 
 // ==HVN-CORE-BEGIN==
@@ -779,6 +782,7 @@ return {
       showBand3 = false, bandMult3 = 3.0, bandLine3 = '#ab47bc59', bandFill3 = '#ab47bc0d',
       showHVN = true, hvnBuyColor = '#26a69a', hvnSellColor = '#ef5350', hvnInsideColor = '#9e9e9e',
       showLVN = true, lvnBuyColor = '#29b6f6', lvnSellColor = '#ffa726',
+      showWeekVA = true, showDayVA = true, colWeekVA = '#4a90e2', colDayVA = '#c9a43c',
     } = indicator.extendData?.inputs || {};
     const n = dataList.length;
     const res = new Array(n);
@@ -879,8 +883,15 @@ return {
     };
     // Day profiles first: draw paints the list top-most first, so they sit above the week's.
     const profiles = [];
-    if (showDayProfile) profiles.push(...sessionProfiles('1D', dayRgb));
-    if (showWeekProfile) profiles.push(...sessionProfiles('1W', weekRgb));
+    const vaLines = [];
+    const addProfiles = (anchor, rgb, showVA, color) => {
+      for (const p of sessionProfiles(anchor, rgb)) {
+        profiles.push(p);
+        if (showVA) vaLines.push({ from: p.from, to: p.to, vah: p.vah, val: p.val, color });
+      }
+    };
+    if (showDayProfile) addProfiles('1D', dayRgb, showDayVA, colDayVA);
+    if (showWeekProfile) addProfiles('1W', weekRgb, showWeekVA, colWeekVA);
     for (const key of Object.keys(cache.profiles)) if (!usedKeys.has(key)) delete cache.profiles[key];
 
     const vwap = showVWAP ? vwapOnChart(dataList, vw1m.B, vwapSeries(vw1m.B, vw1m.days, o, vw1m.c, vw1m.sameBars), o, res, barMs) : null;
@@ -924,6 +935,7 @@ return {
 
     indicator._benzoVP = {
       profiles,
+      vaLines,
       pocFill: rgba(pocRgb, 0.38),
       pocLine: rgba(pocRgb, 0.85),
       vwap,
@@ -967,6 +979,22 @@ return {
       ctx.lineTo(X(p.to), y);
     }
     ctx.stroke();
+
+    // VAH / VAL: dashed, no fill.
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    for (const l of st.vaLines || []) {
+      if (l.to < from - 1 || l.from > to + 1) continue;
+      ctx.strokeStyle = l.color;
+      ctx.beginPath();
+      for (const price of [l.vah, l.val]) {
+        const y = Y(price);
+        ctx.moveTo(X(l.from), y);
+        ctx.lineTo(X(l.to), y);
+      }
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
 
     // 2. VWAP line and band lines.
     const vw = st.vwap;

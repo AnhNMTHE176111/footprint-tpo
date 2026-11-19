@@ -73,8 +73,8 @@ Chưa đo được ngưỡng "lệnh đơn bao nhiêu là to" bằng số liệu
 ```
 %AppData%\OrderFlowBubbles\bigtrade-log\<symbol>_<khung>.csv   (cột: time_ticks,time_iso,price,mot,buy,sell)
 ```
-Chạy vài phiên rồi mở file này bằng Python/Excel để đo lại `BigTradeAbsFloor`/`BigTradeFixedContracts`
-cho chuẩn thay vì đoán.
+Mở file này bằng Python để đo lại ngưỡng lệnh đơn (`research/corven_m5_2026-11-18/bigtrade_threshold.py`;
+ngưỡng hiện tại `BigTradeMinContracts` = 10 hợp đồng).
 
 ## Bộ reference DLL lấy từ đâu (tái lập)
 DLL tham chiếu được trích **từ chính installer Quantower** (Windows-only, không có gói NuGet):

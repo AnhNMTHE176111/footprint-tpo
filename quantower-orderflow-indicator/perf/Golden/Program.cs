@@ -110,6 +110,9 @@ namespace GoldenPerf
             return bad == 0 ? 0 : 1;
         }
 
+        // Khi đặt biến môi trường OFB_FAKE_MOT=1: giả lập lệnh đơn = bên trội của ô (cận trên) để chạy thử đường Big Trade (lịch sử thật luôn = 0). KHÔNG dùng cho golden.
+        static readonly bool FakeMot = Environment.GetEnvironmentVariable("OFB_FAKE_MOT") == "1";
+
         // ---------------------------------------------------------------- nạp dữ liệu
         static List<HistoryItemBar> LoadBars(string lvlCsv, string barsCsv)
         {
@@ -140,7 +143,7 @@ namespace GoldenPerf
                 if (!byIdx.TryGetValue(int.Parse(p[0], Inv), out var b)) continue;
                 b.VolumeAnalysisData.PriceLevels[D(p[2])] = new VolumeAnalysisItem
                 {
-                    SellVolume = D(p[3]), BuyVolume = D(p[4]), Volume = D(p[5]), Trades = (int)D(p[7]), BuyTrades = (int)D(p[8]), SellTrades = (int)D(p[9]), MaxOneTradeVolume = D(p[10])
+                    SellVolume = D(p[3]), BuyVolume = D(p[4]), Volume = D(p[5]), Trades = (int)D(p[7]), BuyTrades = (int)D(p[8]), SellTrades = (int)D(p[9]), MaxOneTradeVolume = FakeMot ? Math.Max(D(p[3]), D(p[4])) : D(p[10])
                 };
             }
             // kiểm tra nhanh: Delta của Quantower = buy - sell phải khớp cột delta

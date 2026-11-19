@@ -6,8 +6,8 @@ const RES_MS = { '1m': 60000, '5m': 300000, '15m': 900000, '30m': 1800000, '1h':
 const DAY_MS = 86400000;
 const HOUR_MS_ = 3600000;
 const ANCHOR_SPAN_MIN = { '1h': 60, '4h': 240, '1D': 1440, '1W': 10080, '1M': 44640 };
-const MAX_HISTORY_BARS = 120000;
-const TRANSPARENT = 'rgba(0, 0, 0, 0)';   // the platform allows 200k lower-timeframe bars per script
+const MAX_HISTORY_BARS = 120000;   // the platform allows 200k lower-timeframe bars per script
+const TRANSPARENT = 'rgba(0, 0, 0, 0)';
 // Row transparency (Pine 0..100) runs from G_EDGE (lowest volume) to G_PEAK (POC).
 const G_PEAK = 3;
 const G_EDGE = 68;
@@ -729,6 +729,27 @@ function baseSeries(hist, live, cache) {
   return { B: cache.B, sameBars: false };
 }
 
+// Per-indicator caches live here, not on the indicator object: the platform can hand calc() the
+// indicator wrapped in a Proxy, and a Map reached through a Proxy throws "incompatible receiver".
+// The indicator only carries the cache's id (a string survives any wrapping).
+const CACHES = {};
+const CACHE_IDS = [];
+const MAX_CACHES = 6;
+function newCache() {
+  return { hist: null, B: null, bKey: '', sessBy: null, vwapSeries: null, profiles: {}, dayKey: '', days: null, zoneKey: '', zones: null, res: null, zeros: null };
+}
+function cacheOf(indicator) {
+  let id = indicator._benzoCacheId;
+  if (typeof id !== 'string' || !CACHES[id]) {
+    id = `benzo-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+    indicator._benzoCacheId = id;
+    CACHES[id] = newCache();
+    CACHE_IDS.push(id);
+    while (CACHE_IDS.length > MAX_CACHES) delete CACHES[CACHE_IDS.shift()];
+  }
+  return CACHES[id];
+}
+
 return {
   figures: [
     {
@@ -758,8 +779,7 @@ return {
     const res = new Array(n);
     for (let i = 0; i < n; i++) res[i] = {};
     if (n === 0) return res;
-    if (!indicator._benzoCache) indicator._benzoCache = { hist: null, B: null, bKey: '', sessBy: null, vwapSeries: null, profiles: new Map(), dayKey: '', days: null, zoneKey: '', zones: null, res: null };
-    const cache = indicator._benzoCache;
+    const cache = cacheOf(indicator);
     // While a data request is in flight, keep showing the last result instead of a blank frame.
     // Hide-candles mode: the chart paints every candle in a transparent colour (barColor), so only
     // the indicator's drawings stay; the rows are reused across calls, so the colour is also cleared.
@@ -828,10 +848,10 @@ return {
         }
         const key = `${anchor}|${B.t[a]}|${B.t[b - 1]}|${b - a}|${span.from}|${span.to}|${profKey}`;
         usedKeys.add(key);
-        let p = cache.profiles.get(key);
+        let p = cache.profiles[key];
         if (p === undefined) {
           p = buildProfile(B, a, b, span.from, span.to, po);
-          cache.profiles.set(key, p);
+          cache.profiles[key] = p;
         }
         if (p) out.push(p);
       }
@@ -841,7 +861,7 @@ return {
     const profiles = [];
     if (isDay || showDayProfile) profiles.push(...sessionProfiles('1D', dayRgb));
     if (!isDay) profiles.push(...sessionProfiles('1W', weekRgb));
-    for (const key of cache.profiles.keys()) if (!usedKeys.has(key)) cache.profiles.delete(key);
+    for (const key of Object.keys(cache.profiles)) if (!usedKeys.has(key)) delete cache.profiles[key];
 
     const vwap = showVWAP ? vwapOnChart(dataList, B, vwapSeries(B, days, o, cache, sameBars), o, res, barMs) : null;
     // HVN and LVN zones, each across the pane from its session's start. Above the live price =

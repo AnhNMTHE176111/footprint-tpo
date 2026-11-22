@@ -504,3 +504,11 @@ Người học yêu cầu: research internet + brainstorm (Fable) → Opus imple
 - Áp cách 6 bước lên profile ngày 30/10 (ảnh không có số → đo độ dài thanh khối lượng bằng pixel; dòng 3970–3976 bị vạch phủ, sửa tay). HVN bền qua mọi cách làm mượt/cỡ dòng: 4010–3989 (đỉnh ~4000), 3928–3904 (đỉnh 3907–3908 = POC), 3894–3886 (đỉnh ~3891). Nút 3975 và 3954 không bền. Câu hỏi mở: CORVEN dùng TPO daily hôm nay hay hôm qua.
 
 <!-- Thử push: kiểm tra git push hoạt động sau khi xác minh email (2026-11-08) -->
+
+## 2026-11-22 — Research Volume Profile (bản chất, hành vi, setup cho scalp M1)
+Người học yêu cầu research nguồn công khai toàn cầu rồi dạy 2 thứ: bản chất/hành vi VP và các setup mạnh. 2 agent, ~110 lượt tìm/đọc.
+Tổng hợp: `volume-profile/VP-BAN-CHAT-VA-SETUP.md`. Kết luận chính:
+- Định nghĩa ổn định (70% = quy ước 1σ; POC; đuôi = từ chối; poor high/low = đỉnh phẳng). Hành vi hầu hết là giai thoại.
+- Có số: luật 80% chỉ đạt 42–53% (vàng 43%); naked POC chạm lại = đối chứng trung điểm phiên; xác suất chạm mức phụ thuộc khoảng cách (< 0,5 biên độ ngày ~62%, 1–2 biên độ 11–16%). Khớp 3 lần đo trong repo.
+- Ví dụ người học "2 vùng đấu giá xong thì quay về đấu giá đoạn giữa": không nguồn nào nói; tài liệu nói giá đi qua đoạn mỏng nhanh và phản ứng tại đó. Đã giao bài đếm 20 phiên để tự kiểm.
+- Setup có số duy nhất: IB break/retest trên ES/NQ (tradingstats) — chưa có cho vàng. Mọi setup vào lệnh VP khác chưa kiểm định công khai.

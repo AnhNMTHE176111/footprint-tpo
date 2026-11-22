@@ -1,0 +1,7 @@
+bước nhảy: 36
+LVN ALL {'n': 271, 'wr': np.float64(30.3), 'expR': np.float64(-0.175), 'ci90': (np.float64(-0.341), np.float64(-0.004)), 'totR': np.float64(-47.5), 'pts': np.float64(-135.3)}
+    H1 08/24-07/25 {'n': 165, 'wr': np.float64(23.0), 'expR': np.float64(-0.414), 'ci90': (np.float64(-0.584), np.float64(-0.233)), 'totR': np.float64(-68.3), 'pts': np.float64(-151.1)}
+    H2 08/25-08/26 {'n': 106, 'wr': np.float64(41.5), 'expR': np.float64(0.196), 'ci90': (np.float64(-0.092), np.float64(0.51)), 'totR': np.float64(20.8), 'pts': np.float64(15.8)}
+FAKE ALL {'n': 539, 'wr': np.float64(28.9), 'expR': np.float64(-0.198), 'ci90': (np.float64(-0.308), np.float64(-0.083)), 'totR': np.float64(-106.9), 'pts': np.float64(-193.3)}
+    H1 08/24-07/25 {'n': 275, 'wr': np.float64(29.5), 'expR': np.float64(-0.312), 'ci90': (np.float64(-0.446), np.float64(-0.174)), 'totR': np.float64(-85.8), 'pts': np.float64(-190.7)}
+    H2 08/25-08/26 {'n': 264, 'wr': np.float64(28.4), 'expR': np.float64(-0.08), 'ci90': (np.float64(-0.251), np.float64(0.098)), 'totR': np.float64(-21.1), 'pts': np.float64(-2.6)}

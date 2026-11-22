@@ -512,3 +512,6 @@ Tổng hợp: `volume-profile/VP-BAN-CHAT-VA-SETUP.md`. Kết luận chính:
 - Có số: luật 80% chỉ đạt 42–53% (vàng 43%); naked POC chạm lại = đối chứng trung điểm phiên; xác suất chạm mức phụ thuộc khoảng cách (< 0,5 biên độ ngày ~62%, 1–2 biên độ 11–16%). Khớp 3 lần đo trong repo.
 - Ví dụ người học "2 vùng đấu giá xong thì quay về đấu giá đoạn giữa": không nguồn nào nói; tài liệu nói giá đi qua đoạn mỏng nhanh và phản ứng tại đó. Đã giao bài đếm 20 phiên để tự kiểm.
 - Setup có số duy nhất: IB break/retest trên ES/NQ (tradingstats) — chưa có cho vàng. Mọi setup vào lệnh VP khác chưa kiểm định công khai.
+
+## 2026-11-22 — Backtest sách "Thực chiến cùng Pro Market Profile" (người học yêu cầu bỏ qua kiến thức/cách đo cũ trong repo, chỉ dùng data)
+Báo cáo: `mp-pro/BAO-CAO-BACKTEST.md`. 5 vòng trên GCZ26 90d + GC liên tục 2 năm (~500 phiên). Không setup nào của sách có lợi thế khi viết thành luật cơ học; 2 ứng viên tốt nhất (phá LVN M5, fake out VA M5) âm rõ trên 2 năm (−0,18R n=271; −0,20R n=539). Vào ở M1 âm ở mọi setup.

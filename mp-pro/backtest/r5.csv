@@ -1,0 +1,17 @@
+setup,n_dev,wr_dev,R_dev,ci_dev,n_val,wr_val,R_val,ci_val
+K lb5 minpoc2,33,57.6,0.015,"(np.float64(-0.218), np.float64(0.246))",13,61.5,0.116,"(np.float64(-0.314), np.float64(0.484))"
+K lb5 minpoc3,6,66.7,0.108,"(np.float64(-0.502), np.float64(0.627))",3,66.7,0.217,"(np.float64(-0.399), np.float64(0.833))"
+K lb5 minpoc4,2,100.0,0.558,"(np.float64(0.293), np.float64(0.823))",1,100.0,0.835,"(np.float64(0.835), np.float64(0.835))"
+K lb10 minpoc2,53,54.7,-0.02,"(np.float64(-0.219), np.float64(0.198))",12,58.3,0.054,"(np.float64(-0.413), np.float64(0.451))"
+K lb10 minpoc3,16,68.8,0.202,"(np.float64(-0.145), np.float64(0.546))",0,,,
+K lb10 minpoc4,3,100.0,0.823,"(np.float64(0.822), np.float64(0.825))",0,,,
+K lb20 minpoc2,59,57.6,0.032,"(np.float64(-0.18), np.float64(0.244))",6,33.3,-0.414,"(np.float64(-1.074), np.float64(0.376))"
+K lb20 minpoc3,24,62.5,0.12,"(np.float64(-0.179), np.float64(0.399))",0,,,
+K lb20 minpoc4,5,100.0,0.707,"(np.float64(0.492), np.float64(0.819))",0,,,
+SPK both,18,50.0,-0.111,"(np.float64(-0.511), np.float64(0.289))",7,57.1,0.03,"(np.float64(-0.495), np.float64(0.554))"
+SPK cont,0,,,,1,100.0,0.826,"(np.float64(0.826), np.float64(0.826))"
+SPK rev,18,50.0,-0.111,"(np.float64(-0.511), np.float64(0.289))",6,50.0,-0.103,"(np.float64(-0.711), np.float64(0.505))"
+PIN tf30 w0.5 1R,766,48.3,-0.103,"(np.float64(-0.166), np.float64(-0.039))",650,49.5,-0.044,"(np.float64(-0.112), np.float64(0.022))"
+PIN tf30 w0.66 1R,251,43.8,-0.173,"(np.float64(-0.274), np.float64(-0.071))",239,50.2,-0.022,"(np.float64(-0.135), np.float64(0.084))"
+PIN tf15 w0.5 1R,1531,51.3,-0.073,"(np.float64(-0.116), np.float64(-0.031))",1336,50.3,-0.04,"(np.float64(-0.083), np.float64(0.004))"
+PIN tf15 w0.66 1R,514,51.4,-0.069,"(np.float64(-0.149), np.float64(0.004))",440,48.0,-0.082,"(np.float64(-0.16), np.float64(-0.005))"

@@ -103,6 +103,8 @@ function buildProfile(B, a, b, from, to, o) {
         bottom: bot + r * rh,
         dW,
         uW: w - dW,
+        vol: tv,
+        sellVol: dr[r],
         sellFill: rgba(o.sellRgb, alpha),
         buyFill: rgba(o.buyRgb, alpha),
       });
@@ -111,8 +113,25 @@ function buildProfile(B, a, b, from, to, o) {
   const poc = bot + (pIdx + 0.5) * rh;
   return {
     from, to, right: Math.max(to, from + wMax), wMax, rows: rowList, poc, pocTop: poc + rh * 0.5, pocBot: poc - rh * 0.5,
-    vah: bot + (up + 1) * rh, val: bot + dn * rh,
+    vah: bot + (up + 1) * rh, val: bot + dn * rh, rh,
   };
+}
+
+// Volume as TradingView's format.volume shows it: 950, 1.23K, 4.5M.
+function volumeText(v) {
+  const a = Math.abs(v);
+  const short = (x, s) => `${Number(x.toFixed(x < 10 ? 2 : x < 100 ? 1 : 0))}${s}`;
+  if (a >= 1e9) return short(v / 1e9, 'B');
+  if (a >= 1e6) return short(v / 1e6, 'M');
+  if (a >= 1e3) return short(v / 1e3, 'K');
+  return String(Math.round(v));
+}
+
+// Font size of the row numbers from how many profile rows fit on screen (Pine: large / normal /
+// small / tiny); null = zoomed out too far, numbers hidden.
+function rowNumberPx(rowsOnScreen, maxRows) {
+  if (!(rowsOnScreen > 0) || rowsOnScreen > maxRows) return null;
+  return rowsOnScreen <= 15 ? 16 : rowsOnScreen <= 25 ? 12 : rowsOnScreen <= 40 ? 10 : 8;
 }
 
 // ==HVN-CORE-BEGIN==
@@ -783,7 +802,8 @@ return {
       showHVN = true, hvnBuyColor = '#26a69a', hvnSellColor = '#ef5350', hvnInsideColor = '#9e9e9e',
       showLVN = true, lvnBuyColor = '#29b6f6', lvnSellColor = '#ffa726',
       showWeekVA = true, showDayVA = true, colWeekVA = '#4a90e2', colDayVA = '#c9a43c',
-    } = indicator.extendData?.inputs || {};
+      rowNumbersOn = 'Day', rowNumberColor = '#d1d4dc', rowNumberMax = 70,
+    } =indicator.extendData?.inputs || {};
     const n = dataList.length;
     const res = new Array(n);
     for (let i = 0; i < n; i++) res[i] = {};
@@ -867,7 +887,10 @@ return {
         if (!span) continue;
         if (isLive) {
           const p = buildProfile(B, a, b, span.from, span.to, po);
-          if (p) out.push(p);
+          if (p) {
+            p.numbers = rowNumbersOn === 'Both' || (anchor === '1D' ? rowNumbersOn === 'Day' : rowNumbersOn === 'Week');
+            out.push(p);
+          }
           continue;
         }
         const key = `${anchor}|${B.t[a]}|${B.t[b - 1]}|${b - a}|${span.from}|${span.to}|${profKey}`;
@@ -943,6 +966,8 @@ return {
       vwapWidth,
       bands,
       zones,
+      rowNumberColor,
+      rowNumberMax: Math.max(1, Number(rowNumberMax) || 70),
     };
     cache.res = res;
     return withCandleColor(res);
@@ -969,7 +994,28 @@ return {
       visProfiles.push(p);
     }
 
-    // 1. POC lines (top layer).
+    // 0. Total volume of each row of the developing profile, in one column at its start (top layer,
+    // still behind the candles like Pine's labels). Rows on screen = pane height / row height in
+    // pixels, so it follows the real zoom, manual price-scale zoom included.
+    const paneH = bv.bounds(args).height || (ctx.canvas ? ctx.canvas.clientHeight : 0);
+    for (const p of visProfiles) {
+      if (!p.numbers || !p.rows.length) continue;
+      const rowPx = Math.abs(Y(p.rows[0].bottom) - Y(p.rows[0].top));
+      const px = rowNumberPx(rowPx > 0 ? paneH / rowPx : NaN, st.rowNumberMax);
+      if (!px) continue;
+      ctx.font = bv.font(args, { size: px }).css;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = st.rowNumberColor;
+      const x = X(p.from) + 2;
+      for (const r of p.rows) {
+        const y = Y(r.bottom + p.rh * 0.5);
+        if (y < -px || y > paneH + px) continue;
+        ctx.fillText(volumeText(r.vol), x, y);
+      }
+    }
+
+    // 1. POC lines.
     ctx.strokeStyle = st.pocLine;
     ctx.lineWidth = 4;
     ctx.beginPath();

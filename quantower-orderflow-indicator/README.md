@@ -87,6 +87,18 @@ Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score,
 
 **Native Quantower nên thêm:** M1 → Cumulative Delta (line) + VWAP; M30 → Volume Profile phiên (VA + HVN/LVN).
 
+## Chế độ ngưỡng "Không theo CORVEN (thống kê)" (2026-11-25)
+
+> Bật ở ô **"Chế độ ngưỡng (chấm Bid/Ask + Big Trade)"**. Mặc định vẫn là **"Theo CORVEN"**. Logic: `StatThreshold.cs`; đo đạc và spec: `research/stat_anomaly_2026-11-24/` (`SPEC.md`, bản Python chuẩn `sa3_ref.py`, so C# = Python `IMPL.md`).
+
+- **Chấm Bid/Ask:** một ô nổ chấm khi Bid (hoặc Ask) của nó lớn hơn 98% các ô **cùng khung giờ trong 5 ngày giao dịch trước** (khung giờ tính theo giờ Chicago, gộp thêm hai khung liền kề). 9 giờ tối giờ Việt Nam được so với 9 giờ tối các ngày trước, không so với phiên Á, nên ngưỡng tự co theo phiên và theo khung. Ví dụ đo được: NQ M1 ngưỡng khoảng 10 hợp đồng ở phiên Á, 31 ở phiên Mỹ; GC M5 khoảng 18 và 27.
+- **Big Trade:** một lệnh đơn nổ vòng khi nó lớn hơn 99% các lệnh đơn của 4 giờ gần nhất.
+- Các ô sát nhau gộp thành một bóng (giữ ô lớn nhất). Không có sàn, không có luật che chấm xanh gần chấm đỏ.
+- Ô **"Không theo CORVEN · Mức hiếm của chấm"** (chỉ hiện khi chọn chế độ này): 2% (mặc định), 1%, 0,5%. Chỉ mức 2% qua được bài kiểm "không sót ô lớn nhất ngày".
+- Khi bật chế độ này, các ô sau **không còn tác dụng** (tên ô giữ nguyên): "Dùng sàn tối thiểu", "Sàn tối thiểu", "Tự co dãn theo khung", "Bộ số", "Mã NQ/MNQ tự dùng bộ số Nasdaq", "Big Trade · Ngưỡng tự thích nghi", "Mật độ đích", "Sàn", "Tối đa vòng mỗi nến". Vẫn có tác dụng: "Ô Bid/Ask lớn · Bật", "Chấm Bid/Ask nhỏ · Bật", "Big Trade · Bật", **"Nổ ở mọi mức giá"** (vẽ mọi ô vượt ngưỡng, không gộp). "Nền tự co theo khung" vẫn điều khiển kiệt sức.
+- Tooltip chấm: `Sell - 53 Bid (Ask 39) | ngưỡng > 31 (2% lớn nhất cùng khung giờ, 5 ngày trước)`; khi chưa đủ ngày: `... (2% lớn nhất 120 phút gần nhất, chưa đủ ngày)`. Tooltip Big Trade: `Big trade: 1 lệnh 25 hợp đồng (ngưỡng > 12, 1% lớn nhất 240 phút gần nhất) | ô 3 Bid 30 Ask`.
+- **Giới hạn phải biết:** (1) đây là cách định nghĩa "ô lớn bất thường", **chưa hề đo là có lợi thế giao dịch**; (2) ở M1 thưa hơn chế độ theo CORVEN khoảng 3 lần (GC M1 khoảng 0,3–0,4 chấm mỗi nến); (3) chart cần nạp ít nhất 6 ngày giao dịch, hai ngày đầu của chart dùng ngưỡng tạm 120 phút; (4) NQ từ M15 trở lên: nửa giờ trước giờ mở cửa cổ phiếu Mỹ ngưỡng bị cao, dễ thiếu chấm; (5) Big Trade mới đo trên 16 phiên vàng và 6 phiên NQ, và cần chart chạy sống để có lệnh đơn; (6) chưa đo trên MGC, MNQ, khung trên H1; (7) chỉ chạy với nến thời gian có số phút nguyên (M1, M5, M15…); nến tick / range / số phút lẻ tự chạy như "Theo CORVEN". (8) stop hunt (bóng tím) lấy các bóng đang hiển thị làm đầu vào, nên bật chế độ này thì dấu stop hunt cũng đổi (GC M5: 139 → 103 dấu); số đo stop hunt cũ chỉ đúng với "Theo CORVEN". (9) Nến tính khi chart mới nạp ít ngày (ngưỡng tạm 120 phút) bị niêm phong với chấm đó; nạp sâu hơn vẫn giữ chấm cũ cho tới khi đổi một tham số.
+
 ## Bảng cấu hình then chốt (Settings)
 > ⚠️ **Từ 2026-11-08 Settings chỉ còn 12 ô bật/tắt (từ 2026-11-18 thêm ô thứ 13; từ 2026-11-19 gỡ ô Hấp thụ nên còn 12 "Chấm Bid/Ask nhỏ · Bật"; sau đó thêm ô "Chấm Bid/Ask nhỏ · Nổ ở mọi mức giá" (mặc định tắt) — bật thì chấm nổ ở MỌI mức vượt ngưỡng, bỏ điều kiện lớn nhất trong ±4 tick; Settings còn 13 ô)** (Nến delta, Ô Bid/Ask lớn, Số Delta,
 > Big Trade, Big Delta line, Kiệt sức, Stacked Imbalance, Divergence, Sweep, Unfinished, Stop-hunt) — người

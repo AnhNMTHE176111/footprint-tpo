@@ -1,0 +1,9 @@
+ma,khung,cau_hinh,so_nen_mau,cham_CORVEN,cham_CORVEN_nen,cham_minh,cham_minh_nen,recall,precision,F1,ghi_chu
+GC,1,goc,580,885,1.526,184,0.3172,0.2542,0.9891,0.4045,
+GC,1,p1,580,885,1.526,111,0.1914,0.1616,0.991,0.2779,
+GC,1,dc_dang_chay_khong_sot,580,885,1.526,482,0.831,0.5989,0.9004,0.7193,
+GC,1,dc_dang_chay_it_nhieu,580,885,1.526,328,0.5655,0.4565,0.9756,0.622,
+NQ,1,goc,534,1205,2.257,339,0.6348,0.195,0.5546,0.2886,"NQ: chart CORVEN gộp hàng 8 tick, chỉ tham khảo"
+NQ,1,p1,534,1205,2.257,222,0.4157,0.1494,0.6261,0.2412,"NQ: chart CORVEN gộp hàng 8 tick, chỉ tham khảo"
+NQ,1,dc_dang_chay_khong_sot,534,1205,2.257,585,1.096,0.2813,0.4564,0.3481,"NQ: chart CORVEN gộp hàng 8 tick, chỉ tham khảo"
+NQ,1,dc_dang_chay_it_nhieu,534,1205,2.257,471,0.882,0.2365,0.4756,0.3159,"NQ: chart CORVEN gộp hàng 8 tick, chỉ tham khảo"

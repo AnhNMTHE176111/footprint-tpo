@@ -1,0 +1,31 @@
+=== (a) ví dụ nhỏ, kết quả tính tay ===
+ĐẠT   cuon: ngưỡng 8, vòng {101: 12, 110: 11}; bản chuẩn có 5 nến rỗng xen giữa vẫn ra ngưỡng 8 (nến rỗng không nộp, không tính vào 5 nến)
+ĐẠT   ky_luc: ngưỡng 15, vòng {102: 20}
+ĐẠT   cung_gio: ngày 4 ngưỡng 10, vòng {100: 11}; ba ngày đầu chưa có ngưỡng
+ĐẠT   lai: ngưỡng tỉ số 4 (hiển thị 10), vòng {100: 11}
+ĐẠT   gộp vòng: ba ô mot 9 ở 100, 103, 105, g 2 -> giữ 100 và 103, bỏ 105
+=== (e) số nến nhật ký M1 ===
+ĐẠT   GC 22948 (chuẩn 22.948), NQ 8340 (chuẩn 8.340), GClive 5517
+=== (b)+(d) bản nhanh = bản chuẩn từng nến (bản chuẩn có chèn nến rỗng) ===
+ĐẠT   GC M5 cuon_T120_p0.5: 2730 nến có số liệu (+1290 nến rỗng ở bản chuẩn), 1631 có ngưỡng, 442 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   GC M5 cuon_T60_lam0.5: 2730 nến có số liệu (+1290 nến rỗng ở bản chuẩn), 2725 có ngưỡng, 1376 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   GC M5 cung_gio_K5_lc_lam1: 2730 nến có số liệu (+1290 nến rỗng ở bản chuẩn), 1902 có ngưỡng, 1477 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   GC M5 cung_gio_K5_p1: 2730 nến có số liệu (+1290 nến rỗng ở bản chuẩn), 1872 có ngưỡng, 783 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   GC M5 ky_luc_T240_q0.25: 2730 nến có số liệu (+1290 nến rỗng ở bản chuẩn), 2722 có ngưỡng, 853 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   GC M5 lai_med_tichluy_p1: 2730 nến có số liệu (+1290 nến rỗng ở bản chuẩn), 2709 có ngưỡng, 1315 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   GC M5 lai_p90_120_ngay_lam0.5: 2730 nến có số liệu (+1290 nến rỗng ở bản chuẩn), 2722 có ngưỡng, 1177 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   NQ M15 cuon_T120_p0.5: 556 nến có số liệu (+220 nến rỗng ở bản chuẩn), 502 có ngưỡng, 520 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   NQ M15 cuon_T60_lam0.5: 556 nến có số liệu (+220 nến rỗng ở bản chuẩn), 551 có ngưỡng, 313 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   NQ M15 cung_gio_K3_lc_lam1: 556 nến có số liệu (+220 nến rỗng ở bản chuẩn), 276 có ngưỡng, 293 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   NQ M15 cung_gio_K3_p1: 556 nến có số liệu (+220 nến rỗng ở bản chuẩn), 276 có ngưỡng, 510 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   NQ M15 ky_luc_T240_q0.25: 556 nến có số liệu (+220 nến rỗng ở bản chuẩn), 548 có ngưỡng, 189 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   NQ M15 lai_med_tichluy_p1: 556 nến có số liệu (+220 nến rỗng ở bản chuẩn), 553 có ngưỡng, 779 vòng; nến lệch 0; nến rỗng có vòng 0
+ĐẠT   NQ M15 lai_p90_120_ngay_lam0.5: 556 nến có số liệu (+220 nến rỗng ở bản chuẩn), 549 có ngưỡng, 236 vòng; nến lệch 0; nến rỗng có vòng 0
+=== (c) không nhìn tương lai ===
+ĐẠT   GC M5 cắt tại nến 1531/4594: 96 cấu hình, lệch 0
+ĐẠT   GC M5 cắt tại nến 3062/4594: 96 cấu hình, lệch 0
+ĐẠT   NQ M15 cắt tại nến 185/556: 96 cấu hình, lệch 0
+ĐẠT   NQ M15 cắt tại nến 370/556: 96 cấu hình, lệch 0
+ĐẠT   GClive M5 cắt tại nến 376/1129: 68 cấu hình, lệch 0
+ĐẠT   GClive M5 cắt tại nến 752/1129: 68 cấu hình, lệch 0
+TẤT CẢ: ĐẠT

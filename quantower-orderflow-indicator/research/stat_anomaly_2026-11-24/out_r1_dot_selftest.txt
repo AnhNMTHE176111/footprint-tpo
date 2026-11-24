@@ -1,0 +1,42 @@
+=== (a) ví dụ nhỏ, kết quả tính tay ===
+ĐẠT   K kiểu p: 1% của 500 mẫu = 5; 1% của 499 mẫu = chưa có ngưỡng (cần >= 500)
+ĐẠT   K kiểu λ: 0,25 x 5 nến = 1; 0,25 x 4 nến = chưa có (cần >= 5 nến); 0,25 x 7 = 1
+ĐẠT   r kỷ lục: q 0,25, n 8 -> floor(2,25 + 0,5) = 2; q 0,1, n 8 -> max(1, 1) = 1; q 0,5 n 20 -> 11
+ĐẠT   cuon: nến 6 ngưỡng 4, chấm {Bid 100, Ask 110}; nến 1..5 chưa có ngưỡng
+ĐẠT   cuon kiểu p 1% với 5 mẫu: chưa có ngưỡng (cần 500 mẫu)
+ĐẠT   cung_gio: ngày 4 14:00 ngưỡng 10, chấm {Bid 100}; 15:00 chưa có ngưỡng (0 lần xuất hiện); ba ngày đầu chưa có ngưỡng
+ĐẠT   cung_gio lân cận ±1: ngưỡng 20, không chấm; không lân cận vẫn ngưỡng 10
+ĐẠT   lai: nến 10 ngưỡng tỉ số 5 (hiển thị 10), chấm {Bid 102}; nến 0..9 chưa có ngưỡng
+ĐẠT   z_log: nến 6 ngưỡng 2^5,4478 = 43,64; Bid 44 vượt, Ask 43 không
+ĐẠT   ky_luc: nến 9 ngưỡng 15, chấm {Bid 100, Ask 110}; 8 nến đầu chưa có ngưỡng
+ĐẠT   gộp ±w: Bid 30 giữ, Bid 25 cách 3 tick bỏ; hai Ask 30 bằng nhau cách 4 tick -> không chấm nào
+=== (d) mốc đối chứng luật đang chạy ra lại số chuẩn cũ (GC M1) ===
+ĐẠT   GC M1 Không sót sàn 5 = 80386 (chuẩn 80.386); Ít nhiễu sàn 9 = 39918 (chuẩn 39.918); Không sót sàn 9 = 62768 (chuẩn 62.768)
+ĐẠT   Số nến: GC M1 87362 (chuẩn 87.362), NQ M1 71047 (chuẩn 71.047)
+=== (b) bản nhanh = bản chuẩn từng nến, 10 ngày giao dịch đầu ===
+ĐẠT   GC M5 cuon_T120_p1: 2640 nến, 2633 nến có ngưỡng, 1718 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   GC M5 cuon_T60_lam0.5: 2640 nến, 2635 nến có ngưỡng, 1430 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   GC M5 cung_gio_K5_lc_lam0.5: 2640 nến, 1812 nến có ngưỡng, 911 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   GC M5 cung_gio_K10_p0.5: 2640 nến, 1692 nến có ngưỡng, 733 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   GC M5 lai_med_K5_p1: 2640 nến, 1806 nến có ngưỡng, 1157 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   GC M5 lai_mean_cuon1380_lam1: 2640 nến, 2630 nến có ngưỡng, 1825 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   GC M5 z_log_T120_z3: 2640 nến, 2635 nến có ngưỡng, 397 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   GC M5 ky_luc_T240_q0.25: 2640 nến, 2632 nến có ngưỡng, 1042 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   GC M5 ky_luc_K10_q0.1: 2640 nến, 1812 nến có ngưỡng, 347 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   NQ M15 cuon_T120_p1: 912 nến, 910 nến có ngưỡng, 1279 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   NQ M15 cuon_T60_lam0.5: 912 nến, 907 nến có ngưỡng, 605 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   NQ M15 cung_gio_K5_lc_lam0.5: 912 nến, 636 nến có ngưỡng, 365 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   NQ M15 cung_gio_K10_p0.5: 912 nến, 624 nến có ngưỡng, 695 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   NQ M15 lai_med_K5_p1: 912 nến, 636 nến có ngưỡng, 766 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   NQ M15 lai_mean_cuon1380_lam1: 912 nến, 902 nến có ngưỡng, 277 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   NQ M15 z_log_T120_z3: 912 nến, 907 nến có ngưỡng, 95 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   NQ M15 ky_luc_T240_q0.25: 912 nến, 904 nến có ngưỡng, 523 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+ĐẠT   NQ M15 ky_luc_K10_q0.1: 912 nến, 636 nến có ngưỡng, 148 chấm; lệch ngưỡng 0, lệch vượt 0, lệch chấm 0
+=== (c) không nhìn tương lai: cắt tại một nến, chạy lại ===
+ĐẠT   GC M15 cắt tại nến 5739/5875: 165 cấu hình, lệch 0
+ĐẠT   GC M15 cắt tại nến 2688/5875: 165 cấu hình, lệch 0
+ĐẠT   GC M5 cắt tại nến 4942/17623: 9 cấu hình, lệch 0
+ĐẠT   GC M5 cắt tại nến 15147/17623: 9 cấu hình, lệch 0
+ĐẠT   NQ M15 cắt tại nến 2787/4737: 9 cấu hình, lệch 0
+ĐẠT   NQ M15 cắt tại nến 1395/4737: 9 cấu hình, lệch 0
+TẤT CẢ: ĐẠT

@@ -1,0 +1,7 @@
+*.pkl
+__pycache__/
+# file đo trung gian quá lớn (>5MB), tạo lại bằng sa_*.py vòng 1
+out_r1_bt_calib.csv
+out_r1_bt_density.csv
+out_r1_dot_calib.csv
+out_r1_dot_density.csv

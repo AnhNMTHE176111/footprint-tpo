@@ -270,6 +270,7 @@ static class Tests
         _fail += AdaptiveTests.Run();
         _fail += CorvenM5ParityTests.Run();
         _fail += StopHuntTests.Run();
+        _fail += StatThresholdTests.Run();
         StackedImbalanceTests.RunAll();
         _fail += StackedImbalanceTests.Fail;
         Console.WriteLine(_fail == 0 ? "\n=== TAT CA PASS ===" : $"\n=== {_fail} FAIL ===");

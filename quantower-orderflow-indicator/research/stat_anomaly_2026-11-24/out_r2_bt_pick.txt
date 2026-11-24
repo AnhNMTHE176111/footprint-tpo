@@ -1,0 +1,13 @@
+cuon_A_T120_p1: điều kiện Khớp chung 0,8–1,25 và nhiễu <= 5% (GC kiểm + NQ, M1/M5/M15) = TRƯỢT; Khớp chung 1.084–1.261, nhiễu lớn nhất 0.0126; "20 ô lớn nhất ngày" nhỏ nhất = 0.6687
+cuon_A_T120_p0.5: điều kiện Khớp chung 0,8–1,25 và nhiễu <= 5% (GC kiểm + NQ, M1/M5/M15) = TRƯỢT; Khớp chung 0.879–1.343, nhiễu lớn nhất 0.0333; "20 ô lớn nhất ngày" nhỏ nhất = 0.0625
+cuon_A_T240_p1: điều kiện Khớp chung 0,8–1,25 và nhiễu <= 5% (GC kiểm + NQ, M1/M5/M15) = ĐẠT; Khớp chung 1.054–1.169, nhiễu lớn nhất 0.0162; "20 ô lớn nhất ngày" nhỏ nhất = 0.8938
+cuon_A_T240_p0.5: điều kiện Khớp chung 0,8–1,25 và nhiễu <= 5% (GC kiểm + NQ, M1/M5/M15) = TRƯỢT; Khớp chung 1.092–1.292, nhiễu lớn nhất 0.0141; "20 ô lớn nhất ngày" nhỏ nhất = 0.5687
+cuon_B_T120_p1: điều kiện Khớp chung 0,8–1,25 và nhiễu <= 5% (GC kiểm + NQ, M1/M5/M15) = TRƯỢT; Khớp chung 1.084–1.283, nhiễu lớn nhất 0.0126; "20 ô lớn nhất ngày" nhỏ nhất = 0.9187
+cuon_B_T120_p0.5: điều kiện Khớp chung 0,8–1,25 và nhiễu <= 5% (GC kiểm + NQ, M1/M5/M15) = TRƯỢT; Khớp chung 1.111–1.345, nhiễu lớn nhất 0.0219; "20 ô lớn nhất ngày" nhỏ nhất = 0.6844
+cuon_B_T240_p1: điều kiện Khớp chung 0,8–1,25 và nhiễu <= 5% (GC kiểm + NQ, M1/M5/M15) = ĐẠT; Khớp chung 1.054–1.169, nhiễu lớn nhất 0.0162; "20 ô lớn nhất ngày" nhỏ nhất = 0.8938
+cuon_B_T240_p0.5: điều kiện Khớp chung 0,8–1,25 và nhiễu <= 5% (GC kiểm + NQ, M1/M5/M15) = TRƯỢT; Khớp chung 1.092–1.292, nhiễu lớn nhất 0.0228; "20 ô lớn nhất ngày" nhỏ nhất = 0.6719
+cuon_C_T120_p1: điều kiện Khớp chung 0,8–1,25 và nhiễu <= 5% (GC kiểm + NQ, M1/M5/M15) = TRƯỢT; Khớp chung 1.092–1.282, nhiễu lớn nhất 0.0127; "20 ô lớn nhất ngày" nhỏ nhất = 0.6188
+cuon_C_T120_p0.5: điều kiện Khớp chung 0,8–1,25 và nhiễu <= 5% (GC kiểm + NQ, M1/M5/M15) = TRƯỢT; Khớp chung 1.120–1.355, nhiễu lớn nhất 0.0222; "20 ô lớn nhất ngày" nhỏ nhất = 0.3312
+cuon_C_T240_p1: điều kiện Khớp chung 0,8–1,25 và nhiễu <= 5% (GC kiểm + NQ, M1/M5/M15) = ĐẠT; Khớp chung 1.054–1.185, nhiễu lớn nhất 0.0160; "20 ô lớn nhất ngày" nhỏ nhất = 0.6219
+cuon_C_T240_p0.5: điều kiện Khớp chung 0,8–1,25 và nhiễu <= 5% (GC kiểm + NQ, M1/M5/M15) = TRƯỢT; Khớp chung 1.095–1.308, nhiễu lớn nhất 0.0232; "20 ô lớn nhất ngày" nhỏ nhất = 0.3094
+KẾT QUẢ ÁP LUẬT: giá trị nhỏ nhất cao nhất = 0.8938; các tổ hợp lệch dưới 0,005: cuon_A_T240_p1, cuon_B_T240_p1; theo thứ tự ưu tiên A>B>C, T240>T120, p1% -> cuon_A_T240_p1

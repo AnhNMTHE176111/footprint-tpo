@@ -1,0 +1,11 @@
+ĐẠT  GC M60 nen_moi: cài độc lập đỏ 1646 / xanh 1662; Opus 1646 / 1662; nến {'chua': 1, 'du_phong': 45, 'chinh': 1424}; giá trị bên lớn nhất 542
+ĐẠT  NQ M15 nen_moi: cài độc lập đỏ 5512 / xanh 5494; Opus 5512 / 5494; nến {'chua': 1, 'du_phong': 183, 'chinh': 4553}; giá trị bên lớn nhất 1972
+ĐẠT  GC M15 nen_moi: cài độc lập đỏ 4342 / xanh 4425; Opus 4342 / 4425; nến {'chua': 2, 'du_phong': 182, 'chinh': 5691}; giá trị bên lớn nhất 490
+ĐẠT  GC M5 nap8: cài độc lập đỏ 956 / xanh 959; Opus 956 / 959; nến {'chua': 5, 'du_phong': 547, 'chinh': 1489}; giá trị bên lớn nhất 435
+ĐẠT  NQ M15 nap8: cài độc lập đỏ 1097 / xanh 1028; Opus 1097 / 1028; nến {'chua': 1, 'du_phong': 183, 'chinh': 513}; giá trị bên lớn nhất 1972
+ĐẠT  NQ M60 p1: cài độc lập đỏ 1295 / xanh 1329; Opus 1295 / 1329; nến {'chua': 1, 'du_phong': 45, 'chinh': 1139}; giá trị bên lớn nhất 2299
+ĐẠT  GC M60 khong_lan_can: cài độc lập đỏ 1771 / xanh 1805; Opus 1771 / 1805; nến {'chua': 1, 'du_phong': 46, 'chinh': 1423}; giá trị bên lớn nhất 542
+ĐẠT  Big Trade GC M30: cài độc lập 788; Opus 788
+ĐẠT  Big Trade NQ M15: cài độc lập 864; Opus 864
+ĐẠT  Big Trade GC M5: cài độc lập 1913; Opus 1913
+TỔNG: ĐẠT

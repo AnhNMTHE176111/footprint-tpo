@@ -1,0 +1,70 @@
+ĐẠT  tính tay ngưỡng chính (lân cận=0): có ngưỡng [False, False, False, True], ngưỡng ngày 4 = 98 (tay: 98), vượt [99, 100] (tay: 99, 100), chấm ở tick [100] (tay: 100)
+ĐẠT  tính tay, bản chuẩn: dấu [('2026-10-08 14:00:00', 'dotS', 100)]
+ĐẠT  tính tay ngưỡng chính (lân cận=1): có ngưỡng [False, False, False, True], ngưỡng ngày 4 = 98 (tay: 98), vượt [99, 100] (tay: 99, 100), chấm ở tick [100] (tay: 100)
+ĐẠT  tính tay, bản chuẩn: dấu [('2026-10-08 14:00:00', 'dotS', 100)]
+ĐẠT  tính tay dự phòng: nguồn ngưỡng [0, 0, 0, 0, 0, 2] (tay 0,0,0,0,0,2), ngưỡng nến 6 = 59 (tay 59)
+ĐẠT  tính tay gộp: hai ô 70 cách 2 tick (w = 4) đều không thành chấm, ô 65 ở tick 20 là chấm -> [20]
+ĐẠT  tính tay cửa sổ Big Trade: lo A [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], C [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 11] (tay C: 0 x 10, 10, 11)
+ĐẠT  tính tay cửa sổ B (H1, p 0,5%): lo nến 11 = 1 (tay 1), nến 6 = 0 (tay 0)
+ĐẠT  GC M5: CSV Golden 17623 nến = bảng nhanh 17623 nến; giá trị bên không nguyên: 0
+ĐẠT  GC M5 goc: chấm bản chuẩn 15553 = bản nhanh 15553 (lệch 0); nến ngưỡng chính 16795, dự phòng 824, chưa có 4
+ĐẠT  GC M5 nạp 8 ngày cuối (từ 2026-10-28 22:00:00): bản chuẩn 1825 = bản nhanh 1825 chấm; nến dự phòng 823, chưa có 5
+ĐẠT  GC M5 p1: chấm bản chuẩn 9447 = bản nhanh 9447 (lệch 0); nến ngưỡng chính 16795, dự phòng 821, chưa có 7
+ĐẠT  GC M5 gio_utc: chấm bản chuẩn 15486 = bản nhanh 15486 (lệch 0); nến ngưỡng chính 16759, dự phòng 860, chưa có 4
+ĐẠT  GC M5 toi_thieu_1_ngay: chấm bản chuẩn 15524 = bản nhanh 15524 (lệch 0); nến ngưỡng chính 17341, dự phòng 278, chưa có 4
+ĐẠT  GC M5 T240: chấm bản chuẩn 15512 = bản nhanh 15512 (lệch 0); nến ngưỡng chính 16795, dự phòng 824, chưa có 4
+ĐẠT  GC M5 khong_lan_can: chấm bản chuẩn 16221 = bản nhanh 16221 (lệch 0); nến ngưỡng chính 16795, dự phòng 824, chưa có 4
+ĐẠT  GC M5 K5: chấm bản chuẩn 15764 = bản nhanh 15764 (lệch 0); nến ngưỡng chính 16795, dự phòng 824, chưa có 4
+ĐẠT  GC M5 goc: cắt dữ liệu ở nến 10573: ngưỡng và chấm trước điểm cắt y hệt
+ĐẠT  GC M5 T240: cắt dữ liệu ở nến 10573: ngưỡng và chấm trước điểm cắt y hệt
+ĐẠT  GC M60: CSV Golden 1470 nến = bảng nhanh 1470 nến; giá trị bên không nguyên: 0
+ĐẠT  GC M60 goc: chấm bản chuẩn 3029 = bản nhanh 3029 (lệch 0); nến ngưỡng chính 1401, dự phòng 68, chưa có 1
+ĐẠT  GC M60 p1: chấm bản chuẩn 2162 = bản nhanh 2162 (lệch 0); nến ngưỡng chính 1401, dự phòng 67, chưa có 2
+ĐẠT  GC M60 gio_utc: chấm bản chuẩn 3025 = bản nhanh 3025 (lệch 0); nến ngưỡng chính 1398, dự phòng 71, chưa có 1
+ĐẠT  GC M60 toi_thieu_1_ngay: chấm bản chuẩn 3024 = bản nhanh 3024 (lệch 0); nến ngưỡng chính 1447, dự phòng 22, chưa có 1
+ĐẠT  GC M60 T240: chấm bản chuẩn 3029 = bản nhanh 3029 (lệch 0); nến ngưỡng chính 1401, dự phòng 68, chưa có 1
+ĐẠT  GC M60 khong_lan_can: chấm bản chuẩn 3198 = bản nhanh 3198 (lệch 0); nến ngưỡng chính 1401, dự phòng 68, chưa có 1
+ĐẠT  GC M60 K5: chấm bản chuẩn 3047 = bản nhanh 3047 (lệch 0); nến ngưỡng chính 1401, dự phòng 68, chưa có 1
+ĐẠT  GC M60 goc: cắt dữ liệu ở nến 882: ngưỡng và chấm trước điểm cắt y hệt
+ĐẠT  GC M60 T240: cắt dữ liệu ở nến 882: ngưỡng và chấm trước điểm cắt y hệt
+ĐẠT  NQ M1: CSV Golden 71047 nến = bảng nhanh 71047 nến; giá trị bên không nguyên: 0
+ĐẠT  NQ M1 goc: chấm bản chuẩn 55139 = bản nhanh 55139 (lệch 0); nến ngưỡng chính 66908, dự phòng 4134, chưa có 5
+ĐẠT  NQ M1 p1: chấm bản chuẩn 34437 = bản nhanh 34437 (lệch 0); nến ngưỡng chính 66908, dự phòng 4128, chưa có 11
+ĐẠT  NQ M1 goc: cắt dữ liệu ở nến 42628: ngưỡng và chấm trước điểm cắt y hệt
+ĐẠT  NQ M1 T240: cắt dữ liệu ở nến 42628: ngưỡng và chấm trước điểm cắt y hệt
+ĐẠT  NQ M15: CSV Golden 4737 nến = bảng nhanh 4737 nến; giá trị bên không nguyên: 0
+ĐẠT  NQ M15 goc: chấm bản chuẩn 9711 = bản nhanh 9711 (lệch 0); nến ngưỡng chính 4461, dự phòng 275, chưa có 1
+ĐẠT  NQ M15 nạp 8 ngày cuối (từ 2026-11-12 23:00:00): bản chuẩn 1901 = bản nhanh 1901 chấm; nến dự phòng 275, chưa có 1
+ĐẠT  NQ M15 p1: chấm bản chuẩn 6944 = bản nhanh 6944 (lệch 0); nến ngưỡng chính 4461, dự phòng 274, chưa có 2
+ĐẠT  NQ M15 gio_utc: chấm bản chuẩn 9591 = bản nhanh 9591 (lệch 0); nến ngưỡng chính 4449, dự phòng 287, chưa có 1
+ĐẠT  NQ M15 toi_thieu_1_ngay: chấm bản chuẩn 9822 = bản nhanh 9822 (lệch 0); nến ngưỡng chính 4645, dự phòng 91, chưa có 1
+ĐẠT  NQ M15 T240: chấm bản chuẩn 9647 = bản nhanh 9647 (lệch 0); nến ngưỡng chính 4461, dự phòng 275, chưa có 1
+ĐẠT  NQ M15 khong_lan_can: chấm bản chuẩn 10359 = bản nhanh 10359 (lệch 0); nến ngưỡng chính 4461, dự phòng 275, chưa có 1
+ĐẠT  NQ M15 K5: chấm bản chuẩn 9958 = bản nhanh 9958 (lệch 0); nến ngưỡng chính 4461, dự phòng 275, chưa có 1
+ĐẠT  NQ M15 goc: cắt dữ liệu ở nến 2842: ngưỡng và chấm trước điểm cắt y hệt
+ĐẠT  NQ M15 T240: cắt dữ liệu ở nến 2842: ngưỡng và chấm trước điểm cắt y hệt
+ĐẠT  Big Trade NQ M1 cuon_A_T240_p1: vòng bản chuẩn 3330 = bản nhanh 3330 (lệch 0); nến có số liệu 8340, có ngưỡng 8331
+ĐẠT  Big Trade NQ M1 cuon_B_T240_p1: vòng bản chuẩn 3330 = bản nhanh 3330 (lệch 0); nến có số liệu 8340, có ngưỡng 8331
+ĐẠT  Big Trade NQ M1 cuon_C_T240_p1: vòng bản chuẩn 3372 = bản nhanh 3372 (lệch 0); nến có số liệu 8340, có ngưỡng 8328
+ĐẠT  Big Trade NQ M1 cuon_A_T240_p1: cắt dữ liệu ở 2026-10-29 12:24:00: ngưỡng và vòng trước điểm cắt y hệt
+ĐẠT  Big Trade NQ M1 cuon_B_T240_p1: cắt dữ liệu ở 2026-10-29 12:24:00: ngưỡng và vòng trước điểm cắt y hệt
+ĐẠT  Big Trade NQ M1 cuon_C_T240_p1: cắt dữ liệu ở 2026-10-29 12:24:00: ngưỡng và vòng trước điểm cắt y hệt
+ĐẠT  Big Trade GC M5 cuon_A_T240_p1: vòng bản chuẩn 1913 = bản nhanh 1913 (lệch 0); nến có số liệu 4594, có ngưỡng 4573
+ĐẠT  Big Trade GC M5 cuon_B_T120_p0.5: vòng bản chuẩn 1127 = bản nhanh 1127 (lệch 0); nến có số liệu 4594, có ngưỡng 4562
+ĐẠT  Big Trade GC M5 cuon_C_T120_p0.5: vòng bản chuẩn 1113 = bản nhanh 1113 (lệch 0); nến có số liệu 4594, có ngưỡng 4476
+ĐẠT  Big Trade GC M5 cuon_A_T240_p1: cắt dữ liệu ở 2026-09-15 00:10:00: ngưỡng và vòng trước điểm cắt y hệt
+ĐẠT  Big Trade GC M5 cuon_B_T120_p0.5: cắt dữ liệu ở 2026-09-15 00:10:00: ngưỡng và vòng trước điểm cắt y hệt
+ĐẠT  Big Trade GC M5 cuon_C_T120_p0.5: cắt dữ liệu ở 2026-09-15 00:10:00: ngưỡng và vòng trước điểm cắt y hệt
+ĐẠT  Big Trade NQ M15 cuon_A_T240_p1: vòng bản chuẩn 864 = bản nhanh 864 (lệch 0); nến có số liệu 556, có ngưỡng 553
+ĐẠT  Big Trade NQ M15 cuon_B_T240_p1: vòng bản chuẩn 864 = bản nhanh 864 (lệch 0); nến có số liệu 556, có ngưỡng 553
+ĐẠT  Big Trade NQ M15 cuon_C_T120_p0.5: vòng bản chuẩn 556 = bản nhanh 556 (lệch 0); nến có số liệu 556, có ngưỡng 547
+ĐẠT  Big Trade NQ M15 cuon_A_T240_p1: cắt dữ liệu ở 2026-10-29 12:15:00: ngưỡng và vòng trước điểm cắt y hệt
+ĐẠT  Big Trade NQ M15 cuon_B_T240_p1: cắt dữ liệu ở 2026-10-29 12:15:00: ngưỡng và vòng trước điểm cắt y hệt
+ĐẠT  Big Trade NQ M15 cuon_C_T120_p0.5: cắt dữ liệu ở 2026-10-29 12:15:00: ngưỡng và vòng trước điểm cắt y hệt
+ĐẠT  Big Trade GC M30 cuon_A_T240_p1: vòng bản chuẩn 788 = bản nhanh 788 (lệch 0); nến có số liệu 766, có ngưỡng 755
+ĐẠT  Big Trade GC M30 cuon_B_T120_p0.5: vòng bản chuẩn 457 = bản nhanh 457 (lệch 0); nến có số liệu 766, có ngưỡng 756
+ĐẠT  Big Trade GC M30 cuon_C_T240_p0.5: vòng bản chuẩn 449 = bản nhanh 449 (lệch 0); nến có số liệu 766, có ngưỡng 730
+ĐẠT  Big Trade GC M30 cuon_A_T240_p1: cắt dữ liệu ở 2026-09-15 00:00:00: ngưỡng và vòng trước điểm cắt y hệt
+ĐẠT  Big Trade GC M30 cuon_B_T120_p0.5: cắt dữ liệu ở 2026-09-15 00:00:00: ngưỡng và vòng trước điểm cắt y hệt
+ĐẠT  Big Trade GC M30 cuon_C_T240_p0.5: cắt dữ liệu ở 2026-09-15 00:00:00: ngưỡng và vòng trước điểm cắt y hệt
+TỔNG: 69/69 ĐẠT (383 s)

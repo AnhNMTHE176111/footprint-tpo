@@ -13,6 +13,7 @@
     <Compile Include="../CellBigLogic.cs" />
     <Compile Include="../StopHuntLogic.cs" />
     <Compile Include="../RollingRobust.cs" />
+    <Compile Include="../StatThreshold.cs" />
     <!-- BigTradeLog nam trong cung file SignalCache.cs, khong can dong compile rieng -->
 
   </ItemGroup>

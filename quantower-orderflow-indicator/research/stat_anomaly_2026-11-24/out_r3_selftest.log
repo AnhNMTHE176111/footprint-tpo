@@ -1,0 +1,57 @@
+ĐẠT  tính tay sel=nms, bản nhanh: ngưỡng nến 8 = 40 (tay 40), w = 4 (tay 4), chấm [(np.str_('dotB'), 200), (np.str_('dotB'), 206), (np.str_('dotS'), 100)] (tay [('dotB', 200), ('dotB', 206), ('dotS', 100)])
+ĐẠT  tính tay sel=nms, bản chuẩn: chấm [('dotB', 200), ('dotB', 206), ('dotS', 100)]
+ĐẠT  tính tay sel=lmax, bản nhanh: ngưỡng nến 8 = 40 (tay 40), w = 4 (tay 4), chấm [(np.str_('dotB'), 200)] (tay [('dotB', 200)])
+ĐẠT  tính tay sel=lmax, bản chuẩn: chấm [('dotB', 200)]
+ĐẠT  tính tay sel=all, bản nhanh: ngưỡng nến 8 = 40 (tay 40), w = 4 (tay 4), chấm [(np.str_('dotB'), 200), (np.str_('dotB'), 203), (np.str_('dotB'), 206), (np.str_('dotS'), 100), (np.str_('dotS'), 101)] (tay [('dotB', 200), ('dotB', 203), ('dotB', 206), ('dotS', 100), ('dotS', 101)])
+ĐẠT  tính tay sel=all, bản chuẩn: chấm [('dotB', 200), ('dotB', 203), ('dotB', 206), ('dotS', 100), ('dotS', 101)]
+ĐẠT  tính tay hàm chọn: 20/15/12 ở tick 0/3/6 -> giữ [np.True_, np.False_, np.True_] (tay T,F,T); 12/12 ở tick 0/1 -> [np.True_, np.False_] (tay T,F)
+ĐẠT  khung lân cận bỏ trùng (khung 720 phút, 2 khung/ngày): số mẫu ngưỡng chính nến ngày 3 = 400 (tay 400); bản chuẩn = bản nhanh (5 chấm)
+ĐẠT  khung lân cận bỏ trùng (khung 1440 phút, 1 khung/ngày): số mẫu ngưỡng chính nến ngày 3 = 200 (tay 200); bản chuẩn = bản nhanh (1 chấm)
+ĐẠT  nến rỗng bị bỏ hẳn: dấu 3 = 3, nến chính/dự phòng/chưa có 0/1/7 = 0/1/7, nến rỗng 2
+ĐẠT  dữ liệu giả M1 sel=nms lân cận=0: bản chuẩn 957 = bản nhanh 957 chấm (lệch 0)
+ĐẠT  dữ liệu giả M1 sel=nms lân cận=1: bản chuẩn 957 = bản nhanh 957 chấm (lệch 0)
+ĐẠT  dữ liệu giả M1 sel=lmax lân cận=0: bản chuẩn 949 = bản nhanh 949 chấm (lệch 0)
+ĐẠT  dữ liệu giả M1 sel=lmax lân cận=1: bản chuẩn 949 = bản nhanh 949 chấm (lệch 0)
+ĐẠT  dữ liệu giả M1 sel=all lân cận=0: bản chuẩn 999 = bản nhanh 999 chấm (lệch 0)
+ĐẠT  dữ liệu giả M1 sel=all lân cận=1: bản chuẩn 999 = bản nhanh 999 chấm (lệch 0)
+ĐẠT  dữ liệu giả M30 sel=nms lân cận=0: bản chuẩn 1238 = bản nhanh 1238 chấm (lệch 0)
+ĐẠT  dữ liệu giả M30 sel=nms lân cận=1: bản chuẩn 1225 = bản nhanh 1225 chấm (lệch 0)
+ĐẠT  dữ liệu giả M30 sel=lmax lân cận=0: bản chuẩn 1178 = bản nhanh 1178 chấm (lệch 0)
+ĐẠT  dữ liệu giả M30 sel=lmax lân cận=1: bản chuẩn 1174 = bản nhanh 1174 chấm (lệch 0)
+ĐẠT  dữ liệu giả M30 sel=all lân cận=0: bản chuẩn 1586 = bản nhanh 1586 chấm (lệch 0)
+ĐẠT  dữ liệu giả M30 sel=all lân cận=1: bản chuẩn 1550 = bản nhanh 1550 chấm (lệch 0)
+ĐẠT  dữ liệu giả M720 sel=nms lân cận=0: bản chuẩn 64 = bản nhanh 64 chấm (lệch 0)
+ĐẠT  dữ liệu giả M720 sel=nms lân cận=1: bản chuẩn 63 = bản nhanh 63 chấm (lệch 0)
+ĐẠT  dữ liệu giả M720 sel=lmax lân cận=0: bản chuẩn 61 = bản nhanh 61 chấm (lệch 0)
+ĐẠT  dữ liệu giả M720 sel=lmax lân cận=1: bản chuẩn 60 = bản nhanh 60 chấm (lệch 0)
+ĐẠT  dữ liệu giả M720 sel=all lân cận=0: bản chuẩn 80 = bản nhanh 80 chấm (lệch 0)
+ĐẠT  dữ liệu giả M720 sel=all lân cận=1: bản chuẩn 75 = bản nhanh 75 chấm (lệch 0)
+ĐẠT  GC M5: CSV Golden 17623 nến (rỗng 0) = bảng nhanh 17623 nến; giá trị bên không nguyên: 0
+ĐẠT  GC M5 nen_moi: chấm bản chuẩn 16592 = bản nhanh 16592 (lệch 0); nến ngưỡng chính 17071, dự phòng 548, chưa có 4
+ĐẠT  GC M5 nạp 8 ngày cuối (từ 2026-10-28 22:00:00): bản chuẩn 1915 = bản nhanh 1915 chấm; nến chính 1489, dự phòng 547, chưa có 5
+ĐẠT  GC M5 sel_lmax: chấm bản chuẩn 15743 = bản nhanh 15743 (lệch 0); nến ngưỡng chính 17071, dự phòng 548, chưa có 4
+ĐẠT  GC M5 sel_all: chấm bản chuẩn 30015 = bản nhanh 30015 (lệch 0); nến ngưỡng chính 17071, dự phòng 548, chưa có 4
+ĐẠT  GC M5 khong_lan_can: chấm bản chuẩn 17678 = bản nhanh 17678 (lệch 0); nến ngưỡng chính 17065, dự phòng 554, chưa có 4
+ĐẠT  GC M5 p1: chấm bản chuẩn 10024 = bản nhanh 10024 (lệch 0); nến ngưỡng chính 17071, dự phòng 545, chưa có 7
+ĐẠT  GC M5 nen_moi: cắt dữ liệu ở nến 10573: ngưỡng và chấm trước điểm cắt y hệt (10464 chấm)
+ĐẠT  GC M5 sel_lmax: cắt dữ liệu ở nến 10573: ngưỡng và chấm trước điểm cắt y hệt (9947 chấm)
+ĐẠT  GC M60: CSV Golden 1470 nến (rỗng 0) = bảng nhanh 1470 nến; giá trị bên không nguyên: 0
+ĐẠT  GC M60 nen_moi: chấm bản chuẩn 3308 = bản nhanh 3308 (lệch 0); nến ngưỡng chính 1424, dự phòng 45, chưa có 1
+ĐẠT  GC M60 sel_lmax: chấm bản chuẩn 3046 = bản nhanh 3046 (lệch 0); nến ngưỡng chính 1424, dự phòng 45, chưa có 1
+ĐẠT  GC M60 nen_moi: cắt dữ liệu ở nến 882: ngưỡng và chấm trước điểm cắt y hệt (2107 chấm)
+ĐẠT  GC M60 sel_lmax: cắt dữ liệu ở nến 882: ngưỡng và chấm trước điểm cắt y hệt (1930 chấm)
+ĐẠT  NQ M1: CSV Golden 71047 nến (rỗng 0) = bảng nhanh 71047 nến; giá trị bên không nguyên: 0
+ĐẠT  NQ M1 nen_moi: chấm bản chuẩn 60589 = bản nhanh 60589 (lệch 0); nến ngưỡng chính 68288, dự phòng 2754, chưa có 5
+ĐẠT  NQ M1 sel_lmax: chấm bản chuẩn 56983 = bản nhanh 56983 (lệch 0); nến ngưỡng chính 68288, dự phòng 2754, chưa có 5
+ĐẠT  NQ M1 nen_moi: cắt dữ liệu ở nến 42628: ngưỡng và chấm trước điểm cắt y hệt (31878 chấm)
+ĐẠT  NQ M1 sel_lmax: cắt dữ liệu ở nến 42628: ngưỡng và chấm trước điểm cắt y hệt (29988 chấm)
+ĐẠT  NQ M15: CSV Golden 4737 nến (rỗng 0) = bảng nhanh 4737 nến; giá trị bên không nguyên: 0
+ĐẠT  NQ M15 nen_moi: chấm bản chuẩn 11006 = bản nhanh 11006 (lệch 0); nến ngưỡng chính 4553, dự phòng 183, chưa có 1
+ĐẠT  NQ M15 nạp 8 ngày cuối (từ 2026-11-12 23:00:00): bản chuẩn 2125 = bản nhanh 2125 chấm; nến chính 513, dự phòng 183, chưa có 1
+ĐẠT  NQ M15 sel_lmax: chấm bản chuẩn 10004 = bản nhanh 10004 (lệch 0); nến ngưỡng chính 4553, dự phòng 183, chưa có 1
+ĐẠT  NQ M15 sel_all: chấm bản chuẩn 41786 = bản nhanh 41786 (lệch 0); nến ngưỡng chính 4553, dự phòng 183, chưa có 1
+ĐẠT  NQ M15 khong_lan_can: chấm bản chuẩn 11854 = bản nhanh 11854 (lệch 0); nến ngưỡng chính 4553, dự phòng 183, chưa có 1
+ĐẠT  NQ M15 p1: chấm bản chuẩn 7696 = bản nhanh 7696 (lệch 0); nến ngưỡng chính 4553, dự phòng 182, chưa có 2
+ĐẠT  NQ M15 nen_moi: cắt dữ liệu ở nến 2842: ngưỡng và chấm trước điểm cắt y hệt (6001 chấm)
+ĐẠT  NQ M15 sel_lmax: cắt dữ liệu ở nến 2842: ngưỡng và chấm trước điểm cắt y hệt (5445 chấm)
+TỔNG: 56/56 ĐẠT

@@ -116,6 +116,8 @@ namespace OrderFlowBubbles
         // ===================== baseline ROBUST (median + MAD) =====================
         private StopHuntDetector _stopHunt;     // stop hunt CORVEN (chỉ nạp nến ĐÃ ĐÓNG, đúng 1 lần/nến)
         private BigTradeAdaptive _btAdapt;      // Big Trade thích nghi: top-K lệnh đơn của N nến đóng TRƯỚC (2026-11-24)
+        private StatDots _statDots;             // chế độ "Không theo CORVEN (thống kê)": chấm (null khi chế độ tắt)
+        private StatBigTrade _statBt;           // chế độ "Không theo CORVEN (thống kê)": Big Trade (null khi chế độ tắt)
         private ExhTailBaseline _exhTail;       // kiệt sức: đuôi đỉnh/đáy của N nến đóng TRƯỚC (2026-11-24)
         private string _baseKey;                // N nến nền + mật độ Big Trade lúc dựng nền; đổi -> ResetState
         private CellBigBaseline _cellBigBase;   // mức nền Ô lớn + kiệt sức (volume TB mỗi ô, bên trội lớn nhất): TB 20 nến đóng TRƯỚC
@@ -187,6 +189,25 @@ namespace OrderFlowBubbles
         // ---------- 1.5) Ô BID/ASK LỚN — BÓNG ĐẠI DIỆN CHÍNH (2026-09-15; luật theo TỪNG TICK 2026-11-19) ----------
         // Xem CellBigLogic.cs. Chấm nhỏ đặc xét RIÊNG TỪNG BÊN (vòng tròn mờ giờ là Big Trade, mục 2): chấm đỏ khi Bid >= CellDotMedianRatio x trung vị volume mỗi ô (TB 20 nến trước) và lớn hơn hẳn Bid của mọi tick trong ±CellDotLocalTicks tick; chấm xanh tương tự với Ask; chấm xanh bị che nếu có chấm đỏ cùng nến cách <= CellDotHideBuyNearSellTicks tick.
         // KHÔNG phải lợi thế đã kiểm định; không giới hạn số bóng/nến. Màu: xanh buy, đỏ sell; TÍM = bóng của nến quét trong một stop hunt.
+        // ---------- CHẾ ĐỘ NGƯỠNG (2026-11-25, research/stat_anomaly_2026-11-24/SPEC.md; logic ở StatThreshold.cs) ----------
+        // 0 = Theo CORVEN (mọi luật cũ, mặc định). 1 = Không theo CORVEN (thống kê): chấm Bid/Ask nổ khi lớn hơn hẳn 98% (mức hiếm) các Bid/Ask
+        // cùng khung giờ (giờ Chicago) của 5 ngày giao dịch trước; Big Trade nổ khi lệnh đơn lớn hơn hẳn 99% lệnh đơn 240 phút gần nhất.
+        // Đây là ĐỊNH NGHĨA HIỂN THỊ "ô lớn bất thường", KHÔNG phải lợi thế giao dịch đã kiểm định. Chỉ chạy với nến thời gian có số phút nguyên >= 1;
+        // khung khác chạy như "Theo CORVEN". Khi bật: sàn, bộ số, bộ Nasdaq, tự co dãn, Big Trade thích nghi / mật độ / sàn / tối đa vòng bị bỏ qua.
+        [InputParameter("Chế độ ngưỡng (chấm Bid/Ask + Big Trade)", 22, variants: new object[] { "Theo CORVEN", 0, "Không theo CORVEN (thống kê)", 1 })]
+        public int ThresholdMode { get; set; } = 0;
+
+        // Mức hiếm của chấm, phần vạn (200 = 2%). Chỉ hiện khi chế độ "Không theo CORVEN" bật (xem Settings).
+        [InputParameter("Không theo CORVEN · Mức hiếm của chấm", 23, variants: new object[] { "2% lớn nhất (đã đo: không sót)", 200, "1% lớn nhất (thưa hơn, có sót)", 100, "0,5% lớn nhất (rất thưa, sót nhiều)", 50 })]
+        public int StatRarePbp { get; set; } = 200;
+
+        public int StatDotDays { get; set; } = 5;               // số ngày giao dịch trước của cùng khung giờ
+        public bool StatDotNeighbors { get; set; } = true;      // gộp thêm hai khung giờ liền kề
+        public int StatDotMinDays { get; set; } = 2;            // khung giờ cần ít nhất số ngày này, chưa đủ -> dự phòng
+        public int StatDotFallbackMinutes { get; set; } = 120;  // dự phòng: nến đóng trong số phút gần nhất
+        public int StatBtMinutes { get; set; } = 240;           // Big Trade: cửa sổ (phút nến có số liệu)
+        public int StatBtRarePbp { get; set; } = 100;           // Big Trade: mức hiếm, phần vạn (100 = 1%)
+
         [InputParameter("Ô Bid/Ask lớn (đại diện chính) · Bật", 25)]
         public bool CellBigEnabled { get; set; } = true;
 
@@ -478,6 +499,9 @@ namespace OrderFlowBubbles
                 Rel(nameof(BigTradeDensity), nameof(BigTradeAdaptiveEnabled));
                 Rel(nameof(BigTradeFloor), nameof(BigTradeAdaptiveEnabled));
                 Rel(nameof(BigTradeMaxPerBar), nameof(BigTradeAdaptiveEnabled));
+                // ô "Mức hiếm" chỉ hiện khi chọn "Không theo CORVEN (thống kê)"
+                var rare = settings?.FirstOrDefault(x => x.Name == nameof(StatRarePbp));
+                if (rare != null) rare.Relation = new SettingItemRelationVisibility(nameof(ThresholdMode), new SelectItem("", 1));
                 return settings;
             }
             set => base.Settings = value;
@@ -532,12 +556,28 @@ namespace OrderFlowBubbles
                 + (AdaptiveBaseline ? $"|nbase-v1:{DesiredBaseBars()}" : "")
                 + (CellDotAdaptive ? $"|dotu-v2:{CellDotPreset}" : "")
                 + (BigTradeAdaptiveEnabled ? $"|bta-v1:{BigTradeDensity}/{BigTradeFloor}/{BigTradeCeil}/{BigTradeMaxPerBar}/{BigTradeMergeDiv}/{BigTradeMergeMin}" : "")
-                + (ExhTailMedianRatio > 0 ? $"|exhtail-v1:{ExhTailMedianRatio}" : "");
+                + (ExhTailMedianRatio > 0 ? $"|exhtail-v1:{ExhTailMedianRatio}" : "")
+                // 2026-11-25 chế độ "Không theo CORVEN (thống kê)": chỉ thêm khi BẬT -> tắt thì dấu vân tay y như cũ
+                + (StatModeNow ? "|stat-v1:" + StatKey() : "");
         }
+
+        // ---- chế độ "Không theo CORVEN (thống kê)" (StatThreshold.cs) ----
+        // Phút một nến hợp lệ cho chế độ mới: số nguyên >= 1 (lệch dưới 1e-9); ngược lại 0 = chạy như "Theo CORVEN".
+        private int StatMinutes()
+        {
+            double m = BarMinutesNow;
+            if (!(m >= 1)) return 0;
+            double r = Math.Floor(m + 0.5);
+            return Math.Abs(m - r) < 1e-9 ? (int)r : 0;
+        }
+        private bool StatModeNow => ThresholdMode == 1 && StatMinutes() > 0;
+        private string StatKey() => string.Join("/", new object[] { StatMinutes(), StatRarePbp, StatDotDays, StatDotNeighbors, StatDotMinDays, StatDotFallbackMinutes, StatBtMinutes, StatBtRarePbp }
+            .Select(x => Convert.ToString(x, System.Globalization.CultureInfo.InvariantCulture)));
 
         // Số nến nền theo khung (BaselineWindow). Tắt "Nền tự co theo khung" = CellBigBaselineBars (20) như cũ.
         private int DesiredBaseBars() => AdaptiveBaseline ? BaselineWindow.BarsFor(BarMinutesNow, BaselineWindowMinutes) : CellBigBaselineBars;
-        private string BaseKey() => DesiredBaseBars() + "|" + BigTradeDensity.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        private string BaseKey() => DesiredBaseBars() + "|" + BigTradeDensity.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            + (StatModeNow ? "|stat:" + StatKey() : "");
 
         private void InitBaselines()
         {
@@ -545,6 +585,13 @@ namespace OrderFlowBubbles
             _baseKey = BaseKey();
             _cellBigBase = new CellBigBaseline(CellBigBaselineBars, nb);
             _btAdapt = new BigTradeAdaptive(nb, BigTradeDensity);
+            if (StatModeNow)
+            {
+                int sm = StatMinutes();
+                _statDots = new StatDots(sm, StatRarePbp, StatDotDays, StatDotNeighbors, StatDotMinDays, StatDotFallbackMinutes);
+                _statBt = new StatBigTrade(sm, StatBtRarePbp, StatBtMinutes);
+            }
+            else { _statDots = null; _statBt = null; }
             _exhTail = new ExhTailBaseline(nb);
             _rLvlAbsDelta = new RollingRobust(BaselineBars);
             _trackAbsDelta = DLineEnabled;
@@ -776,16 +823,32 @@ namespace OrderFlowBubbles
                     cellLevels.Add(new CellLevel(kv.Key, kv.Value.it.BuyVolume, kv.Value.it.SellVolume, kv.Value.it.Volume, kv.Value.it.Trades));
                 double avgRange = 0;
                 if (_cellBigBase != null) _cellBigBase.TryGetRange(out avgRange);   // bộ NQ: cửa sổ nới theo biên độ nến (khung càng lớn càng rộng)
-                var marks = CellBigLogic.Evaluate(cellLevels, hasCellB, cellMedian, CellSettings(avgRange));
                 var inv = System.Globalization.CultureInfo.InvariantCulture;
+                bool statDots = _statDots != null;   // chỉ khác null khi chế độ thống kê bật (đổi chế độ / khung -> BaseKey đổi -> ResetState)
+                List<CellMark> marks;
+                string statTip = null;
+                if (statDots)
+                {
+                    // "Không theo CORVEN (thống kê)": ngưỡng cùng khung giờ các ngày trước (hoặc dự phòng 120 phút), không sàn, không che
+                    int sthr = -1; bool sfb = false;
+                    marks = CellDotEnabled ? _statDots.Evaluate(bar.TimeLeft, cellLevels, CellDotAllLevels, out sthr, out sfb) : new List<CellMark>();
+                    // "ngưỡng > 31 (2% lớn nhất cùng khung giờ, 5 ngày trước)" / "ngưỡng > 31 (2% lớn nhất 120 phút gần nhất, chưa đủ ngày)"
+                    string pct = (StatRarePbp / 100.0).ToString("0.#", inv);
+                    statTip = sfb
+                        ? $"> {sthr} ({pct}% lớn nhất {StatDotFallbackMinutes} phút gần nhất, chưa đủ ngày)"
+                        : $"> {sthr} ({pct}% lớn nhất cùng khung giờ, {StatDotDays} ngày trước)";
+                }
+                else
+                    marks = CellBigLogic.Evaluate(cellLevels, hasCellB, cellMedian, CellSettings(avgRange));
                 foreach (var m in marks)
                 {
                     var col2 = m.Side > 0 ? BuyColor : SellColor;
                     string side = m.Side > 0 ? "Buy" : "Sell";
                     // Dot theo từng bên: "Sell - 53 Bid (Ask 39) | ngưỡng 31" / "Buy - 40 Ask (Bid 12) | ngưỡng 31" (k = 2,8 x trung vị mỗi ô, ít nhất sàn)
+                    string thrTxt = statTip ?? m.Threshold.ToString("0.#", inv);
                     string tip2 = m.Side > 0
-                        ? $"{side} - {m.Buy:0} Ask (Bid {m.Sell:0}) | ngưỡng {m.Threshold.ToString("0.#", inv)}"
-                        : $"{side} - {m.Sell:0} Bid (Ask {m.Buy:0}) | ngưỡng {m.Threshold.ToString("0.#", inv)}";
+                        ? $"{side} - {m.Buy:0} Ask (Bid {m.Sell:0}) | ngưỡng {thrTxt}"
+                        : $"{side} - {m.Sell:0} Bid (Ask {m.Buy:0}) | ngưỡng {thrTxt}";
                     var b2 = Solid(m.Tick * tick, Shape.Ellipse, col2, true, tip2);
                     b2.SizeFrac = m.SizeFrac;
                     b2.CellBig = true; b2.CellDot = true; b2.CellBid = m.Sell; b2.CellAsk = m.Buy; b2.CellSide = m.Side;
@@ -798,7 +861,32 @@ namespace OrderFlowBubbles
             {
                 // lịch sử không có lệnh đơn (luôn 0) -> lấy từ nhật ký lệnh đơn đã ghi lúc chạy sống (nếu có)
                 if (btCells.Count == 0 && _bigTradeLog != null) btCells = _bigTradeLog.CellsOf(bar.TimeLeft.Ticks, tick);
-                if (btCells.Count > 0)
+                if (btCells.Count > 0 && _statBt != null)
+                {
+                    // "Không theo CORVEN (thống kê)": lệnh đơn lớn hơn hẳn 1% lớn nhất của 240 phút nến có số liệu gần nhất; chưa đủ 500 lệnh -> không vẽ
+                    if (_statBt.TryThreshold(out int sthr))
+                    {
+                        int g = _statBt.MergeTicks();
+                        var sel = BigTradeAdaptive.Select(btCells.Select(c => (c.tick, c.mot)).ToList(), sthr, g, 0, true);
+                        sel.Sort((a, b) => btCells[a].tick.CompareTo(btCells[b].tick));
+                        var inv0 = System.Globalization.CultureInfo.InvariantCulture;
+                        string pct = (StatBtRarePbp / 100.0).ToString("0.#", inv0);
+                        foreach (int si in sel)
+                        {
+                            var c = btCells[si];
+                            int dir = c.buy > c.sell ? 1 : -1;
+                            bigTradeCands.Add(new Bubble
+                            {
+                                Price = c.price, Shape = Shape.Ellipse, Color = dir > 0 ? BuyColor : SellColor,
+                                Size = MidSize(), Transparency = SolidTransparency, Halo = false, UseBarWidth = true,
+                                SizeFrac = BigTradeLogic.SizeFrac(c.mot, Math.Max(1, sthr)),
+                                Tooltip = $"Big trade: 1 lệnh {c.mot:0} hợp đồng (ngưỡng > {sthr}, {pct}% lớn nhất {StatBtMinutes} phút gần nhất) | ô {c.sell:0} Bid {c.buy:0} Ask",
+                                CellBig = true, CellDot = false, CellBid = c.sell, CellAsk = c.buy, CellSide = dir
+                            });
+                        }
+                    }
+                }
+                else if (btCells.Count > 0)
                 {
                     double thr = BigTradeMinContracts; int g = 0, cap = 0;
                     if (BigTradeAdaptiveEnabled && _btAdapt != null)
@@ -1444,6 +1532,7 @@ namespace OrderFlowBubbles
                 if (CellBigLogic.BarStats(cbLevels, out double bmean, out double bmedian))
                 {
                     _cellBigBase.Add(bmean, bmedian, CellBigLogic.BarRangeTicks(cbLevels));
+                    _statDots?.AddClosedBar(bar.TimeLeft, cbLevels);   // chế độ thống kê: nộp Bid/Ask của nến vào (ngày, khung giờ), dự phòng, biên độ
                     // nền đuôi kiệt sức: mọi nến đóng có giao dịch và high > low nộp đuôi đỉnh (Ask) + đuôi đáy (Bid), không phụ thuộc râu
                     long hT = (long)Math.Round(bar.High / tickSz), lT = (long)Math.Round(bar.Low / tickSz);
                     if (_exhTail != null && hT > lT)
@@ -1462,6 +1551,7 @@ namespace OrderFlowBubbles
                     if (bt.Count == 0 && _bigTradeLog != null)
                         foreach (var c in _bigTradeLog.CellsOf(bar.TimeLeft.Ticks, tickSz)) bt.Add((c.tick, c.mot));
                     _btAdapt.AddClosedBar(bt);
+                    _statBt?.AddClosedBar(bt);   // chế độ thống kê: nến không có lệnh đơn > 0 không nộp
                 }
             }
             if (ads != null) _rLvlAbsDelta.AddBar(ads);

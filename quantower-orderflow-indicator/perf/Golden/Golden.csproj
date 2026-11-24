@@ -20,6 +20,7 @@
     <Compile Include="../../CellBigLogic.cs" />
     <Compile Include="../../StopHuntLogic.cs" />
     <Compile Include="../../RollingRobust.cs" />
+    <Compile Include="../../StatThreshold.cs" />
     <Compile Include="Program.cs" />
     <Reference Include="TradingPlatform.BusinessLayer"><HintPath>$(USERPROFILE)\quantower-libs\TradingPlatform.BusinessLayer.dll</HintPath></Reference>
     <Reference Include="System.Drawing.Common"><HintPath>$(USERPROFILE)\quantower-libs\System.Drawing.Common.dll</HintPath></Reference>

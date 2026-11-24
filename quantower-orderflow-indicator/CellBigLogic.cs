@@ -325,12 +325,15 @@ namespace OrderFlowBubbles
 
         /// <summary>Chọn vòng: ô đạt (mot &gt; 0 và &gt;= thr), duyệt mot giảm dần (bằng nhau: tick thấp trước), bỏ ô cách ô đã giữ &lt;= g tick
         /// (g &lt;= 0: không gộp), dừng khi đủ cap vòng (cap &lt;= 0: không giới hạn). Trả CHỈ SỐ trong cells, theo thứ tự giữ.</summary>
-        public static List<int> Select(IReadOnlyList<(long tick, double mot)> cells, double thr, int g, int cap)
+        public static List<int> Select(IReadOnlyList<(long tick, double mot)> cells, double thr, int g, int cap) => Select(cells, thr, g, cap, false);
+
+        /// <summary>Như trên; strict = true: ô phải LỚN HƠN HẲN ngưỡng (mot &gt; thr) — chế độ "Không theo CORVEN (thống kê)".</summary>
+        public static List<int> Select(IReadOnlyList<(long tick, double mot)> cells, double thr, int g, int cap, bool strict)
         {
             var kept = new List<int>();
             if (cells == null) return kept;
             var order = new List<int>();
-            for (int i = 0; i < cells.Count; i++) if (cells[i].mot > 0 && cells[i].mot >= thr) order.Add(i);
+            for (int i = 0; i < cells.Count; i++) if (cells[i].mot > 0 && (strict ? cells[i].mot > thr : cells[i].mot >= thr)) order.Add(i);
             order.Sort((a, b) =>
             {
                 int c = cells[b].mot.CompareTo(cells[a].mot);

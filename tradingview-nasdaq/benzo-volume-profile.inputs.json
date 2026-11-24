@@ -11,7 +11,7 @@
   {"id": "showLive", "name": "Show Developing (current) Profile", "type": "bool", "defval": true},
   {"id": "showWeekVA", "name": "Week VAH / VAL (dashed)", "type": "bool", "defval": true},
   {"id": "showDayVA", "name": "Day VAH / VAL (dashed)", "type": "bool", "defval": true},
-  {"id": "rowNumbersOn", "name": "Volume Number on Each Row (developing profile)", "type": "select", "options": ["Auto", "Off", "Day", "Week", "Both"], "defval": "Auto"},
+  {"id": "rowNumbersMode", "name": "Volume Number on Each Row", "type": "select", "options": ["Auto", "Off", "Day", "Week", "Both"], "defval": "Auto"},
   {"id": "rowNumbersAll", "name": "Row Numbers on Finished Profiles Too", "type": "bool", "defval": true},
   {"id": "rowNumberColor", "name": "Row Number Color", "type": "color", "defval": "#d1d4dc"},
   {"id": "rowNumberMax", "name": "Hide Row Numbers Above (rows on screen)", "type": "int", "defval": 70, "min": 10, "max": 400, "step": 5},

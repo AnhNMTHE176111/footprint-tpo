@@ -768,6 +768,7 @@ function baseSeries(hist, live, cache) {
 const CACHES = {};
 const CACHE_IDS = [];
 const MAX_CACHES = 6;
+let lastDiag = '';
 function newCache() {
   return { series: {}, profiles: {}, res: null };
 }
@@ -813,7 +814,7 @@ return {
       showHVN = true, hvnBuyColor = '#26a69a', hvnSellColor = '#ef5350', hvnInsideColor = '#9e9e9e',
       showLVN = true, lvnBuyColor = '#29b6f6', lvnSellColor = '#ffa726',
       showWeekVA = true, showDayVA = true, colWeekVA = '#4a90e2', colDayVA = '#c9a43c',
-      rowNumbersOn = 'Auto', rowNumbersAll = true, rowNumberColor = '#d1d4dc', rowNumberMax = 70,
+      rowNumbersMode: rowNumbersOn = 'Auto', rowNumbersAll = true, rowNumberColor = '#d1d4dc', rowNumberMax = 70,
     } =indicator.extendData?.inputs || {};
     const n = dataList.length;
     const res = new Array(n);
@@ -985,6 +986,7 @@ return {
       zones,
       rowNumberColor,
       rowNumberMax: Math.max(1, Number(rowNumberMax) || 70),
+      rowNumbersMode: numbersOn,
     };
     cache.res = res;
     return withCandleColor(res);
@@ -1016,10 +1018,12 @@ return {
     // pixels, so it follows the real zoom, manual price-scale zoom included.
     // bv.bounds may not report a height: fall back to the canvas, then to a typical 700 px pane.
     const paneH = paneHeight(bv.bounds(args), ctx.canvas);
+    const diag = [];
     for (const p of visProfiles) {
       if (!p.numbers || !p.rows.length) continue;
       const rowPx = Math.abs(Y(p.rows[0].bottom) - Y(p.rows[0].top));
       const px = rowNumberPx(rowPx > 0 ? paneH / rowPx : NaN, st.rowNumberMax);
+      diag.push(`row ${Math.round(rowPx)}px -> ${rowPx > 0 ? Math.round(paneH / rowPx) : '?'} rows on screen, font ${px || 'hidden'}`);
       if (!px) continue;
       ctx.font = bv.font(args, { size: px }).css;
       ctx.textAlign = 'left';
@@ -1032,6 +1036,13 @@ return {
         if (!Number.isFinite(y) || y < -px || y > paneH + px) continue;
         ctx.fillText(volumeText(r.vol), x, y);
       }
+    }
+
+    // One line in the indicator's Log tab whenever the row-number state changes (no F12 needed).
+    const diagText = `[Benzo VP] row numbers: mode ${st.rowNumbersMode}, pane ${Math.round(paneH)}px, ${visProfiles.length} profile(s) in view, ${diag.length} numbered${diag.length ? ` (${diag.join('; ')})` : ''}`;
+    if (diagText !== lastDiag) {
+      lastDiag = diagText;
+      try { console.log(diagText); } catch (e) { /* no console */ }
     }
 
     // 1. POC lines.

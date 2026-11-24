@@ -1,0 +1,28 @@
+ví dụ nhỏ: ĐẠT
+ví dụ nhỏ: ĐẠT
+khong_sot GC M15: 10238 chấm, bản nhanh = bản chuẩn; ghi dot_golden_khong_sot_GC_M15.csv
+khong_sot NQ M30: 5722 chấm, bản nhanh = bản chuẩn; ghi dot_golden_khong_sot_NQ_M30.csv
+       bo ma khung   nen  nen_co_nen  N   cham    do  xanh
+khong_sot GC    M1 87362       87357 20  80386 47288 33098
+khong_sot GC    M5 17623       17618 20  26402 15221 11181
+khong_sot GC   M15  5875        5870  8  10238  5727  4511
+khong_sot GC   M30  2938        2933  5   5575  3069  2506
+khong_sot GC   M60  1470        1465  5   3027  1644  1383
+khong_sot NQ    M1 71047       71042 20 106953 58967 47986
+khong_sot NQ    M5 14210       14205 20  29450 15940 13510
+khong_sot NQ   M15  4737        4732  8  11061  5906  5155
+khong_sot NQ   M30  2369        2364  5   5722  3010  2712
+khong_sot NQ   M60  1185        1180  5   3044  1587  1457
+it_nhieu GC M15: 4747 chấm, bản nhanh = bản chuẩn; ghi dot_golden_it_nhieu_GC_M15.csv
+it_nhieu NQ M30: 2652 chấm, bản nhanh = bản chuẩn; ghi dot_golden_it_nhieu_NQ_M30.csv
+      bo ma khung   nen  nen_co_nen  N  cham    do  xanh
+it_nhieu GC    M1 87362       87357 20 39918 24583 15335
+it_nhieu GC    M5 17623       17618 20 13106  8067  5039
+it_nhieu GC   M15  5875        5870  8  4747  2943  1804
+it_nhieu GC   M30  2938        2933  5  2464  1547   917
+it_nhieu GC   M60  1470        1465  5  1329   850   479
+it_nhieu NQ    M1 71047       71042 20 47895 28365 19530
+it_nhieu NQ    M5 14210       14205 20 14124  8944  5180
+it_nhieu NQ   M15  4737        4732  8  5118  3356  1762
+it_nhieu NQ   M30  2369        2364  5  2652  1733   919
+it_nhieu NQ   M60  1185        1180  5  1476  1007   469

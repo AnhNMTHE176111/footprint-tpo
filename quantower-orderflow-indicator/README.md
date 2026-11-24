@@ -53,6 +53,13 @@ Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score,
 
 > **Sàn tối thiểu của chấm Bid/Ask (2026-11-24):** ô "Chấm Bid/Ask nhỏ · Dùng sàn tối thiểu" (mặc định bật) và ô số "Sàn tối thiểu (hợp đồng)" (mặc định 9, chỉ hiện khi ô trên bật). Tắt = chấm chỉ còn điều kiện k × trung vị. Trên 78.464 nến M1 NQ: sàn 9 → 33.958 chấm, tắt sàn → 35.130, sàn 20 → 18.180 (C# = Python).
 
+> **Ngưỡng tự thích nghi theo khung + phiên (2026-11-24, tối; Fable đo + đề xuất, Opus implement):** chi tiết và số đo ở [research/adaptive_2026-11-24/README.md](research/adaptive_2026-11-24/README.md). Mọi luật là khớp mật độ hiển thị với CORVEN, không phải lợi thế.
+> - **Nền theo khung** ("Nền tự co theo khung", bật): N = min(20, max(5, 120 phút / phút một nến)) nến — M1/M5 20, M15 8, M30/H1 5.
+> - **Big Trade** ("Ngưỡng tự thích nghi", bật): ngưỡng = max(sàn 5, lệnh đơn lớn thứ K trong N nến trước), K = mật độ 1,0 × N; gộp vòng cách ≤ max(2, biên độ TB / 8) tick; tối đa 3 vòng/nến. Lịch sử không có lệnh đơn → lấy từ nhật ký `bigtrade-log` (vòng của nến cũ vẽ lại được sau khi đổi tham số). NQ M15 phiên Mỹ: 15,05 → 0,96 vòng/nến.
+> - **Chấm** ("Tự co dãn theo khung", bật; ô "Bộ số": Không sót / Trung gian / Ít nhiễu): một công thức mọi mã, w = max(4, biên độ TB / 6), ngưỡng = max(k × trung vị, sàn). Thay bộ GC và bộ Nasdaq khi bật.
+> - **Kiệt sức**: thêm "đuôi ≤ 0,8 × trung vị đuôi N nến trước" (0 = tắt). NQ H1 1,77 → 0,75 dấu/nến; CORVEN GC M5 vẫn 11/11.
+> - Kiểm: C# = Python từng dấu (chấm 2 bộ × GC/NQ × M1–H1, kiệt sức GC M5/M15 NQ M5/M30, Big Trade NQ M1/M15 GC M5/M30 từ nhật ký); nạp nguội = nạp tăng dần (`Golden.dll inccheck`); tắt hết các ô thích nghi = golden cũ.
+>
 > **Bộ NQ tự nới theo khung (2026-11-24, chiều):** cửa sổ ±w = max(8, làm tròn(biên độ TB 20 nến trước theo tick / 14)), che giữ 12, 3,5 × trung vị, sàn 9. M1/M5 gần như giữ ±8; M15 ≈ ±14; M30 ≈ ±22; H1 ≈ ±31. Chấm/nến NQ (vàng GC cùng khung): M1 0,47 (0,46) · M5 0,78 (0,84) · M15 1,19 (1,11) · M30 1,67 (1,34) · H1 1,54 (1,54). C# = Python trên M1/M5/M15/H1 (`research/nq_calib_2026-11-24/tf_scale.py`, `tf_csv.py`). Khớp mật độ, không phải lợi thế.
 >
 > **Stacked Imbalance kéo dài tối đa (2026-11-24):** CORVEN "dùng gần thôi, đừng dùng xa" / "xa tít thì không dùng" → vùng đủ 20 nến mà chưa bị chạm thì hết hạn, dừng ở nến thứ 20 (CORVEN không nêu con số, chỉnh ở ô "Stacked Imbalance · Kéo dài tối đa"). Vùng còn hiệu lực chỉ kéo tới nến đang chạy. Golden đổi chỉ ở dòng kết thúc vùng (đã kiểm: `--set ImbMaxBars=0` khớp chuẩn cũ; niêm phong không đổi).

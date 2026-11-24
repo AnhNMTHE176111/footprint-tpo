@@ -1,0 +1,13 @@
+CORVEN: GC M1 1.53 chấm/nến, NQ M1 2.26 chấm/nến, GC M5 16 cụm (~33 chấm) / 26 nến
+                                                luat  GC_M1_cham_nen  GC_M1_recall  GC_M1_precision  NQ_M1_cham_nen  NQ_M1_recall  NQ_M1_precision  GC_M5_cham GC_M5_cum_trung
+                                            HIỆN TẠI            0.57          0.46             0.98            0.82          0.23             0.50          33            7/16
+               chung 2,8 · sàn 9 (che max(6; 0,75w))            0.57          0.46             0.98            0.88          0.24             0.48          30            7/16
+                      chung 2,8 · sàn 9 · che 2 tick            0.62          0.49             0.97            0.99          0.27             0.49          31            7/16
+                       chung 2.8 · sàn 9 · KHÔNG che            0.65          0.50             0.97            1.01          0.28             0.49          32            7/16
+                       chung 2.8 · sàn 5 · KHÔNG che            0.69          0.53             0.97            1.43          0.35             0.46          32            7/16
+                       chung 2.4 · sàn 9 · KHÔNG che            0.79          0.58             0.93            1.06          0.28             0.48          47           11/16
+                       chung 2.4 · sàn 5 · KHÔNG che            0.90          0.64             0.92            1.85          0.38             0.39          47           11/16
+                       chung 2.0 · sàn 9 · KHÔNG che            0.91          0.63             0.90            1.13          0.28             0.46          56           12/16
+                       chung 2.0 · sàn 5 · KHÔNG che            1.17          0.75             0.85            2.27          0.39             0.33          56           12/16
+       chung 2,4 · sàn 5 · w tối thiểu 3 · không che            0.92          0.64             0.92            1.85          0.38             0.39          47           11/16
+chung 2,0 · sàn 5 · w tối thiểu 2 (R/10) · không che            1.32          0.80             0.84            2.71          0.45             0.32          67           12/16

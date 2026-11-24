@@ -170,25 +170,33 @@ namespace OrderFlowBubbles
     }
 
     // Mức nền: trung bình cuốn của N nến ĐÃ ĐÓNG. Người gọi chỉ Add mỗi nến đóng ĐÚNG 1 lần.
-    // Hai chuỗi: volume TB mỗi ô có giao dịch (kiệt sức dùng) và TRUNG VỊ volume mỗi ô (chấm dùng). Cần >= 5 nến.
+    // Ba chuỗi: volume TB mỗi ô có giao dịch (kiệt sức dùng, luôn nMean = 20 nến), TRUNG VỊ volume mỗi ô và BIÊN ĐỘ nến (chấm dùng,
+    // nMedian nến — tự co theo khung từ 2026-11-24, xem BaselineWindow). Cần >= 5 nến.
     public sealed class CellBigBaseline
     {
-        private readonly int _n;
+        private readonly int _nMean, _nMed;
         private readonly Queue<double> _mean = new Queue<double>();
         private readonly Queue<double> _median = new Queue<double>();
         private readonly Queue<double> _range = new Queue<double>();
-        public CellBigBaseline(int n) { _n = Math.Max(CellBigLogic.MinHistoryBars, n); }
+        public CellBigBaseline(int n) : this(n, n) { }
+        public CellBigBaseline(int nMean, int nMedian)
+        {
+            _nMean = Math.Max(CellBigLogic.MinHistoryBars, nMean);
+            _nMed = Math.Max(CellBigLogic.MinHistoryBars, nMedian);
+        }
         public int Count => _mean.Count;
+        public int MedianBars => _nMed;
         public void Add(double barMeanLevelVol, double barMedianLevelVol, double barRangeTicks = 0)
         {
             _mean.Enqueue(barMeanLevelVol); _median.Enqueue(barMedianLevelVol); _range.Enqueue(barRangeTicks);
-            while (_mean.Count > _n) { _mean.Dequeue(); _median.Dequeue(); _range.Dequeue(); }
+            while (_mean.Count > _nMean) _mean.Dequeue();
+            while (_median.Count > _nMed) { _median.Dequeue(); _range.Dequeue(); }
         }
-        /// <summary>Biên độ nến tính theo tick (tick cao nhất - thấp nhất có giao dịch), trung bình 20 nến trước. Bộ NQ dùng để nới cửa sổ theo khung.</summary>
+        /// <summary>Biên độ nến tính theo tick (tick cao nhất - thấp nhất có giao dịch), trung bình nMedian nến trước.</summary>
         public bool TryGetRange(out double avgRangeTicks) => Avg(_range, out avgRangeTicks);
-        /// <summary>Volume TB mỗi ô có giao dịch (trung bình 20 nến trước).</summary>
+        /// <summary>Volume TB mỗi ô có giao dịch (trung bình nMean = 20 nến trước).</summary>
         public bool TryGet(out double avgLevelVol) => Avg(_mean, out avgLevelVol);
-        /// <summary>Trung vị volume mỗi ô có giao dịch, lấy trung bình của 20 nến trước.</summary>
+        /// <summary>Trung vị volume mỗi ô có giao dịch, lấy trung bình của nMedian nến trước.</summary>
         public bool TryGetMedian(out double avgMedianLevelVol) => Avg(_median, out avgMedianLevelVol);
         private static bool Avg(Queue<double> q, out double v)
         {
@@ -197,6 +205,147 @@ namespace OrderFlowBubbles
             double s = 0; foreach (var x in q) s += x;
             v = s / q.Count;
             return v > 0;
+        }
+    }
+
+    // ========================================================================
+    //  NGƯỠNG TỰ THÍCH NGHI THEO KHUNG + TÌNH TRẠNG (2026-11-24, research/adaptive_2026-11-24/, Fable đo + đề xuất)
+    //  Mọi luật là KHỚP MẬT ĐỘ HIỂN THỊ với chart CORVEN, KHÔNG phải lợi thế đã kiểm định.
+    //  Làm tròn: Floor(x + 0,5) (khớp Python), KHÔNG dùng Math.Round (làm tròn về số chẵn).
+    // ========================================================================
+    public static class BaselineWindow
+    {
+        public const double DefaultWindowMinutes = 120;
+        public static int RoundHalfUp(double x) => (int)Math.Floor(x + 0.5);
+        /// <summary>Số nến ĐÃ ĐÓNG làm nền = min(20, max(5, làm tròn(120 phút / phút một nến))): M1 20 · M5 20 · M15 8 · M30 5 · H1 5.
+        /// Không phải nến thời gian (minutes &lt;= 0) -> 20. Lý do đo được: 20 nến M30 = 10 giờ nên nền lấy từ phiên trước
+        /// (NQ M30 phiên Á 0,09 chấm/nến, phiên Mỹ 3,77).</summary>
+        public static int BarsFor(double minutesPerBar, double windowMinutes = DefaultWindowMinutes)
+            => minutesPerBar > 0 ? Math.Min(20, Math.Max(5, (int)Math.Floor(windowMinutes / minutesPerBar + 0.5))) : 20;
+    }
+
+    // CHẤM — một công thức cho mọi mã, mọi khung (thay bộ số theo mã khi bật):
+    //   w = max(4, làm tròn(biên độ TB / 6)); ngưỡng = max(k x B, sàn); che h = max(che tối thiểu, làm tròn(tỉ lệ che x w)).
+    //   B (trung vị mỗi ô) và biên độ TB lấy trên N nến trước (BaselineWindow).
+    //   Bộ số: 0 = Không sót (k 2,0 · sàn 5 · che 2) — recall chấm CORVEN GC M1 0,70 (precision 0,85);
+    //          1 = Trung gian (k 2,4 · sàn 5 · che 2) — recall 0,61 (0,92);
+    //          2 = Ít nhiễu  (k 2,8 · sàn 9 · che max(6; 0,75 x w)) — recall 0,46 (0,98), mật độ gần luật cũ ở M1/M5.
+    public static class UnifiedDots
+    {
+        public const double RangePerWindow = 6.0;
+        public const int WindowMin = 4;
+        public const int PresetNoMiss = 0, PresetMiddle = 1, PresetQuiet = 2;
+
+        public static (double k, double floor, double hideRatio, int hideMin) Preset(int preset) => preset switch
+        {
+            PresetMiddle => (2.4, 5.0, 0.0, 2),
+            PresetQuiet => (2.8, 9.0, 0.75, 6),
+            _ => (2.0, 5.0, 0.0, 2),
+        };
+
+        public static int Window(double avgRangeTicks)
+            => avgRangeTicks > 0 ? Math.Max(WindowMin, BaselineWindow.RoundHalfUp(avgRangeTicks / RangePerWindow)) : WindowMin;
+
+        public static int Hide(int w, double hideRatio, int hideMin) => Math.Max(hideMin, BaselineWindow.RoundHalfUp(hideRatio * w));
+
+        /// <summary>Đặt k / cửa sổ / che / sàn theo bộ số. allLevels: giữ chế độ "nổ mọi mức giá" (w = 0). floorEnabled false = bỏ sàn.</summary>
+        public static void Apply(CellBigSettings s, int preset, double avgRangeTicks, bool allLevels, bool floorEnabled)
+        {
+            if (s == null) return;
+            var p = Preset(preset);
+            int w = Window(avgRangeTicks);
+            s.DotMedianRatio = p.k;
+            s.MinSide = floorEnabled ? p.floor : 0;
+            s.DotLocalTicks = allLevels ? 0 : w;
+            s.DotHideBuyNearSellTicks = Hide(w, p.hideRatio, p.hideMin);
+        }
+    }
+
+    // BIG TRADE thích nghi — "lớn thứ K trong N nến trước" (Bookmap cùng họ: ngưỡng cuốn theo phân phối gần đây; dùng thứ hạng vì lệnh đơn có đuôi rất dài).
+    //   Mỗi nến ĐÃ ĐÓNG có số liệu lệnh đơn (ít nhất một ô > 0) nộp K lệnh đơn lớn nhất của nó; K = max(1, làm tròn(mật độ x N)).
+    //   Ngưỡng dùng = max(sàn, giá trị lớn thứ K trong gộp hàng đợi) (trần > 0 thì kẹp); chưa đủ 5 nến có số liệu -> ngưỡng cố định.
+    //   Gộp vòng cách nhau <= g = max(gộp tối thiểu, làm tròn(biên độ TB các nến trước / chia)) tick (giữ lệnh lớn hơn), tối đa cap vòng/nến.
+    //   Đo (nhật ký lệnh đơn, vòng/nến Á/Âu/Mỹ): NQ M15 cố định 10 = 2,04 / 3,09 / 15,05 -> thích nghi 0,77 / 1,12 / 0,96.
+    public sealed class BigTradeAdaptive
+    {
+        public const int MinBars = 5;
+        private readonly int _n, _k;
+        private readonly Queue<double[]> _tops = new Queue<double[]>();
+        private readonly Queue<double> _ranges = new Queue<double>();
+
+        public BigTradeAdaptive(int n, double density)
+        {
+            _n = Math.Max(1, n);
+            _k = Math.Max(1, BaselineWindow.RoundHalfUp(density * _n));
+        }
+        public int Count => _tops.Count;
+        public int K => _k;
+
+        /// <summary>Giá trị lớn thứ K trong gộp các mảng (0 nếu chưa đủ K giá trị).</summary>
+        public static double KthLargest(IEnumerable<double[]> tops, int k)
+        {
+            var v = new List<double>();
+            foreach (var a in tops) v.AddRange(a);
+            if (k < 1 || v.Count < k) return 0;
+            v.Sort((a, b) => b.CompareTo(a));
+            return v[k - 1];
+        }
+
+        /// <summary>Ngưỡng dùng cho nến đang xét (chỉ từ các nến ĐÃ ĐÓNG trước).</summary>
+        public double Threshold(double fixedMin, double floor, double ceil)
+        {
+            if (_tops.Count < MinBars) return fixedMin;
+            double thr = Math.Max(floor, KthLargest(_tops, _k));
+            if (ceil > 0) thr = Math.Min(thr, ceil);
+            return thr;
+        }
+
+        /// <summary>Khoảng gộp (tick) theo biên độ TB của các nến trước.</summary>
+        public int MergeTicks(double div, int gmin)
+        {
+            if (_ranges.Count < MinBars || div <= 0) return gmin;
+            double s = 0; foreach (var r in _ranges) s += r;
+            double avg = s / _ranges.Count;
+            return avg > 0 ? Math.Max(gmin, BaselineWindow.RoundHalfUp(avg / div)) : gmin;
+        }
+
+        /// <summary>Nộp nến vừa đóng (ĐÚNG 1 lần, SAU khi đã xét nến đó). Nến không có ô nào lệnh đơn &gt; 0 -> bỏ qua (không nộp số 0).</summary>
+        public void AddClosedBar(IReadOnlyList<(long tick, double mot)> cells)
+        {
+            if (cells == null) return;
+            var vals = new List<double>(); long lo = long.MaxValue, hi = long.MinValue;
+            foreach (var c in cells)
+                if (c.mot > 0) { vals.Add(c.mot); if (c.tick < lo) lo = c.tick; if (c.tick > hi) hi = c.tick; }
+            if (vals.Count == 0) return;
+            vals.Sort((a, b) => b.CompareTo(a));
+            if (vals.Count > _k) vals.RemoveRange(_k, vals.Count - _k);
+            _tops.Enqueue(vals.ToArray()); _ranges.Enqueue(hi - lo);
+            while (_tops.Count > _n) { _tops.Dequeue(); _ranges.Dequeue(); }
+        }
+
+        /// <summary>Chọn vòng: ô đạt (mot &gt; 0 và &gt;= thr), duyệt mot giảm dần (bằng nhau: tick thấp trước), bỏ ô cách ô đã giữ &lt;= g tick
+        /// (g &lt;= 0: không gộp), dừng khi đủ cap vòng (cap &lt;= 0: không giới hạn). Trả CHỈ SỐ trong cells, theo thứ tự giữ.</summary>
+        public static List<int> Select(IReadOnlyList<(long tick, double mot)> cells, double thr, int g, int cap)
+        {
+            var kept = new List<int>();
+            if (cells == null) return kept;
+            var order = new List<int>();
+            for (int i = 0; i < cells.Count; i++) if (cells[i].mot > 0 && cells[i].mot >= thr) order.Add(i);
+            order.Sort((a, b) =>
+            {
+                int c = cells[b].mot.CompareTo(cells[a].mot);
+                if (c != 0) return c;
+                c = cells[a].tick.CompareTo(cells[b].tick);
+                return c != 0 ? c : a.CompareTo(b);
+            });
+            foreach (int i in order)
+            {
+                if (cap > 0 && kept.Count >= cap) break;
+                bool clash = false;
+                if (g > 0) foreach (int j in kept) if (Math.Abs(cells[i].tick - cells[j].tick) <= g) { clash = true; break; }
+                if (!clash) kept.Add(i);
+            }
+            return kept;
         }
     }
 

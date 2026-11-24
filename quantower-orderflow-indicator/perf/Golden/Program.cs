@@ -60,6 +60,10 @@ namespace GoldenPerf
             if (mode == "realcache") return RealCache(work);
             // --tick / --symbol: chạy trên mã khác vàng (vd NQ: --tick 0.25 --symbol NQZ26). Mặc định = vàng GC như cũ.
             TickArg = double.Parse(Arg(args, "--tick", "0.1"), Inv); SymbolArg = Arg(args, "--symbol", null);
+            // --minutes: phút một nến (nền tự co theo khung); --btlog: nhật ký lệnh đơn đọc vào (Big Trade); --zeromot: bỏ lệnh đơn trong CSV (chỉ dùng nhật ký);
+            // --marks FILE: ghi từng dấu (thời gian nến, loại, tick) để so từng dấu với Python
+            MinutesArg = double.Parse(Arg(args, "--minutes", "0"), Inv); BtLogArg = Arg(args, "--btlog", null);
+            ZeroMot = Array.IndexOf(args, "--zeromot") >= 0; MarksArg = Arg(args, "--marks", null);
             // --set Ten=GiaTri (lặp được): đổi tham số cho chế độ stophunt, vd --set CellDotFloorEnabled=false
             for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "--set") { var kv = args[i + 1].Split('='); (SetArgs ??= new Dictionary<string, object>())[kv[0]] = kv[1]; }
             Console.WriteLine($"data: {lvl}\nwork: {work}");
@@ -67,6 +71,7 @@ namespace GoldenPerf
             var bars = LoadBars(lvl, barsCsv);
             Console.WriteLine($"da nap {bars.Count} nen trong {sw.ElapsedMilliseconds} ms");
             if (mode == "stophunt") return StopHuntList(bars, work, Arg(args, "--out", Path.Combine(work, "sh_cs_signals.csv")));
+            if (mode == "inccheck") return IncCheck(bars, work, int.Parse(Arg(args, "--sub", "6000"), Inv));
             return mode == "bench" ? Bench(bars, work, baseline) : Golden(args, bars, work, baseline, perfDir);
         }
 
@@ -79,6 +84,7 @@ namespace GoldenPerf
             var r = Make(bars, 0, bars.Count, c, SetArgs); r.Ind.VolumeAnalysisData_Loaded();
             var bubbles = (IDictionary)typeof(Ind).GetField("_bubbles", NP).GetValue(r.Ind);
             var rows = new List<string>();
+            var marks = MarksArg != null ? new List<string> { "t,kind,price" } : null;
             var signals = new HashSet<string>();
             int purple = 0, cellBig = 0, bad = 0, dots = 0, purpleDots = 0, exhCount = 0, dotsRed = 0, dotsBlue = 0;
             var days = new HashSet<string>();
@@ -88,9 +94,14 @@ namespace GoldenPerf
                 {
                     var t = b.GetType();
                     string shp = t.GetField("Shape", NP).GetValue(b).ToString();
-                    if (shp == "ExhTop" || shp == "ExhBottom") exhCount++;
+                    double mpx = (double)t.GetField("Price", NP).GetValue(b);
+                    if (shp == "ExhTop" || shp == "ExhBottom") { exhCount++; marks?.Add($"{bars[k].TimeLeft:yyyy-MM-dd HH:mm},{(shp == "ExhTop" ? "exhT" : "exhB")},{mpx.ToString(Inv)}"); }
                     bool big = (bool)t.GetField("CellBig", NP).GetValue(b);
                     if (!big) continue;
+                    {
+                        bool dt = (bool)t.GetField("CellDot", NP).GetValue(b); int sd0 = (int)t.GetField("CellSide", NP).GetValue(b);
+                        marks?.Add($"{bars[k].TimeLeft:yyyy-MM-dd HH:mm},{(dt ? (sd0 < 0 ? "dotS" : "dotB") : "bt")},{mpx.ToString(Inv)}");
+                    }
                     cellBig++;
                     bool isDot = (bool)t.GetField("CellDot", NP).GetValue(b);
                     int side = (int)t.GetField("CellSide", NP).GetValue(b);
@@ -109,9 +120,28 @@ namespace GoldenPerf
                     rows.Add($"{bars[k].TimeLeft:yyyy-MM-dd HH:mm},{sd},{m.Groups[2].Value},{m.Groups[3].Value},{m.Groups[4].Value},{side}");
                 }
             File.WriteAllLines(outFile, rows.Prepend("sweep_time,side,level,bid,ask,orig_side"));
+            if (marks != null) File.WriteAllLines(MarksArg, marks);
             double nd = Math.Max(1, days.Count);
             Console.WriteLine($"stop hunt: {signals.Count} dau ({signals.Count / nd:0.00}/ngay), bong tim {purple} ({purple / nd:0.00}/ngay), tong o lon {cellBig} (Big {cellBig - dots}, Dot {dots} = do {dotsRed} + xanh {dotsBlue}; tim: Big {purple - purpleDots}, Dot {purpleDots}), {days.Count} ngay lich, kiet suc {exhCount}, loi dinh dang/mau {bad} -> {outFile}");
             return bad == 0 ? 0 : 1;
+        }
+
+        // So nạp NGUỘI với nạp TĂNG DẦN (thêm từng nến, mỗi nến Process 3 lần) trên `sub` nến cuối: trạng thái phải giống hệt.
+        // Dùng để kiểm các hàng đợi nền mới (Big Trade thích nghi, nền đuôi kiệt sức) chỉ nộp mỗi nến đóng ĐÚNG 1 lần (2026-11-24).
+        static int IncCheck(List<HistoryItemBar> bars, string work, int sub)
+        {
+            sub = Math.Min(sub, bars.Count); int off = bars.Count - sub;
+            string c1 = Path.Combine(work, "IC1.jsonl"), c2 = Path.Combine(work, "IC2.jsonl");
+            foreach (var f in new[] { c1, c2 }) if (File.Exists(f)) File.Delete(f);
+            var cold = Make(bars, off, sub, c1, SetArgs); cold.Ind.VolumeAnalysisData_Loaded();
+            var inc = Make(bars, off, sub / 2, c2, SetArgs); inc.Ind.VolumeAnalysisData_Loaded();
+            for (int k = sub / 2 + 1; k <= sub; k++) { inc.Ind.TestBarCount = k; inc.Process(); inc.Process(); inc.Process(); }
+            var d1 = new Dig(); var d2 = new Dig();
+            string h1 = StateHash(cold.Ind, d1), h2 = StateHash(inc.Ind, d2);
+            var bub = (IDictionary)typeof(Ind).GetField("_bubbles", NP).GetValue(cold.Ind);
+            int bt = 0; foreach (var l in bub.Values) foreach (var b in (IEnumerable)l) { var t = b.GetType(); if ((bool)t.GetField("CellBig", NP).GetValue(b) && !(bool)t.GetField("CellDot", NP).GetValue(b)) bt++; }
+            Console.WriteLine($"nguoi {h1} ({d1.Lines} dong) / tang dan {h2} ({d2.Lines} dong), vong Big Trade {bt}: {(h1 == h2 ? "KHOP" : "LECH")}");
+            return h1 == h2 ? 0 : 1;
         }
 
         // Khi đặt biến môi trường OFB_FAKE_MOT=1: giả lập lệnh đơn = bên trội của ô (cận trên) để chạy thử đường Big Trade (lịch sử thật luôn = 0). KHÔNG dùng cho golden.
@@ -147,7 +177,7 @@ namespace GoldenPerf
                 if (!byIdx.TryGetValue(int.Parse(p[0], Inv), out var b)) continue;
                 b.VolumeAnalysisData.PriceLevels[D(p[2])] = new VolumeAnalysisItem
                 {
-                    SellVolume = D(p[3]), BuyVolume = D(p[4]), Volume = D(p[5]), Trades = (int)D(p[7]), BuyTrades = (int)D(p[8]), SellTrades = (int)D(p[9]), MaxOneTradeVolume = FakeMot ? Math.Max(D(p[3]), D(p[4])) : D(p[10])
+                    SellVolume = D(p[3]), BuyVolume = D(p[4]), Volume = D(p[5]), Trades = (int)D(p[7]), BuyTrades = (int)D(p[8]), SellTrades = (int)D(p[9]), MaxOneTradeVolume = ZeroMot ? 0 : FakeMot ? Math.Max(D(p[3]), D(p[4])) : D(p[10])
                 };
             }
             // kiểm tra nhanh: Delta của Quantower = buy - sell phải khớp cột delta
@@ -164,6 +194,7 @@ namespace GoldenPerf
         }
 
         static double TickArg = 0.1; static string SymbolArg; static Dictionary<string, object> SetArgs;
+        static double MinutesArg; static string BtLogArg, MarksArg; static bool ZeroMot;
 
         static Run Make(List<HistoryItemBar> bars, int off, int count, string cacheFile, Dictionary<string, object> cfg)
         {
@@ -182,6 +213,8 @@ namespace GoldenPerf
             ind.TestBarCount = count;
             ind.TestTickSize = TickArg;
             ind.TestSymbolName = SymbolArg;
+            ind.TestBarMinutes = MinutesArg;
+            ind.TestBigTradeLogFile = BtLogArg;
             ind.TestCacheFile = cacheFile;
             var m = typeof(Ind).GetMethod("Process", NP);
             return new Run { Ind = ind, Process = (Action)Delegate.CreateDelegate(typeof(Action), ind, m) };

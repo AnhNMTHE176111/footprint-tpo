@@ -1,0 +1,5 @@
+                                     luat  GC_M1_cham_nen  GC_M1_recall  GC_M1_precision  NQ_M1_cham_nen  NQ_M1_recall  NQ_M1_precision  GC_M5_cham GC_M5_cum_trung
+                                 HIỆN TẠI            0.57          0.46             0.98            0.82          0.23             0.50          33            7/16
+ÍT NHIỄU: 2,8 · sàn 9 · che max(6; 0,75w)            0.57          0.46             0.98            0.88          0.24             0.48          30            7/16
+     TRUNG GIAN: 2,4 · sàn 5 · che 2 tick            0.83          0.61             0.92            1.78          0.38             0.39          41            9/16
+      KHÔNG SÓT: 2,0 · sàn 5 · che 2 tick            1.04          0.70             0.85            2.17          0.39             0.33          49           10/16

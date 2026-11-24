@@ -341,7 +341,39 @@ namespace OrderFlowBubbles
     // ========================================================================
     public sealed class BigTradeLog
     {
+        private static readonly System.Globalization.CultureInfo Inv = System.Globalization.CultureInfo.InvariantCulture;
+        private static bool TryNum(string x, out double v) => double.TryParse(x, System.Globalization.NumberStyles.Float, Inv, out v);
+        private void AddValue(long timeTicks, double price, double mot, double buy, double sell)
+        {
+            if (!(mot > 0)) return;
+            if (!_byBar.TryGetValue(timeTicks, out var l)) _byBar[timeTicks] = l = new List<(double, double, double, double)>();
+            l.Add((price, mot, buy, sell));
+        }
+
+        /// <summary>Các ô có lệnh đơn &gt; 0 của nến mở lúc timeTicks (theo tick tăng dần; trùng tick giữ lệnh lớn hơn). Rỗng nếu nhật ký không có nến này.</summary>
+        public List<(long tick, double mot, double price, double buy, double sell)> CellsOf(long timeTicks, double tickSize)
+        {
+            var res = new List<(long tick, double mot, double price, double buy, double sell)>();
+            if (tickSize <= 0) return res;
+            lock (_fileLock)
+            {
+                if (!_byBar.TryGetValue(timeTicks, out var l)) return res;
+                var byTick = new Dictionary<long, int>();
+                foreach (var c in l)
+                {
+                    long t = (long)Math.Round(c.price / tickSize);
+                    if (byTick.TryGetValue(t, out int i)) { if (c.mot > res[i].mot) res[i] = (t, c.mot, c.price, c.buy, c.sell); }
+                    else { byTick[t] = res.Count; res.Add((t, c.mot, c.price, c.buy, c.sell)); }
+                }
+            }
+            res.Sort((a, b) => a.tick.CompareTo(b.tick));
+            return res;
+        }
+
         private readonly HashSet<string> _seen = new();
+        // 2026-11-24: giữ cả GIÁ TRỊ theo nến (time_ticks -> các ô) để Big Trade thích nghi làm nóng nền + vẽ lại vòng của nến lịch sử
+        // (lịch sử của feed luôn có lệnh đơn = 0). Một nến M1 khoảng 50 ô; nhật ký 1 tháng NQ M1 ~465 nghìn dòng.
+        private readonly Dictionary<long, List<(double price, double mot, double buy, double sell)>> _byBar = new();
         private readonly object _fileLock = new();
         private bool _headerWritten;
 
@@ -353,7 +385,7 @@ namespace OrderFlowBubbles
 
         public void Load()
         {
-            _seen.Clear();
+            _seen.Clear(); _byBar.Clear();
             _headerWritten = false;
             if (string.IsNullOrEmpty(FilePath) || !File.Exists(FilePath)) return;
             bool first = true;
@@ -364,6 +396,9 @@ namespace OrderFlowBubbles
                 var parts = line.Split(',');
                 if (parts.Length < 2) continue;
                 _seen.Add(parts[0] + "|" + parts[2]); // time_ticks|price
+                if (parts.Length >= 6 && long.TryParse(parts[0], System.Globalization.NumberStyles.Integer, Inv, out long tt)
+                    && TryNum(parts[2], out double pr) && TryNum(parts[3], out double mot) && TryNum(parts[4], out double b) && TryNum(parts[5], out double sl))
+                    AddValue(tt, pr, mot, b, sl);
             }
         }
 
@@ -375,6 +410,7 @@ namespace OrderFlowBubbles
             {
                 if (_seen.Contains(key)) return false;
                 _seen.Add(key);
+                AddValue(timeTicks, price, mot, buy, sell);
                 if (string.IsNullOrEmpty(FilePath)) return true;
                 string dir = Path.GetDirectoryName(FilePath);
                 if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);

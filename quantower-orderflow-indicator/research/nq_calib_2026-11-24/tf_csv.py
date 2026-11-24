@@ -1,11 +1,13 @@
-"""Gộp footprint NQ M1 lên khung M (phút) thành cặp CSV cùng định dạng data-export (để chạy perf/Golden stophunt so C# với Python).
-python tf_csv.py <phút> <thư mục ra>"""
+"""Gộp footprint M1 lên khung M (phút) thành cặp CSV cùng định dạng data-export (để chạy perf/Golden stophunt so C# với Python).
+python tf_csv.py <phút> <thư mục ra> [NQ|GC]   (mặc định NQ; NQ lấy từ 14/09, GC từ 11/08 như load.py)"""
 import sys, os, pandas as pd, numpy as np
 m, out = int(sys.argv[1]), sys.argv[2]
-D = '../../../data-export/data-footprint/fp_NQZ26_XCME_Time_20260826-20261124_90d'
+sym = sys.argv[3] if len(sys.argv) > 3 else 'NQ'
+SRC = {'NQ': ('fp_NQZ26_XCME_Time_20260826-20261124_90d', '2026-09-14'), 'GC': ('fp_GCZ26_XCEC_Time_20260811-20261109_90d', '2026-08-11')}
+D = '../../../data-export/data-footprint/' + SRC[sym][0]
 L = pd.read_csv(D + '.csv'); B = pd.read_csv(D + '_bars.csv')
 L['dt'] = pd.to_datetime(L.datetime); B['dt'] = pd.to_datetime(B.datetime)
-L = L[L.dt >= '2026-09-14']; B = B[B.dt >= '2026-09-14']
+L = L[L.dt >= SRC[sym][1]]; B = B[B.dt >= SRC[sym][1]]
 L['t'] = L.dt.dt.floor(f'{m}min'); B['t'] = B.dt.dt.floor(f'{m}min')
 g = B.sort_values('dt').groupby('t')
 bars = pd.DataFrame({'open': g.open.first(), 'high': g.high.max(), 'low': g.low.min(), 'close': g.close.last(), 'bar_volume': g.bar_volume.sum(),
@@ -19,6 +21,6 @@ lv = L.groupby(['t', 'price']).agg(bid_vol=('bid_vol', 'sum'), ask_vol=('ask_vol
                                     buy_trades=('buy_trades', 'sum'), sell_trades=('sell_trades', 'sum'), max_one_trade=('max_one_trade', 'max')).reset_index()
 lv.insert(0, 'bar_idx', lv.t.map(idx)); lv.insert(1, 'datetime', lv.pop('t').dt.strftime('%Y-%m-%d %H:%M:%S'))
 lv['price'] = lv.price.map(lambda p: f'{p:.2f}')
-os.makedirs(out, exist_ok=True); f = os.path.join(out, f'fp_NQ_m{m}')
+os.makedirs(out, exist_ok=True); f = os.path.join(out, f'fp_{sym}_m{m}')
 lv.to_csv(f + '.csv', index=False); bars.to_csv(f + '_bars.csv', index=False)
 print(f, len(bars), 'nến', len(lv), 'dòng')

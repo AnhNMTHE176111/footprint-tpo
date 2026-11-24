@@ -1,0 +1,122 @@
+C:\Users\anhla\AppData\Local\Programs\Python\Python310\lib\site-packages\numpy\_core\fromnumeric.py:3860: RuntimeWarning: Mean of empty slice.
+  return _methods._mean(a, axis=axis, dtype=dtype,
+C:\Users\anhla\AppData\Local\Programs\Python\Python310\lib\site-packages\numpy\_core\_methods.py:145: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+C:\Users\anhla\AppData\Local\Programs\Python\Python310\lib\site-packages\numpy\_core\fromnumeric.py:3860: RuntimeWarning: Mean of empty slice.
+  return _methods._mean(a, axis=axis, dtype=dtype,
+C:\Users\anhla\AppData\Local\Programs\Python\Python310\lib\site-packages\numpy\_core\_methods.py:145: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+C:\Users\anhla\AppData\Local\Programs\Python\Python310\lib\site-packages\numpy\_core\fromnumeric.py:3860: RuntimeWarning: Mean of empty slice.
+  return _methods._mean(a, axis=axis, dtype=dtype,
+C:\Users\anhla\AppData\Local\Programs\Python\Python310\lib\site-packages\numpy\_core\_methods.py:145: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+C:\Users\anhla\AppData\Local\Programs\Python\Python310\lib\site-packages\numpy\_core\fromnumeric.py:3860: RuntimeWarning: Mean of empty slice.
+  return _methods._mean(a, axis=axis, dtype=dtype,
+C:\Users\anhla\AppData\Local\Programs\Python\Python310\lib\site-packages\numpy\_core\_methods.py:145: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+
+######## (a)(b) NQ
+khung                                          luat    A   Au   My  tat_ca            gio      nguong    nen_co_vong  p95  mx
+   M1      hạng K, N=10 d0.75 sàn5 gộp R/8 tối đa 3 0.41 0.46 0.78    0.55 24.7/27.5/46.9      5/5/10 0.32/0.35/0.53    2   3
+   M1      hạng K, N=20 d0.75 sàn5 gộp R/8 tối đa 3 0.41 0.46 0.74    0.53 24.9/27.8/44.2      5/5/10 0.32/0.35/0.50    2   3
+   M1      hạng K, N=40 d0.75 sàn5 gộp R/8 tối đa 3 0.41 0.47 0.73    0.53 24.6/28.3/43.6      5/5/10 0.32/0.35/0.50    2   3
+   M1 1.5 x trung vị (max mỗi nến), N=20, không gộp 0.30 0.40 0.45    0.38 18.2/23.9/27.0      5/5/15 0.23/0.28/0.30    2  11
+   M1 2.0 x trung vị (max mỗi nến), N=20, không gộp 0.22 0.28 0.27    0.25 13.0/16.8/16.0      7/7/20 0.18/0.21/0.19    1  10
+   M1 3.0 x trung vị (max mỗi nến), N=20, không gộp 0.11 0.14 0.12    0.12    6.8/8.7/6.9    10/10/30 0.10/0.12/0.10    1   8
+   M5      hạng K, N=10 d0.75 sàn5 gộp R/8 tối đa 3 0.73 0.86 0.72    0.76   8.8/10.3/8.6      8/9/23 0.51/0.57/0.51    3   3
+   M5      hạng K, N=20 d0.75 sàn5 gộp R/8 tối đa 3 0.66 0.86 0.69    0.72   7.9/10.3/8.3      9/9/23 0.46/0.56/0.47    3   3
+   M5      hạng K, N=40 d0.75 sàn5 gộp R/8 tối đa 3 0.53 0.88 0.79    0.71   6.4/10.6/9.4     10/8/23 0.39/0.57/0.50    3   3
+   M5 1.5 x trung vị (max mỗi nến), N=20, không gộp 0.39 0.67 0.54    0.52    4.6/8.1/6.5    14/11/32 0.27/0.38/0.31    2  25
+   M5 2.0 x trung vị (max mỗi nến), N=20, không gộp 0.27 0.45 0.30    0.33    3.2/5.4/3.7    18/15/43 0.21/0.28/0.20    2  17
+   M5 3.0 x trung vị (max mỗi nến), N=20, không gộp 0.13 0.19 0.12    0.14    1.5/2.3/1.4    27/22/64 0.10/0.14/0.10    1   5
+  M15      hạng K, N=10 d0.75 sàn5 gộp R/8 tối đa 3 0.62 0.94 0.81    0.78    2.5/3.8/3.2    19/15/40 0.41/0.60/0.49    3   3
+  M15      hạng K, N=20 d0.75 sàn5 gộp R/8 tối đa 3 0.49 0.99 0.90    0.76    1.9/3.9/3.6    21/16/40 0.37/0.60/0.51    3   3
+  M15      hạng K, N=40 d0.75 sàn5 gộp R/8 tối đa 3 0.41 0.88 1.13    0.78    1.6/3.5/4.5    31/15/32 0.29/0.55/0.60    3   3
+  M15 1.5 x trung vị (max mỗi nến), N=20, không gộp 0.35 0.72 0.95    0.65    1.4/2.9/3.8    30/22/51 0.23/0.37/0.39    3  23
+  M15 2.0 x trung vị (max mỗi nến), N=20, không gộp 0.24 0.41 0.51    0.38    0.9/1.6/2.0    40/29/68 0.14/0.27/0.30    2  12
+  M15 3.0 x trung vị (max mỗi nến), N=20, không gộp 0.18 0.14 0.18    0.17    0.7/0.6/0.7   60/44/102 0.11/0.13/0.12    1   5
+  M30      hạng K, N=10 d0.75 sàn5 gộp R/8 tối đa 3 0.54 0.95 1.00    0.81    1.1/1.9/2.0    34/20/51 0.35/0.54/0.54    3   3
+  M30      hạng K, N=20 d0.75 sàn5 gộp R/8 tối đa 3 0.42 0.81 1.20    0.78    0.8/1.6/2.4    48/20/44 0.28/0.47/0.63    3   3
+  M30      hạng K, N=40 d0.75 sàn5 gộp R/8 tối đa 3 0.53 0.49 1.34    0.78    1.1/1.0/2.7    42/41/40 0.32/0.37/0.73    3   3
+  M30 1.5 x trung vị (max mỗi nến), N=20, không gộp 0.56 0.65 1.54    0.91    1.1/1.3/3.1    59/29/57 0.21/0.33/0.57    5  17
+  M30 2.0 x trung vị (max mỗi nến), N=20, không gộp 0.44 0.33 0.80    0.53    0.9/0.7/1.6    79/39/76 0.12/0.27/0.34    3  11
+  M30 3.0 x trung vị (max mỗi nến), N=20, không gộp 0.39 0.09 0.34    0.29    0.8/0.2/0.7  118/58/114 0.09/0.08/0.21    2   9
+  M60      hạng K, N=10 d0.75 sàn5 gộp R/8 tối đa 3 0.48 1.02 1.12    0.84    0.5/1.0/1.1    62/34/59 0.26/0.50/0.63    3   3
+  M60      hạng K, N=20 d0.75 sàn5 gộp R/8 tối đa 3 0.57 0.57 1.35    0.81    0.6/0.6/1.3    60/60/52 0.33/0.31/0.72    3   3
+  M60      hạng K, N=40 d0.75 sàn5 gộp R/8 tối đa 3 0.67 0.60 1.28    0.83    0.7/0.6/1.3    53/50/51 0.41/0.38/0.74    3   3
+  M60 1.5 x trung vị (max mỗi nến), N=20, không gộp 1.46 0.38 1.63    1.19    1.5/0.4/1.6    74/67/58 0.30/0.19/0.58    5  17
+  M60 2.0 x trung vị (max mỗi nến), N=20, không gộp 1.31 0.31 0.77    0.84    1.3/0.3/0.8    98/90/78 0.20/0.17/0.40    4  17
+  M60 3.0 x trung vị (max mỗi nến), N=20, không gộp 1.22 0.10 0.14    0.55    1.2/0.1/0.1 147/134/117 0.15/0.10/0.12    1  17
+
+######## (a)(b) GC
+khung                                          luat    A   Au   My  tat_ca            gio   nguong    nen_co_vong  p95  mx
+   M1      hạng K, N=10 d0.75 sàn5 gộp R/8 tối đa 3 0.36 0.52 0.48    0.45 21.7/31.2/29.1    5/5/5 0.28/0.39/0.37    2   3
+   M1      hạng K, N=20 d0.75 sàn5 gộp R/8 tối đa 3 0.37 0.53 0.49    0.45 22.0/31.7/29.2    5/5/5 0.28/0.39/0.37    2   3
+   M1      hạng K, N=40 d0.75 sàn5 gộp R/8 tối đa 3 0.38 0.54 0.49    0.46 22.5/32.6/29.2    5/5/5 0.28/0.40/0.37    2   3
+   M1 1.5 x trung vị (max mỗi nến), N=20, không gộp 0.34 0.45 0.39    0.39 20.6/27.0/23.2    5/5/5 0.24/0.30/0.27    2  29
+   M1 2.0 x trung vị (max mỗi nến), N=20, không gộp 0.29 0.33 0.27    0.30 17.4/19.7/16.3    5/7/7 0.21/0.24/0.21    2  19
+   M1 3.0 x trung vị (max mỗi nến), N=20, không gộp 0.17 0.16 0.12    0.15   10.4/9.5/7.5  6/10/10 0.13/0.13/0.10    1   9
+   M5      hạng K, N=10 d0.75 sàn5 gộp R/8 tối đa 3 0.78 0.82 0.72    0.77    9.4/9.9/8.7   7/9/10 0.51/0.54/0.51    3   3
+   M5      hạng K, N=20 d0.75 sàn5 gộp R/8 tối đa 3 0.74 0.81 0.62    0.72    8.9/9.7/7.5   8/9/10 0.48/0.53/0.46    3   3
+   M5      hạng K, N=40 d0.75 sàn5 gộp R/8 tối đa 3 0.75 0.85 0.58    0.72   8.9/10.2/6.9   8/9/10 0.48/0.55/0.43    3   3
+   M5 1.5 x trung vị (max mỗi nến), N=20, không gộp 0.50 0.46 0.29    0.43    6.0/5.5/3.5 10/14/15 0.32/0.31/0.22    2  17
+   M5 2.0 x trung vị (max mỗi nến), N=20, không gộp 0.30 0.27 0.17    0.25    3.6/3.2/2.1 14/18/20 0.22/0.19/0.14    1  14
+   M5 3.0 x trung vị (max mỗi nến), N=20, không gộp 0.12 0.11 0.08    0.10    1.4/1.3/0.9 21/27/30 0.10/0.09/0.07    1   7
+  M15      hạng K, N=10 d0.75 sàn5 gộp R/8 tối đa 3 0.83 0.83 0.63    0.77    3.3/3.3/2.5 12/15/16 0.52/0.57/0.45    3   3
+  M15      hạng K, N=20 d0.75 sàn5 gộp R/8 tối đa 3 0.77 0.88 0.51    0.72    3.1/3.5/2.0 12/15/18 0.50/0.59/0.35    3   3
+  M15      hạng K, N=40 d0.75 sàn5 gộp R/8 tối đa 3 0.64 0.94 0.54    0.70    2.6/3.8/2.2 14/14/18 0.44/0.62/0.37    3   3
+  M15 1.5 x trung vị (max mỗi nến), N=20, không gộp 0.44 0.62 0.31    0.45    1.8/2.5/1.3 17/21/26 0.30/0.34/0.22    2  23
+  M15 2.0 x trung vị (max mỗi nến), N=20, không gộp 0.25 0.33 0.18    0.25    1.0/1.3/0.7 23/28/34 0.19/0.21/0.14    1  20
+  M15 3.0 x trung vị (max mỗi nến), N=20, không gộp 0.08 0.12 0.09    0.10    0.3/0.5/0.4 34/42/51 0.07/0.08/0.07    1  11
+  M30      hạng K, N=10 d0.75 sàn5 gộp R/8 tối đa 3 0.77 0.94 0.60    0.77    1.5/1.9/1.2 18/19/24 0.50/0.59/0.40    3   3
+  M30      hạng K, N=20 d0.75 sàn5 gộp R/8 tối đa 3 0.66 0.98 0.58    0.72    1.3/2.0/1.2 19/19/25 0.42/0.58/0.38    3   3
+  M30      hạng K, N=40 d0.75 sàn5 gộp R/8 tối đa 3 0.54 0.88 0.70    0.69    1.1/1.8/1.4 21/20/21 0.39/0.52/0.45    3   3
+  M30 1.5 x trung vị (max mỗi nến), N=20, không gộp 0.35 0.64 0.40    0.45    0.7/1.3/0.8 27/27/32 0.25/0.32/0.26    2  21
+  M30 2.0 x trung vị (max mỗi nến), N=20, không gộp 0.20 0.38 0.24    0.26    0.4/0.8/0.5 36/36/42 0.14/0.21/0.16    1  13
+  M30 3.0 x trung vị (max mỗi nến), N=20, không gộp 0.10 0.19 0.15    0.14    0.2/0.4/0.3 55/54/63 0.08/0.11/0.11    1   8
+  M60      hạng K, N=10 d0.75 sàn5 gộp R/8 tối đa 3 0.70 1.07 0.52    0.76    0.7/1.1/0.5 24/24/32 0.46/0.65/0.36    3   3
+  M60      hạng K, N=20 d0.75 sàn5 gộp R/8 tối đa 3 0.54 0.92 0.63    0.68    0.5/0.9/0.6 30/26/30 0.37/0.53/0.42    3   3
+  M60      hạng K, N=40 d0.75 sàn5 gộp R/8 tối đa 3 0.43 0.92 0.63    0.64    0.4/0.9/0.6 30/27/30 0.31/0.52/0.42    3   3
+  M60 1.5 x trung vị (max mỗi nến), N=20, không gộp 0.36 0.84 0.52    0.55    0.4/0.8/0.5 38/36/38 0.23/0.30/0.31    3  20
+  M60 2.0 x trung vị (max mỗi nến), N=20, không gộp 0.26 0.50 0.36    0.36    0.3/0.5/0.4 50/48/50 0.17/0.22/0.23    2  11
+  M60 3.0 x trung vị (max mỗi nến), N=20, không gộp 0.20 0.24 0.16    0.20    0.2/0.2/0.2 75/72/75 0.12/0.11/0.12    1   7
+
+######## (c) số vòng ở 3 nến đầu sau 13:30 UTC (mở cửa cổ phiếu Mỹ, 26-30/10) và sau 22:00 UTC (mở lại), TB mỗi nến
+ma khung                           luat  My_1330_nen1  My_1330_nen2  My_1330_nen3  molai_2200_nen1  molai_2200_nen2  molai_2200_nen3  tat_ca
+NQ    M1                     cố định 10          3.50          2.00          1.50             1.40             0.60             0.40    0.46
+NQ    M1 thích nghi, không gộp/giới hạn          5.50          3.17          2.67             1.60             1.00             0.80    0.65
+NQ    M1          thích nghi (mặc định)          2.67          1.67          1.67             1.60             1.00             0.80    0.53
+NQ    M5                     cố định 10         11.00         15.17          7.50             3.00             0.20             0.80    2.26
+NQ    M5 thích nghi, không gộp/giới hạn          4.67          6.83          1.00             0.80             0.00             0.20    0.97
+NQ    M5          thích nghi (mặc định)          2.00          2.33          1.00             0.80             0.00             0.20    0.72
+NQ   M15                     cố định 10         33.33         21.17         19.67             4.00             2.20             2.40    6.64
+NQ   M15 thích nghi, không gộp/giới hạn          7.83          4.33          3.83             1.00             0.80             1.00    1.11
+NQ   M15          thích nghi (mặc định)          2.83          2.50          2.33             1.00             0.80             0.60    0.76
+NQ   M30                     cố định 10         54.00         36.17         37.17             6.20             3.80             3.86   13.08
+NQ   M30 thích nghi, không gộp/giới hạn          7.50          5.00          7.00             1.40             1.80             0.57    1.35
+NQ   M30          thích nghi (mặc định)          2.83          2.50          2.50             0.80             0.60             0.43    0.78
+GC    M1                     cố định 10          0.76          0.41          0.29             0.18             0.06             0.18    0.16
+GC    M1 thích nghi, không gộp/giới hạn          1.59          1.00          0.76             1.12             0.59             0.53    0.53
+GC    M1          thích nghi (mặc định)          1.41          0.94          0.71             0.94             0.53             0.53    0.45
+GC    M5                     cố định 10          1.94          1.47          2.12             0.53             0.29             0.24    0.80
+GC    M5 thích nghi, không gộp/giới hạn          0.88          0.71          1.35             1.65             0.82             0.47    0.92
+GC    M5          thích nghi (mặc định)          0.82          0.65          1.24             1.12             0.71             0.35    0.72
+GC   M15                     cố định 10          5.47          5.06          4.94             1.06             0.94             1.12    2.35
+GC   M15 thích nghi, không gộp/giới hạn          1.53          1.00          1.12             0.41             0.47             0.53    0.94
+GC   M15          thích nghi (mặc định)          1.41          0.71          0.88             0.41             0.41             0.35    0.72
+GC   M30                     cố định 10         10.35          8.65          6.88             1.94             2.88             4.29    4.61
+GC   M30 thích nghi, không gộp/giới hạn          1.76          1.59          1.06             0.18             0.24             0.65    0.98
+GC   M30          thích nghi (mặc định)          1.41          1.24          1.00             0.18             0.18             0.47    0.72
+
+######## (d) nhật ký SỐNG (đứt quãng): hàng đợi = N nến có số liệu liền trước trong file (kể cả qua khoảng hở)
+    ma  nen khung                  luat    A   Au   My  tat_ca            gio    nguong    nen_co_vong  p95  mx
+GClive 5517    M1            CỐ ĐỊNH 10 0.10 0.16 0.37    0.16   6.0/9.3/22.3  10/10/10 0.08/0.13/0.26    1   8
+GClive 5517    M1 thích nghi (mặc định) 0.33 0.45 0.67    0.43 19.9/27.1/40.5     5/5/6 0.26/0.35/0.48    2   3
+GClive 1069    M5            CỐ ĐỊNH 10 0.48 0.77 1.78    0.78   5.8/9.2/21.4  10/10/10 0.26/0.42/0.64    4  10
+GClive 1069    M5 thích nghi (mặc định) 0.65 0.72 0.80    0.70    7.8/8.7/9.5    7/9/11 0.44/0.50/0.50    3   3
+GClive  335   M15            CỐ ĐỊNH 10 1.40 2.35 5.14    2.30   5.6/9.4/20.6  10/10/10 0.53/0.79/0.86    9  21
+GClive  335   M15 thích nghi (mặc định) 0.55 0.93 1.19    0.80    2.2/3.7/4.7  15/13/15 0.39/0.58/0.65    3   3
+NQlive  209    M1            CỐ ĐỊNH 10  NaN 0.41 0.95    0.72  nan/24.5/57.0 nan/10/10  nan/0.22/0.45    3   8
+NQlive  209    M1 thích nghi (mặc định)  NaN 0.73 0.77    0.75  nan/43.6/46.1  nan/5/10  nan/0.53/0.53    2   3
+NQlive   41    M5            CỐ ĐỊNH 10  NaN 2.00 4.75    3.61  nan/24.0/57.0 nan/10/10  nan/0.59/0.83   11  21
+NQlive   41    M5 thích nghi (mặc định)  NaN 1.29 0.67    0.93   nan/15.5/8.0 nan/10/19  nan/0.65/0.33    3   3

@@ -115,6 +115,9 @@ namespace OrderFlowBubbles
 
         // ===================== baseline ROBUST (median + MAD) =====================
         private StopHuntDetector _stopHunt;     // stop hunt CORVEN (chỉ nạp nến ĐÃ ĐÓNG, đúng 1 lần/nến)
+        private BigTradeAdaptive _btAdapt;      // Big Trade thích nghi: top-K lệnh đơn của N nến đóng TRƯỚC (2026-11-24)
+        private ExhTailBaseline _exhTail;       // kiệt sức: đuôi đỉnh/đáy của N nến đóng TRƯỚC (2026-11-24)
+        private string _baseKey;                // N nến nền + mật độ Big Trade lúc dựng nền; đổi -> ResetState
         private CellBigBaseline _cellBigBase;   // mức nền Ô lớn + kiệt sức (volume TB mỗi ô, bên trội lớn nhất): TB 20 nến đóng TRƯỚC
         private RollingRobust _rLvlAbsDelta;  // per-level |Delta| — CHỈ nạp khi DLineEnabled (chỉ Big Delta line đọc nó)
         private bool _trackAbsDelta;          // DLineEnabled tại lúc InitBaselines (ResetState)
@@ -213,9 +216,27 @@ namespace OrderFlowBubbles
         [InputParameter("Chấm Bid/Ask nhỏ · Dùng sàn tối thiểu", 29)]
         public bool CellDotFloorEnabled { get; set; } = true;
 
-        // Ô số chỉ hiện khi ô "Dùng sàn tối thiểu" bật (xem Settings bên dưới).
-        [InputParameter("Chấm Bid/Ask nhỏ · Sàn tối thiểu (hợp đồng)", 30, 1, 10000, 1, 0)]
+        // Ô số chỉ hiện khi ô "Dùng sàn tối thiểu" bật (xem Settings bên dưới). Khi "Tự co dãn theo khung" bật, sàn lấy theo BỘ SỐ (5 / 5 / 9),
+        // ô số này chỉ dùng cho chế độ cũ; ô "Dùng sàn tối thiểu" vẫn có tác dụng ở cả hai chế độ (tắt = bỏ sàn).
+        [InputParameter("Chấm Bid/Ask nhỏ · Sàn tối thiểu (hợp đồng, khi tắt tự co dãn)", 30, 1, 10000, 1, 0)]
         public double CellBigMinSide { get; set; } = 9;
+
+        // 2026-11-24 (research/adaptive_2026-11-24): MỘT công thức chấm cho mọi mã, mọi khung — w = max(4, biên độ TB / 6),
+        // ngưỡng = max(k x trung vị mỗi ô, sàn), nền lấy trên N nến theo khung (xem UnifiedDots / BaselineWindow trong CellBigLogic.cs).
+        // Bật = thay bộ số cũ (2,8 / ±4 / che 6) và bộ Nasdaq. Tắt = như cũ.
+        [InputParameter("Chấm Bid/Ask nhỏ · Tự co dãn theo khung (công thức chung mọi mã)", 31)]
+        public bool CellDotAdaptive { get; set; } = true;
+
+        // Bộ số khi tự co dãn: 0 Không sót (k 2,0 · sàn 5 · che 2), 1 Trung gian (2,4 · 5 · 2), 2 Ít nhiễu (2,8 · 9 · che max(6; 0,75 x w)).
+        [InputParameter("Chấm Bid/Ask nhỏ · Bộ số (khi tự co dãn)", 32, variants: new object[] { "Không sót (nhiều chấm nhất)", 0, "Trung gian", 1, "Ít nhiễu", 2 })]
+        public int CellDotPreset { get; set; } = 0;
+
+        // Nền (trung vị mỗi ô, biên độ, Big Trade, đuôi kiệt sức) lấy trên N = min(20, max(5, 120 phút / phút một nến)) nến: M1/M5 20, M15 8, M30/H1 5.
+        // Tắt = 20 nến như cũ. Volume TB mỗi ô của luật kiệt sức cũ luôn 20 nến.
+        [InputParameter("Nền tự co theo khung (chấm, Big Trade, kiệt sức)", 33)]
+        public bool AdaptiveBaseline { get; set; } = true;
+
+        public double BaselineWindowMinutes { get; set; } = BaselineWindow.DefaultWindowMinutes;
 
         // màu bóng (chấm / Big Trade) thuộc nến quét của stop hunt đã xác nhận (thay cho tam giác cũ)
         public Color CellBigStopHuntColor { get; set; } = Color.MediumOrchid;
@@ -260,8 +281,26 @@ namespace OrderFlowBubbles
         [InputParameter("Big Trade (lệnh đơn) · Bật", 60)]
         public bool BigTradeEnabled { get; set; } = true;
 
-        // Ngưỡng (hợp đồng) của một lệnh đơn để nổ vòng mờ.
+        // Ngưỡng (hợp đồng) của một lệnh đơn để nổ vòng mờ (chế độ cố định; chế độ thích nghi dùng khi chưa đủ 5 nến có số liệu).
         public double BigTradeMinContracts { get; set; } = 10;
+
+        // 2026-11-24 (research/adaptive_2026-11-24, mục 2): ngưỡng = max(sàn, lệnh đơn lớn thứ K trong N nến trước), K = mật độ x N;
+        // gộp vòng cách nhau <= max(2, biên độ TB / 8) tick, tối đa 3 vòng/nến. NQ M15 phiên Mỹ: 15,05 -> 0,96 vòng/nến. Tắt = cố định 10 như cũ.
+        [InputParameter("Big Trade · Ngưỡng tự thích nghi (theo khung + phiên)", 61)]
+        public bool BigTradeAdaptiveEnabled { get; set; } = true;
+
+        [InputParameter("Big Trade · Mật độ đích (vòng/nến)", 62, 0.1, 20, 0.1, 1)]
+        public double BigTradeDensity { get; set; } = 1.0;
+
+        [InputParameter("Big Trade · Sàn (hợp đồng)", 63, 1, 10000, 1, 0)]
+        public double BigTradeFloor { get; set; } = 5;
+
+        [InputParameter("Big Trade · Tối đa vòng mỗi nến (0 = không giới hạn)", 64, 0, 100, 1, 0)]
+        public int BigTradeMaxPerBar { get; set; } = 3;
+
+        public double BigTradeCeil { get; set; } = 0;        // trần ngưỡng (0 = tắt)
+        public double BigTradeMergeDiv { get; set; } = 8;    // gộp vòng: biên độ TB / số này (0 = chỉ gộp tối thiểu)
+        public int BigTradeMergeMin { get; set; } = 2;       // gộp tối thiểu (tick)
 
         // Độ đậm của vòng Big Trade, phần trăm (35 = mờ ~35%). Chỉ ảnh hưởng cách vẽ.
         public int BigTradeOpacity { get; set; } = 35;
@@ -290,6 +329,10 @@ namespace OrderFlowBubbles
         public int ExhSumLevels { get; set; } = 6;
 
         public double ExhSumHistRatio { get; set; } = 1.1;
+
+        // 2026-11-24: thêm điều kiện tổng bên soi <= số này x trung vị đuôi (đỉnh + đáy) của N nến trước. 0 = tắt (luật cũ). Xem ExhSettings.TailMedianRatio.
+        [InputParameter("Kiệt sức · Đuôi ≤ số này × trung vị đuôi các nến trước (0 = tắt)", 81, 0, 10, 0.05, 2)]
+        public double ExhTailMedianRatio { get; set; } = 0.8;
 
         public int ExhSweepTicks { get; set; } = 1;
 
@@ -423,6 +466,15 @@ namespace OrderFlowBubbles
                 var settings = base.Settings;
                 var floor = settings?.FirstOrDefault(x => x.Name == nameof(CellBigMinSide));
                 if (floor != null) floor.Relation = new SettingItemRelationVisibility(nameof(CellDotFloorEnabled), true);
+                void Rel(string child, string parent)
+                {
+                    var it = settings?.FirstOrDefault(x => x.Name == child);
+                    if (it != null) it.Relation = new SettingItemRelationVisibility(parent, true);
+                }
+                Rel(nameof(CellDotPreset), nameof(CellDotAdaptive));
+                Rel(nameof(BigTradeDensity), nameof(BigTradeAdaptiveEnabled));
+                Rel(nameof(BigTradeFloor), nameof(BigTradeAdaptiveEnabled));
+                Rel(nameof(BigTradeMaxPerBar), nameof(BigTradeAdaptiveEnabled));
                 return settings;
             }
             set => base.Settings = value;
@@ -445,12 +497,13 @@ namespace OrderFlowBubbles
                 DotEnabled = CellDotEnabled, DotMedianRatio = CellDotMedianRatio, DotLocalTicks = CellDotAllLevels ? 0 : CellDotLocalTicks, DotHideBuyNearSellTicks = CellDotHideBuyNearSellTicks,
                 MinSide = CellDotFloorEnabled ? CellBigMinSide : 0, FixedMode = UseFixedThreshold, FixedThreshold = FixedThresholdContracts
             };
-            if (UseNasdaqPresetNow) SymbolPreset.ApplyNasdaq(s, avgRangeTicks);
+            if (CellDotAdaptive) UnifiedDots.Apply(s, CellDotPreset, avgRangeTicks, CellDotAllLevels, CellDotFloorEnabled);
+            else if (UseNasdaqPresetNow) SymbolPreset.ApplyNasdaq(s, avgRangeTicks);
             return s;
         }
 
         // Mã hiện tại là NQ/MNQ và người dùng để bật "tự dùng bộ số Nasdaq".
-        private bool UseNasdaqPresetNow => CellDotNasdaqAuto && SymbolPreset.IsNasdaq(TestBarSource != null ? TestSymbolName : Symbol?.Name);
+        private bool UseNasdaqPresetNow => !CellDotAdaptive && CellDotNasdaqAuto && SymbolPreset.IsNasdaq(TestBarSource != null ? TestSymbolName : Symbol?.Name);
 
         private string ComputeSettingsFingerprint()
         {
@@ -471,12 +524,25 @@ namespace OrderFlowBubbles
                 StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v8")
                 // chỉ thêm khi bộ Nasdaq đang chạy -> dấu vân tay của vàng GC giữ nguyên như cũ (bản niêm phong cũ vẫn dùng được)
                 + (CellDotFloorEnabled ? "" : "|nofloor")   // chỉ thêm khi TẮT sàn -> dấu vân tay mặc định giữ nguyên
-                + (UseNasdaqPresetNow ? $"|nq-v2:{SymbolPreset.NqDotMedianRatio}/{SymbolPreset.NqDotLocalTicks}/{SymbolPreset.NqRangePerWindowTick}/{SymbolPreset.NqDotHideBuyNearSellTicks}" : "");
+                + (UseNasdaqPresetNow ? $"|nq-v2:{SymbolPreset.NqDotMedianRatio}/{SymbolPreset.NqDotLocalTicks}/{SymbolPreset.NqRangePerWindowTick}/{SymbolPreset.NqDotHideBuyNearSellTicks}" : "")
+                // 2026-11-24 thích nghi: mỗi phần chỉ thêm khi BẬT -> tắt hết thì dấu vân tay = bản cũ
+                + (AdaptiveBaseline ? $"|nbase-v1:{DesiredBaseBars()}" : "")
+                + (CellDotAdaptive ? $"|dotu-v1:{CellDotPreset}" : "")
+                + (BigTradeAdaptiveEnabled ? $"|bta-v1:{BigTradeDensity}/{BigTradeFloor}/{BigTradeCeil}/{BigTradeMaxPerBar}/{BigTradeMergeDiv}/{BigTradeMergeMin}" : "")
+                + (ExhTailMedianRatio > 0 ? $"|exhtail-v1:{ExhTailMedianRatio}" : "");
         }
+
+        // Số nến nền theo khung (BaselineWindow). Tắt "Nền tự co theo khung" = CellBigBaselineBars (20) như cũ.
+        private int DesiredBaseBars() => AdaptiveBaseline ? BaselineWindow.BarsFor(BarMinutesNow, BaselineWindowMinutes) : CellBigBaselineBars;
+        private string BaseKey() => DesiredBaseBars() + "|" + BigTradeDensity.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         private void InitBaselines()
         {
-            _cellBigBase = new CellBigBaseline(CellBigBaselineBars);
+            int nb = DesiredBaseBars();
+            _baseKey = BaseKey();
+            _cellBigBase = new CellBigBaseline(CellBigBaselineBars, nb);
+            _btAdapt = new BigTradeAdaptive(nb, BigTradeDensity);
+            _exhTail = new ExhTailBaseline(nb);
             _rLvlAbsDelta = new RollingRobust(BaselineBars);
             _trackAbsDelta = DLineEnabled;
             _rBarVol = new RollingRobust(BaselineBars);
@@ -516,6 +582,7 @@ namespace OrderFlowBubbles
             lock (_calcLock)
             {
                 if (_rBarVol == null) return;
+                if (_baseKey != BaseKey()) ResetState();   // khung (số nến nền) hoặc mật độ Big Trade đổi -> dựng lại nền, tính lại từ đầu
                 double tick = TickSizeNow;
                 if (tick <= 0) return;
 
@@ -628,6 +695,7 @@ namespace OrderFlowBubbles
 
             var dLineCands = new List<(double price, double z, int sign, double buy, double sell)>();
             var bigTradeCands = new List<Bubble>();
+            var btCells = new List<(long tick, double mot, double price, double buy, double sell)>();
             var cellBigCands = new List<(Bubble b, double magnitude, long lo, long hi)>();
 
             for (long k = loIdx; k <= hiIdx; k++)
@@ -651,19 +719,7 @@ namespace OrderFlowBubbles
                         // Chỉ ghi lúc nến ĐÃ ĐÓNG (isClosed): nến đang chạy có thể còn tăng tiếp.
                         if (isClosed && _bigTradeLog != null)
                             _bigTradeLog.TryAppend(bar.TimeLeft.Ticks, bar.TimeLeft, price, mot, buy, sell);
-
-                        if (BigTradeLogic.Hit(mot, BigTradeMinContracts))
-                        {
-                            int dir = buy > sell ? 1 : -1;
-                            bigTradeCands.Add(new Bubble
-                            {
-                                Price = price, Shape = Shape.Ellipse, Color = dir > 0 ? BuyColor : SellColor,
-                                Size = MidSize(), Transparency = SolidTransparency, Halo = false, UseBarWidth = true,
-                                SizeFrac = BigTradeLogic.SizeFrac(mot, BigTradeMinContracts),
-                                Tooltip = $"Big trade: 1 lệnh {mot:0} hợp đồng | ô {sell:0} Bid {buy:0} Ask",
-                                CellBig = true, CellDot = false, CellBid = sell, CellAsk = buy, CellSide = dir
-                            });
-                        }
+                        btCells.Add((k, mot, price, buy, sell));   // xét ngưỡng SAU vòng lặp (cần cả nến để gộp / giới hạn)
                     }
                 }
 
@@ -734,6 +790,41 @@ namespace OrderFlowBubbles
                 }
             }
 
+            // ---- BIG TRADE: ngưỡng cố định (cũ) hoặc thích nghi (2026-11-24) ----
+            if (BigTradeEnabled)
+            {
+                // lịch sử không có lệnh đơn (luôn 0) -> lấy từ nhật ký lệnh đơn đã ghi lúc chạy sống (nếu có)
+                if (btCells.Count == 0 && _bigTradeLog != null) btCells = _bigTradeLog.CellsOf(bar.TimeLeft.Ticks, tick);
+                if (btCells.Count > 0)
+                {
+                    double thr = BigTradeMinContracts; int g = 0, cap = 0;
+                    if (BigTradeAdaptiveEnabled && _btAdapt != null)
+                    {
+                        thr = _btAdapt.Threshold(BigTradeMinContracts, BigTradeFloor, BigTradeCeil);
+                        g = _btAdapt.MergeTicks(BigTradeMergeDiv, BigTradeMergeMin);
+                        cap = BigTradeMaxPerBar;
+                    }
+                    var sel = BigTradeAdaptive.Select(btCells.Select(c => (c.tick, c.mot)).ToList(), thr, g, cap);
+                    sel.Sort((a, b) => btCells[a].tick.CompareTo(btCells[b].tick));   // thứ tự vẽ: tick tăng dần (như bản cũ)
+                    var inv0 = System.Globalization.CultureInfo.InvariantCulture;
+                    foreach (int si in sel)
+                    {
+                        var c = btCells[si];
+                        int dir = c.buy > c.sell ? 1 : -1;
+                        bigTradeCands.Add(new Bubble
+                        {
+                            Price = c.price, Shape = Shape.Ellipse, Color = dir > 0 ? BuyColor : SellColor,
+                            Size = MidSize(), Transparency = SolidTransparency, Halo = false, UseBarWidth = true,
+                            SizeFrac = BigTradeLogic.SizeFrac(c.mot, thr),
+                            Tooltip = BigTradeAdaptiveEnabled
+                                ? $"Big trade: 1 lệnh {c.mot:0} hợp đồng (ngưỡng {thr.ToString("0.#", inv0)}) | ô {c.sell:0} Bid {c.buy:0} Ask"
+                                : $"Big trade: 1 lệnh {c.mot:0} hợp đồng | ô {c.sell:0} Bid {c.buy:0} Ask",
+                            CellBig = true, CellDot = false, CellBid = c.sell, CellAsk = c.buy, CellSide = dir
+                        });
+                    }
+                }
+            }
+
             // ---- chọn TOP-N + thứ tự vẽ ----
             // Big Trade (vòng mờ) add TRƯỚC CÙNG; chấm Bid/Ask add sau (khi vẽ, chấm luôn nằm trên cùng).
             list.AddRange(bigTradeCands);
@@ -787,13 +878,14 @@ namespace OrderFlowBubbles
             var levels = new List<ExhLevel>(va.PriceLevels.Count);
             foreach (var kv in va.PriceLevels)   // Bid = SellVolume (khớp ở Bid), Ask = BuyVolume (khớp ở Ask)
                 levels.Add(new ExhLevel((long)Math.Round(kv.Key / tick), kv.Value.SellVolume, kv.Value.BuyVolume, kv.Value.Volume));
-            var s = new ExhSettings { MinWickTicks = ExhMinWickTicks, SumLevels = ExhSumLevels, SumHistRatio = ExhSumHistRatio };
+            var s = new ExhSettings { MinWickTicks = ExhMinWickTicks, SumLevels = ExhSumLevels, SumHistRatio = ExhSumHistRatio, TailMedianRatio = ExhTailMedianRatio };
             double histMean = 0; bool hasHist = _cellBigBase != null && _cellBigBase.TryGet(out histMean);   // TB 20 nến đóng TRƯỚC
+            double tailMed = 0; bool hasTail = _exhTail != null && _exhTail.TryGetMedian(out tailMed);        // trung vị đuôi N nến đóng TRƯỚC
             long o = (long)Math.Round(bar.Open / tick), h = (long)Math.Round(bar.High / tick);
             long l = (long)Math.Round(bar.Low / tick), c = (long)Math.Round(bar.Close / tick);
             foreach (bool top in new[] { true, false })
             {
-                var r = ExhaustionLogic.Detect(top, o, h, l, c, levels, s, hasHist, histMean);
+                var r = ExhaustionLogic.Detect(top, o, h, l, c, levels, s, hasHist, histMean, hasTail, tailMed);
                 if (!r.Hit) continue;
                 var b = new Bubble
                 {
@@ -1300,6 +1392,9 @@ namespace OrderFlowBubbles
         internal double TestTickSize;
         internal string TestCacheFile;
         internal string TestSymbolName;   // null = như vàng GC (golden không đổi)
+        internal double TestBarMinutes;   // phút một nến trong khe test (0 = không rõ -> nền 20 nến, như M1)
+        internal string TestBigTradeLogFile;   // nhật ký lệnh đơn đọc vào khe test (null = không có)
+        private double BarMinutesNow => TestBarSource != null ? TestBarMinutes : ChartBarMinutes(null);
         private int BarCountNow => TestBarSource != null ? TestBarCount : HistoricalData.Count;
         private double TickSizeNow => TestBarSource != null ? TestTickSize : (Symbol?.TickSize ?? 0);
 
@@ -1343,7 +1438,28 @@ namespace OrderFlowBubbles
             if (tickSz > 0)
             {
                 var cbLevels = va.PriceLevels.Select(kv => new CellLevel((long)Math.Round(kv.Key / tickSz), kv.Value.BuyVolume, kv.Value.SellVolume, kv.Value.Volume, kv.Value.Trades)).ToList();
-                if (CellBigLogic.BarStats(cbLevels, out double bmean, out double bmedian)) _cellBigBase.Add(bmean, bmedian, CellBigLogic.BarRangeTicks(cbLevels));
+                if (CellBigLogic.BarStats(cbLevels, out double bmean, out double bmedian))
+                {
+                    _cellBigBase.Add(bmean, bmedian, CellBigLogic.BarRangeTicks(cbLevels));
+                    // nền đuôi kiệt sức: mọi nến đóng có giao dịch và high > low nộp đuôi đỉnh (Ask) + đuôi đáy (Bid), không phụ thuộc râu
+                    long hT = (long)Math.Round(bar.High / tickSz), lT = (long)Math.Round(bar.Low / tickSz);
+                    if (_exhTail != null && hT > lT)
+                    {
+                        var exLv = new List<ExhLevel>(cbLevels.Count);
+                        foreach (var c in cbLevels) exLv.Add(new ExhLevel(c.Tick, c.Sell, c.Buy, c.Vol));
+                        _exhTail.Add(ExhaustionLogic.TailSum(true, hT, exLv, ExhSumLevels), ExhaustionLogic.TailSum(false, lT, exLv, ExhSumLevels));
+                    }
+                }
+                // Big Trade thích nghi: nộp top-K lệnh đơn của nến (từ feed, hoặc nhật ký nếu lịch sử không có); nến không có số liệu -> không nộp
+                if (_btAdapt != null)
+                {
+                    var bt = new List<(long tick, double mot)>();
+                    foreach (var kv in va.PriceLevels)
+                        if (kv.Value.MaxOneTradeVolume > 0) bt.Add(((long)Math.Round(kv.Key / tickSz), kv.Value.MaxOneTradeVolume));
+                    if (bt.Count == 0 && _bigTradeLog != null)
+                        foreach (var c in _bigTradeLog.CellsOf(bar.TimeLeft.Ticks, tickSz)) bt.Add((c.tick, c.mot));
+                    _btAdapt.AddClosedBar(bt);
+                }
             }
             if (ads != null) _rLvlAbsDelta.AddBar(ads);
             _rBarVol.AddBar(new[] { va.Total.Volume });
@@ -1400,7 +1516,7 @@ namespace OrderFlowBubbles
             if (_cache != null) return;
             if (TestCacheFile != null)   // khe test: file cache chỉ định, không đụng %AppData% của người dùng
             {
-                _cache = new SignalCache(TestCacheFile); _cache.Load(); _bigTradeLog = new BigTradeLog(null);
+                _cache = new SignalCache(TestCacheFile); _cache.Load(); _bigTradeLog = new BigTradeLog(TestBigTradeLogFile); _bigTradeLog.Load();
                 return;
             }
             string symName = Symbol?.Name ?? "unknown";

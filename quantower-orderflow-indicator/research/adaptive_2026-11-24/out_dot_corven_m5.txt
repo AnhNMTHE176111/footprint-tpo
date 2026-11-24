@@ -1,0 +1,4 @@
+hiện tại (2,8/±4/che 6/sàn 9, nền 20 nến): 33 chấm (10 xanh + 23 đỏ) trên 26 nến; w trung vị 4, ngưỡng trung vị 35.1
+công thức chung (2,8 · w=max(4,R/6) · che max(6; 0,75w) · sàn 9): 30 chấm (11 xanh + 19 đỏ) trên 26 nến; w trung vị 10, ngưỡng trung vị 35.1
+chung nhau 29, chỉ hiện tại 4, chỉ công thức chung 1
+marks_python_26bars.csv (chuẩn cũ): 33 chấm

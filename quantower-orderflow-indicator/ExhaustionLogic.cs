@@ -33,6 +33,38 @@ namespace OrderFlowBubbles
         public int MinWickTicks = 3;      // râu >= số tick này (<= 0: không đòi râu)
         public int SumLevels = 6;         // số mức giá xét, tính từ cực trị đi vào trong
         public double SumHistRatio = 1.1; // tổng bên soi trên SumLevels mức <= số này x TB volume/mức của 20 nến đã đóng trước (mức nền lịch sử)
+        // 2026-11-24 (research/adaptive_2026-11-24, mục 4): thêm điều kiện tổng bên soi <= số này x TRUNG VỊ của chính đại lượng đó (đuôi đỉnh theo Ask
+        // + đuôi đáy theo Bid) trên N nến đã đóng trước. <= 0 = tắt (đúng luật cũ). Lý do đo được: đuôi 6 tick gần như không tăng theo khung
+        // (trung vị 11 -> 29) còn TB mỗi ô tăng mạnh (5 -> 65) nên khung lớn gần như nến nào cũng nổ (NQ H1 1,77 dấu/nến -> 0,75).
+        // CORVEN GC M5: 11/11 dấu vẫn trùng, thừa 2 -> 1. ⚠ 0,8 chọn trên chính 11 dấu của một chart (dấu CORVEN "dày" nhất có tỉ số 0,76).
+        public double TailMedianRatio = 0;
+    }
+
+    // Nền đuôi: mỗi nến ĐÃ ĐÓNG có giao dịch và high > low nộp HAI số (đuôi đỉnh theo Ask, đuôi đáy theo Bid), không phụ thuộc râu.
+    // Giữ N nến; trung vị của 2 x số nến giá trị, cần >= 5 nến.
+    public sealed class ExhTailBaseline
+    {
+        public const int MinBars = 5;
+        private readonly int _n;
+        private readonly Queue<(double top, double bot)> _q = new Queue<(double, double)>();
+        public ExhTailBaseline(int n) { _n = Math.Max(1, n); }
+        public int Count => _q.Count;
+        public void Add(double topTail, double botTail)
+        {
+            _q.Enqueue((topTail, botTail));
+            while (_q.Count > _n) _q.Dequeue();
+        }
+        public bool TryGetMedian(out double median)
+        {
+            median = 0;
+            if (_q.Count < MinBars) return false;
+            var v = new List<double>(_q.Count * 2);
+            foreach (var p in _q) { v.Add(p.top); v.Add(p.bot); }
+            v.Sort();
+            int n = v.Count;
+            median = n % 2 == 1 ? v[n / 2] : (v[n / 2 - 1] + v[n / 2]) / 2.0;
+            return true;
+        }
     }
 
     public readonly struct ExhLevel
@@ -71,9 +103,28 @@ namespace OrderFlowBubbles
         }
 
         // Dò kiệt sức ở MỘT phía của nến. highTick/lowTick/openTick/closeTick là chỉ số tick.
+        // Tổng bên soi (Ask ở đỉnh, Bid ở đáy) trên sumLevels tick từ cực trị extTick đi vào trong; tick trống = 0.
+        public static double TailSum(bool top, long extTick, IReadOnlyList<ExhLevel> levels, int sumLevels)
+        {
+            var byTick = new Dictionary<long, ExhLevel>(levels?.Count ?? 0);
+            if (levels != null) foreach (var l in levels) byTick[l.Tick] = l;
+            return TailSum(top, extTick, byTick, sumLevels);
+        }
+        private static double TailSum(bool top, long extTick, Dictionary<long, ExhLevel> byTick, int sumLevels)
+        {
+            int step = top ? -1 : 1, want = Math.Max(1, sumLevels);
+            double sum = 0;
+            for (int j = 0; j < want; j++)
+            {
+                byTick.TryGetValue(extTick + step * j, out var l);
+                sum += top ? l.Ask : l.Bid;
+            }
+            return sum;
+        }
+
         public static ExhResult Detect(bool top, long openTick, long highTick, long lowTick, long closeTick,
                                        IReadOnlyList<ExhLevel> levels, ExhSettings s,
-                                       bool hasHist, double histMeanLevelVol)
+                                       bool hasHist, double histMeanLevelVol, bool hasTail = false, double tailMedian = 0)
         {
             long ext = top ? highTick : lowTick;
             var none = new ExhResult(ExhKind.None, top, ext, 0, 0, Array.Empty<double>());
@@ -99,6 +150,8 @@ namespace OrderFlowBubbles
                 sum += fromExt[j];
             }
             if (!(sum <= s.SumHistRatio * mean)) return none;
+            // điều kiện đuôi (tắt khi TailMedianRatio <= 0; chưa đủ nền đuôi thì chỉ áp luật cũ)
+            if (s.TailMedianRatio > 0 && hasTail && !(sum <= s.TailMedianRatio * tailMedian)) return none;
 
             // tooltip/Seq: chuỗi giá trị bên soi từ TRONG ra CỰC TRỊ
             var seq = new double[want];

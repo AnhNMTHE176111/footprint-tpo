@@ -1,0 +1,13 @@
+{'luat': 'chung: 2,0 · w=max(4,R/4) · che 1,5w · sàn 5', 'GC_cham_nen': 0.85, 'GC_ti_le_CORVEN': 0.55, 'GC_recall': 0.58, 'GC_precision': 0.85, 'GC_F1': 0.687, 'GC_w': 5, 'NQ_cham_nen': 1.37, 'NQ_ti_le_CORVEN': 0.61, 'NQ_recall': 0.25, 'NQ_precision': 0.33, 'NQ_F1': 0.283, 'NQ_w': 20}
+CORVEN: GC 1.53 chấm/nến (580 nến), NQ 2.26 chấm/nến (534 nến)
+                                                                luat  GC_cham_nen  GC_ti_le_CORVEN  GC_recall  GC_precision  GC_F1  GC_w  NQ_cham_nen  NQ_ti_le_CORVEN  NQ_recall  NQ_precision  NQ_F1  NQ_w
+CÔNG THỨC CHUNG CHỐT: 2,8 · w=max(4,R/6) · che max(6; 0,75w) · sàn 9         0.57             0.37       0.46          0.98  0.622     4         0.88             0.39       0.24          0.48  0.316    13
+                                                như chốt, bội số 3,2         0.46             0.30       0.38          0.98  0.546     4         0.85             0.38       0.23          0.49  0.315    13
+              HIỆN TẠI (GC 2,8/±4/che 6; NQ 3,5/±max(8,R/14)/che 12)         0.57             0.37       0.46          0.98  0.625     4         0.82             0.36       0.23          0.50  0.316     8
+                                chung: 2,8 · w=max(4,R/6) · che 1,5w         0.56             0.37       0.45          0.98  0.616     4         0.80             0.35       0.21          0.48  0.295    13
+                                chung: 3,0 · w=max(4,R/6) · che 1,5w         0.49             0.32       0.40          0.98  0.570     4         0.79             0.35       0.21          0.48  0.292    13
+                                chung: 2,8 · w=max(4,R/5) · che 1,5w         0.56             0.36       0.45          0.98  0.612     4         0.77             0.34       0.20          0.48  0.286    16
+                                chung: 2,8 · w=max(4,R/4) · che 1,5w         0.53             0.35       0.43          0.97  0.596     5         0.73             0.32       0.20          0.48  0.277    20
+                        chung: 2,8 · w=max(4,R/6) · che 1,5w · sàn 5         0.58             0.38       0.47          0.98  0.636     4         1.10             0.49       0.27          0.44  0.334    13
+                        chung: 2,4 · w=max(4,R/4) · che 1,5w · sàn 5         0.69             0.45       0.52          0.92  0.664     5         1.19             0.53       0.25          0.38  0.302    20
+                        chung: 2,0 · w=max(4,R/4) · che 1,5w · sàn 5         0.85             0.55       0.58          0.85  0.687     5         1.37             0.61       0.25          0.33  0.283    20

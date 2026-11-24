@@ -12,6 +12,7 @@
   {"id": "showWeekVA", "name": "Week VAH / VAL (dashed)", "type": "bool", "defval": true},
   {"id": "showDayVA", "name": "Day VAH / VAL (dashed)", "type": "bool", "defval": true},
   {"id": "rowNumbersOn", "name": "Volume Number on Each Row (developing profile)", "type": "select", "options": ["Off", "Day", "Week", "Both"], "defval": "Day"},
+  {"id": "rowNumbersAll", "name": "Row Numbers on Finished Profiles Too", "type": "bool", "defval": true},
   {"id": "rowNumberColor", "name": "Row Number Color", "type": "color", "defval": "#d1d4dc"},
   {"id": "rowNumberMax", "name": "Hide Row Numbers Above (rows on screen)", "type": "int", "defval": 70, "min": 10, "max": 400, "step": 5},
   {"id": "vaBoost", "name": "Value Area Emphasis", "type": "float", "defval": 1.18, "min": 1.0, "max": 2.0, "step": 0.02},

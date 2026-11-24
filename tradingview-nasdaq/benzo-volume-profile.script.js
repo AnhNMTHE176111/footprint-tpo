@@ -813,7 +813,7 @@ return {
       showHVN = true, hvnBuyColor = '#26a69a', hvnSellColor = '#ef5350', hvnInsideColor = '#9e9e9e',
       showLVN = true, lvnBuyColor = '#29b6f6', lvnSellColor = '#ffa726',
       showWeekVA = true, showDayVA = true, colWeekVA = '#4a90e2', colDayVA = '#c9a43c',
-      rowNumbersOn = 'Day', rowNumberColor = '#d1d4dc', rowNumberMax = 70,
+      rowNumbersOn = 'Day', rowNumbersAll = true, rowNumberColor = '#d1d4dc', rowNumberMax = 70,
     } =indicator.extendData?.inputs || {};
     const n = dataList.length;
     const res = new Array(n);
@@ -889,6 +889,7 @@ return {
     const sessionProfiles = (anchor, rgb) => {
       const ps = sessionsOf(anchor);
       const po = { ...o, ...rgb };
+      const wantNumbers = rowNumbersOn === 'Both' || (anchor === '1D' ? rowNumbersOn === 'Day' : rowNumbersOn === 'Week');
       const out = [];
       for (let k = Math.max(0, ps.length - 1 - sessions); k < ps.length; k++) {
         const isLive = k === ps.length - 1;
@@ -899,7 +900,7 @@ return {
         if (isLive) {
           const p = buildProfile(B, a, b, span.from, span.to, po);
           if (p) {
-            p.numbers = rowNumbersOn === 'Both' || (anchor === '1D' ? rowNumbersOn === 'Day' : rowNumbersOn === 'Week');
+            p.numbers = wantNumbers;
             out.push(p);
           }
           continue;
@@ -911,7 +912,10 @@ return {
           p = buildProfile(B, a, b, span.from, span.to, po);
           cache.profiles[key] = p;
         }
-        if (p) out.push(p);
+        if (p) {
+          p.numbers = wantNumbers && rowNumbersAll;
+          out.push(p);
+        }
       }
       return out;
     };
@@ -1005,7 +1009,7 @@ return {
       visProfiles.push(p);
     }
 
-    // 0. Total volume of each row of the developing profile, in one column at its start (top layer,
+    // 0. Total volume of each row (developing profile, and finished ones if rowNumbersAll), in one column at its start (top layer,
     // still behind the candles like Pine's labels). Rows on screen = pane height / row height in
     // pixels, so it follows the real zoom, manual price-scale zoom included.
     // bv.bounds may not report a height: fall back to the canvas, then to a typical 700 px pane.

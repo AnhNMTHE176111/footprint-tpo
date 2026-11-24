@@ -168,8 +168,12 @@ namespace GoldenPerf
         static Run Make(List<HistoryItemBar> bars, int off, int count, string cacheFile, Dictionary<string, object> cfg)
         {
             var ind = new Ind();
-            if (cfg != null)
-                foreach (var kv in cfg)
+            // --set áp cho MỌI kịch bản (sau cấu hình riêng của kịch bản), vd --set ImbMaxBars=0 để so với chuẩn cũ
+            var all = new Dictionary<string, object>();
+            if (cfg != null) foreach (var kv in cfg) all[kv.Key] = kv.Value;
+            if (SetArgs != null) foreach (var kv in SetArgs) all[kv.Key] = kv.Value;
+            if (all.Count > 0)
+                foreach (var kv in all)
                 {
                     var pi = typeof(Ind).GetProperty(kv.Key) ?? throw new Exception("khong co tham so " + kv.Key);
                     pi.SetValue(ind, Convert.ChangeType(kv.Value, pi.PropertyType, Inv));

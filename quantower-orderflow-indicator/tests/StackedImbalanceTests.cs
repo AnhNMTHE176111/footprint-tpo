@@ -163,6 +163,12 @@ static class StackedImbalanceTests
         Check(!StackedImbalanceCalc.IsFar(-1, 60, 59), "tuoi 59 -> chua xa (van ve)");
         Check(!StackedImbalanceCalc.IsFar(5, 60, 500), "da ket thuc -> khong bi coi la xa (van ve)");
         Check(!StackedImbalanceCalc.IsFar(-1, 0, 500), "ImbFarBars = 0 -> tat che do xa");
+        Console.WriteLine("[SI-8c] Keo dai toi da (cat ngan vung xa)");
+        Check(StackedImbalanceCalc.CapLength(100, -1, SiEnd.Active, 20, 119) == (-1, SiEnd.Active), "con 19 nen -> van keo");
+        Check(StackedImbalanceCalc.CapLength(100, -1, SiEnd.Active, 20, 120) == (120, SiEnd.Expired), "du 20 nen -> het han, dung o nen 120");
+        Check(StackedImbalanceCalc.CapLength(100, -1, SiEnd.Active, 20, 5000) == (120, SiEnd.Expired), "rat xa -> van dung o nen 120 (khong keo het man hinh)");
+        Check(StackedImbalanceCalc.CapLength(100, 105, SiEnd.Touched, 20, 5000) == (105, SiEnd.Touched), "da cham som -> giu nguyen");
+        Check(StackedImbalanceCalc.CapLength(100, -1, SiEnd.Active, 0, 5000) == (-1, SiEnd.Active), "0 = khong gioi han");
     }
 
     // [SI-9] niêm phong: trường vùng đi qua JSON; bản ghi CŨ (không có trường) vẫn đọc được

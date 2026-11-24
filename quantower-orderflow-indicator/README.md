@@ -33,7 +33,7 @@ tiêu** → cùng cấu hình chạy đúng cho GC, MGC, hay feed proxy. Knob **
 | **Nến delta lớn** | **tô thân nến** | cả thân | **xanh (Δ>0) / đỏ (Δ<0)** |
 | **Số Delta** | chữ dưới nến | — | xanh/đỏ theo dấu |
 | Exhaustion / Divergence / Sweep | ▲ tam giác | vừa | đỉnh→cyan, đáy→đỏ |
-| Stacked Imbalance | ▭ vùng chữ nhật kéo sang phải | số mức | xanh lơ buy / hồng sell (nhạt = bị rút râu; vùng còn hiệu lực nhưng đã xa ≥ ImbFarBars nến thì KHÔNG vẽ; hover chỉ ghi "Stacked imbalance buy/sell N mức") |
+| Stacked Imbalance | ▭ vùng chữ nhật kéo sang phải, **tối đa 20 nến** (ô "Kéo dài tối đa", 0 = không giới hạn), vùng còn hiệu lực chỉ kéo tới nến đang chạy, không kéo hết màn hình | số mức | xanh lơ buy / hồng sell (nhạt = bị rút râu hoặc đã kết thúc; hover chỉ ghi "Stacked imbalance buy/sell N mức") |
 | Unfinished / Stop-hunt | ▭ / ⬤ halo | nhỏ / lớn | 2 phía / phe hấp thụ |
 
 Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score, deltaPct…).
@@ -53,6 +53,10 @@ Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score,
 
 > **Sàn tối thiểu của chấm Bid/Ask (2026-11-24):** ô "Chấm Bid/Ask nhỏ · Dùng sàn tối thiểu" (mặc định bật) và ô số "Sàn tối thiểu (hợp đồng)" (mặc định 9, chỉ hiện khi ô trên bật). Tắt = chấm chỉ còn điều kiện k × trung vị. Trên 78.464 nến M1 NQ: sàn 9 → 33.958 chấm, tắt sàn → 35.130, sàn 20 → 18.180 (C# = Python).
 
+> **Bộ NQ tự nới theo khung (2026-11-24, chiều):** cửa sổ ±w = max(8, làm tròn(biên độ TB 20 nến trước theo tick / 14)), che giữ 12, 3,5 × trung vị, sàn 9. M1/M5 gần như giữ ±8; M15 ≈ ±14; M30 ≈ ±22; H1 ≈ ±31. Chấm/nến NQ (vàng GC cùng khung): M1 0,47 (0,46) · M5 0,78 (0,84) · M15 1,19 (1,11) · M30 1,67 (1,34) · H1 1,54 (1,54). C# = Python trên M1/M5/M15/H1 (`research/nq_calib_2026-11-24/tf_scale.py`, `tf_csv.py`). Khớp mật độ, không phải lợi thế.
+>
+> **Stacked Imbalance kéo dài tối đa (2026-11-24):** CORVEN "dùng gần thôi, đừng dùng xa" / "xa tít thì không dùng" → vùng đủ 20 nến mà chưa bị chạm thì hết hạn, dừng ở nến thứ 20 (CORVEN không nêu con số, chỉnh ở ô "Stacked Imbalance · Kéo dài tối đa"). Vùng còn hiệu lực chỉ kéo tới nến đang chạy. Golden đổi chỉ ở dòng kết thúc vùng (đã kiểm: `--set ImbMaxBars=0` khớp chuẩn cũ; niêm phong không đổi).
+>
 > **Chấm Bid/Ask trên NQ/MNQ (2026-11-24):** mã NQ/MNQ tự dùng bộ số Nasdaq **3,5 × trung vị, lớn nhất trong ±8 tick, che chấm xanh cách chấm đỏ ≤ 12 tick** (sàn 9 giữ nguyên) thay cho bộ vàng 2,8 / ±4 / 6, vì nến NQ rộng gấp ~2,7 lần tính theo tick. Tắt bằng ô "Chấm Bid/Ask nhỏ · Mã NQ/MNQ tự dùng bộ số Nasdaq". Số liệu và so sánh với chart NQ của CORVEN: [research/nq_calib_2026-11-24/README.md](research/nq_calib_2026-11-24/README.md).
 
 > **Hấp thụ (Absorption) đã gỡ hoàn toàn (2026-11-19):** indicator không còn tính, vẽ, niêm phong hay xác nhận hấp thụ đỉnh/đáy; các ô cài đặt và tham số của nó đã bị xoá, nên chart cũ lưu cài đặt hấp thụ cũng không bật lại được. Bản ghi niêm phong cũ có bóng hấp thụ bị bỏ khi nạp lại.

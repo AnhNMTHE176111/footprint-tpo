@@ -202,7 +202,7 @@ namespace OrderFlowBubbles
 
         // Bật (mặc định) = mã NQ/MNQ tự dùng bộ số Nasdaq cho chấm: 3,5 x trung vị, lớn nhất trong ±8 tick, che xanh cách đỏ <= 12 tick
         // (thay cho CellDotMedianRatio / CellDotLocalTicks / CellDotHideBuyNearSellTicks). Mã khác (GC, MGC…) không đổi. Xem SymbolPreset trong CellBigLogic.cs.
-        [InputParameter("Chấm Bid/Ask nhỏ · Mã NQ/MNQ tự dùng bộ số Nasdaq (3,5 x · ±8 tick · che 12)", 28)]
+        [InputParameter("Chấm Bid/Ask nhỏ · Mã NQ/MNQ tự dùng bộ số Nasdaq (3,5 x · cửa sổ tự nới theo khung · che 12)", 28)]
         public bool CellDotNasdaqAuto { get; set; } = true;
 
         // chấm xanh bị che (không vẽ) nếu cùng nến có chấm đỏ cách <= số tick này (CORVEN vẽ đỏ đè xanh); < 0 = tắt che
@@ -323,7 +323,11 @@ namespace OrderFlowBubbles
         // một nến ĐÓNG CỬA xuyên qua mép xa ("không giữ được giá, đâm thủng").
         public bool ImbEndOnTouch { get; set; } = true;
 
-        public int ImbMaxBars { get; set; } = 0;
+        // CORVEN (Meet 07/11, 0:06:54 "dùng gần thôi, đừng dùng xa"; 1:05:32 "xa tít thì không dùng"): vùng còn hiệu lực
+        // mà đã kéo đủ N nến thì coi là HẾT HIỆU LỰC — dừng kéo ở nến thứ N (vẽ nhạt như vùng đã kết thúc). 0 = không giới hạn.
+        // CORVEN không nêu con số; 20 nến là lựa chọn hiển thị (vùng bị chạm trung vị sau 1 nến, 95% trong 42 nến), chỉnh được.
+        [InputParameter("Stacked Imbalance · Kéo dài tối đa (nến, 0 = không giới hạn)", 91, 0, 10000, 1, 0)]
+        public int ImbMaxBars { get; set; } = 20;
 
         // CORVEN: "dùng gần thôi, đừng dùng xa" → vùng còn hiệu lực nhưng đã quá N nến thì KHÔNG vẽ, không hover nữa.
         // 60 nến (~1 giờ M1) > 95% thời gian chờ bị chạm đo được (42 nến).
@@ -434,14 +438,14 @@ namespace OrderFlowBubbles
         internal static bool ShouldArmVa(bool vaLoaded, VolumeAnalysisCalculationState? state)
             => !vaLoaded && state == VolumeAnalysisCalculationState.Finished;
 
-        private CellBigSettings CellSettings()
+        private CellBigSettings CellSettings(double avgRangeTicks = 0)
         {
             var s = new CellBigSettings
             {
                 DotEnabled = CellDotEnabled, DotMedianRatio = CellDotMedianRatio, DotLocalTicks = CellDotAllLevels ? 0 : CellDotLocalTicks, DotHideBuyNearSellTicks = CellDotHideBuyNearSellTicks,
                 MinSide = CellDotFloorEnabled ? CellBigMinSide : 0, FixedMode = UseFixedThreshold, FixedThreshold = FixedThresholdContracts
             };
-            if (UseNasdaqPresetNow) SymbolPreset.ApplyNasdaq(s);
+            if (UseNasdaqPresetNow) SymbolPreset.ApplyNasdaq(s, avgRangeTicks);
             return s;
         }
 
@@ -467,7 +471,7 @@ namespace OrderFlowBubbles
                 StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v8")
                 // chỉ thêm khi bộ Nasdaq đang chạy -> dấu vân tay của vàng GC giữ nguyên như cũ (bản niêm phong cũ vẫn dùng được)
                 + (CellDotFloorEnabled ? "" : "|nofloor")   // chỉ thêm khi TẮT sàn -> dấu vân tay mặc định giữ nguyên
-                + (UseNasdaqPresetNow ? $"|nq-v1:{SymbolPreset.NqDotMedianRatio}/{SymbolPreset.NqDotLocalTicks}/{SymbolPreset.NqDotHideBuyNearSellTicks}" : "");
+                + (UseNasdaqPresetNow ? $"|nq-v2:{SymbolPreset.NqDotMedianRatio}/{SymbolPreset.NqDotLocalTicks}/{SymbolPreset.NqRangePerWindowTick}/{SymbolPreset.NqDotHideBuyNearSellTicks}" : "");
         }
 
         private void InitBaselines()
@@ -711,7 +715,9 @@ namespace OrderFlowBubbles
                 var cellLevels = new List<CellLevel>(byTick.Count);
                 foreach (var kv in byTick)
                     cellLevels.Add(new CellLevel(kv.Key, kv.Value.it.BuyVolume, kv.Value.it.SellVolume, kv.Value.it.Volume, kv.Value.it.Trades));
-                var marks = CellBigLogic.Evaluate(cellLevels, hasCellB, cellMedian, CellSettings());
+                double avgRange = 0;
+                if (_cellBigBase != null) _cellBigBase.TryGetRange(out avgRange);   // bộ NQ: cửa sổ nới theo biên độ nến (khung càng lớn càng rộng)
+                var marks = CellBigLogic.Evaluate(cellLevels, hasCellB, cellMedian, CellSettings(avgRange));
                 var inv = System.Globalization.CultureInfo.InvariantCulture;
                 foreach (var m in marks)
                 {
@@ -960,6 +966,8 @@ namespace OrderFlowBubbles
                             var e = StackedImbalanceCalc.CheckEnd(b.ZoneSide, b.Price, b.PriceHi, lastBar.High, lastBar.Low, lastBar.Close, mode);
                             if (e != SiEnd.Active) { endIdx = last; end = e; }
                         }
+                        // đã kéo đủ ImbMaxBars nến mà nến đóng chưa chốt (nến đang chạy) -> cắt ở nến thứ N như UpdateZones
+                        (endIdx, end) = StackedImbalanceCalc.CapLength(zIdx, endIdx, end, ImbMaxBars, last);
                         float x0 = (float)(conv.GetChartX(src.TimeLeft) + barsW / 2.0);
                         float x1;
                         if (endIdx >= 0)
@@ -968,7 +976,11 @@ namespace OrderFlowBubbles
                             if (eb == null) continue;
                             x1 = (float)(conv.GetChartX(eb.TimeLeft) + barsW / 2.0);
                         }
-                        else x1 = clip.Right;
+                        else   // còn hiệu lực: kéo tới nến đang chạy, KHÔNG kéo hết màn hình bên phải
+                        {
+                            var lbx = lastBar ?? src;
+                            x1 = (float)(conv.GetChartX(lbx.TimeLeft) + barsW / 2.0);
+                        }
                         if (x1 < clip.Left || x0 > clip.Right) continue;
                         float yTop = (float)conv.GetChartY(b.PriceHi + tick / 2.0);
                         float yBot = (float)conv.GetChartY(b.Price - tick / 2.0);
@@ -1330,8 +1342,8 @@ namespace OrderFlowBubbles
             double tickSz = TickSizeNow;
             if (tickSz > 0)
             {
-                var cbLevels = va.PriceLevels.Select(kv => new CellLevel((long)Math.Round(kv.Key / tickSz), kv.Value.BuyVolume, kv.Value.SellVolume, kv.Value.Volume, kv.Value.Trades));
-                if (CellBigLogic.BarStats(cbLevels, out double bmean, out double bmedian)) _cellBigBase.Add(bmean, bmedian);
+                var cbLevels = va.PriceLevels.Select(kv => new CellLevel((long)Math.Round(kv.Key / tickSz), kv.Value.BuyVolume, kv.Value.SellVolume, kv.Value.Volume, kv.Value.Trades)).ToList();
+                if (CellBigLogic.BarStats(cbLevels, out double bmean, out double bmedian)) _cellBigBase.Add(bmean, bmedian, CellBigLogic.BarRangeTicks(cbLevels));
             }
             if (ads != null) _rLvlAbsDelta.AddBar(ads);
             _rBarVol.AddBar(new[] { va.Total.Volume });

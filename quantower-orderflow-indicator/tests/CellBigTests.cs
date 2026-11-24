@@ -221,6 +221,27 @@ static class CellBigTests
         var r2 = Ev(nqs2, 10, lv2);
         Check(r2.Count == 1 && r2[0].Tick == 106, "bo Nasdaq: 36 va 40 cach 6 tick (< 8) -> chi 40 no");
 
+        Console.WriteLine("[CellBig] bo Nasdaq tu noi cua so theo bien do nen (khung)");
+        Check(SymbolPreset.NqLocalTicksFor(0) == 8 && SymbolPreset.NqLocalTicksFor(47) == 8 && SymbolPreset.NqLocalTicksFor(112.6) == 8, "M1 (47 tick), M5 (113 tick), chua co lich su -> +-8");
+        Check(SymbolPreset.NqLocalTicksFor(203) == 14 && SymbolPreset.NqLocalTicksFor(303) == 22 && SymbolPreset.NqLocalTicksFor(439) == 31, "M15 203 -> 14, M30 303 -> 22, H1 439 -> 31",
+              $"{SymbolPreset.NqLocalTicksFor(203)},{SymbolPreset.NqLocalTicksFor(303)},{SymbolPreset.NqLocalTicksFor(439)}");
+        var nq15 = new CellBigSettings(); SymbolPreset.ApplyNasdaq(nq15, 203);
+        Check(nq15.DotLocalTicks == 14 && nq15.DotHideBuyNearSellTicks == 12 && nq15.DotMedianRatio == 3.5, "ApplyNasdaq(M15): +-14, che 12, 3,5 x");
+        var nq15all = new CellBigSettings { DotLocalTicks = 0 }; SymbolPreset.ApplyNasdaq(nq15all, 203);
+        Check(nq15all.DotLocalTicks == 0, "che do no moi muc gia van giu 0");
+        // 40 tai tick 100, 38 tai tick 112 (cach 12): +-8 -> ca hai no; +-14 -> chi 40
+        var lv3 = new[] { L(100, 0, 40), L(112, 0, 38) };
+        Check(Ev(nqs2, 10, lv3).Count == 2 && Ev(nq15, 10, lv3).Count == 1, "cach 12 tick: M5 2 cham, M15 1 cham");
+        Check(CellBigLogic.BarRangeTicks(new[] { L(100, 1, 0), L(140, 0, 2), new CellLevel(200, 0, 0, 0, 0) }) == 40 && CellBigLogic.BarRangeTicks(new CellLevel[0]) == 0, "bien do = tick cao - thap cua o co giao dich");
+        var br = new CellBigBaseline(20);
+        for (int i = 0; i < 4; i++) br.Add(5, 3, 100);
+        Check(!br.TryGetRange(out _), "4 nen -> chua co bien do");
+        br.Add(5, 3, 200);
+        Check(br.TryGetRange(out double rg) && Math.Abs(rg - 120) < 1e-9, "5 nen -> bien do TB 120", $"{rg}");
+        for (int i = 0; i < 30; i++) br.Add(5, 3, 50);
+        br.TryGetRange(out double rg2);
+        Check(Math.Abs(rg2 - 50) < 1e-9 && br.Count == 20, "cuon 20 nen ca bien do");
+
         return _fail;
     }
 }

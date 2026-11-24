@@ -82,6 +82,16 @@ namespace OrderFlowBubbles
             return n > 0 && tot > 0;
         }
 
+        /// <summary>Biên độ nến theo tick: tick cao nhất - tick thấp nhất trong các ô có giao dịch (0 nếu rỗng).</summary>
+        public static double BarRangeTicks(IEnumerable<CellLevel> levels)
+        {
+            long lo = long.MaxValue, hi = long.MinValue;
+            if (levels != null)
+                foreach (var l in levels)
+                    if (l.Vol > 0) { if (l.Tick < lo) lo = l.Tick; if (l.Tick > hi) hi = l.Tick; }
+            return hi >= lo ? hi - lo : 0;
+        }
+
         /// <summary>
         /// Xét từng ô của một nến, chỉ ra các chấm Dot THEO TỪNG BÊN. medianBaseline = mức nền (trung vị) từ các nến đã đóng trước (hasBaseline false = chưa đủ 5 nến -> chỉ chế độ cố định chạy).
         /// Trả xanh (tick tăng dần) rồi tới đỏ (tick tăng dần): thứ tự vẽ, đỏ nằm trên.
@@ -166,13 +176,16 @@ namespace OrderFlowBubbles
         private readonly int _n;
         private readonly Queue<double> _mean = new Queue<double>();
         private readonly Queue<double> _median = new Queue<double>();
+        private readonly Queue<double> _range = new Queue<double>();
         public CellBigBaseline(int n) { _n = Math.Max(CellBigLogic.MinHistoryBars, n); }
         public int Count => _mean.Count;
-        public void Add(double barMeanLevelVol, double barMedianLevelVol)
+        public void Add(double barMeanLevelVol, double barMedianLevelVol, double barRangeTicks = 0)
         {
-            _mean.Enqueue(barMeanLevelVol); _median.Enqueue(barMedianLevelVol);
-            while (_mean.Count > _n) { _mean.Dequeue(); _median.Dequeue(); }
+            _mean.Enqueue(barMeanLevelVol); _median.Enqueue(barMedianLevelVol); _range.Enqueue(barRangeTicks);
+            while (_mean.Count > _n) { _mean.Dequeue(); _median.Dequeue(); _range.Dequeue(); }
         }
+        /// <summary>Biên độ nến tính theo tick (tick cao nhất - thấp nhất có giao dịch), trung bình 20 nến trước. Bộ NQ dùng để nới cửa sổ theo khung.</summary>
+        public bool TryGetRange(out double avgRangeTicks) => Avg(_range, out avgRangeTicks);
         /// <summary>Volume TB mỗi ô có giao dịch (trung bình 20 nến trước).</summary>
         public bool TryGet(out double avgLevelVol) => Avg(_mean, out avgLevelVol);
         /// <summary>Trung vị volume mỗi ô có giao dịch, lấy trung bình của 20 nến trước.</summary>
@@ -194,8 +207,15 @@ namespace OrderFlowBubbles
     public static class SymbolPreset
     {
         public const double NqDotMedianRatio = 2.8 * 1.25;   // 3,5
-        public const int NqDotLocalTicks = 8;
+        public const int NqDotLocalTicks = 8;           // cửa sổ tối thiểu (M1, M5)
         public const int NqDotHideBuyNearSellTicks = 12;
+        // TỰ NỚI THEO KHUNG (2026-11-24, tf_scale.py): cửa sổ ±w = max(8, làm tròn(biên độ TB 20 nến trước / 14)), che giữ 12.
+        // Nến càng rộng (M15, M30, H1…) cửa sổ càng to, nên số chấm mỗi nến bám theo vàng GC cùng khung:
+        // chấm/nến NQ (GC): M1 0,47 (0,46) · M5 0,78 (0,84) · M15 1,19 (1,11) · M30 1,67 (1,34) · H1 1,54 (1,54).
+        // Cửa sổ cố định 8 thì M15 1,45 · M30 2,40 · H1 2,66 (dày gấp 1,3-1,8 lần GC). Khớp mật độ, không phải lợi thế đã kiểm định.
+        public const double NqRangePerWindowTick = 14;
+        public static int NqLocalTicksFor(double avgRangeTicks)
+            => avgRangeTicks > 0 ? Math.Max(NqDotLocalTicks, (int)Math.Round(avgRangeTicks / NqRangePerWindowTick)) : NqDotLocalTicks;
 
         /// <summary>true nếu tên mã là NQ hoặc MNQ (vd "/NQZ26:XCME", "NQZ26", "/NQ:XCME", "MNQH27"). Không bắt NQLT, NQMLF…</summary>
         public static bool IsNasdaq(string symbolName)
@@ -215,11 +235,11 @@ namespace OrderFlowBubbles
         }
 
         /// <summary>Đổi bộ số chấm sang bộ Nasdaq (giữ sàn, chế độ cố định, cờ bật/tắt). DotLocalTicks = 0 (chế độ nổ mọi mức giá) giữ 0.</summary>
-        public static void ApplyNasdaq(CellBigSettings s)
+        public static void ApplyNasdaq(CellBigSettings s, double avgRangeTicks = 0)
         {
             if (s == null) return;
             s.DotMedianRatio = NqDotMedianRatio;
-            if (s.DotLocalTicks > 0) s.DotLocalTicks = NqDotLocalTicks;
+            if (s.DotLocalTicks > 0) s.DotLocalTicks = NqLocalTicksFor(avgRangeTicks);
             if (s.DotHideBuyNearSellTicks >= 0) s.DotHideBuyNearSellTicks = NqDotHideBuyNearSellTicks;
         }
     }

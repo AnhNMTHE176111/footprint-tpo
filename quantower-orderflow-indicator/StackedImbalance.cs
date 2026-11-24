@@ -183,6 +183,11 @@ namespace OrderFlowBubbles
         /// <summary>Vùng còn hiệu lực nhưng đã quá xa (tuổi ≥ farBars) → không vẽ, không hover.</summary>
         public static bool IsFar(int endIdx, int farBars, int age) => endIdx < 0 && farBars > 0 && age >= farBars;
 
+        /// <summary>Kéo dài tối đa (2026-11-24, CORVEN "xa tít thì không dùng"): vùng còn hiệu lực (endIdx &lt; 0) mà nến hiện tại
+        /// đã cách nến tạo vùng >= maxBars thì kết thúc HẾT HẠN tại nến zIdx + maxBars. maxBars &lt;= 0 = không giới hạn.</summary>
+        public static (int endIdx, SiEnd end) CapLength(int zIdx, int endIdx, SiEnd end, int maxBars, int curIdx)
+            => endIdx < 0 && maxBars > 0 && curIdx - zIdx >= maxBars ? (zIdx + maxBars, SiEnd.Expired) : (endIdx, end);
+
         public static string PositionText(SiPosition p) => p switch
         {
             SiPosition.Body => "giữa thân nến",

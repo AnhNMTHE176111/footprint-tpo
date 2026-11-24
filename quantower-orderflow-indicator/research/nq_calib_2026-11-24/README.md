@@ -48,6 +48,20 @@ Cách đọc:
 - **Vị trí khớp kém hơn hẳn GC** (precision 0,50 so với 0,98), với **cả hai bộ số**. Lý do đo được: chart NQ của CORVEN **gộp 8 tick (2,0 điểm) thành một hàng**. Giá của các chấm CORVEN dồn về lưới 8 tick (độ tập trung pha 0,61 với chu kỳ 8 tick, 0,30 với 4 tick là bội, gần 0 với 5, 10, 16 tick). Indicator đọc từng tick nên không thể khớp vị trí từng chấm với chart gộp hàng. Thử chạy luật trên hàng 8 tick (`rows_test.py`) cũng chỉ đạt F1 0,58 với luật rất lỏng, precision tối đa khoảng 0,77, nên chưa đổi indicator sang gộp hàng.
 - Mức ngẫu nhiên để so: dịch chấm của mình ngẫu nhiên ±30 tick thì precision 0,25 (cách ≤ 4 tick). Precision 0,55 ở cùng khoảng cách nghĩa là chấm của mình vẫn hay nằm gần chấm CORVEN, chỉ không trùng từng tick.
 
+## 4b. Tự nới theo khung (`tf_scale.py`, `tf_csv.py`)
+
+Cửa sổ ±8 cố định làm khung lớn dày chấm: M15 1,45, M30 2,40, H1 2,66 chấm/nến (vàng GC: 1,11 / 1,34 / 1,54). Nến NQ càng lớn càng rộng (biên độ TB: M1 47, M5 113, M15 203, M30 303, H1 439 tick), nên cửa sổ nới theo biên độ:
+**w = max(8, làm tròn(biên độ TB 20 nến trước / 14))**, che giữ 12 tick, 3,5 × trung vị, sàn 9.
+
+| Chấm/nến (đỏ / xanh) | M1 | M5 | M15 | M30 | H1 |
+|---|---|---|---|---|---|
+| GC, bộ GC | 0,46 | 0,84 | 1,11 (0,70/0,41) | 1,34 | 1,54 |
+| NQ, ±8 cố định | 0,47 | 0,82 | 1,45 (1,02/0,43) | 2,40 | 2,66 |
+| **NQ, tự nới /14, che 12** | **0,47** | **0,78** | **1,19 (0,76/0,42)** | **1,67** | **1,54** |
+| NQ, tự nới /14, che 1,5 × w | 0,47 | 0,76 | 1,08 (0,76/0,31) | 1,41 | 1,23 |
+
+Che 1,5 × w xóa quá nhiều chấm xanh (tỉ lệ đỏ 70–79% so với GC 63–65%), nên giữ che 12. C# = Python (`Golden.dll stophunt --tick 0.25 --symbol NQZ26 --levels <tf_csv>`): M1 33.492 (19.653 + 13.839), M5 11.105 (6.716 + 4.389), M15 5.628 (3.618 + 2.010), H1 1.823 (1.141 + 682). M1 chỉ 6,9% nến có cửa sổ > 8.
+
 ## 5. Big Trade (vòng mờ) trên NQ
 
 Giữ ngưỡng **10 hợp đồng**. Nhật ký lệnh đơn sống của NQ mới có 18 nến M1 (24/11, 12:01 đến 12:19 UTC, trước giờ Mỹ): trung vị 1, phân vị 99 là 5, lớn nhất 13; ≥ 10 hợp đồng khoảng 0,11 lần mỗi nến M1 (GC 0,16). Quá ít để hiệu chỉnh. Một hợp đồng NQ (20 USD × 26.000 ≈ 520 nghìn USD) gần bằng một hợp đồng GC (100 oz × 4.100 ≈ 410 nghìn USD), nên cùng ngưỡng số hợp đồng là hợp lý. Chạy lại `../corven_m5_2026-11-18/bigtrade_threshold.py --log .../_NQZ26_XCME_Time_1Minute.csv` khi nhật ký đủ vài ngày.

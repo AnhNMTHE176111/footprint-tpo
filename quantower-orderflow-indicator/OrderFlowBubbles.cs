@@ -209,6 +209,12 @@ namespace OrderFlowBubbles
         public int CellDotHideBuyNearSellTicks { get; set; } = 6;
 
         // sàn tuyệt đối cho giá trị của bên đang xét (chấm nhỏ)
+        // Bật (mặc định) = chấm chỉ nổ khi bên đang xét >= CellBigMinSide hợp đồng (ngoài điều kiện k x trung vị). Tắt = bỏ sàn, chỉ còn ngưỡng tương đối.
+        [InputParameter("Chấm Bid/Ask nhỏ · Dùng sàn tối thiểu", 29)]
+        public bool CellDotFloorEnabled { get; set; } = true;
+
+        // Ô số chỉ hiện khi ô "Dùng sàn tối thiểu" bật (xem Settings bên dưới).
+        [InputParameter("Chấm Bid/Ask nhỏ · Sàn tối thiểu (hợp đồng)", 30, 1, 10000, 1, 0)]
         public double CellBigMinSide { get; set; } = 9;
 
         // màu bóng (chấm / Big Trade) thuộc nến quét của stop hunt đã xác nhận (thay cho tam giác cũ)
@@ -233,7 +239,7 @@ namespace OrderFlowBubbles
         public int DeltaBarTintPct { get; set; } = 85;
 
         // ---------- Số Delta ----------
-        [InputParameter("Số Delta · Hiện dưới nến", 30)]
+        [InputParameter("Số Delta · Hiện dưới nến", 35)]
         public bool ShowDeltaNumbers { get; set; } = true;
 
         public int DeltaFontSize { get; set; } = 7;
@@ -405,6 +411,19 @@ namespace OrderFlowBubbles
         //  vĩnh viễn → OnUpdate return sớm → trắng chart. Giờ OnUpdate tự "mở lại" khi VA đã Finished
         //  (ShouldArmVa). Bỏ luôn dòng đặt _processedClosedCount=0 ở đây: Clear() đã reset, còn đặt lại
         //  SONG SONG với lượt tính lại (chạy trên task khác) dễ làm baseline nạp trùng.
+        // Ô "Sàn tối thiểu (hợp đồng)" chỉ hiện khi ô "Dùng sàn tối thiểu" đang bật.
+        public override IList<SettingItem> Settings
+        {
+            get
+            {
+                var settings = base.Settings;
+                var floor = settings?.FirstOrDefault(x => x.Name == nameof(CellBigMinSide));
+                if (floor != null) floor.Relation = new SettingItemRelationVisibility(nameof(CellDotFloorEnabled), true);
+                return settings;
+            }
+            set => base.Settings = value;
+        }
+
         protected override void OnSettingsUpdated()
         {
             _fingerprintValid = false;   // tham số đổi -> tính lại dấu vân tay ở lượt Process kế tiếp
@@ -420,7 +439,7 @@ namespace OrderFlowBubbles
             var s = new CellBigSettings
             {
                 DotEnabled = CellDotEnabled, DotMedianRatio = CellDotMedianRatio, DotLocalTicks = CellDotAllLevels ? 0 : CellDotLocalTicks, DotHideBuyNearSellTicks = CellDotHideBuyNearSellTicks,
-                MinSide = CellBigMinSide, FixedMode = UseFixedThreshold, FixedThreshold = FixedThresholdContracts
+                MinSide = CellDotFloorEnabled ? CellBigMinSide : 0, FixedMode = UseFixedThreshold, FixedThreshold = FixedThresholdContracts
             };
             if (UseNasdaqPresetNow) SymbolPreset.ApplyNasdaq(s);
             return s;
@@ -447,6 +466,7 @@ namespace OrderFlowBubbles
                 SweepEnabled, SweepLookback, UnfinishedEnabled,
                 StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v8")
                 // chỉ thêm khi bộ Nasdaq đang chạy -> dấu vân tay của vàng GC giữ nguyên như cũ (bản niêm phong cũ vẫn dùng được)
+                + (CellDotFloorEnabled ? "" : "|nofloor")   // chỉ thêm khi TẮT sàn -> dấu vân tay mặc định giữ nguyên
                 + (UseNasdaqPresetNow ? $"|nq-v1:{SymbolPreset.NqDotMedianRatio}/{SymbolPreset.NqDotLocalTicks}/{SymbolPreset.NqDotHideBuyNearSellTicks}" : "");
         }
 

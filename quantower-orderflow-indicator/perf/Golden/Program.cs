@@ -60,6 +60,8 @@ namespace GoldenPerf
             if (mode == "realcache") return RealCache(work);
             // --tick / --symbol: chạy trên mã khác vàng (vd NQ: --tick 0.25 --symbol NQZ26). Mặc định = vàng GC như cũ.
             TickArg = double.Parse(Arg(args, "--tick", "0.1"), Inv); SymbolArg = Arg(args, "--symbol", null);
+            // --set Ten=GiaTri (lặp được): đổi tham số cho chế độ stophunt, vd --set CellDotFloorEnabled=false
+            for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "--set") { var kv = args[i + 1].Split('='); (SetArgs ??= new Dictionary<string, object>())[kv[0]] = kv[1]; }
             Console.WriteLine($"data: {lvl}\nwork: {work}");
             var sw = Stopwatch.StartNew();
             var bars = LoadBars(lvl, barsCsv);
@@ -74,7 +76,7 @@ namespace GoldenPerf
         static int StopHuntList(List<HistoryItemBar> bars, string work, string outFile)
         {
             string c = Path.Combine(work, "SH.jsonl"); if (File.Exists(c)) File.Delete(c);
-            var r = Make(bars, 0, bars.Count, c, null); r.Ind.VolumeAnalysisData_Loaded();
+            var r = Make(bars, 0, bars.Count, c, SetArgs); r.Ind.VolumeAnalysisData_Loaded();
             var bubbles = (IDictionary)typeof(Ind).GetField("_bubbles", NP).GetValue(r.Ind);
             var rows = new List<string>();
             var signals = new HashSet<string>();
@@ -161,7 +163,7 @@ namespace GoldenPerf
             public Ind Ind; public Action Process;
         }
 
-        static double TickArg = 0.1; static string SymbolArg;
+        static double TickArg = 0.1; static string SymbolArg; static Dictionary<string, object> SetArgs;
 
         static Run Make(List<HistoryItemBar> bars, int off, int count, string cacheFile, Dictionary<string, object> cfg)
         {

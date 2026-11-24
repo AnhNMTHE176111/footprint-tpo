@@ -5,14 +5,21 @@ var t = typeof(OrderFlowBubbles.OrderFlowBubbles);
 var props = t.GetProperties(BindingFlags.Public|BindingFlags.Instance).Where(p => p.GetCustomAttributes().Any(a => a.GetType().Name=="InputParameterAttribute")).ToList();
 Console.WriteLine($"InputParameter count = {props.Count}");
 foreach (var p in props) Console.WriteLine("  " + p.Name);
-int fail = props.Count == 14 ? 0 : 1;
+int fail = props.Count == 16 ? 0 : 1;
 object o = null; try { o = Activator.CreateInstance(t); } catch (Exception e) { Console.WriteLine("Khong tao duoc instance: " + e.GetType().Name); }
 if (o != null) {
   void chk(string n, object exp){ var v=t.GetProperty(n).GetValue(o); bool ok=Equals(v,exp); if(!ok) fail++; Console.WriteLine($"  {(ok?"OK  ":"FAIL")} {n} = {v} (mong doi {exp})"); }
   chk("DeltaFontSize",7); chk("DeltaYOffsetPx",8); chk("DLineEnabled",false); chk("DeltaMinBarWidthPx",6);
-  chk("CellDotAllLevels",false); chk("CellDotNasdaqAuto",true); chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhMinWickTicks",3); chk("ExhSumLevels",6); chk("ExhSumHistRatio",1.1); chk("BigTradeMinContracts",10.0); chk("BigTradeOpacity",35); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellDotMedianRatio",2.8); chk("CellDotLocalTicks",4); chk("CellDotHideBuyNearSellTicks",6); chk("CellDotEnabled",true); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true);
+  chk("CellDotAllLevels",false); chk("CellDotNasdaqAuto",true); chk("CellDotFloorEnabled",true); chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhMinWickTicks",3); chk("ExhSumLevels",6); chk("ExhSumHistRatio",1.1); chk("BigTradeMinContracts",10.0); chk("BigTradeOpacity",35); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellDotMedianRatio",2.8); chk("CellDotLocalTicks",4); chk("CellDotHideBuyNearSellTicks",6); chk("CellDotEnabled",true); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true);
   chk("StopHuntEnabled",true); chk("StopHuntBoxSmall",60); chk("StopHuntBoxLarge",60); chk("StopHuntBoxMaxMult",8.0); chk("StopHuntTolTicks",3); chk("StopHuntConfirmBars",2); chk("StopHuntCooldown",5);
   chk("CellBigStopHuntColor",System.Drawing.Color.MediumOrchid);
+  try {
+    var st = (System.Collections.IEnumerable)t.GetProperty("Settings").GetValue(o);
+    object floor = null; foreach (var it in st) if ((string)it.GetType().GetProperty("Name").GetValue(it) == "CellBigMinSide") floor = it;
+    var rel = floor?.GetType().GetProperty("Relation").GetValue(floor);
+    bool ok = rel != null && rel.GetType().Name == "SettingItemRelationVisibility";
+    if (!ok) fail++; Console.WriteLine($"  {(ok?"OK  ":"FAIL")} o San toi thieu chi hien khi bat (Relation = {rel?.GetType().Name ?? "null"})");
+  } catch (Exception e) { Console.WriteLine("  (bo qua kiem Settings ngoai Quantower: " + (e.InnerException ?? e).GetType().Name + ")"); }
   foreach (var gn in new[] { "CellBigRowTicks", "CellBigRowOffset", "CellBigRatio", "CellDotRatio", "ExhSumRel", "CellBigMaxSideRatio", "CellBigLocalTicks", "CellBigMinImbalance", "CellBigOpacity", "BigZ", "BigVolMult", "BigTradeTopN", "BigTradeRequireRealTrades", "BigTradeSkipOnAbsorption", "CellDotTradesRatio", "AbsorptionEnabled", "AbsEffortZ", "AbsScoreMin", "AbsMaxDisplaceTicks", "AbsorptionTopN", "AbsRangeRatio", "AbsImpactZ", "AbsSwingPeriod", "AbsPocProminence", "AbsDivergencePct", "AbsTwoSidedPct", "AbsMultiBarLookback", "AbsConfirmBars", "AbsBreakTicks", "WNoResult", "WProminent", "WDivergence", "WTwoSided", "WMulti", "WSwing", "CellBigSkipOnAbsorption", "BaselineTopLevels", "BigTradeFixedContracts", "BigTradeAbsFloor", "HaloTransparency" }) { bool g2 = t.GetProperty(gn) == null; if(!g2) fail++; Console.WriteLine($"  {(g2?"OK  ":"FAIL")} {gn} da bo"); }
   { bool gone = t.GetProperty("StopHuntLookback") == null; if(!gone) fail++; Console.WriteLine($"  {(gone?"OK  ":"FAIL")} StopHuntLookback da bo"); }
 }

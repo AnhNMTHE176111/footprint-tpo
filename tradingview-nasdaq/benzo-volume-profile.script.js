@@ -127,6 +127,17 @@ function volumeText(v) {
   return String(Math.round(v));
 }
 
+function paneHeight(b, canvas) {
+  const cands = [
+    b && b.height,
+    b && b.bottom - b.top,
+    canvas && canvas.clientHeight,
+    canvas && canvas.height / ((typeof window !== 'undefined' && window.devicePixelRatio) || 1),
+  ];
+  for (const h of cands) if (Number.isFinite(h) && h > 0) return h;
+  return 700;
+}
+
 // Font size of the row numbers from how many profile rows fit on screen (Pine: large / normal /
 // small / tiny); null = zoomed out too far, numbers hidden.
 function rowNumberPx(rowsOnScreen, maxRows) {
@@ -997,7 +1008,8 @@ return {
     // 0. Total volume of each row of the developing profile, in one column at its start (top layer,
     // still behind the candles like Pine's labels). Rows on screen = pane height / row height in
     // pixels, so it follows the real zoom, manual price-scale zoom included.
-    const paneH = bv.bounds(args).height || (ctx.canvas ? ctx.canvas.clientHeight : 0);
+    // bv.bounds may not report a height: fall back to the canvas, then to a typical 700 px pane.
+    const paneH = paneHeight(bv.bounds(args), ctx.canvas);
     for (const p of visProfiles) {
       if (!p.numbers || !p.rows.length) continue;
       const rowPx = Math.abs(Y(p.rows[0].bottom) - Y(p.rows[0].top));
@@ -1007,10 +1019,11 @@ return {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = st.rowNumberColor;
-      const x = X(p.from) + 2;
+      // Pinned to the pane's left edge once the profile's start scrolls off screen.
+      const x = Math.max(X(p.from), 0) + 2;
       for (const r of p.rows) {
         const y = Y(r.bottom + p.rh * 0.5);
-        if (y < -px || y > paneH + px) continue;
+        if (!Number.isFinite(y) || y < -px || y > paneH + px) continue;
         ctx.fillText(volumeText(r.vol), x, y);
       }
     }

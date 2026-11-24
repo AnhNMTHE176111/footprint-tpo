@@ -203,6 +203,24 @@ static class CellBigTests
 
         Console.WriteLine("[CellBig] FloorDiv (StopHuntLogic dung)");
         Check(CellBigLogic.FloorDiv(7, 2) == 3 && CellBigLogic.FloorDiv(-1, 2) == -1 && CellBigLogic.FloorDiv(-4, 2) == -2, "floor chia dung voi so am");
+        Console.WriteLine("[CellBig] bo so theo ma: Nasdaq (NQ/MNQ)");
+        foreach (var n in new[] { "/NQZ26:XCME", "NQZ26", "/NQ:XCME", "/NQ", "MNQH27", "/MNQZ26:XCME", "nqz26" })
+            Check(SymbolPreset.IsNasdaq(n), "la Nasdaq: " + n);
+        foreach (var n in new[] { null, "", "/GCZ26:XCEC", "GC", "MGCZ26", "NQLT", "NQMLF", "/ES:XCME", "NQZ", "NQZ2026", "NQA26" })
+            Check(!SymbolPreset.IsNasdaq(n), "khong phai Nasdaq: " + (n ?? "null"));
+        var nqs = new CellBigSettings(); SymbolPreset.ApplyNasdaq(nqs);
+        Check(nqs.DotMedianRatio == 3.5 && nqs.DotLocalTicks == 8 && nqs.DotHideBuyNearSellTicks == 12 && nqs.MinSide == 9 && nqs.DotEnabled && !nqs.FixedMode, "bo Nasdaq: 3,5 / +-8 / che 12, san 9 giu nguyen");
+        var nqAll = new CellBigSettings { DotLocalTicks = 0, DotHideBuyNearSellTicks = -1 }; SymbolPreset.ApplyNasdaq(nqAll);
+        Check(nqAll.DotLocalTicks == 0 && nqAll.DotHideBuyNearSellTicks == -1, "bo Nasdaq giu che do no moi muc gia (0) va tat che (-1)");
+        // cung mot nen: bid 30 tai tick 100 va bid 34 tai tick 106, nen 10. Bo GC (+-4): ca hai no; bo Nasdaq (+-8, 3,5 x 10 = 35): khong cai nao no (34 < 35)
+        var lv = new[] { L(100, 0, 30), L(106, 0, 34) };
+        Check(Ev(new CellBigSettings(), 10, lv).Count(m => m.Side < 0) == 2, "bo GC: 2 cham do (cach 6 tick > 4)");
+        var nqs2 = new CellBigSettings(); SymbolPreset.ApplyNasdaq(nqs2);
+        Check(Ev(nqs2, 10, lv).Count == 0, "bo Nasdaq: nguong 35 -> khong no");
+        var lv2 = new[] { L(100, 0, 36), L(106, 0, 40) };
+        var r2 = Ev(nqs2, 10, lv2);
+        Check(r2.Count == 1 && r2[0].Tick == 106, "bo Nasdaq: 36 va 40 cach 6 tick (< 8) -> chi 40 no");
+
         return _fail;
     }
 }

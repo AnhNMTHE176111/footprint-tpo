@@ -187,6 +187,43 @@ namespace OrderFlowBubbles
         }
     }
 
+    // BỘ SỐ CHẤM THEO MÃ (2026-11-24, research/nq_calib_2026-11-24/). Bộ mặc định (2,8 / ±4 / che 6) fit trên vàng GC.
+    // NQ: nến M5 rộng gấp ~2,7 lần GC tính theo tick (trung vị 104 so với 39 tick) còn volume mỗi ô gần bằng (trung vị 8 so với 7,5),
+    // nên giữ bộ GC thì NQ ra 1,61 chấm/nến M5, gần gấp đôi GC (0,84). Bộ Nasdaq 3,5 / ±8 / che 12 cho 0,82 chấm/nến M5 (đỏ 0,51, xanh 0,31;
+    // GC 0,53 / 0,31) và 0,47 chấm/nến M1 (GC 0,46). Sàn 9 giữ nguyên. Đây là khớp MẬT ĐỘ hiển thị với GC, không phải lợi thế đã kiểm định.
+    public static class SymbolPreset
+    {
+        public const double NqDotMedianRatio = 2.8 * 1.25;   // 3,5
+        public const int NqDotLocalTicks = 8;
+        public const int NqDotHideBuyNearSellTicks = 12;
+
+        /// <summary>true nếu tên mã là NQ hoặc MNQ (vd "/NQZ26:XCME", "NQZ26", "/NQ:XCME", "MNQH27"). Không bắt NQLT, NQMLF…</summary>
+        public static bool IsNasdaq(string symbolName)
+        {
+            if (string.IsNullOrWhiteSpace(symbolName)) return false;
+            var s = symbolName.Trim().TrimStart('/').ToUpperInvariant();
+            int colon = s.IndexOf(':'); if (colon >= 0) s = s.Substring(0, colon);
+            string rest = s.StartsWith("MNQ") ? s.Substring(3) : s.StartsWith("NQ") ? s.Substring(2) : null;
+            if (rest == null) return false;
+            if (rest.Length == 0) return true;                                        // mã liên tục /NQ, /MNQ
+            // phần còn lại phải là mã tháng + năm: 1 chữ tháng (F G H J K M N Q U V X Z) + 1-2 chữ số
+            if ("FGHJKMNQUVXZ".IndexOf(rest[0]) < 0) return false;
+            string y = rest.Substring(1);
+            if (y.Length < 1 || y.Length > 2) return false;
+            foreach (char c in y) if (c < '0' || c > '9') return false;
+            return true;
+        }
+
+        /// <summary>Đổi bộ số chấm sang bộ Nasdaq (giữ sàn, chế độ cố định, cờ bật/tắt). DotLocalTicks = 0 (chế độ nổ mọi mức giá) giữ 0.</summary>
+        public static void ApplyNasdaq(CellBigSettings s)
+        {
+            if (s == null) return;
+            s.DotMedianRatio = NqDotMedianRatio;
+            if (s.DotLocalTicks > 0) s.DotLocalTicks = NqDotLocalTicks;
+            if (s.DotHideBuyNearSellTicks >= 0) s.DotHideBuyNearSellTicks = NqDotHideBuyNearSellTicks;
+        }
+    }
+
     // BIG TRADE: một lệnh đơn chủ động lớn tại một mức giá (VolumeAnalysisItem.MaxOneTradeVolume).
     public static class BigTradeLogic
     {

@@ -58,6 +58,8 @@ namespace GoldenPerf
             string baseline = Arg(args, "--baseline", Path.Combine(work, "baseline"));
             Directory.CreateDirectory(work);
             if (mode == "realcache") return RealCache(work);
+            // --tick / --symbol: chạy trên mã khác vàng (vd NQ: --tick 0.25 --symbol NQZ26). Mặc định = vàng GC như cũ.
+            TickArg = double.Parse(Arg(args, "--tick", "0.1"), Inv); SymbolArg = Arg(args, "--symbol", null);
             Console.WriteLine($"data: {lvl}\nwork: {work}");
             var sw = Stopwatch.StartNew();
             var bars = LoadBars(lvl, barsCsv);
@@ -159,6 +161,8 @@ namespace GoldenPerf
             public Ind Ind; public Action Process;
         }
 
+        static double TickArg = 0.1; static string SymbolArg;
+
         static Run Make(List<HistoryItemBar> bars, int off, int count, string cacheFile, Dictionary<string, object> cfg)
         {
             var ind = new Ind();
@@ -170,7 +174,8 @@ namespace GoldenPerf
                 }
             ind.TestBarSource = i => bars[off + i];
             ind.TestBarCount = count;
-            ind.TestTickSize = 0.1;
+            ind.TestTickSize = TickArg;
+            ind.TestSymbolName = SymbolArg;
             ind.TestCacheFile = cacheFile;
             var m = typeof(Ind).GetMethod("Process", NP);
             return new Run { Ind = ind, Process = (Action)Delegate.CreateDelegate(typeof(Action), ind, m) };

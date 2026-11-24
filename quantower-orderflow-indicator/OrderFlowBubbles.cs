@@ -200,6 +200,11 @@ namespace OrderFlowBubbles
         [InputParameter("Chấm Bid/Ask nhỏ · Nổ ở mọi mức giá (bỏ điều kiện lớn nhất trong ±4 tick)", 27)]
         public bool CellDotAllLevels { get; set; } = false;
 
+        // Bật (mặc định) = mã NQ/MNQ tự dùng bộ số Nasdaq cho chấm: 3,5 x trung vị, lớn nhất trong ±8 tick, che xanh cách đỏ <= 12 tick
+        // (thay cho CellDotMedianRatio / CellDotLocalTicks / CellDotHideBuyNearSellTicks). Mã khác (GC, MGC…) không đổi. Xem SymbolPreset trong CellBigLogic.cs.
+        [InputParameter("Chấm Bid/Ask nhỏ · Mã NQ/MNQ tự dùng bộ số Nasdaq (3,5 x · ±8 tick · che 12)", 28)]
+        public bool CellDotNasdaqAuto { get; set; } = true;
+
         // chấm xanh bị che (không vẽ) nếu cùng nến có chấm đỏ cách <= số tick này (CORVEN vẽ đỏ đè xanh); < 0 = tắt che
         public int CellDotHideBuyNearSellTicks { get; set; } = 6;
 
@@ -410,11 +415,19 @@ namespace OrderFlowBubbles
         internal static bool ShouldArmVa(bool vaLoaded, VolumeAnalysisCalculationState? state)
             => !vaLoaded && state == VolumeAnalysisCalculationState.Finished;
 
-        private CellBigSettings CellSettings() => new CellBigSettings
+        private CellBigSettings CellSettings()
         {
-            DotEnabled = CellDotEnabled, DotMedianRatio = CellDotMedianRatio, DotLocalTicks = CellDotAllLevels ? 0 : CellDotLocalTicks, DotHideBuyNearSellTicks = CellDotHideBuyNearSellTicks,
-            MinSide = CellBigMinSide, FixedMode = UseFixedThreshold, FixedThreshold = FixedThresholdContracts
-        };
+            var s = new CellBigSettings
+            {
+                DotEnabled = CellDotEnabled, DotMedianRatio = CellDotMedianRatio, DotLocalTicks = CellDotAllLevels ? 0 : CellDotLocalTicks, DotHideBuyNearSellTicks = CellDotHideBuyNearSellTicks,
+                MinSide = CellBigMinSide, FixedMode = UseFixedThreshold, FixedThreshold = FixedThresholdContracts
+            };
+            if (UseNasdaqPresetNow) SymbolPreset.ApplyNasdaq(s);
+            return s;
+        }
+
+        // Mã hiện tại là NQ/MNQ và người dùng để bật "tự dùng bộ số Nasdaq".
+        private bool UseNasdaqPresetNow => CellDotNasdaqAuto && SymbolPreset.IsNasdaq(TestBarSource != null ? TestSymbolName : Symbol?.Name);
 
         private string ComputeSettingsFingerprint()
         {
@@ -432,7 +445,9 @@ namespace OrderFlowBubbles
                 ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun, ImbMinVolume,
                 DivergenceEnabled, DivSwingLookback, DivVolPartic, DivCooldown,
                 SweepEnabled, SweepLookback, UnfinishedEnabled,
-                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v8");
+                StopHuntEnabled, StopHuntBoxSmall, StopHuntBoxLarge, StopHuntBoxMaxMult, StopHuntTolTicks, StopHuntConfirmBars, StopHuntCooldown, "stophunt-v8")
+                // chỉ thêm khi bộ Nasdaq đang chạy -> dấu vân tay của vàng GC giữ nguyên như cũ (bản niêm phong cũ vẫn dùng được)
+                + (UseNasdaqPresetNow ? $"|nq-v1:{SymbolPreset.NqDotMedianRatio}/{SymbolPreset.NqDotLocalTicks}/{SymbolPreset.NqDotHideBuyNearSellTicks}" : "");
         }
 
         private void InitBaselines()
@@ -1252,6 +1267,7 @@ namespace OrderFlowBubbles
         internal int TestBarCount;
         internal double TestTickSize;
         internal string TestCacheFile;
+        internal string TestSymbolName;   // null = như vàng GC (golden không đổi)
         private int BarCountNow => TestBarSource != null ? TestBarCount : HistoricalData.Count;
         private double TickSizeNow => TestBarSource != null ? TestTickSize : (Symbol?.TickSize ?? 0);
 

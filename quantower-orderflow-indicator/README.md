@@ -51,6 +51,8 @@ Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score,
 | 10 | **Unfinished** | Đỉnh/đáy còn cả 2 phía (> sàn nhiễu). | tắt |
 | 11 | **Stop-hunt** | Quét cực trị + bóng Ô lớn ngay đó + fail break (logic ở StopHuntLogic.cs). | bật |
 
+> **Chấm Bid/Ask trên NQ/MNQ (2026-11-24):** mã NQ/MNQ tự dùng bộ số Nasdaq **3,5 × trung vị, lớn nhất trong ±8 tick, che chấm xanh cách chấm đỏ ≤ 12 tick** (sàn 9 giữ nguyên) thay cho bộ vàng 2,8 / ±4 / 6, vì nến NQ rộng gấp ~2,7 lần tính theo tick. Tắt bằng ô "Chấm Bid/Ask nhỏ · Mã NQ/MNQ tự dùng bộ số Nasdaq". Số liệu và so sánh với chart NQ của CORVEN: [research/nq_calib_2026-11-24/README.md](research/nq_calib_2026-11-24/README.md).
+
 > **Hấp thụ (Absorption) đã gỡ hoàn toàn (2026-11-19):** indicator không còn tính, vẽ, niêm phong hay xác nhận hấp thụ đỉnh/đáy; các ô cài đặt và tham số của nó đã bị xoá, nên chart cũ lưu cài đặt hấp thụ cũng không bật lại được. Bản ghi niêm phong cũ có bóng hấp thụ bị bỏ khi nạp lại.
 
 ## Khác biệt so với bản ATAS

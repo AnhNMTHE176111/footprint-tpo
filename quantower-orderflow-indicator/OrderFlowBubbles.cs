@@ -216,9 +216,9 @@ namespace OrderFlowBubbles
         [InputParameter("Chấm Bid/Ask nhỏ · Dùng sàn tối thiểu", 29)]
         public bool CellDotFloorEnabled { get; set; } = true;
 
-        // Ô số chỉ hiện khi ô "Dùng sàn tối thiểu" bật (xem Settings bên dưới). Khi "Tự co dãn theo khung" bật, sàn lấy theo BỘ SỐ (5 / 5 / 9),
-        // ô số này chỉ dùng cho chế độ cũ; ô "Dùng sàn tối thiểu" vẫn có tác dụng ở cả hai chế độ (tắt = bỏ sàn).
-        [InputParameter("Chấm Bid/Ask nhỏ · Sàn tối thiểu (hợp đồng, khi tắt tự co dãn)", 30, 1, 10000, 1, 0)]
+        // Ô số chỉ hiện khi ô "Dùng sàn tối thiểu" bật (xem Settings bên dưới). Áp cho CẢ chế độ cũ lẫn "Tự co dãn theo khung"
+        // (sửa 2026-11-24: bản trước để bộ số ghi đè sàn thành 5).
+        [InputParameter("Chấm Bid/Ask nhỏ · Sàn tối thiểu (hợp đồng)", 30, 1, 10000, 1, 0)]
         public double CellBigMinSide { get; set; } = 9;
 
         // 2026-11-24 (research/adaptive_2026-11-24): MỘT công thức chấm cho mọi mã, mọi khung — w = max(4, biên độ TB / 6),
@@ -497,7 +497,7 @@ namespace OrderFlowBubbles
                 DotEnabled = CellDotEnabled, DotMedianRatio = CellDotMedianRatio, DotLocalTicks = CellDotAllLevels ? 0 : CellDotLocalTicks, DotHideBuyNearSellTicks = CellDotHideBuyNearSellTicks,
                 MinSide = CellDotFloorEnabled ? CellBigMinSide : 0, FixedMode = UseFixedThreshold, FixedThreshold = FixedThresholdContracts
             };
-            if (CellDotAdaptive) UnifiedDots.Apply(s, CellDotPreset, avgRangeTicks, CellDotAllLevels, CellDotFloorEnabled);
+            if (CellDotAdaptive) UnifiedDots.Apply(s, CellDotPreset, avgRangeTicks, CellDotAllLevels, CellDotFloorEnabled, CellBigMinSide);
             else if (UseNasdaqPresetNow) SymbolPreset.ApplyNasdaq(s, avgRangeTicks);
             return s;
         }
@@ -527,7 +527,7 @@ namespace OrderFlowBubbles
                 + (UseNasdaqPresetNow ? $"|nq-v2:{SymbolPreset.NqDotMedianRatio}/{SymbolPreset.NqDotLocalTicks}/{SymbolPreset.NqRangePerWindowTick}/{SymbolPreset.NqDotHideBuyNearSellTicks}" : "")
                 // 2026-11-24 thích nghi: mỗi phần chỉ thêm khi BẬT -> tắt hết thì dấu vân tay = bản cũ
                 + (AdaptiveBaseline ? $"|nbase-v1:{DesiredBaseBars()}" : "")
-                + (CellDotAdaptive ? $"|dotu-v1:{CellDotPreset}" : "")
+                + (CellDotAdaptive ? $"|dotu-v2:{CellDotPreset}" : "")
                 + (BigTradeAdaptiveEnabled ? $"|bta-v1:{BigTradeDensity}/{BigTradeFloor}/{BigTradeCeil}/{BigTradeMaxPerBar}/{BigTradeMergeDiv}/{BigTradeMergeMin}" : "")
                 + (ExhTailMedianRatio > 0 ? $"|exhtail-v1:{ExhTailMedianRatio}" : "");
         }

@@ -227,20 +227,20 @@ namespace OrderFlowBubbles
     // CHẤM — một công thức cho mọi mã, mọi khung (thay bộ số theo mã khi bật):
     //   w = max(4, làm tròn(biên độ TB / 6)); ngưỡng = max(k x B, sàn); che h = max(che tối thiểu, làm tròn(tỉ lệ che x w)).
     //   B (trung vị mỗi ô) và biên độ TB lấy trên N nến trước (BaselineWindow).
-    //   Bộ số: 0 = Không sót (k 2,0 · sàn 5 · che 2) — recall chấm CORVEN GC M1 0,70 (precision 0,85);
-    //          1 = Trung gian (k 2,4 · sàn 5 · che 2) — recall 0,61 (0,92);
-    //          2 = Ít nhiễu  (k 2,8 · sàn 9 · che max(6; 0,75 x w)) — recall 0,46 (0,98), mật độ gần luật cũ ở M1/M5.
+    //   Bộ số (đo với sàn của bộ trong research/adaptive_2026-11-24): 0 = Không sót (k 2,0 · che 2) — recall chấm CORVEN GC M1 0,70 (precision 0,85, sàn 5);
+    //          1 = Trung gian (k 2,4 · che 2) — recall 0,61 (0,92, sàn 5); 2 = Ít nhiễu (k 2,8 · che max(6; 0,75 x w)) — recall 0,46 (0,98, sàn 9).
+    //   SÀN luôn lấy từ ô "Sàn tối thiểu" của người dùng (sửa 2026-11-24: bản trước để bộ số ghi đè sàn thành 5 dù người dùng đặt 9).
     public static class UnifiedDots
     {
         public const double RangePerWindow = 6.0;
         public const int WindowMin = 4;
         public const int PresetNoMiss = 0, PresetMiddle = 1, PresetQuiet = 2;
 
-        public static (double k, double floor, double hideRatio, int hideMin) Preset(int preset) => preset switch
+        public static (double k, double hideRatio, int hideMin) Preset(int preset) => preset switch
         {
-            PresetMiddle => (2.4, 5.0, 0.0, 2),
-            PresetQuiet => (2.8, 9.0, 0.75, 6),
-            _ => (2.0, 5.0, 0.0, 2),
+            PresetMiddle => (2.4, 0.0, 2),
+            PresetQuiet => (2.8, 0.75, 6),
+            _ => (2.0, 0.0, 2),
         };
 
         public static int Window(double avgRangeTicks)
@@ -248,14 +248,14 @@ namespace OrderFlowBubbles
 
         public static int Hide(int w, double hideRatio, int hideMin) => Math.Max(hideMin, BaselineWindow.RoundHalfUp(hideRatio * w));
 
-        /// <summary>Đặt k / cửa sổ / che / sàn theo bộ số. allLevels: giữ chế độ "nổ mọi mức giá" (w = 0). floorEnabled false = bỏ sàn.</summary>
-        public static void Apply(CellBigSettings s, int preset, double avgRangeTicks, bool allLevels, bool floorEnabled)
+        /// <summary>Đặt k / cửa sổ / che theo bộ số; sàn = sàn của người dùng (floorEnabled false = bỏ sàn). allLevels: giữ chế độ "nổ mọi mức giá" (w = 0).</summary>
+        public static void Apply(CellBigSettings s, int preset, double avgRangeTicks, bool allLevels, bool floorEnabled, double userFloor)
         {
             if (s == null) return;
             var p = Preset(preset);
             int w = Window(avgRangeTicks);
             s.DotMedianRatio = p.k;
-            s.MinSide = floorEnabled ? p.floor : 0;
+            s.MinSide = floorEnabled ? userFloor : 0;
             s.DotLocalTicks = allLevels ? 0 : w;
             s.DotHideBuyNearSellTicks = Hide(w, p.hideRatio, p.hideMin);
         }

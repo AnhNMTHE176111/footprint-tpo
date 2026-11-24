@@ -110,7 +110,7 @@ static class AdaptiveTests
         Console.WriteLine("[Adaptive] cham: cong thuc chung (nguong, w, che)");
         (double thr, int w, int h) U(int preset, double B, double R)
         {
-            var s = new CellBigSettings(); UnifiedDots.Apply(s, preset, R, false, true);
+            var s = new CellBigSettings(); UnifiedDots.Apply(s, preset, R, false, true, preset == 2 ? 9 : 5);   // sàn như bộ số trong README 6.1
             return (Math.Max(s.DotMedianRatio * B, s.MinSide), s.DotLocalTicks, s.DotHideBuyNearSellTicks);
         }
         bool Eq((double thr, int w, int h) a, double thr, int w, int h) => Math.Abs(a.thr - thr) < 1e-9 && a.w == w && a.h == h;
@@ -122,8 +122,15 @@ static class AdaptiveTests
         Check(Eq(U(0, 2, 16), 5, 4, 2), "khong sot (2; 16) -> 5 / 4 / 2", U(0, 2, 16).ToString());
         Check(Eq(U(1, 8, 39), 19.2, 7, 2), "trung gian (8; 39) -> 19,2 / 7 / 2", U(1, 8, 39).ToString());
         Check(UnifiedDots.Window(27) == 5 && UnifiedDots.Window(21) == 4, "R 27 -> w 5 (4,5 len 5); R 21 -> 4");
-        var sAll = new CellBigSettings(); UnifiedDots.Apply(sAll, 0, 183, true, false);
+        var sAll = new CellBigSettings(); UnifiedDots.Apply(sAll, 0, 183, true, false, 9);
         Check(sAll.DotLocalTicks == 0 && sAll.MinSide == 0, "che do no moi muc gia giu w = 0; tat san -> san 0");
+        // LỖI người học 24/11: sàn 9 mà vẫn nổ "Sell - 6 Bid | ngưỡng 5.5" (bộ số ghi đè sàn thành 5)
+        var sFl = new CellBigSettings(); UnifiedDots.Apply(sFl, 0, 40, true, true, 9);
+        Check(sFl.MinSide == 9, "san lay tu o nguoi dung (9), bo so khong ghi de", sFl.MinSide.ToString());
+        var eFl = CellBigLogic.Evaluate(new List<CellLevel> { new CellLevel(100, 1, 6, 7, 1) }, true, 2.75, sFl);
+        Check(eFl.Count == 0, "6 Bid, nguong 2,0 x 2,75 = 5,5 nhung san 9 -> KHONG no");
+        var eFl2 = CellBigLogic.Evaluate(new List<CellLevel> { new CellLevel(100, 1, 9, 10, 1) }, true, 2.75, sFl);
+        Check(eFl2.Count == 1 && eFl2[0].Threshold == 9, "9 Bid -> no, nguong hien 9", eFl2.Count > 0 ? eFl2[0].Threshold.ToString() : "-");
 
         Console.WriteLine("[Adaptive] cham: mot nen (nguong 22,4)");
         var one = new (long t, double bid, double ask)[] { (100, 5, 30), (101, 2, 3), (104, 25, 1), (108, 40, 26), (112, 3, 24), (120, 1, 23) };
@@ -144,10 +151,10 @@ static class AdaptiveTests
         bl.TryGetMedian(out double B4); bl.TryGetRange(out double R12);
         Check(B4 == 4 && R12 == 12, "B 4, R 12", $"{B4}, {R12}");
         var test = new (long t, double bid, double ask)[] { (100, 12, 1), (103, 11, 0), (105, 2, 15), (112, 0, 20) };
-        var sq = new CellBigSettings(); UnifiedDots.Apply(sq, 2, R12, false, true);
+        var sq = new CellBigSettings(); UnifiedDots.Apply(sq, 2, R12, false, true, 9);
         var eq = Ev(sq, B4, test);
         Check(Ticks(eq, 1) == "112" && Ticks(eq, -1) == "100" && Math.Abs(eq[0].Threshold - 11.2) < 1e-9, "it nhieu: nguong 11,2 / w 4 / che 6 -> xanh {112}, do {100}", $"{Ticks(eq, 1)} / {Ticks(eq, -1)} nguong {eq[0].Threshold}");
-        var sn = new CellBigSettings(); UnifiedDots.Apply(sn, 0, R12, false, true);
+        var sn = new CellBigSettings(); UnifiedDots.Apply(sn, 0, R12, false, true, 5);
         var en = Ev(sn, B4, test);
         Check(Ticks(en, 1) == "105,112" && Ticks(en, -1) == "100" && en[0].Threshold == 8, "khong sot: nguong 8 / w 4 / che 2 -> xanh {105,112}, do {100}", $"{Ticks(en, 1)} / {Ticks(en, -1)}");
         Check(CellBigLogic.Evaluate(test.Select(x => new CellLevel(x.t, x.ask, x.bid, x.ask + x.bid, 1)).ToList(), false, 0, sn).Count == 0, "chua co nen -> khong cham");

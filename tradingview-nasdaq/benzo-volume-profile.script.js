@@ -145,6 +145,11 @@ function rowNumberPx(rowsOnScreen, maxRows) {
   return rowsOnScreen <= 15 ? 16 : rowsOnScreen <= 25 ? 12 : rowsOnScreen <= 40 ? 10 : 8;
 }
 
+// Font size from the row height in pixels: about 70% of it, 9..16 px.
+function rowNumberFont(rowPx) {
+  return Math.max(9, Math.min(16, Math.floor(rowPx * 0.7)));
+}
+
 // ==HVN-CORE-BEGIN==
 // HVN (high volume node / volume cluster) detection on a flat series of profile-resolution bars.
 // Arrays h, l, v, t are parallel; [from, to) is one profile window (a week).
@@ -1013,38 +1018,6 @@ return {
       visProfiles.push(p);
     }
 
-    // 0. Total volume of each row (developing profile, and finished ones if rowNumbersAll), in one column at its start (top layer,
-    // still behind the candles like Pine's labels). Rows on screen = pane height / row height in
-    // pixels, so it follows the real zoom, manual price-scale zoom included.
-    // bv.bounds may not report a height: fall back to the canvas, then to a typical 700 px pane.
-    const paneH = paneHeight(bv.bounds(args), ctx.canvas);
-    const diag = [];
-    for (const p of visProfiles) {
-      if (!p.numbers || !p.rows.length) continue;
-      const rowPx = Math.abs(Y(p.rows[0].bottom) - Y(p.rows[0].top));
-      const px = rowNumberPx(rowPx > 0 ? paneH / rowPx : NaN, st.rowNumberMax);
-      diag.push(`row ${Math.round(rowPx)}px -> ${rowPx > 0 ? Math.round(paneH / rowPx) : '?'} rows on screen, font ${px || 'hidden'}`);
-      if (!px) continue;
-      ctx.font = bv.font(args, { size: px }).css;
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = st.rowNumberColor;
-      // Pinned to the pane's left edge once the profile's start scrolls off screen.
-      const x = Math.max(X(p.from), 0) + 2;
-      for (const r of p.rows) {
-        const y = Y(r.bottom + p.rh * 0.5);
-        if (!Number.isFinite(y) || y < -px || y > paneH + px) continue;
-        ctx.fillText(volumeText(r.vol), x, y);
-      }
-    }
-
-    // One line in the indicator's Log tab whenever the row-number state changes (no F12 needed).
-    const diagText = `[Benzo VP] row numbers: mode ${st.rowNumbersMode}, pane ${Math.round(paneH)}px, ${visProfiles.length} profile(s) in view, ${diag.length} numbered${diag.length ? ` (${diag.join('; ')})` : ''}`;
-    if (diagText !== lastDiag) {
-      lastDiag = diagText;
-      try { console.log(diagText); } catch (e) { /* no console */ }
-    }
-
     // 1. POC lines.
     ctx.strokeStyle = st.pocLine;
     ctx.lineWidth = 4;
@@ -1186,6 +1159,41 @@ return {
 
     // Zone edge lines and labels on top of the candles, so the levels stay easy to find.
     ctx.globalCompositeOperation = 'source-over';
+    // Row numbers on top of everything (candles included), so they stay readable: the total volume
+    // of each row, in one column at the profile's start. Shown while rows on screen (pane height /
+    // row height) <= rowNumberMax; the font follows the row height. Dark outline for contrast.
+    const paneH = paneHeight(bv.bounds(args), ctx.canvas);
+    const diag = [];
+    for (const p of visProfiles) {
+      if (!p.numbers || !p.rows.length) continue;
+      const rowPx = Math.abs(Y(p.rows[0].bottom) - Y(p.rows[0].top));
+      const px = rowNumberPx(rowPx > 0 ? paneH / rowPx : NaN, st.rowNumberMax) ? rowNumberFont(rowPx) : null;
+      diag.push(`row ${Math.round(rowPx)}px -> ${rowPx > 0 ? Math.round(paneH / rowPx) : '?'} rows on screen, font ${px || 'hidden'}`);
+      if (!px) continue;
+      ctx.font = bv.font(args, { size: px }).css;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.fillStyle = st.rowNumberColor;
+      // Pinned to the pane's left edge once the profile's start scrolls off screen.
+      const x = Math.max(X(p.from), 0) + 3;
+      for (const r of p.rows) {
+        const y = Y(r.bottom + p.rh * 0.5);
+        if (!Number.isFinite(y) || y < -px || y > paneH + px) continue;
+        const txt = volumeText(r.vol);
+        ctx.strokeText(txt, x, y);
+        ctx.fillText(txt, x, y);
+      }
+    }
+    // One line in the indicator's Log tab whenever the row-number state changes.
+    const diagText = `[Benzo VP] row numbers: mode ${st.rowNumbersMode}, pane ${Math.round(paneH)}px, ${visProfiles.length} profile(s) in view, ${diag.length} numbered${diag.length ? ` (${diag.join('; ')})` : ''}`;
+    if (diagText !== lastDiag) {
+      lastDiag = diagText;
+      try { console.log(diagText); } catch (e) { /* no console */ }
+    }
+
     if (st.zones.length) {
       ctx.lineWidth = 1;
       ctx.font = bv.font(args, { size: 10 }).css;

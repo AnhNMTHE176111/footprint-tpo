@@ -219,6 +219,9 @@ type NodeProf
     int          pocRow
     array<int>   peaks
     array<int>   cuts
+    array<int>   cumB   // cumB[r] = bars whose low row <= r
+    array<int>   cumT   // cumT[r] = bars whose high row <= r
+    int          nSpan  // bars with a high and a low
 
 type Zone
     float lo
@@ -495,16 +498,29 @@ f_nodeProfile(int a, int b, float unit, float rowFrac, int minRows) =>
             rows := int(math.ceil((top - bot) / rowSize))
             if rows >= 8
                 vr = array.new<float>(rows, 0.0)
+                cumB = array.new<int>(rows, 0)
+                cumT = array.new<int>(rows, 0)
+                nSpan = 0
                 total = 0.0
                 for k = a to b - 1
-                    vol = bV.get(k)
-                    if not na(vol) and vol > 0
-                        rB = math.min(rows - 1, math.max(0, int(math.floor((bL.get(k) - bot) / rowSize))))
-                        rT = math.min(rows - 1, math.max(0, int(math.floor((bH.get(k) - bot) / rowSize))))
-                        ve = vol / (rT - rB + 1)
-                        for r = rB to rT
-                            vr.set(r, vr.get(r) + ve)
-                        total += vol
+                    hk = bH.get(k)
+                    lk = bL.get(k)
+                    if not na(hk) and not na(lk)
+                        rB = math.min(rows - 1, math.max(0, int(math.floor((lk - bot) / rowSize))))
+                        rT = math.min(rows - 1, math.max(0, int(math.floor((hk - bot) / rowSize))))
+                        // Row span of every bar, for the time share of each cluster (f_clusters).
+                        cumB.set(rB, cumB.get(rB) + 1)
+                        cumT.set(rT, cumT.get(rT) + 1)
+                        nSpan += 1
+                        vol = bV.get(k)
+                        if not na(vol) and vol > 0
+                            ve = vol / (rT - rB + 1)
+                            for r = rB to rT
+                                vr.set(r, vr.get(r) + ve)
+                            total += vol
+                for r = 1 to rows - 1
+                    cumB.set(r, cumB.get(r) + cumB.get(r - 1))
+                    cumT.set(r, cumT.get(r) + cumT.get(r - 1))
                 if total > 0
                     sm = f_smooth(vr, HVN_SIGMA)
                     pocRow = 0
@@ -538,7 +554,7 @@ f_nodeProfile(int a, int b, float unit, float rowFrac, int minRows) =>
                                     m := j
                             cuts.push(m)
                     cuts.push(rows - 1)
-                    P := NodeProf.new(bot, rowSize, rows, vr, sm, total, pocRow, peaks, cuts)
+                    P := NodeProf.new(bot, rowSize, rows, vr, sm, total, pocRow, peaks, cuts, cumB, cumT, nSpan)
     P
 
 // Every volume cluster of the window, with its dense core and the measures that tell a finished
@@ -585,13 +601,16 @@ f_clusters(NodeProf P, int a, int b) =>
         z.coreOfBody := float(coreRows) / bodyRows
         z.taper      := float(math.min(r - ba, bb - r)) / math.max(1, r - ba, bb - r)
         cands.push(z)
-    // Time accepted inside each core (share of the window's bars that traded there).
+    // Time accepted inside each core (share of the window's bars that traded there): a bar spanning
+    // rows rB..rT touches core rows ca..cb unless rT < ca or rB > cb. Counted from the row-span
+    // prefix sums instead of looping bars x clusters (that loop hit TradingView's 0.5 s limit).
     bars = b - a
-    for k = a to b - 1
-        for z in cands
-            if bL.get(k) <= z.hi and bH.get(k) >= z.lo
-                z.timeShare += 1.0 / bars
     for z in cands
+        ca = int(math.round((z.lo - P.bot) / P.rowSize))
+        cb = int(math.round((z.hi - P.bot) / P.rowSize)) - 1
+        below = ca > 0 ? P.cumT.get(ca - 1) : 0
+        above = P.nSpan - P.cumB.get(cb)
+        z.timeShare := float(P.nSpan - below - above) / bars
         z.score := z.volShare + z.timeShare
     cands
 

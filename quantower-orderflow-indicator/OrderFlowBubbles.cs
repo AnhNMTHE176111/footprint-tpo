@@ -200,7 +200,7 @@ namespace OrderFlowBubbles
         public int CellDotLocalTicks { get; set; } = 4;
 
         // Bật = chấm Bid/Ask nổ ở MỌI mức giá vượt ngưỡng (bỏ điều kiện "lớn nhất trong ±CellDotLocalTicks tick"); tắt = như cũ.
-        [InputParameter("Chấm Bid/Ask nhỏ · Nổ ở mọi mức giá (bỏ điều kiện lớn nhất trong ±4 tick)", 27)]
+        [InputParameter("Chấm Bid/Ask nhỏ · Nổ ở mọi mức giá (bỏ điều kiện lớn nhất quanh nó — rất dày ở NQ và từ M5, nên tắt)", 27)]
         public bool CellDotAllLevels { get; set; } = false;
 
         // Bật (mặc định) = mã NQ/MNQ tự dùng bộ số Nasdaq cho chấm: 3,5 x trung vị, lớn nhất trong ±8 tick, che xanh cách đỏ <= 12 tick
@@ -218,7 +218,10 @@ namespace OrderFlowBubbles
 
         // Ô số chỉ hiện khi ô "Dùng sàn tối thiểu" bật (xem Settings bên dưới). Áp cho CẢ chế độ cũ lẫn "Tự co dãn theo khung"
         // (sửa 2026-11-24: bản trước để bộ số ghi đè sàn thành 5).
-        [InputParameter("Chấm Bid/Ask nhỏ · Sàn tối thiểu (hợp đồng)", 30, 1, 10000, 1, 0)]
+        // Đo 2026-11-24 (research/dot_floor_2026-11-24): sàn chỉ có tác dụng ở M1 (M5 trở lên k x trung vị đã cao hơn). GC M1 so CORVEN (885 chấm):
+        // sàn 7 recall 0,675 / precision 0,87; sàn 9 0,60 / 0,90 (mất chủ yếu phiên Á); sàn 12 0,45 / 0,96; sàn 15 0,31 / 0,98 -> trên 9 sót nhiều.
+        // Giữ 9 (người học thấy nhiễu); 7 = ít sót nhất mà gần như không tăng nhiễu theo F1 (Fable đề xuất).
+        [InputParameter("Chấm Bid/Ask nhỏ · Sàn tối thiểu (hợp đồng; chỉ tác dụng ở M1 — 9 thưa, 7 ít sót, trên 9 sót nhiều)", 30, 1, 10000, 1, 0)]
         public double CellBigMinSide { get; set; } = 9;
 
         // 2026-11-24 (research/adaptive_2026-11-24): MỘT công thức chấm cho mọi mã, mọi khung — w = max(4, biên độ TB / 6),

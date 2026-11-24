@@ -132,6 +132,23 @@ static class AdaptiveTests
         var eFl2 = CellBigLogic.Evaluate(new List<CellLevel> { new CellLevel(100, 1, 9, 10, 1) }, true, 2.75, sFl);
         Check(eFl2.Count == 1 && eFl2[0].Threshold == 9, "9 Bid -> no, nguong hien 9", eFl2.Count > 0 ? eFl2[0].Threshold.ToString() : "-");
 
+        Console.WriteLine("[Adaptive] san tuyet doi (research/dot_floor_2026-11-24, floor_selftest.py)");
+        (double thr, int w, int h) UF(int preset, double B, double R, double floor)
+        {
+            var s = new CellBigSettings(); UnifiedDots.Apply(s, preset, R, false, true, floor);
+            return (Math.Max(s.DotMedianRatio * B, s.MinSide), s.DotLocalTicks, s.DotHideBuyNearSellTicks);
+        }
+        Check(Eq(UF(0, 2.75, 88, 7), 7, 15, 2) && Eq(UF(0, 2.75, 88, 9), 9, 15, 2) && Eq(UF(0, 2.75, 88, 5), 5.5, 15, 2), "B 2,75 R 88: san 7 -> 7/15/2, san 9 -> 9, san 5 -> 5,5");
+        Check(Eq(UF(0, 3.5, 30, 7), 7, 5, 2) && Eq(UF(2, 3.0, 16, 7), 8.4, 4, 6), "(3,5; 30; san 7) -> 7/5/2; it nhieu (3; 16; san 7) -> 8,4/4/6");
+        var fb = new (long t, double bid, double ask)[] { (100, 6, 1), (101, 1, 2), (106, 2, 7), (112, 9, 0), (113, 3, 8), (120, 1, 6) };
+        CellBigSettings FS(double thr, int w) => new CellBigSettings { DotMedianRatio = 1, MinSide = 0, DotLocalTicks = w, DotHideBuyNearSellTicks = 2 };
+        string BR(List<CellMark> m) => Ticks(m, 1) + " / " + Ticks(m, -1);
+        Check(BR(Ev(FS(0, 4), 5.5, fb)) == "106,120 / 100,112", "nguong 5,5 -> xanh 106,120 / do 100,112", BR(Ev(FS(0, 4), 5.5, fb)));
+        Check(BR(Ev(FS(0, 4), 7, fb)) == "106 / 112", "nguong 7 -> xanh 106 / do 112", BR(Ev(FS(0, 4), 7, fb)));
+        Check(BR(Ev(FS(0, 4), 9, fb)) == " / 112", "nguong 9 -> do 112", BR(Ev(FS(0, 4), 9, fb)));
+        var fa = new (long t, double bid, double ask)[] { (100, 8, 0), (102, 9, 0), (103, 7, 0), (110, 0, 7) };
+        Check(BR(Ev(FS(0, 4), 7, fa)) == "110 / 102" && BR(Ev(FS(0, 0), 7, fa)) == "110 / 100,102,103", "no moi muc gia (w 0): do 100,102,103; w 4: do 102", BR(Ev(FS(0, 0), 7, fa)));
+
         Console.WriteLine("[Adaptive] cham: mot nen (nguong 22,4)");
         var one = new (long t, double bid, double ask)[] { (100, 5, 30), (101, 2, 3), (104, 25, 1), (108, 40, 26), (112, 3, 24), (120, 1, 23) };
         CellBigSettings W(int w, int h) => new CellBigSettings { DotMedianRatio = 2.8, MinSide = 9, DotLocalTicks = w, DotHideBuyNearSellTicks = h };

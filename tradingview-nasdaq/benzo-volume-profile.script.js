@@ -813,7 +813,7 @@ return {
       showHVN = true, hvnBuyColor = '#26a69a', hvnSellColor = '#ef5350', hvnInsideColor = '#9e9e9e',
       showLVN = true, lvnBuyColor = '#29b6f6', lvnSellColor = '#ffa726',
       showWeekVA = true, showDayVA = true, colWeekVA = '#4a90e2', colDayVA = '#c9a43c',
-      rowNumbersOn = 'Day', rowNumbersAll = true, rowNumberColor = '#d1d4dc', rowNumberMax = 70,
+      rowNumbersOn = 'Auto', rowNumbersAll = true, rowNumberColor = '#d1d4dc', rowNumberMax = 70,
     } =indicator.extendData?.inputs || {};
     const n = dataList.length;
     const res = new Array(n);
@@ -886,10 +886,12 @@ return {
     // changes: its profile is built once and reused on every tick.
     const profKey = [profileRows, valueArea, widthPct, maxWidthBar, vaBoost, colBuy, colSell, colDayBuy, colDaySell, profileRes].join('|');
     const usedKeys = new Set();
+    // Auto: numbers on the day profile when it is shown (it overrides the week's), else on the week's.
+    const numbersOn = rowNumbersOn === 'Auto' ? (showDayProfile ? 'Day' : 'Week') : rowNumbersOn;
     const sessionProfiles = (anchor, rgb) => {
       const ps = sessionsOf(anchor);
       const po = { ...o, ...rgb };
-      const wantNumbers = rowNumbersOn === 'Both' || (anchor === '1D' ? rowNumbersOn === 'Day' : rowNumbersOn === 'Week');
+      const wantNumbers = numbersOn === 'Both' || (anchor === '1D' ? numbersOn === 'Day' : numbersOn === 'Week');
       const out = [];
       for (let k = Math.max(0, ps.length - 1 - sessions); k < ps.length; k++) {
         const isLive = k === ps.length - 1;

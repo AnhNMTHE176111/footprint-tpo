@@ -550,9 +550,9 @@ static partial class Tests
         Check(StrongZonePainter.FillAlpha(new SzZone { Gold = true }) == 70 && StrongZonePainter.FillAlpha(new SzZone()) == 40, "do dam: vang 70, con lai 40");
         Check(StrongZones.ColorOf(true, -1) == "vang" && StrongZones.ColorOf(false, 1) == "xanh" && StrongZones.ColorOf(false, -1) == "do" && StrongZones.ColorOf(false, 0) == "xam",
               "chon mau theo vang/phia");
-        Check(StrongZonePainter.TextOf(new SzZone { Label = "Hỗ trợ · 3 lần", Dist = 4.56 }, 0.1) == "Hỗ trợ · 3 lần · cách 4.6 giá".Replace("4.6", (4.56).ToString("0.0"))
+        Check(StrongZonePainter.TextOf(new SzZone { Label = "Hỗ trợ · 3 lần", Dist = 4.56 }, 0.1) == "Hỗ trợ · 3 lần"
               && StrongZonePainter.TextOf(new SzZone { Label = "X (giá đang trong vùng)", Inside = true }, 0.1) == "X (giá đang trong vùng)",
-              "chu: kem khoang cach; trong vung thi khong");
+              "chu: chi nhan, khong kem khoang cach");
         // vị trí chữ
         {
             float th = 13f;

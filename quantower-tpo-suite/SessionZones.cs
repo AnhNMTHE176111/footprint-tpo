@@ -920,10 +920,9 @@ namespace SessionZonesNs
                     using var pen = new Pen(Color.FromArgb(180, TargetColor), 1.4f)
                     { DashStyle = DashStyle.Custom, DashPattern = new float[] { 10f, 6f } };
                     gr.DrawLine(pen, clip.Left, ym, clip.Right, ym);
-                    double distGia = Math.Abs(z.Center - rs.NowPrice) / (10.0 * rs.Tick);
                     using var f = new Font("Arial", 8, FontStyle.Regular);
                     using var br = new SolidBrush(TargetColor);
-                    gr.DrawString($"{z.Label} · cách {distGia:0.0} giá", f, br, clip.Right - 190, ym - 12);
+                    gr.DrawString(z.Label, f, br, clip.Right - 190, ym - 12);
                 }
                 foreach (var z in rs.Zones.Where(z => z.IsMarker && z.Type != "strong").OrderBy(z => z.Strength))   // yếu vẽ trước
                 {
@@ -961,10 +960,9 @@ namespace SessionZonesNs
                     gr.DrawLine(pen, clip.Left, ym, clip.Right, ym);
                     // B2: nhãn LUÔN kèm khoảng cách tới giá hiện tại (giá, không phải tick) —
                     // người dừng lỗ 3 giá cần biết ngay có với tới trong ngày không.
-                    double distGia = Math.Abs(z.Center - rs.NowPrice) / (10.0 * rs.Tick);
                     using var f = new Font("Arial", 8, FontStyle.Bold);
                     using var br = new SolidBrush(col);
-                    gr.DrawString($"{z.Label} · cách {distGia:0.0} giá", f, br, clip.Right - 190, ym - 12);
+                    gr.DrawString(z.Label, f, br, clip.Right - 190, ym - 12);
                 }
             }
             if (!string.IsNullOrEmpty(rs.Note))

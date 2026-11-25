@@ -1862,9 +1862,8 @@ namespace TpoSuite
 
         public static int FillAlpha(SzZone z) => z.Gold ? 70 : 40;
 
-        // "giá" = 10 tick như các mốc cũ của SessionZones.
-        public static string TextOf(SzZone z, double tick)
-            => z.Inside ? z.Label : $"{z.Label} · cách {z.Dist / (10.0 * tick):0.0} giá";
+        // Chỉ nhãn — bỏ phần "cách n giá" theo yêu cầu người dùng (2026-11-25).
+        public static string TextOf(SzZone z, double tick) => z.Label;
 
         // Vị trí Y của nhãn (góc trên chữ). Ưu tiên nằm giữa dải; dải mỏng hơn chữ thì đặt ngay TRÊN dải.
         // Sau đó đẩy cho các nhãn không đè nhau (cách nhau ≥ textH) và kẹp trong [clipTop, clipBot].

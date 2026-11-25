@@ -198,7 +198,7 @@ namespace OrderFlowBubbles
         public int ThresholdMode { get; set; } = 0;
 
         // Mức hiếm của chấm, phần vạn (200 = 2%). Chỉ hiện khi chế độ "Không theo CORVEN" bật (xem Settings).
-        [InputParameter("Không theo CORVEN · Mức hiếm của chấm", 23, variants: new object[] { "2% lớn nhất (đã đo: không sót)", 200, "1% lớn nhất (thưa hơn, có sót)", 100, "0,5% lớn nhất (rất thưa, sót nhiều)", 50 })]
+        [InputParameter("Độ dày chấm (chỉ theo mode \"Không theo CORVEN\")", 23, variants: new object[] { "Dày (2%)", 200, "Vừa (1%)", 100, "Thưa (0,5%)", 50 })]
         public int StatRarePbp { get; set; } = 200;
 
         public int StatDotDays { get; set; } = 5;               // số ngày giao dịch trước của cùng khung giờ

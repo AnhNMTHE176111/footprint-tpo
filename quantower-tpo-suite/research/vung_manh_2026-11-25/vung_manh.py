@@ -9,6 +9,7 @@ Opus port sang C# rồi so từng số với file này (xem parity_cases.py).
 """
 import numpy as np
 from vm import *
+import hvn_cum as HC
 
 P = dict(
     K=2,              # đỉnh/đáy cục bộ: so với K nến mỗi bên
@@ -24,7 +25,10 @@ P = dict(
     HVN_RATIO=2.5,    # "lớn": đỉnh đã làm mượt >= 2,5 × trung bình hàng
     HVN_TOP=3,
     HVN_AWAY=2.0,     # "đã rời xa": sau khi profile chốt, giá từng cách đỉnh cụm >= 2 U
-    D_ONLY=True,      # chỉ nhận HVN của profile hình chữ D
+    D_ONLY=False,     # chỉ nhận HVN của profile hình chữ D (2026-11-25: TẮT — HVN dạng cụm tự mang tiêu chí "lớn và đều")
+    HVN_MODE='cum',   # 'cum' = HVN dạng cụm (hvn_cum.py, PLAN mục 10) · 'dinh' = kiểu cũ (đỉnh nhọn + PeakSharpness 90 %), chỉ để so
+    HVN_HL='giao',    # hợp lưu với hộp HVN: 'giao' = vùng va đập giao hộp (± TOL) · 'mep' = chỉ khi chạm MÉP hộp (± TOL)
+    HVN_X=HC.HP['X'], HVN_SM=HC.HP['SM'], HVN_PK2=HC.HP['PK2'], HVN_Y=HC.HP['Y'], HVN_Y_W=HC.HP['Y_W'], HVN_WMIN=HC.HP['WMIN'], HVN_MAXC=HC.HP['MAXC'],
     D_POC_LO=0.30, D_POC_HI=0.70, D_VA_MAX=0.60,
     GOLD_MIN=3,       # vàng: >= 3 nhóm mức và có HVN
     GROUP_EDGES=True, # gộp VAH/VAL với VWAP ±1σ cùng kỳ thành một nhóm (False: mỗi tên mức là một nhóm)
@@ -77,6 +81,15 @@ def day_levels(D, d, p=P):
     def add_hvn(a, b, name, src):
         st = profile_stats(D, a, b)
         if st is None: return
+        if p.get('HVN_MODE', 'dinh') == 'cum':
+            tk, v = D.ticks_over(a, b)
+            up = float((D.m30['h'][a:b + 1] - D.m30['l'][a:b + 1]).mean())
+            hp = dict(SM=p['HVN_SM'], X=p['HVN_X'], PK2=p['HVN_PK2'], Y=p['HVN_Y_W'] if name == 'hvn_w' else p['HVN_Y'], WMIN=p['HVN_WMIN'], MAXC=p['HVN_MAXC'])
+            cl, _ = HC.clusters(tk, v, up / TICK, hp)
+            for c in cl:
+                out.append(dict(name=name, lo=round(c['lo'] * TICK, 6), hi=round(c['hi'] * TICK, 6), peak=round(c['peak'] * TICK, 6),
+                                ratio=c['mass'], end=b, src=src, dshape=is_d_shape(st, p), cum=True))
+            return
         res, sm = find_hvn(st['pr'], st['w'])
         dsh = is_d_shape(st, p)
         for i, pk, ratio in res[:p['HVN_TOP']]:
@@ -121,7 +134,10 @@ def hvn_ok(D, L, j, u, p=P):
     if p['D_ONLY'] and not L['dshape']: return False
     a = L['end'] + 1
     if a > j: return False
-    far = max(D.m30['h'][a:j + 1].max() - L['peak'], L['peak'] - D.m30['l'][a:j + 1].min())
+    if L.get('cum'):      # hộp: đo từ MÉP hộp
+        far = max(D.m30['h'][a:j + 1].max() - L['hi'], L['lo'] - D.m30['l'][a:j + 1].min())
+    else:
+        far = max(D.m30['h'][a:j + 1].max() - L['peak'], L['peak'] - D.m30['l'][a:j + 1].min())
     return far >= p['HVN_AWAY'] * u
 
 
@@ -180,7 +196,12 @@ class Engine:
             lo, hi = np.floor(lo / TICK + 1e-6) * TICK, np.ceil(hi / TICK - 1e-6) * TICK
             names = []
             for L in lv:
-                if L['lo'] <= hi + p['TOL'] * u and L['hi'] >= lo - p['TOL'] * u:
+                tol = p['TOL'] * u
+                if L.get('cum') and p.get('HVN_HL', 'giao') == 'mep':
+                    hit = (lo - tol <= L['lo'] <= hi + tol) or (lo - tol <= L['hi'] <= hi + tol)
+                else:
+                    hit = L['lo'] <= hi + tol and L['hi'] >= lo - tol
+                if hit:
                     if L['name'].startswith('hvn') and not hvn_ok(D, L, j, u, p): continue
                     names.append(L['name'])
             names = [n for n in THU_TU if n in names]

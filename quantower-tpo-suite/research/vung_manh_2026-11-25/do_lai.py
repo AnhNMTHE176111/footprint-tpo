@@ -38,6 +38,13 @@ TAG = {'gc': 'gc1', 'nq': 'nq1', 'full': 'chot2'}[sym]
 if 'tatnoi' in sys.argv:
     vm.SPLICE_JUMP = 1e12
     TAG += '_tatnoi'
+# Ghi đè thông số: KHOA=giatri (vd HVN_MODE=dinh D_ONLY=True HVN_HL=mep) + nhan=ten để đặt tên bộ kết quả
+OVER = {}
+for _a in sys.argv[3:]:
+    if '=' not in _a: continue
+    _k, _v = _a.split('=')
+    if _k == 'nhan': TAG += '_' + _v; continue
+    OVER[_k] = (_v == 'True') if _v in ('True', 'False') else (float(_v) if _v.replace('.', '').isdigit() and '.' in _v else int(_v) if _v.isdigit() else _v)
 
 if sym == 'nq':
     # Hàng profile ĐÚNG như C# sẽ chia trên NQ: Snap = Math.Round(giá / 0,5) — với giá NQ phép chia ra đúng x,5 nên làm tròn
@@ -241,9 +248,9 @@ def tol_scan(D, p):
 
 
 if cmd == 'eval':
-    final_eval.run(TAG, {})
+    final_eval.run(TAG, OVER)
 elif cmd == 'bang':
-    D = Data(); p = dict(V.P); eng = V.Engine(D, p)
+    D = Data(); p = dict(V.P); p.update(OVER); eng = V.Engine(D, p)
     t = pd.to_datetime(D.m30['t'])
     print('# %s — %s → %s · %d nến M30' % (sym.upper(), t[0], t[-1], D.n))
     print('\n## Cấu tạo'); structure(D, eng, p)

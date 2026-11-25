@@ -84,21 +84,29 @@ static partial class Tests
         Check(!ZonePolicy.KeepType("naked_poc", def), "mac dinh BO naked POC phien");
         Check(!ZonePolicy.KeepType("poc_cluster", def) && !ZonePolicy.KeepType("value_band", def), "mac dinh BO cum POC + bang gia tri");
         Check(!ZonePolicy.KeepType("lvn_week", def), "mac dinh BO LVN tuan");
-        foreach (var t in new[] { "vwap_week", "vwap_day", "va_edge", "hvn_day", "hvn_week", "lvn" })
+        foreach (var t in new[] { "vwap_week", "vwap_day", "va_edge", "hvn_box", "lvn" })
             Check(ZonePolicy.KeepType(t, def), "mac dinh GIU " + t);
         var on = new ZoneFilter { SessionHighLow = true, NakedPoc = true, PocClusters = true, WeekLvn = true };
         Check(ZonePolicy.KeepType("priorhl", on) && ZonePolicy.KeepType("naked_poc", on)
               && ZonePolicy.KeepType("value_band", on) && ZonePolicy.KeepType("lvn_week", on), "bat lai duoc tung loai cu");
         Check(ZonePolicy.KeepType("priorhl", null) == false, "filter null -> dung mac dinh");
 
-        Check(!ZonePolicy.IsMarkerType("hvn_day") && !ZonePolicy.IsMarkerType("hvn_week"), "HVN ngay/tuan la lop NEN");
+        Check(!ZonePolicy.IsMarkerType("hvn_box"), "hop HVN la lop NEN");
         Check(ZonePolicy.IsMarkerType("vwap_week") && ZonePolicy.IsMarkerType("va_edge"), "VWAP + canh range la lop MOC");
         Check(ZonePolicy.Role("vwap_week") == "canh" && ZonePolicy.Role("vwap_day") == "canh", "chi VWAP la VUNG CANH");
-        Check(ZonePolicy.Role("hvn_day") == "nen" && ZonePolicy.Role("va_edge") == "canh_range", "vai tro HVN / VA");
+        Check(ZonePolicy.Role("hvn_box") == "nen" && ZonePolicy.Role("va_edge") == "canh_range", "vai tro hop HVN / VA");
         Check(ZonePolicy.BaseStrength("vwap_week") > ZonePolicy.BaseStrength("vwap_day")
               && ZonePolicy.BaseStrength("vwap_day") > ZonePolicy.BaseStrength("va_edge"), "thu hang VWAP tuan > ngay > canh");
-        Check(!ZonePolicy.CanMerge("va_edge", "hvn_day"), "khong gop moc voi nen");
-        Check(ZonePolicy.CanMerge("hvn_day", "hvn_week"), "gop duoc hai nen");
+        Check(!ZonePolicy.CanMerge("va_edge", "lvn"), "khong gop moc voi nen");
+        Check(ZonePolicy.CanMerge("lvn", "lvn_week") && !ZonePolicy.CanMerge("hvn_box", "hvn_box"), "gop duoc hai nen LVN; hop HVN khong gop");
+
+        // Một hợp đồng cụ thể ⇒ tắt bộ chặn chỗ nối (PLAN-VUNG-MANH.md §12.3)
+        foreach (var nm in new[] { "GCZ26", "NQZ26", "MGCZ26", "GCZ6", "6EZ26", "NQZ26:XCME", "GCZ26.XCEC", "gcz26", " MNQH27 ", "GCZ26 dxFeed" })
+            Check(ZonePolicy.IsSingleContract(nm), $"mot hop dong: '{nm}' -> true");
+        foreach (var nm in new[] { "/GC:XCEC", "/NQ", "/GCQ26:XCEC", "GC", "NQ", "GC:XCEC", "XAUUSD", "NAS100USD", "USTEC", "", "   ", null })
+            Check(!ZonePolicy.IsSingleContract(nm), $"ma lien tuc / khong phai hop dong: '{nm ?? "null"}' -> false");
+        Check(ZonePolicy.IsSingleContract("/GC:XCEC", false) && !ZonePolicy.IsSingleContract("GCZ26", true),
+              "Quantower bao thang FutureContractType -> dung no thay vi doan theo ten");
 
         // LVN la VUNG: TroughBand noi tu day sang hai ben trong cho khoi luong con thap
         {

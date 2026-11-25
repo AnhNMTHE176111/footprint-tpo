@@ -3,6 +3,8 @@
 > Fable viết spec + đo (2026-11-25). Opus implement. Số liệu: [`research/vung_manh_2026-11-25/DO-VUNG-MANH.md`](research/vung_manh_2026-11-25/DO-VUNG-MANH.md).
 > Bản tham chiếu Python (nguồn sự thật khi spec và code lệch nhau): [`research/vung_manh_2026-11-25/vung_manh.py`](research/vung_manh_2026-11-25/vung_manh.py) + [`vm.py`](research/vung_manh_2026-11-25/vm.py).
 
+> **Cập nhật 2026-11-25 (lần 2): mục 10, 11, 12 ở cuối file THAY THẾ mọi chỗ nói về HVN ở mục 1–9** (đỉnh ≥ 2,5 × trung bình, `PeakSharpness` 90 %, `HVN_TOP`, lọc chữ D, input `SzHvnDOnly`) và thay bảng input mục 3. Số liệu: [`research/vung_manh_2026-11-25/HVN-CUM.md`](research/vung_manh_2026-11-25/HVN-CUM.md).
+
 ## 0. Phải đọc trước khi code
 
 **Vùng này CHƯA có lợi thế đo được.** Trên 589 phiên GC (2024-08 → 2026-11), vùng đúng định nghĩa dưới đây cho kết quả ngang vùng dời ngẫu nhiên: thắng 1:1 48,8 % / 47,2 % (TRAIN / TEST) so với đối chứng 47,9 % / 47,5 %. Vùng vàng chỉ có 60 lần quay lại trong 2,3 năm — chưa kết luận được. Giống kết luận cũ ở `vung-canh-lenh/research/report/HOP-LUU-SZ.md`.
@@ -269,3 +271,218 @@ Build theo quy trình repo (`./build-tpo.sh zones`), mở Quantower: so 4 khung 
 4. **Độ rộng**: không có độ rộng nào "bắt đỉnh đáy" tốt hơn (điểm đảo chiều không tụ về vùng). Độ rộng hiện tại là lựa chọn theo rủi ro.
 5. **35 % thời gian không có vùng nào được vẽ** với mặc định — đúng thiết kế, không phải lỗi.
 6. Phép đo chưa xét xác nhận order flow tại vùng (hấp thụ, delta) — đó mới là cách người dùng thực sự vào lệnh, và chưa được đo ở đây.
+
+## 10. HVN dạng cụm (thay định nghĩa HVN cũ)
+
+Người dùng định nghĩa HVN là **cụm khối lượng đủ lớn và đều (thân chữ D)** — dấu hiệu đấu giá ở đó đã xong; khi giá quay lại, cụm có giá trị bảo vệ vùng, để canh phản ứng đảo chiều **hoặc** phá vỡ. Không phải từng đỉnh nhọn. Mỗi profile thường một hộp, tối đa hai.
+
+Bản tham chiếu: [`research/vung_manh_2026-11-25/hvn_cum.py`](research/vung_manh_2026-11-25/hvn_cum.py), hàm `clusters()`. Toàn bộ tính trên **số nguyên bước giá** nên C# phải ra đúng từng số.
+
+### 10.1 Thông số (hằng số trong `StrongZoneParams`, KHÔNG có input)
+
+| Hằng | Giá trị | Nghĩa |
+|---|---|---|
+| `HvnSmooth` (SM) | 0,05 | nửa cửa sổ làm mượt, × up |
+| `HvnBody` (X) | 0,80 | **độ đều**: mọi mức giá trong hộp có khối lượng mượt ≥ 80 % đỉnh của hộp |
+| `HvnSecond` (PK2) | 0,50 | hộp thứ hai: đỉnh ≥ 50 % đỉnh lớn nhất của profile |
+| `HvnMassDay` (Y) | 0,10 | **đủ lớn**: hộp chứa ≥ 10 % khối lượng profile ngày |
+| `HvnMassWeek` (Y_W) | 0,08 | như trên cho profile tuần (11–15 tuần dữ liệu, chọn theo mật độ) |
+| `HvnMinWidth` (WMIN) | 0,20 | hộp rộng ≥ 0,20 × up (hẹp hơn là đỉnh nhọn) |
+| `HvnMaxPerProfile` (MAXC) | 2 | tối đa 2 hộp mỗi profile |
+| `HvnDays` | 5 | giữ nguyên |
+| `HvnAway` | 2,0 | giữ nguyên, nhưng đo từ MÉP hộp (10.4) |
+
+Xoá khỏi `StrongZoneParams`: `HvnRatio`, `HvnTop`, `DOnly`, `DPocLo`, `DPocHi`, `DVaMax`.
+
+### 10.2 Thuật toán `StrongZones.HvnClusters(levels, tick, up, massMin, p)`
+
+Đầu vào: khối lượng theo **từng mức giá thô** của mọi nến M30 trong profile (cộng dồn theo giá — đúng thứ đang dùng cho VWAP/σ ở 4.6, **không** qua `RowsOver`/`Snap`); `up` = trung bình `(h − l)` của các nến M30 `a..b` của chính profile đó.
+
+1. Đổi giá sang số nguyên bước giá: `k = (long)Math.Round(price / tick)`. `t0 = min k`, `n = max k − t0 + 1`. Mảng `w[0..n−1]`, `w[k − t0] += volume`, chỗ không có giao dịch = 0. `tot = Σ w`. Nếu `n < 3` hoặc `tot ≤ 0` ⇒ không có hộp.
+2. `h = max(1, (int)Math.Floor(SM × up / tick + 0.5))`.
+3. `S[i] = Σ w[max(0, i−h) .. min(n−1, i+h)]` (tổng, không chia; ngoài mép coi là 0). Dùng mảng cộng dồn.
+4. `used[] = false`; `P1 = max S`. Lặp tối đa 200 vòng:
+   - `i* =` chỉ số **nhỏ nhất** có `S` lớn nhất trong các ô chưa `used`. Hết ô, hoặc `S[i*] ≤ 0`, hoặc `S[i*] < PK2 × P1` ⇒ dừng.
+   - `thr = X × S[i*]`. `lo = hi = i*`. Lùi `lo` khi `lo > 0`, ô `lo−1` chưa `used` và `S[lo−1] ≥ thr`. Tiến `hi` tương tự.
+   - `vai = (lo > 0 và used[lo−1] và S[lo−1] ≥ thr) hoặc (hi < n−1 và used[hi+1] và S[hi+1] ≥ thr)`.
+   - Đánh dấu `used[lo..hi] = true` (kể cả khi bị loại ở các bước dưới).
+   - `vai` ⇒ sang vòng sau (khối này dính liền một khối cao hơn, không có đáy tách).
+   - `mass = Σ w[lo..hi] / tot` (khối lượng THÔ). `mass < massMin` ⇒ sang vòng sau.
+   - `(hi − lo) < WMIN × up / tick` ⇒ sang vòng sau.
+   - Ghi hộp: `Lo = (t0 + lo) × tick`, `Hi = (t0 + hi) × tick`, `Peak = (t0 + i*) × tick`, `Mass = mass`. Đủ `MAXC` hộp ⇒ dừng.
+5. Thứ tự trả về = thứ tự tìm thấy (đỉnh cao trước).
+
+`S` là tổng các số nguyên nên so sánh `≥ thr` ổn định; phép nhân `X × S[i*]` làm bằng `double` ở cả hai bên.
+
+### 10.3 Dùng trong mức hợp lưu (thay `AddHvn` ở mục 4.6)
+
+- `hvn_d`: với mỗi phiên trong 5 phiên đã đóng (luật chọn phiên như cũ) ⇒ `HvnClusters(..., massMin = HvnMassDay)`; mỗi hộp là một mức `[Lo, Hi]`, `Peak`, `Mass`, `End = b`, `Src`.
+- `hvn_w`: tuần trước, và tuần này tới hết hôm qua (luật cũ, ≥ 60 nến) ⇒ `massMin = HvnMassWeek`.
+- Bỏ khái niệm "profile chữ D" khỏi HVN (`DShape` không còn dùng để lọc; xoá trường nếu không còn ai đọc). Lý do: phiên mẫu của người dùng (NQ 23/11) có POC ở 81 % chiều cao profile nên bị lọc cũ loại; tiêu chí lớn + đều đã nằm trong hộp.
+- Nhãn không đổi: `HVN ngày`, `HVN tuần`.
+
+### 10.4 Hợp lưu và điều kiện "đã rời xa"
+
+- Trùng ⇔ vùng va đập **giao hộp** có dung sai, đúng công thức 4.7 hiện có: `L.lo ≤ hi + TOL × u` và `L.hi ≥ lo − TOL × u`. (Đã đo luật "chỉ khi chạm mép hộp": kết quả gần trùng, không dùng.)
+- `HvnOk` tại nến j: `a = End + 1`, `a ≤ j`, và `max( max(h[a..j]) − L.Hi , L.Lo − min(l[a..j]) ) ≥ HvnAway × u` — đo từ **mép hộp**, không từ đỉnh. Không còn nhánh `DOnly`.
+- Luật vàng giữ nguyên (≥ 3 nhóm và có HVN). **Hệ quả đã đo: thời gian có vùng vàng tăng từ 6–7 % lên 15–19 %** (GC 15,1 %, NQ 19,0 %). Chưa có số liệu nói vàng tốt hơn vùng thường (GC 18 lệnh thắng 22 %, NQ 27 lệnh thắng 48 %).
+
+### 10.5 Test
+
+**a. Mức hàm — `fixture/hvn_cum_cases.json`** (11 profile; mỗi ca có `tick`, `up`, `Y`, `levels = [[giá, khối lượng], …]`, kỳ vọng `h`, `clusters[{lo, hi, peak, mass, rel}]`). So `h`, số hộp, `lo`/`hi`/`peak` bằng đúng (sai số < tick/2), `mass` ≤ 1e-6.
+
+| Ca | up | h | Hộp kỳ vọng (lo – hi · đỉnh · tỉ trọng) |
+|---|---|---|---|
+| **NQZ26 phiên 2026-11-23** (ca người dùng vẽ) | 166,446 | 33 | 26802,50 – 26874,75 · 26817,75 · 0,285 |
+| NQZ26 phiên 2026-11-18 | 125,478 | 25 | 27143,00 – 27206,25 · 27190,25 · 0,276 |
+| NQZ26 phiên 2026-11-10 (hai hộp) | 102,717 | 21 | 27768,00 – 27812,00 · 27790,75 · 0,137 ; 27958,25 – 28032,75 · 27995,00 · 0,144 |
+| NQZ26 phiên 2026-11-13 | 104,413 | 21 | không có |
+| NQZ26 phiên 2026-11-17 | 123,886 | 25 | 26953,00 – 26987,00 · 26977,25 · 0,136 |
+| NQZ26 tuần 2026-11-15 → 11-20 (Y = 0,08) | 132,708 | 27 | không có |
+| GCZ26 phiên 2026-10-29 | 11,430 | 6 | 4034,5 – 4040,6 · 4037,6 · 0,307 |
+| GCZ26 phiên 2026-11-05 (hai hộp) | 15,363 | 8 | 4132,7 – 4137,2 · 4134,3 · 0,142 ; 4122,2 – 4127,9 · 4125,3 · 0,130 |
+| GCZ26 phiên 2026-11-03 | 10,241 | 5 | không có |
+| GCZ26 phiên 2026-10-28 (đỉnh nhọn nhất bị loại, lấy thềm dưới) | 9,496 | 5 | 4051,3 – 4055,0 · 4054,1 · 0,132 |
+| GCZ26 tuần 2026-10-25 → 10-30 (Y = 0,08) | 10,370 | 5 | 4030,2 – 4040,3 · 4037,5 · 0,155 |
+
+**b. Ca dựng tay** (không cần fixture). Số kỳ vọng chính xác lấy bằng cách chạy `hvn_cum.clusters` trên đúng dãy dựng tay rồi chép vào test:
+- Một thân phẳng giữa hai đuôi mỏng ⇒ một hộp ôm thân.
+- Đỉnh nhọn: một mức giá khối lượng gấp 100 lần các mức khác ⇒ thân hẹp hơn `WMIN × up` ⇒ không có hộp.
+- Vai: hai bướu cao 100 và 85, đáy giữa 75 (75 ≥ 0,8 × 85) ⇒ một hộp, bướu thấp không thành hộp riêng.
+- Hai hộp: hai bướu cao 100 và 70, đáy giữa 20, mỗi bướu ≥ 10 % khối lượng ⇒ hai hộp, bướu cao trước.
+- Bướu thứ hai cao 45 (< 50 % của 100) ⇒ một hộp.
+- Hoà: hai bướu y hệt nhau ⇒ bướu giá thấp được tìm trước.
+- Tỉ trọng: thân chứa dưới 10 % ⇒ loại; đúng 10 % ⇒ nhận.
+- `HvnOk`: giá từng cách **mép trên** hộp đúng 2 U ⇒ đủ; cách đỉnh 2 U nhưng cách mép 1,9 U ⇒ không đủ.
+
+**c. Cả bộ máy — `fixture/expected_cum.json`** thay `expected.json` (cùng `m30_bars.csv`, `m30_levels.csv.gz`; 689 ca; 357 điểm va đập không đổi). Khác cấu trúc cũ: mức HVN có `peak`, `mass`, `src`, `end`, `ok` (không còn `ratio`, `dshape`). So như mục 8.1, HVN so `lo`/`hi`/`peak` bằng đúng, `mass` ≤ 1e-6. Sau khi C# PASS thì **xoá `expected.json` cũ** và các test đọc nó. Trong 689 ca: 128 ca có vùng vàng được vẽ (19 %; định nghĩa cũ khoảng 6 %), 411 ca có vùng dính HVN.
+
+Năm ca ghi số của mục 8.2 đổi thành:
+
+| Ca | j · giờ UTC · giá · U | HVN (đều đủ điều kiện) | Vùng được vẽ |
+|---|---|---|---|
+| A | 1342 · 2026-10-30 02:00 · 4015,3 · 10,028261 | ngày: 4034,5–4040,6 (hôm qua, 30,7 %), 4051,3–4055,0, 4071,2–4074,8, 4007,8–4012,2, 4036,9–4043,2; tuần này: 4032,8–4040,3 (16,6 %) | `4026,4–4028,6` đỏ `Kháng cự · 3 lần · VAL hôm qua + VWAP hôm qua −1σ`; `4032,3–4036,3` đỏ `Kháng cự · 6 lần · HVN tuần + HVN ngày`; `4038,8–4042,0` vàng `★ Kháng cự rất mạnh · 3 lần · HVN tuần + HVN ngày + VAL tuần trước + VWAP hôm qua` |
+| B | 1042 · 2026-10-21 13:00 · 4155,3 · 10,070435 | ngày: 4195,0–4198,4, 4195,9–4198,5, 4174,8–4177,3, 4165,5–4168,3, 4114,0–4117,8; không có HVN tuần | `4145,0–4148,3` xanh `Hỗ trợ · 3 lần · VWAP hôm qua`; `4158,4–4162,2` đỏ `Kháng cự · 3 lần · VAL tuần trước + VWAP hôm qua +1σ`; `4163,9–4168,1` đỏ `Kháng cự · 4 lần · HVN ngày + VAL tuần trước`; `4174,3–4177,7` đỏ `Kháng cự · 5 lần · HVN ngày + VWAP tuần trước` |
+| C | 935 · 2026-10-19 05:30 · 4204,8 · 9,806087 | 7 hộp ngày: 4195,9–4198,5, 4174,8–4177,3, 4165,5–4168,3, 4114,0–4117,8, 4207,4–4211,1, 4179,6–4183,8, 4193,6–4196,2 | `4180,4–4184,0` xanh `Hỗ trợ · 6 lần · HVN ngày + VAL hôm qua + VWAP hôm qua −1σ`; `4192,0–4194,0` xanh `Hỗ trợ · 3 lần · HVN ngày + VWAP hôm qua`; `4197,2–4200,5` xanh `Hỗ trợ · 3 lần · HVN ngày`; `4206,7–4209,6` đỏ `Kháng cự · 4 lần · HVN ngày + VWAP tuần trước +1σ` |
+| D | 1502 · 2026-11-04 14:00 · 4043,6 · 10,927826 | ngày: 4034,5–4040,6, 4051,3–4055,0; tuần trước: 4030,2–4040,3 | `4046,4–4050,4` đỏ `Kháng cự · 6 lần · HVN ngày` |
+| E | 1238 · 2026-10-27 19:00 · 4073,9 · 10,236522 | ngày: 4007,8–4012,2, 4036,9–4043,2, 4134,0–4138,0 | `4032,3–4036,3` xanh `Hỗ trợ · 5 lần · HVN ngày + VWAP hôm qua +1σ`; `4042,4–4046,3` xanh `Hỗ trợ · 4 lần · HVN ngày + VAL tuần trước` |
+
+Sinh lại cả hai file: `python hvn_cum_fixture.py` (cần `prep1.py gc`, `prep1.py nq` trước cho phần a).
+
+**d. Kiểm tay trên Quantower:** chart NQZ26, phiên 2026-11-23 ⇒ hộp HVN ngày 26802,50 – 26874,75. Chart GCZ26, phiên 2026-10-29 ⇒ 4034,5 – 4040,6.
+
+## 11. Bỏ hẳn HVN kiểu cũ
+
+Sau thay đổi này trong SessionZones chỉ còn một loại HVN: hộp của mục 10.
+
+| Chỗ | Việc |
+|---|---|
+| `ProfileEngine.cs` · `StrongZones.AddHvn` (quanh dòng 1545), `FindHvnIdx` (1437), `PeakSharpness` theo chỉ số (1461) | `AddHvn` gọi `HvnClusters`. Xoá `FindHvnIdx` và `PeakSharpness` bản chỉ số nếu không còn ai gọi. |
+| `ProfileEngine.cs` · `HvnOk` (1599) | đo từ mép hộp, bỏ nhánh `DOnly` (10.4). |
+| `ProfileEngine.cs` · `StrongZoneParams` (1200) | thêm hằng mục 10.1; xoá `HvnRatio`, `HvnTop`, `DOnly`, các `D*`. |
+| `ProfileEngine.cs` · `ProfileEngine.FindHvn` (495), `ProfileEngine.PeakSharpness` (472) bản public | **GIỮ** — `DailyTpoBias.cs` dòng 195 còn gọi `FindHvn`, và test cũ của hai hàm này phải tiếp tục PASS. Chỉ SessionZones thôi không gọi nữa. |
+| `SessionZones.cs` · khối "HVN/LVN gộp nhiều phiên" (dòng ~595–680): B3 HVN tuần (`FindHvn(wkRows)` + `PeakSharpness`), B4 HVN ngày (mốc 1 giá + viền nền) | Xoá B3, B4. Thay bằng lớp **hộp HVN**: lấy đúng danh sách mức `hvn_d` / `hvn_w` mà `StrongZones.Compute` đã tính (trả thêm ra từ kết quả, không tính lần hai), vẽ mỗi hộp `[Lo, Hi]` khi hộp **đủ điều kiện `HvnOk`** và mép gần cách giá ≤ bán kính vùng mạnh (4 U). Màu `HvnColor`, alpha 30, viền 1 px; nhãn `HVN ngày · 29 % khối lượng` / `HVN tuần · 17 % khối lượng`. Hộp của các phiên khác nhau chồng nhau: vẽ hộp mới nhất, bỏ hộp cũ hơn nếu phần giao > 50 % bề rộng hộp nhỏ hơn. |
+| `SessionZones.cs` · gộp tuần `WeekLookbackWeeks` cho HVN tuần | Xoá: HVN tuần giờ là tuần trước + tuần này tới hết hôm qua như vùng mạnh. `wkRows` nếu còn dùng cho LVN tuần thì giữ phần dựng profile với hằng 3 tuần. |
+| `SessionZones.cs` · `SharpnessGate`, `MaxLevelThicknessPrices`, `ShowMarkerBand`, `ShowContextBands`, `MinHvnRatio`, `MaxHvn`, trường `Zone.BandLo/BandHi`, `Zone.Ratio` | Xoá cùng B3/B4. |
+| `SessionZones.cs` · mục tiêu chốt lời (`ShowTargets`, `TargetMinRatio`, `TargetColor`, `Zone.IsTarget`, dòng ~784) | Sinh từ HVN cũ theo tỉ lệ ⇒ **xoá**. Hộp HVN xa hơn bán kính không vẽ. |
+| `SessionZones.cs` · `ZonePolicy` các loại `hvn_week`, `hvn_day` | Thay bằng một loại `hvn_box`: `IsMarker = false`, `KeepType = true`, `Role = "nen"`, không gộp với loại nào, không qua `MergeZones` / `LimitAndBalance` / `MaxZones`. Dòng Telegram "Nền HVN (đi tiếp/mục tiêu)" đổi thành `Hộp HVN (cụm khối lượng, chưa kiểm định): 26802,50–26874,75 · …` (tối đa 3, gần giá trước). |
+| `SessionZones.cs` · chú thích đầu file và `Description` | Sửa câu mô tả HVN: "hộp HVN = cụm khối lượng lớn và đều của phiên/tuần đã đóng". Giữ chữ "chưa kiểm định". Giữ cả ghi chú cũ "HVN: đi tiếp / mục tiêu, không fade" bên cạnh cách dùng mới (canh đảo chiều **hoặc** phá vỡ) — phép đo chưa phân xử. |
+| `tests/` | Test của `ProfileEngine.FindHvn` / `PeakSharpness` / `FindLvn`: giữ nguyên. Test `StrongZonesTests.cs` đọc `expected.json` (dòng 57), các kiểm `DShape`, `Ratio`, ca `hvn_w 4036,4` (dòng ~437): viết lại theo 10.5. Test `ZonePolicy` cho `hvn_week`/`hvn_day`: đổi sang `hvn_box`. Mọi test không liên quan HVN phải PASS không sửa. |
+| LVN (`FindLvn`, `ShowLvn`) | **Không đổi** trong đợt này. |
+
+Lưu ý chart đã lưu: Quantower nhớ giá trị input theo tên thuộc tính. Đặt tên thuộc tính mới cho ô bật hộp HVN (`ShowHvnBox`), không dùng lại `ShowHvn`, để giá trị cũ không dính sang.
+
+## 12. Tối giản settings của SessionZones
+
+Hiện có 65 ô. Người dùng không chỉnh con số nào. Sau đợt này còn **19 ô**: bật/tắt lớp, màu, Telegram, lệch giờ. Mọi con số thành hằng (`const` hoặc trường `StrongZoneParams`) với đúng giá trị đang chạy.
+
+### 12.1 Ô còn lại (thứ tự hiển thị)
+
+| Nhóm | Tên hiển thị | Thuộc tính | Mặc định |
+|---|---|---|---|
+| Hiển thị | Hiện vùng mạnh (va đập nhiều + hợp lưu) | `ShowStrongZones` | bật |
+| Hiển thị | Hiện hộp HVN (cụm khối lượng lớn của ngày/tuần trước) | `ShowHvnBox` (mới) | bật |
+| Hiển thị | Hiện LVN (chỗ khối lượng mỏng, giá hay xuyên nhanh) | `ShowLvn` | tắt |
+| Hiển thị | Hiện VAH/VAL hôm nay | `ShowTodayVa` | tắt |
+| Hiển thị | Vẽ đường VWAP tuần và ngày | `DrawVwapLines` | tắt |
+| Hiển thị | Hiện bảng chữ tóm tắt phiên | `ShowZones` (đổi tên hiển thị; Opus kiểm ô này đang điều khiển đúng phần nào rồi đặt tên cho khớp) | bật |
+| Màu | Màu hỗ trợ | `SupColor` | như cũ |
+| Màu | Màu kháng cự | `ResColor` | như cũ |
+| Màu | Màu vùng rất mạnh | `StrongGoldColor` | như cũ |
+| Màu | Màu hộp HVN | `HvnColor` | như cũ |
+| Màu | Màu VWAP tuần | `VwapWeekColor` | như cũ |
+| Màu | Màu VWAP ngày | `VwapDayColor` | như cũ |
+| Giờ | Lệch giờ so với UTC (Việt Nam = 7) | `TzOffset` | 7 |
+| Telegram | Gửi Telegram | `TeleEnabled` | tắt |
+| Telegram | Bot token | `TeleBotToken` | trống |
+| Telegram | Chat ID | `TeleChatId` | trống |
+| Telegram | Tab này được gửi (chỉ bật ở một chart) | `TeleIsSender` | tắt |
+| Telegram | Gửi thử ngay (bật rồi tắt) | `TeleTestNow` | tắt |
+| Telegram | Kèm lịch tin Forex Factory | `TeleShowNews` | bật |
+
+### 12.2 Ô hiện có → số phận
+
+| Ô hiện có (thuộc tính) | Xử lý | Lý do |
+|---|---|---|
+| `TzOffset` | giữ | cần cho giờ hiển thị và giờ gửi tin |
+| `AsiaStart`, `EuropeStart`, `UsStart` | hằng 300 / 750 / 1140 | giờ phiên theo giờ Việt Nam, người dùng không đổi |
+| `RowTicks` | hằng 2 | fixture và mọi phép đo dùng 2 |
+| `GapMinutes` | hằng 75 | luật tách phiên của spec |
+| `UseVolume` | hằng true | đã có nhánh tự rơi về TPO khi thiếu khối lượng theo giá |
+| `ZoneLookbackSessions` | hằng 10 | |
+| `ShowHvn`, `MaxHvn`, `MinHvnRatio`, `ShowContextBands`, `ShowMarkerBand`, `SharpnessGate`, `MaxLevelThicknessPrices`, `WeekLookbackWeeks` | **xoá hẳn** | HVN cũ bị bỏ (mục 11); thay bằng `ShowHvnBox` |
+| `ShowTargets`, `TargetMinRatio`, `TargetColor` | **xoá hẳn** | mục tiêu sinh từ HVN cũ |
+| `ShowLvn` | giữ | |
+| `MaxLvn` | hằng 2 | |
+| `ShowTodayVa` | giữ | |
+| `ShowStrongZones` | giữ | |
+| `SzMinTouches`, `SzBounceU`, `SzLookbackDays`, `SzClusterU`, `SzConfluenceTolU`, `SzMinConfluence`, `SzHvnAwayU`, `SzRadiusU`, `SzMaxPerSide` | hằng 3 / 1,0 / 5 / 0,30 / 0,10 / 1 / 2,0 / 4,0 / 3 | giá trị đã đo; tính theo U nên dùng chung cho GC và NQ |
+| `SzHvnDOnly` | **xoá hẳn** | lọc chữ D bị bỏ (10.3) |
+| `SzGroupEdges` | hằng true | cách đếm nhóm đã dùng trong mọi phép đo |
+| `StrongGoldColor`, `SupColor`, `ResColor`, `HvnColor`, `VwapWeekColor`, `VwapDayColor` | giữ | |
+| `ZoneRangeAtr`, `ZoneRadiusPrices`, `MaxZones` | hằng 3,0 / 12,0 / 5 | chỉ còn tác dụng với lớp cũ (VA hôm nay, LVN). Lưu ý `ZoneRadiusPrices = 12 giá` là số của vàng (≈ 1 U của GC), trên NQ quá hẹp; đổi sang `1,0 × U` là thay đổi hành vi ⇒ làm riêng, có test, không gộp vào đợt gọt input |
+| `WeekGapHours` | hằng 30 | |
+| `ShowAllZones` (DEBUG) | xoá hẳn | |
+| `SpliceGuard`, `MinSpliceJumpPrices` | **xoá ô, tự động** — mục 12.3 | |
+| `ShowSessionHighLow`, `ShowNakedPoc`, `ShowPocClusters`, `ShowWeekLvn` (nhóm "Đo ·") | xoá ô, hằng false (để nguyên code, hoặc xoá code nếu gọn) | ghi chú trong chính tên ô: đã đo không có tác dụng / mẫu quá nhỏ / chưa đo |
+| `NakedColor` | xoá ô, thành hằng | lớp naked POC tắt cứng |
+| `DrawVwapLines` | giữ | |
+| `ShowZones` | giữ, đổi tên hiển thị | |
+| `TeleEnabled`, `TeleBotToken`, `TeleChatId`, `TeleIsSender`, `TeleTestNow`, `TeleShowNews` | giữ | vận hành |
+| `TeleUsStartMin`, `TelePreUsMin`, `TeleMorningGrace`, `TeleAfternoonMin` | hằng 1160 / 30 / 6 / 840 | |
+| `TeleShareDir` | hằng "" (thư mục mặc định) | |
+
+Yêu cầu khi làm:
+- Giá trị hằng phải **bằng đúng mặc định hiện tại** ⇒ mọi test hiện có (ngoài phần HVN) PASS không sửa kỳ vọng.
+- Chart đã lưu giá trị cho ô bị xoá: kiểm bằng cách mở một workspace cũ, phải không lỗi.
+- Sắp `InputParameter` theo thứ tự bảng 12.1; tên hiển thị không còn tiền tố "Vùng mạnh ·", "TG ·", "Đo ·", "Cổng:", "DEBUG:".
+- `Description` của indicator viết lại ngắn, giữ câu "chưa kiểm định; không phải tín hiệu vào lệnh".
+
+### 12.3 Chỗ nối hợp đồng: tự bật/tắt
+
+Bộ chặn chỗ nối chỉ có nghĩa với mã liên tục. Trên một hợp đồng cụ thể nó chỉ có thể sai: NQZ26 bị bắt nhầm 3 lần trong 11 tuần (khoảng trống giá thật qua giờ nghỉ), tháng 11 mất gần nửa số vùng.
+
+- Thêm hàm thuần `ZonePolicy.IsSingleContract(string symbolName)`:
+  1. `null` hoặc rỗng ⇒ `false`; bỏ khoảng trắng, đổi sang chữ hoa; nếu bắt đầu bằng `/` ⇒ `false` (mã liên tục kiểu `/GC:XCEC`);
+  2. cắt phần từ dấu `:` hoặc `.` hoặc `@` đầu tiên trở đi;
+  3. `true` ⇔ phần còn lại khớp `^[A-Z0-9]{1,4}[FGHJKMNQUVXZ][0-9]{1,2}$` (gốc + mã tháng + năm).
+- `spliceJump = IsSingleContract(Symbol.Name) ? 0 : 20,0 × 10 × tick` ở cả ba chỗ đang dùng (`SessionZones.cs` dòng ~468, ~606, ~732). Dòng cảnh báo "chỗ nối" chỉ hiện khi bộ chặn đang bật.
+- Test: `GCZ26`, `NQZ26`, `MGCZ26`, `GCZ6`, `6EZ26`, `NQZ26:XCME` ⇒ true; `/GC:XCEC`, `/NQ`, `GC`, `NQ`, `XAUUSD`, `NAS100USD`, `USTEC`, chuỗi rỗng, `null` ⇒ false.
+- Opus kiểm `Symbol.Name` thật trên Quantower với một hợp đồng và một mã liên tục (tên có thể nằm ở thuộc tính khác hoặc có hậu tố khác) rồi chỉnh bước 2 cho khớp; nếu Quantower có thuộc tính nói thẳng mã là liên tục thì dùng thuộc tính đó thay regex.
+- Chưa giải quyết: mã liên tục của NQ vẫn dùng ngưỡng 50 điểm và vẫn có thể bắt nhầm khoảng trống thật. Ngưỡng theo U (khoảng 3 U) mới chỉ có 3 mẫu NQ và 1 chỗ nối thật của GC để so — **chưa đo đủ, chưa đổi**.
+
+### 12.4 Thứ tự làm đề nghị
+
+1. `HvnClusters` + test 10.5 a, b.
+2. Nối vào `StrongZones` (10.3, 10.4) + test 10.5 c; xoá `expected.json` cũ.
+3. Lớp hộp HVN trong `SessionZones.cs`, xoá B3/B4/mục tiêu (mục 11).
+4. `IsSingleContract` + tự tắt bộ chặn (12.3).
+5. Gọt input (12.1, 12.2).
+6. Test toàn bộ → build `./build-tpo.sh zones` → kiểm tay 10.5 d và 4 khung M1/M5/M15/M30.
+
+### 12.5 Cần người dùng chốt
+
+1. Vùng vàng sẽ có mặt 15–19 % thời gian (trước 6–7 %). Giữ luật "≥ 3 nhóm và có HVN", hay siết lại?
+2. Ô "Hiện hộp HVN" mặc định bật: chart sẽ có thêm tối đa vài hộp cam bên cạnh vùng mạnh.
+3. Mục tiêu chốt lời (đường tím) bị xoá cùng HVN cũ.
+4. Hộp NQ 23/11 mới là 26802,50 – 26874,75; cần người dùng nhìn ảnh cận cảnh xác nhận biên, nhất là mép trên (có bậc thềm tới 26.895).

@@ -7,11 +7,13 @@
 //  tuần/bảo trì), gợi ý "Mỹ ưu tiên gì" cho Telegram, và vẽ:
 //    VÙNG MẠNH (PLAN-VUNG-MANH.md, CHƯA KIỂM ĐỊNH): cụm ≥3 đỉnh/đáy M30 bật lại ≥1 U +
 //      hợp lưu với mức của phiên/tuần ĐÃ ĐÓNG (VWAP/±1σ, VAH/VAL hôm qua & tuần trước,
-//      hộp HVN); xanh hỗ trợ / đỏ kháng cự / vàng ≥3 nhóm có HVN.
+//      hộp HVN); xanh hỗ trợ / đỏ kháng cự / vàng ≥3 nhóm có HVN. Mặc định chỉ vẽ vùng CÓ HVN trong
+//      hợp lưu (BT5-5-VONG.md vòng 2; ô "chỉ vẽ vùng có HVN" tắt đi = luật cũ ≥ 1 mức bất kỳ).
 //    HỘP HVN (2026-11-25, §10–11, v2 §13): cụm khối lượng LỚN và ĐỀU (thân chữ D, đấu giá xong) của
 //      5 phiên / tuần trước + tuần này tới hôm qua; vẽ hộp trong 8 U, tối đa 2 hộp mỗi phía giá,
-//      hộp ngày trùng hộp tuần ⇒ một hộp "HVN ngày + tuần". Vùng đệm (§14): dải cam nhạt nét đứt sát
-//      ngoài mép hộp = sườn cụm còn ≥ 50 % đỉnh (≤ 0,45 up), chỉ phía giá đang đứng; chỉ để vẽ. Giá quay lại: canh phản ứng đảo chiều HOẶC
+//      hộp ngày trùng hộp tuần ⇒ một hộp "HVN ngày + tuần"; hộp chỉ tính khi giá đã rời mép ≥ 4 U (vòng 3).
+//      Dải chờ (BT5-5-VONG.md vòng 1, thay vùng đệm §14): dải cam nhạt nét đứt 0,2 U sát ngoài mép hộp,
+//      chỉ phía giá đang đứng; chỉ để vẽ. Giá quay lại: canh phản ứng đảo chiều HOẶC
 //      phá vỡ — chưa kiểm định. (Đo cũ trên HVN đỉnh nhọn: "đi tiếp / mục tiêu, không fade";
 //      phép đo chưa phân xử với cách dùng mới.) HVN kiểu cũ (đỉnh nhọn + nền 90 %), mục tiêu
 //      chốt lời sinh từ nó, và các lớp "Đo ·" đã BỎ HẲN.
@@ -42,17 +44,20 @@ namespace SessionZonesNs
         // ---------- Hiển thị ----------
         [InputParameter("Hiện vùng mạnh (va đập nhiều + hợp lưu)", 10)]
         public bool ShowStrongZones { get; set; } = true;
-        [InputParameter("Hiện hộp HVN (cụm khối lượng lớn của ngày/tuần trước)", 11)]
+        // BT5-5-VONG.md vòng 2: vùng chỉ hợp lưu VWAP/±1σ/VAH/VAL (không có HVN) phản ứng không hơn đường ngẫu nhiên ⇒ mặc định ẩn.
+        [InputParameter("Vùng mạnh: chỉ vẽ vùng có HVN trong hợp lưu", 11)]
+        public bool StrongNeedHvn { get; set; } = true;
+        [InputParameter("Hiện hộp HVN (cụm khối lượng lớn của ngày/tuần trước)", 12)]
         public bool ShowHvnBox { get; set; } = true;
-        [InputParameter("Hiện LVN (chỗ khối lượng mỏng, giá hay xuyên nhanh)", 12)]
+        [InputParameter("Hiện LVN (chỗ khối lượng mỏng, giá hay xuyên nhanh)", 13)]
         public bool ShowLvn { get; set; } = false;
-        [InputParameter("Hiện VAH/VAL hôm nay", 13)]
+        [InputParameter("Hiện VAH/VAL hôm nay", 14)]
         public bool ShowTodayVa { get; set; } = false;
-        [InputParameter("Vẽ đường VWAP tuần và ngày", 14)]
+        [InputParameter("Vẽ đường VWAP tuần và ngày", 15)]
         public bool DrawVwapLines { get; set; } = false;
         // Công tắc chung của 3 lớp phụ ở trên (LVN, VAH/VAL hôm nay, đường VWAP): tắt ô này thì cả ba
         // không vẽ dù đã bật. Không ảnh hưởng vùng mạnh, hộp HVN và tin Telegram.
-        [InputParameter("Hiện các lớp phụ đã bật ở trên (LVN, VAH/VAL, VWAP)", 15)]
+        [InputParameter("Hiện các lớp phụ đã bật ở trên (LVN, VAH/VAL, VWAP)", 16)]
         public bool ShowZones { get; set; } = true;
         // ---------- Màu ----------
         [InputParameter("Màu hỗ trợ", 20)]
@@ -126,7 +131,7 @@ namespace SessionZonesNs
         public SessionZones() : base()
         {
             Name = "Session Zones";
-            Description = "Vùng mạnh = cụm đỉnh/đáy M30 va đập nhiều lần + hợp lưu với VWAP/±1σ, VAH/VAL hôm qua & tuần trước, hộp HVN (xanh hỗ trợ, đỏ kháng cự, vàng = ≥3 nhóm hợp lưu có HVN). Hộp HVN = cụm khối lượng lớn và đều của phiên/tuần đã đóng; giá quay lại thì canh phản ứng đảo chiều hoặc phá vỡ. Dải cam nhạt sát hộp HVN = vùng đệm (sườn cụm còn ≥ 50 % đỉnh); giá có thể đảo trước khi chạm hộp; chưa kiểm định. Cả lớp chưa kiểm định; không phải tín hiệu vào lệnh. Add vào chart bất kỳ — tự lấy dữ liệu M30, vùng không đổi khi đổi khung. Cần Volume Analysis.";
+            Description = "Vùng mạnh = cụm đỉnh/đáy M30 va đập nhiều lần + hợp lưu với VWAP/±1σ, VAH/VAL hôm qua & tuần trước, hộp HVN (xanh hỗ trợ, đỏ kháng cự, vàng = ≥3 nhóm hợp lưu có HVN). Hộp HVN = cụm khối lượng lớn và đều của phiên/tuần đã đóng; giá quay lại thì canh phản ứng đảo chiều hoặc phá vỡ. Dải cam nhạt sát hộp HVN = dải chờ 0,2 U phía giá (giá hay đảo trước khi chạm hộp). Mặc định chỉ vẽ vùng mạnh có HVN; HVN cần giá đã rời ≥ 4 U (backtest 5 vòng NQ + GC: hộp HVN nhỉnh hơn đường ngẫu nhiên, vùng chỉ có VWAP/VA thì không). Cả lớp chưa kiểm định; không phải tín hiệu vào lệnh. Add vào chart bất kỳ — tự lấy dữ liệu M30, vùng không đổi khi đổi khung. Cần Volume Analysis.";
             SeparateWindow = false;
         }
 
@@ -342,11 +347,11 @@ namespace SessionZonesNs
         }
 
         // Mọi thông số vùng mạnh / hộp HVN = mặc định của StrongZoneParams (đã đo, tính theo U nên dùng chung GC và NQ:
-        // 3 lần va đập, bật lại 1 U, 5 phiên, cụm 0,30 U, dung sai 0,10 U, ≥1 nhóm, HVN rời xa 2 U, gộp VAH/VAL với ±1σ,
-        // bán kính 4 U, 3 vùng mỗi phía). Chỉ bộ chặn chỗ nối phụ thuộc symbol.
+        // 3 lần va đập, bật lại 1 U, 5 phiên, cụm 0,30 U, dung sai 0,10 U, ≥1 nhóm, HVN rời xa 4 U, gộp VAH/VAL với ±1σ,
+        // bán kính 4 U, 3 vùng mỗi phía, dải chờ hộp HVN 0,2 U). Chỉ bộ chặn chỗ nối + ô "chỉ vẽ vùng có HVN" phụ thuộc input.
         private StrongZoneParams SzParams(double tick) => new StrongZoneParams
         {
-            GapMinutes = GapMinutes, WeekGapHours = WeekGapHours, SpliceJump = SpliceJump(tick),
+            GapMinutes = GapMinutes, WeekGapHours = WeekGapHours, SpliceJump = SpliceJump(tick), RequireHvn = StrongNeedHvn,
         };
 
         // Cấu trúc vùng mạnh từ history M30 — chỉ dựng lại mảng + tính lại khi khoá đổi (số nến, nến đầu,

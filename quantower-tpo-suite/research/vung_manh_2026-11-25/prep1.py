@@ -32,6 +32,9 @@ CFG = {
         ('fp_GCZ26_XCEC_Time_20260811-20261109_90d', '2026-10-21 00:00:00', None)]),
     'nq': dict(scale=2.5, tick=0.25, t_min='2026-09-13 21:30:00', src=[
         ('fp_NQZ26_XCME_Time_20260826-20261124_90d', None, None)]),
+    # file 293 ngày (xuất 2026-11-25): cả phần NQZ26 còn là hợp đồng phụ (tháng 2–9) để kiểm chất lượng; t_min đặt lại sau khi xem bảng.
+    'nqy': dict(scale=2.5, tick=0.25, t_min=os.environ.get('NQY_TMIN', '2026-02-01 00:00:00'), src=[
+        ('fp_NQZ26_XCME_Time_20260204-20261125_293d16h', None, None)]),
 }
 
 

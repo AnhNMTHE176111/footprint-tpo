@@ -74,17 +74,16 @@ static partial class Tests
         }
         string F(double x) => x.ToString("0.0", IC);
         string Show(List<SzHvnShown> b) => string.Join(" ; ", b.Select(x => $"{x.Lo}-{x.Hi} dem {x.BufLo}-{x.BufHi} d{x.Dist}"));
-        p = p.Clone(); p.HvnBand = 0;   // khối này kiểm đường VẼ VÙNG ĐỆM CŨ (HvnBand = 0); dải chờ mới kiểm ở [3] "mặc định MỚI"
         var bx = StrongZones.HvnBoxes(R(), 105, p);
         Check(bx.Count == 1 && bx[0].BufHi == 102.5 && bx[0].BufLo == 99 && bx[0].Dist == 4, "vung dem: gia tren hop -> chi ve dem tren (BufLo = Lo); Dist van tinh tu Hi", Show(bx));
-        Check(StrongZones.HvnSummaryLine(bx, F) == "Hộp HVN (cụm khối lượng, chưa kiểm định): 99.0–101.0 (HVN ngày, chờ từ 102.5)",
+        Check(StrongZones.HvnSummaryLine(bx, F) == "Hộp HVN (cụm khối lượng, chưa kiểm định): 99.0–101.0 (HVN ngày, đệm tới 102.5)",
               "vung dem: dong Telegram 'dem toi <mep ngoai tren>'", StrongZones.HvnSummaryLine(bx, F));
         bx = StrongZones.HvnBoxes(R(), 95, p);
         Check(bx.Count == 1 && bx[0].BufLo == 98 && bx[0].BufHi == 101, "vung dem: gia duoi hop -> chi ve dem duoi", Show(bx));
-        Check(StrongZones.HvnSummaryLine(bx, F).EndsWith("(HVN ngày, chờ từ 98.0)"), "vung dem: Telegram 'dem toi <mep ngoai duoi>'", StrongZones.HvnSummaryLine(bx, F));
+        Check(StrongZones.HvnSummaryLine(bx, F).EndsWith("(HVN ngày, đệm tới 98.0)"), "vung dem: Telegram 'dem toi <mep ngoai duoi>'", StrongZones.HvnSummaryLine(bx, F));
         bx = StrongZones.HvnBoxes(R(), 100, p);
         Check(bx.Count == 1 && bx[0].BufLo == 98 && bx[0].BufHi == 102.5, "vung dem: gia trong hop -> ve ca hai phia", Show(bx));
-        Check(StrongZones.HvnSummaryLine(bx, F).EndsWith("(HVN ngày, chờ 98.0–102.5)"), "vung dem: Telegram ca hai phia 'dem <duoi>-<tren>'", StrongZones.HvnSummaryLine(bx, F));
+        Check(StrongZones.HvnSummaryLine(bx, F).EndsWith("(HVN ngày, đệm 98.0–102.5)"), "vung dem: Telegram ca hai phia 'dem <duoi>-<tren>'", StrongZones.HvnSummaryLine(bx, F));
         bx = StrongZones.HvnBoxes(R(), 102, p);
         Check(bx.Count == 1 && bx[0].BufHi == 102.5 && bx[0].BufLo == 99 && bx[0].Dist == 1, "vung dem: gia nam trong dem tren -> chi dem tren, Dist = 1 (tu Hi)", Show(bx));
         bx = StrongZones.HvnBoxes(R(), 101, p);
@@ -240,14 +239,12 @@ static partial class Tests
         {
             var t = new DateTime(2026, 11, 25, hh, mm, 0);
             if (!res.TryGetValue(t, out var c)) { Check(false, $"NQ 25/11 {hh:00}:{mm:00}: co ca trong fixture"); continue; }
-            // dải chờ 0,2 U (vòng 1); 07:00 hộp 26249,50-26312,75 chưa đủ "rời xa 4 U" (vòng 3) ⇒ chỉ 2 hộp, từ 07:30 đủ 3
-            var b = c.bx; bool three = hh != 7 || mm != 0;
-            var b1 = b.FirstOrDefault(x => Near(x.Lo, 26249.50, 1e-9)); var b2 = b.FirstOrDefault(x => Near(x.Lo, 26804.25, 1e-9));
-            bool ok = Near(f.C[c.j], px, 1e-9) && Near(c.r.U, 146.775, 5e-4) && b.Count == (three ? 3 : 2)
-                      && Near(b[0].Lo, 25538.50, 1e-9) && Near(b[0].Hi, 25609.75, 1e-9) && b[0].Label == "HVN ngày + tuần" && Near(b[0].BufHi, 25639.25, 1e-9) && b[0].BufLo == b[0].Lo
-                      && (three ? b1 != null && Near(b1.Hi, 26312.75, 1e-9) && b1.Label == "HVN ngày + tuần" && Near(b1.BufLo, 26220.00, 1e-9) && b1.BufHi == b1.Hi : b1 == null)
-                      && b2 != null && Near(b2.Hi, 26873.50, 1e-9) && b2.Label == "HVN ngày + tuần" && Near(b2.BufLo, 26774.75, 1e-9) && b2.BufHi == b2.Hi;
-            Check(ok, $"NQ 25/11 {hh:00}:{mm:00} gia {px:0.00}: hop 25538,50-25609,75 dai cho tren toi 25639,25 ; {(three ? "26249,50-26312,75 dai cho duoi tu 26220,00 ; " : "26249,50 chua du roi xa 4U ; ")}26804,25-26873,50 dai cho duoi tu 26774,75",
+            var b = c.bx;
+            bool ok = Near(f.C[c.j], px, 1e-9) && Near(c.r.U, 146.775, 5e-4) && b.Count == 3
+                      && Near(b[0].Lo, 25538.50, 1e-9) && Near(b[0].Hi, 25609.75, 1e-9) && b[0].Label == "HVN ngày + tuần" && Near(b[0].BufHi, 25652.25, 1e-9) && b[0].BufLo == b[0].Lo
+                      && Near(b[1].Lo, 26249.50, 1e-9) && Near(b[1].Hi, 26312.75, 1e-9) && b[1].Label == "HVN ngày + tuần" && Near(b[1].BufLo, 26227.50, 1e-9) && b[1].BufHi == b[1].Hi
+                      && Near(b[2].Lo, 26804.25, 1e-9) && Near(b[2].Hi, 26873.50, 1e-9) && b[2].Label == "HVN ngày + tuần" && Near(b[2].BufLo, 26767.25, 1e-9) && b[2].BufHi == b[2].Hi;
+            Check(ok, $"NQ 25/11 {hh:00}:{mm:00} gia {px:0.00}: hop 25538,50-25609,75 dem tren toi 25652,25 ; 26249,50-26312,75 dem duoi tu 26227,50 ; 26804,25-26873,50 dem duoi tu 26767,25",
                   $"gia {f.C[c.j]:0.00} U {c.r.U:0.000} " + string.Join(" | ", b.Select(x => $"{x.Lo:0.00}-{x.Hi:0.00} [{x.BufLo:0.00}-{x.BufHi:0.00}] {x.Label}")));
         }
         // ca người dùng: đáy 25637,25 của nến 07:30 nằm trong vùng đệm trên, ngoài hộp
@@ -256,10 +253,10 @@ static partial class Tests
             var box = u.bx.FirstOrDefault(x => Near(x.Lo, 25538.50, 1e-9));
             double low = f.L[u.j];
             Check(box != null && Near(low, 25637.25, 1e-9) && box.Hi < low && low <= box.BufHi,
-                  "NQ 25/11 07:30 (ca nguoi dung): Hi 25609,75 < day nen 25637,25 <= dai cho 25639,25 (Hi + 0,2U)", $"day {low:0.00}, hop {box?.Hi:0.00}, dem toi {box?.BufHi:0.00}");
+                  "NQ 25/11 07:30 (ca nguoi dung): Hi 25609,75 < day nen 25637,25 <= BufHi 25652,25", $"day {low:0.00}, hop {box?.Hi:0.00}, dem toi {box?.BufHi:0.00}");
             var line = StrongZones.HvnSummaryLine(u.bx, x => x.ToString("0.00", IC));
-            Check(line != null && line.Contains("25538.50–25609.75 (HVN ngày + tuần, chờ từ 25639.25)"),
-                  "NQ 25/11 07:30: dong Telegram '25538,50-25609,75 (HVN ngay + tuan, cho tu 25639,25)'", line);
+            Check(line != null && line.Contains("25538.50–25609.75 (HVN ngày + tuần, đệm tới 25652.25)"),
+                  "NQ 25/11 07:30: dong Telegram '25538,50-25609,75 (HVN ngay + tuan, dem toi 25652,25)'", line);
         }
 
         // Hợp lưu KHÔNG dùng vùng đệm (§14.3): (a) sửa vùng đệm của mức trong bộ đệm thành cực rộng ⇒ cụm/nhãn/màu không đổi;
@@ -316,8 +313,8 @@ static partial class Tests
                 RenderPng(f, jl, sh, bx, Path.Combine(outDir, "ca_NQ_2026-11-25_0830_cuoi_du_lieu_vung_dem.png"), sup, rs, gold,
                           $"NQZ26 · cuối dữ liệu {f.T[f.N - 1]:yyyy-MM-dd HH:mm} UTC (nến đang chạy) · giá {nowL:0.00} · U {r.U:0.0}", nowL);
                 nPng++;
-                Check(f.T[f.N - 1] == new DateTime(2026, 11, 25, 8, 30, 0) && bx.Any(b => Near(b.Lo, 25538.50, 1e-9) && Near(b.BufHi, 25639.25, 1e-9)),
-                      "NQ cuoi du lieu 25/11 08:30: van ve hop 25538,50-25609,75 + dai cho tren toi 25639,25");
+                Check(f.T[f.N - 1] == new DateTime(2026, 11, 25, 8, 30, 0) && bx.Any(b => Near(b.Lo, 25538.50, 1e-9) && Near(b.BufHi, 25652.25, 1e-9)),
+                      "NQ cuoi du lieu 25/11 08:30: van ve hop 25538,50-25609,75 + dem tren toi 25652,25");
             }
         }
         catch (Exception ex) { Check(false, "render PNG NQ 25/11", ex.GetType().Name + ": " + ex.Message); }

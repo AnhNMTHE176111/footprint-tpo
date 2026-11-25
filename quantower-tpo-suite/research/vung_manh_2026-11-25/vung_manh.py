@@ -24,7 +24,7 @@ P = dict(
     HVN_DAYS=5,       # HVN ngày: lấy từ bao nhiêu phiên đã đóng
     HVN_RATIO=2.5,    # "lớn": đỉnh đã làm mượt >= 2,5 × trung bình hàng
     HVN_TOP=3,
-    HVN_AWAY=4.0,     # "đã rời xa": sau khi profile chốt, giá từng cách MÉP hộp >= 4 U (BT5-5-VONG.md vòng 3: 2 U → 4 U)
+    HVN_AWAY=2.0,     # "đã rời xa": sau khi profile chốt, giá từng cách đỉnh cụm >= 2 U
     D_ONLY=False,     # chỉ nhận HVN của profile hình chữ D (2026-11-25: TẮT — HVN dạng cụm tự mang tiêu chí "lớn và đều")
     HVN_MODE='cum',   # 'cum' = HVN dạng cụm v1 (hvn_cum.py, PLAN mục 10) · 'cum2' = v2 (hvn_cum2.py, PLAN mục 13; thông số ghi đè qua khoá HVN2) · 'dinh' = kiểu cũ (đỉnh nhọn + PeakSharpness 90 %), chỉ để so
     HVN_HL='giao',    # hợp lưu với hộp HVN: 'giao' = vùng va đập giao hộp (± TOL) · 'mep' = chỉ khi chạm MÉP hộp (± TOL)
@@ -38,8 +38,6 @@ P = dict(
     SEP=0.15,         # hiển thị: hai vùng cách nhau dưới bấy nhiêu (×U) thì chỉ giữ vùng mạnh hơn
     HVN_RADIUS=8.0,   # hiển thị HỘP HVN (PLAN mục 13.5): mép gần cách giá tối đa (×U) — riêng cho hộp HVN, vùng mạnh vẫn RADIUS
     HVN_MAX_SIDE=2,   # hiển thị hộp HVN: tối đa bấy nhiêu hộp gần nhất mỗi phía giá (hộp đang chứa giá không tính)
-    REQ_HVN=True,     # hiển thị vùng mạnh: bắt buộc có HVN trong hợp lưu (BT5-5-VONG.md vòng 2; False = luật cũ ≥ 1 mức bất kỳ)
-    HVN_BAND=0.20,    # dải chờ của hộp HVN (× U) phía giá, thay vùng đệm sườn profile khi VẼ (BT5-5-VONG.md vòng 1); 0 = dùng vùng đệm cũ
 )
 
 # nhóm mức độc lập: VAH và VWAP+1σ của cùng một kỳ gần như trùng nhau do cấu tạo (vùng giá trị 70% ≈ ±1σ) ⇒ tính MỘT.
@@ -264,7 +262,7 @@ def label(z, side):
 def display(D, zs, j, now, p=P):
     """Lọc hiển thị + gán phía/màu/nhãn. now = giá hiện tại. Trả list vùng ĐƯỢC VẼ (thêm side, color, label, dist).
     Thứ tự: (1) đủ nhóm hợp lưu → (2) vùng sát/chồng nhau chỉ giữ vùng mạnh hơn → (3) bán kính → (4) trần mỗi phía."""
-    pool = sorted([dict(z) for z in zs if z['ngroup'] >= p['MIN_GROUP'] and (z['hvn'] or not p.get('REQ_HVN', False))],
+    pool = sorted([dict(z) for z in zs if z['ngroup'] >= p['MIN_GROUP']],
                   key=lambda z: (not z['gold'], -z['ngroup'], -z['n'], -z['newest'], z['lo']))
     kept = []
     for z in pool:
@@ -297,9 +295,6 @@ def hvn_boxes(D, levels, j, now, p=P):
         if dist > p['HVN_RADIUS'] * u: continue
         # vùng đệm được vẽ (PLAN mục 14.3): chỉ phía giá đang đứng — giá ở trên/trong hộp ⇒ đệm trên, giá ở dưới/trong hộp ⇒ đệm dưới
         blo, bhi = L.get('blo', L['lo']), L.get('bhi', L['hi'])
-        if p.get('HVN_BAND', 0) > 0:     # dải chờ cố định band × U, nới ra ngoài theo bước giá
-            blo = np.floor((L['lo'] - p['HVN_BAND'] * u) / TICK + 1e-6) * TICK
-            bhi = np.ceil((L['hi'] + p['HVN_BAND'] * u) / TICK - 1e-6) * TICK
         cand.append(dict(name=L['name'], lo=L['lo'], hi=L['hi'], peak=L['peak'], mass=L['ratio'], dist=dist, end=L['end'], src=L['src'],
                          label='HVN tuần' if L['name'] == 'hvn_w' else 'HVN ngày',
                          buf_lo=blo if now <= L['hi'] else L['lo'], buf_hi=bhi if now >= L['lo'] else L['hi']))

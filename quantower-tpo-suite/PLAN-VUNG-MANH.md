@@ -740,12 +740,3 @@ Sinh lại: `python vung_dem_prep.py` → `python vung_dem_fixture.py`.
 1. **Vẽ vùng đệm dù số đo không ủng hộ?** Trên 192 lần (NQ) và 274 lần (GC) giá quay lại hộp, điểm đảo không tụ quanh hộp thật hơn hộp dời, và vùng đệm (theo râu, theo sườn, hay cố định) chỉ bắt thêm điểm đảo đúng theo tỉ lệ bề rộng của nó. Vẽ là để chart khớp thứ người dùng nhìn thấy trong ca 25/11, không phải vì có lợi thế.
 2. **Cách dựng**: đề xuất theo sườn profile (≥ 50 % đỉnh). Nếu người dùng vẫn muốn đúng nghĩa "vùng râu" thì phương án thay thế đã đo là "từ mép tới trung vị đầu râu của các nến M30 có thân chạm hộp" — ca 25/11 ra 25609,75 – 25656,50, rộng hơn trung bình 0,38 U so với 0,26 U, số đo không hơn.
 3. **Chỉ vẽ phía giá đang đứng** (đề xuất) hay luôn vẽ cả hai phía.
-
-## 15. Backtest 5 vòng (Opus, 2026-11-25) — ba thay đổi mặc định
-
-Chi tiết: `research/vung_manh_2026-11-25/BT5-5-VONG.md` (NQZ26 13/09–25/11 + GCZ26; đối chứng dời 1,5–4 U; chưa kiểm định).
-
-- 15.1 **Dải chờ hộp HVN** `HvnBand = 0,20` (× U): khi VẼ, vùng đệm §14 được thay bằng dải cố định mép hộp ± 0,2 U về phía giá, nới ra mép tick (`floor/ceil`). Quy tắc phía giữ như §14.3. Vùng đệm sườn profile vẫn được tính trong `SzLevel.BufLo/BufHi` nhưng không vẽ khi `HvnBand > 0`. Telegram ghi `chờ từ <giá>` / `chờ <dưới>–<trên>`.
-- 15.2 **Vùng mạnh bắt buộc có HVN** `RequireHvn = true`: `Display` bỏ cụm không có HVN trong hợp lưu, trước bước lọc chồng. Input "Vùng mạnh: chỉ vẽ vùng có HVN trong hợp lưu" (mặc định bật); tắt thì về luật §1 (≥ 1 mức bất kỳ).
-- 15.3 **HVN rời xa 4 U** `HvnAway = 4.0` (thay 2 U ở §10.4). Áp dụng cho cả hộp được vẽ lẫn hợp lưu.
-- 15.4 Test: các ca dựng tay và 5 ca ghi số của §8.3/§13.5c chạy với luật gốc (`HvnAway 2, RequireHvn false, HvnBand 0`); mặc định mới có khối test riêng. Parity C# = Python dùng fixture sinh lại theo mặc định mới.

@@ -1228,7 +1228,7 @@ namespace TpoSuite
         public double WMin = 0.20;        // bề rộng vùng tối thiểu (×U)
         public double Tol = 0.10;         // dung sai hợp lưu (×U)
         public int HvnDays = 5;           // HVN ngày lấy từ bao nhiêu phiên đã đóng
-        public double HvnAway = 4.0;      // "đã rời xa" (×U), đo từ MÉP hộp; 0 = bỏ điều kiện. BT5-5-VONG.md vòng 3: 2 U → 4 U
+        public double HvnAway = 2.0;      // "đã rời xa" (×U), đo từ MÉP hộp; 0 = bỏ điều kiện
         // HVN dạng cụm v2 (PLAN-VUNG-MANH.md §13.1) — cụm khối lượng lớn và đều của một profile đã đóng;
         // tiêu chí không phụ thuộc biên độ profile. Mọi số là hằng (không có input).
         public double HvnSmooth = 0.05;     // nửa cửa sổ làm mượt (×up, up = TB High−Low nến M30 của chính profile)
@@ -1252,10 +1252,6 @@ namespace TpoSuite
         public double HvnBufFloor = 0.50;   // vùng đệm: khối lượng mượt ≥ 50 % đỉnh cụm (= HvnWidenFloor, khai riêng cho rõ)
         public double HvnBufCap = 0.45;     // bề rộng tối đa mỗi phía (×up) (= HvnWidth)
         public double HvnBufMin = 0.05;     // phía nào hẹp hơn 0,05 × up thì không có vùng đệm
-        // Dải chờ của hộp HVN (BT5-5-VONG.md vòng 1) — lớp VẼ, thay vùng đệm sườn profile: hộp nới HvnBand × U về phía giá,
-        // ra mép tick. 0 = vẽ vùng đệm sườn profile như cũ (§14). Không dùng trong hợp lưu / "rời xa".
-        public double HvnBand = 0.20;
-        public bool RequireHvn = true;    // vùng mạnh chỉ vẽ khi hợp lưu có HVN (BT5-5-VONG.md vòng 2); false = luật cũ ≥ 1 mức bất kỳ
         public int GoldMin = 3;           // vàng: ≥ 3 nhóm mức và có HVN
         public bool GroupEdges = true;    // gộp VAH/VAL với VWAP ±1σ cùng kỳ thành một nhóm
         public int MinGroup = 1;          // hiển thị: số nhóm mức hợp lưu tối thiểu
@@ -1448,7 +1444,6 @@ namespace TpoSuite
     {
         public int J = -1, D = -1;
         public double U = double.NaN;
-        public double Tick;                                     // bước giá của chuỗi (ra mép tick cho dải chờ hộp HVN); 0 = không làm tròn
         public List<SzPivot> Pivots = new List<SzPivot>();     // mọi điểm va đập tìm được (cả conf > j)
         public List<SzLevel> Levels = new List<SzLevel>();     // mức hợp lưu của hôm nay
         public List<SzZone> Clusters = new List<SzZone>();     // cụm ≥ NMin điểm, kèm hợp lưu
@@ -1881,7 +1876,7 @@ namespace TpoSuite
         public static SzResult Compute(SzSeries s, StrongZoneParams p, Dictionary<string, (List<SzLevel> lv, bool apx)> levelCache = null)
         {
             p ??= new StrongZoneParams();
-            var res = new SzResult { Closes = s.C, Highs = s.H, Lows = s.L, Tick = s.Tick };
+            var res = new SzResult { Closes = s.C, Highs = s.H, Lows = s.L };
             if (s.N < 3) return res;
             int j = s.N - 2, jn = s.N - 1;
             int d = s.DayOf[jn];
@@ -1963,7 +1958,7 @@ namespace TpoSuite
         {
             var outp = new List<SzZone>();
             if (r == null || r.Clusters.Count == 0 || double.IsNaN(now)) return outp;
-            var pool = r.Clusters.Where(z => z.NGroup >= p.MinGroup && (z.Hvn || !p.RequireHvn)).Select(z => z.CloneZone())
+            var pool = r.Clusters.Where(z => z.NGroup >= p.MinGroup).Select(z => z.CloneZone())
                         .OrderBy(z => z.Gold ? 0 : 1).ThenBy(z => -z.NGroup).ThenBy(z => -z.N).ThenBy(z => -z.Newest).ThenBy(z => z.Lo).ToList();
             var kept = new List<SzZone>();
             foreach (var z in pool)
@@ -2016,11 +2011,6 @@ namespace TpoSuite
                 if (dist > p.HvnRadius * r.U) continue;
                 // vùng đệm được vẽ (§14.3): giá trên/trong hộp ⇒ đệm trên; giá dưới/trong hộp ⇒ đệm dưới. Lọc vẫn theo Lo/Hi.
                 double bLo = double.IsNaN(lv.BufLo) ? lv.Lo : lv.BufLo, bHi = double.IsNaN(lv.BufHi) ? lv.Hi : lv.BufHi;
-                if (p.HvnBand > 0)
-                {   // dải chờ cố định HvnBand × U (vòng 1), nới ra ngoài theo bước giá như bản tham chiếu vung_manh.hvn_boxes
-                    bLo = lv.Lo - p.HvnBand * r.U; bHi = lv.Hi + p.HvnBand * r.U;
-                    if (r.Tick > 0) { bLo = Math.Floor(bLo / r.Tick + 1e-6) * r.Tick; bHi = Math.Ceiling(bHi / r.Tick - 1e-6) * r.Tick; }
-                }
                 cand.Add(new SzHvnShown
                 {
                     Name = lv.Name, Lo = lv.Lo, Hi = lv.Hi, Peak = lv.Peak, Mass = lv.Mass, Dist = dist, End = lv.End, Src = lv.Src,
@@ -2058,15 +2048,14 @@ namespace TpoSuite
                    + string.Join(" · ", boxes.OrderBy(b => b.Dist).Take(max).Select(b => $"{fmt(b.Lo)}–{fmt(b.Hi)} ({b.Label}{BufText(b, fmt)})"));
         }
 
-        // Chữ dải chờ trong dòng Telegram (BT5-5-VONG.md vòng 1; trước là vùng đệm §14.4):
-        // ", chờ từ <mép ngoài>" (một phía) hoặc ", chờ <dưới>–<trên>" (giá trong hộp, cả hai phía).
+        // Chữ vùng đệm trong dòng Telegram (§14.4): ", đệm tới <mép ngoài>" (một phía) hoặc ", đệm <dưới>–<trên>" (cả hai phía).
         public static string BufText(SzHvnShown b, Func<double, string> fmt)
         {
             if (b == null) return "";
             bool up = b.BufHi > b.Hi, dn = b.BufLo < b.Lo;
-            if (up && dn) return $", chờ {fmt(b.BufLo)}–{fmt(b.BufHi)}";
-            if (up) return $", chờ từ {fmt(b.BufHi)}";
-            if (dn) return $", chờ từ {fmt(b.BufLo)}";
+            if (up && dn) return $", đệm {fmt(b.BufLo)}–{fmt(b.BufHi)}";
+            if (up) return $", đệm tới {fmt(b.BufHi)}";
+            if (dn) return $", đệm tới {fmt(b.BufLo)}";
             return "";
         }
 

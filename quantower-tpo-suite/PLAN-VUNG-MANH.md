@@ -274,6 +274,8 @@ Build theo quy trình repo (`./build-tpo.sh zones`), mở Quantower: so 4 khung 
 
 ## 10. HVN dạng cụm (thay định nghĩa HVN cũ)
 
+> **2026-11-25, bản v2:** thông số (10.1), thuật toán (10.2) và cách vẽ hộp được thay bằng **mục 13** sau khi người dùng báo sót cụm NQ 25.530–25.608. Mục 10.3–10.4 còn hiệu lực trừ chỗ mục 13 ghi khác.
+
 Người dùng định nghĩa HVN là **cụm khối lượng đủ lớn và đều (thân chữ D)** — dấu hiệu đấu giá ở đó đã xong; khi giá quay lại, cụm có giá trị bảo vệ vùng, để canh phản ứng đảo chiều **hoặc** phá vỡ. Không phải từng đỉnh nhọn. Mỗi profile thường một hộp, tối đa hai.
 
 Bản tham chiếu: [`research/vung_manh_2026-11-25/hvn_cum.py`](research/vung_manh_2026-11-25/hvn_cum.py), hàm `clusters()`. Toàn bộ tính trên **số nguyên bước giá** nên C# phải ra đúng từng số.
@@ -486,3 +488,139 @@ Bộ chặn chỗ nối chỉ có nghĩa với mã liên tục. Trên một hợ
 2. Ô "Hiện hộp HVN" mặc định bật: chart sẽ có thêm tối đa vài hộp cam bên cạnh vùng mạnh.
 3. Mục tiêu chốt lời (đường tím) bị xoá cùng HVN cũ.
 4. Hộp NQ 23/11 mới là 26802,50 – 26874,75; cần người dùng nhìn ảnh cận cảnh xác nhận biên, nhất là mép trên (có bậc thềm tới 26.895).
+
+## 13. HVN dạng cụm v2 — tiêu chí không phụ thuộc biên độ profile (thay mục 10.1–10.2, sửa 10.3 và mục 11 phần hộp HVN)
+
+Lý do, số đo, ảnh trước/sau: [`research/vung_manh_2026-11-25/HVN-CUM-V2.md`](research/vung_manh_2026-11-25/HVN-CUM-V2.md). Bản tham chiếu: [`hvn_cum2.py`](research/vung_manh_2026-11-25/hvn_cum2.py) hàm `clusters()`; hộp được vẽ: `vung_manh.hvn_boxes()`.
+
+Ca người dùng báo sót (NQZ26): cụm 25.530–25.608 của phiên 2026-11-20 và của tuần 15→20/11. Bản mục 10 loại nó vì "đủ lớn" đo bằng % cả profile và hộp thứ hai so với đỉnh lớn nhất cả profile — hai phép so đều yếu đi khi profile chạy rộng. Trạng thái của cả lớp vẫn là **chưa kiểm định**.
+
+### 13.1 Thông số (hằng trong `StrongZoneParams`, không có input)
+
+| Hằng | Giá trị | Nghĩa | So với mục 10 |
+|---|---|---|---|
+| `HvnSmooth` | 0,05 | nửa cửa sổ làm mượt, × up | giữ |
+| `HvnBody` | 0,80 | **lõi**: khối lượng mượt ≥ 80 % đỉnh | giữ (trước là cả hộp, giờ là lõi) |
+| `HvnWidth` | 0,45 | bề rộng đích của hộp, × up: lõi hẹp hơn thì nới | mới |
+| `HvnWidenFloor` | 0,50 | khi nới không lấy mức giá có khối lượng mượt < 50 % đỉnh | mới |
+| `HvnWidenClimb` | 0,05 | khi nới không lấy mức giá cao hơn (đáy đã đi qua ở phía đó + 5 % đỉnh) — không leo sang bướu bên cạnh | mới |
+| `HvnAround` | 3,0 | "vùng xung quanh" = ± 3 × up; dùng cho cả luật đỉnh cục bộ lẫn luật nổi bật | mới |
+| `HvnContrast` | 2,0 | nổi bật: mật độ hộp ≥ 2 × mật độ phần profile trong vùng xung quanh, ngoài hộp | mới |
+| `HvnBars` | 4,5 | nổi bật: khối lượng hộp ≥ 4,5 lần khối lượng trung bình một nến M30 của profile | mới |
+| `HvnMassDay` | **0,12** | hoặc hộp chứa ≥ 12 % khối lượng profile ngày | 0,10 → 0,12 (hộp giờ rộng hơn khoảng 1,2 lần) |
+| `HvnMassWeek` | 0,08 | … profile tuần | giữ |
+| `HvnMinWidth` | 0,20 | hộp sau khi nới vẫn hẹp hơn 0,20 × up ⇒ bỏ | giữ |
+| `HvnMaxPerProfile` | 2 | số hộp tối đa khi profile hẹp | giữ |
+| `HvnMaxStep` | 6,0 | số hộp tối đa = `min(HvnMaxCap, max(HvnMaxPerProfile, floor(biên độ profile / (6 × up))))` | mới |
+| `HvnMaxCap` | 4 | | mới |
+| `HvnFloor` | 0,10 | dừng khi đỉnh còn lại < 10 % đỉnh lớn nhất (chỉ để chặn vòng lặp; đo: đặt 0 hay 0,2 kết quả không đổi) | mới |
+| `HvnRadius` | 8,0 | hiển thị hộp HVN: mép gần cách giá ≤ 8 U (vùng mạnh vẫn `Radius` = 4) | mới |
+| `HvnMaxSide` | 2 | hiển thị hộp HVN: tối đa 2 hộp gần nhất mỗi phía giá | mới |
+
+Xoá: `HvnSecond`.
+
+### 13.2 Thuật toán `StrongZones.HvnClusters(levels, tick, up, nBars, massMin, p)`
+
+Thêm tham số `nBars` = số nến M30 của profile (`b − a + 1`). Bước 1–3 của 10.2 giữ nguyên (`w`, `tot`, `h`, `S`). Tiếp:
+
+4. `upT = up / tick` (double). `dn = max(1, (int)Math.Floor(HvnAround × upT + 0.5))`. `wt = HvnWidth × upT` (double). `maxBoxes = min(HvnMaxCap, max(HvnMaxPerProfile, (int)Math.Floor((n − 1) / (HvnMaxStep × upT))))`. `P1 = max S`. `used[] = false`.
+5. Lặp tối đa 2000 vòng:
+   1. `i*` = chỉ số **nhỏ nhất** có `S` lớn nhất trong các ô chưa `used`; `P = S[i*]`. Hết ô, hoặc `P ≤ 0`, hoặc `P < HvnFloor × P1` ⇒ dừng.
+   2. **Lõi**: `thr = HvnBody × P`; nới `lo`, `hi` từ `i*` khi ô kề chưa `used` và `S ≥ thr` (y như 10.2). `vai` như 10.2. `vai` ⇒ `used[lo..hi] = true`, sang vòng sau.
+   3. **Đỉnh cục bộ**: nếu `P < max(S[max(0, i* − dn) .. min(n − 1, i* + dn)])` (xét mọi ô, kể cả đã `used`) ⇒ `used[lo..hi] = true`, sang vòng sau. Bằng nhau thì qua.
+   4. Ghi `coreLo = lo`, `coreHi = hi`. **Nới**: `fl = HvnWidenFloor × P`; `vd = HvnWidenClimb × P`; `mL = min S[lo..i*]`; `mR = min S[i*..hi]`. Lặp khi `(hi − lo) < wt`:
+      - `okL = lo > 0 && !used[lo−1] && S[lo−1] ≥ fl && S[lo−1] ≤ mL + vd`; `okR = hi < n−1 && !used[hi+1] && S[hi+1] ≥ fl && S[hi+1] ≤ mR + vd`.
+      - cả hai sai ⇒ thoát; `okL && (!okR || S[lo−1] ≥ S[hi+1])` ⇒ `lo−−`, `mL = min(mL, S[lo])`; ngược lại ⇒ `hi++`, `mR = min(mR, S[hi])`.
+   5. `used[lo..hi] = true` (kể cả khi bị loại ở dưới).
+   6. `(hi − lo) < HvnMinWidth × upT` ⇒ sang vòng sau.
+   7. `vIn = Σ w[lo..hi]`, `nIn = hi − lo + 1`; `A = max(0, lo − dn)`, `Z = min(n − 1, hi + dn)`; `nOut = (lo − A) + (Z − hi)`; `vOut = Σ w[A..lo−1] + Σ w[hi+1..Z]`.
+      - `lon = vIn ≥ massMin × tot`
+      - `noi = vIn × nBars ≥ HvnBars × tot && vIn × nOut ≥ HvnContrast × vOut × nIn`
+      - `!(lon || noi)` ⇒ sang vòng sau.
+   8. Ghi hộp: `Lo`, `Hi`, `Peak` như 10.2, `Mass = vIn / tot`, thêm `CoreLo`, `CoreHi`. Đủ `maxBoxes` ⇒ dừng.
+
+Mọi vế so sánh là tích các số nguyên (khối lượng, số ô, số nến) với một hằng ⇒ làm bằng `double`, không chia.
+
+### 13.3 Dùng trong mức hợp lưu
+
+Như 10.3, chỉ đổi lời gọi: `HvnClusters(..., nBars = b − a + 1, massMin = HvnMassDay | HvnMassWeek, p)`. Luật chọn phiên, tuần, `HvnOk` (đo từ mép hộp), luật giao hộp, luật vàng: **không đổi**.
+
+### 13.4 Hộp HVN được vẽ — `StrongZones.HvnBoxes` (sửa dòng "lớp hộp HVN" của mục 11)
+
+1. Ứng viên: mức HVN đủ `HvnOk` và mép gần cách giá ≤ **`HvnRadius` × U** (trước: `Radius`).
+2. Bỏ hộp trùng như hiện có (sắp `End` giảm dần → `hvn_d` trước → `Mass` giảm dần → `Lo` tăng dần; trùng khi phần giao > 50 % bề rộng hộp nhỏ hơn). **Thêm**: hộp bị bỏ khác loại với hộp giữ lại (một `hvn_d`, một `hvn_w`) ⇒ nhãn hộp giữ lại thành `HVN ngày + tuần`.
+3. **Thêm**: giữ mọi hộp đang chứa giá (`Dist = 0`); mỗi phía giá chỉ giữ `HvnMaxSide` hộp gần nhất (sắp `Dist` tăng dần, rồi `Lo` tăng dần). "Dưới giá" ⇔ `Hi < now`.
+4. Trả về sắp theo `Lo`.
+
+Dòng Telegram "Hộp HVN" dùng đúng danh sách này.
+
+### 13.5 Test
+
+**a. Mức hàm — `fixture/hvn_cum2_cases.json`** (19 profile; mỗi ca có `tick`, `up`, `so_nen_m30`, `mass_min`, `levels`, kỳ vọng `h`, `dn`, `max_boxes`, `clusters[{lo, hi, peak, core_lo, core_hi, mass, bars, con, lon, noi}]`; thông số ở `params`). So `h`, `dn`, `max_boxes`, số hộp, `lo`/`hi`/`peak`/`core_lo`/`core_hi` bằng đúng, `mass` ≤ 1e-6, `lon`/`noi` đúng.
+
+| Ca | up | h | dn | hộp tối đa | Hộp kỳ vọng (lo – hi · đỉnh · tỉ trọng · số nến · nổi bật) |
+|---|---|---|---|---|---|
+| **NQZ26 phiên 2026-11-20** (ca báo sót) | 158,043 | 32 | 1897 | 2 | 25538,50 – 25609,75 · 25583,00 · 0,111 · 5,1 · ×2,80 |
+| **NQZ26 tuần 2026-11-15 → 11-20** (ca báo sót) | 132,708 | 27 | 1592 | 4 | 27239,25 – 27299,00 · 27268,50 · 0,083 · 19,1 · ×2,12 ; 25544,25 – 25604,00 · 25583,25 · 0,026 · 6,1 · ×2,78 |
+| **NQZ26 phiên 2026-11-23** (ca người dùng vẽ) | 166,446 | 33 | 1997 | 2 | 26801,50 – 26876,50 · 26817,75 · 0,294 · 13,5 · ×6,03 |
+| NQZ26 phiên 2026-11-18 | 125,478 | 25 | 1506 | 2 | 27143,00 – 27206,25 · 27190,25 · 0,276 · 12,7 · ×3,61 (lõi đã đủ rộng, không nới) |
+| NQZ26 phiên 2026-11-10 | 102,717 | 21 | 1233 | 2 | 27707,50 – 27753,75 · 27717,75 · 0,134 · 6,2 · ×1,70 (qua nhờ ≥ 12 %, không nổi bật) |
+| NQZ26 phiên 2026-11-13 | 104,413 | 21 | 1253 | 2 | 27794,50 – 27841,50 · 27811,75 · 0,134 · 6,2 · ×2,14 |
+| NQZ26 phiên 2026-11-17 | 123,886 | 25 | 1487 | 2 | 26946,25 – 27002,00 · 26977,25 · 0,195 · 9,0 · ×3,12 |
+| NQZ26 phiên 2026-11-11 (nới bị chặn, hộp hẹp hơn đích) | 73,201 | 15 | 878 | 2 | 28345,50 – 28378,50 · 28366,75 · 0,106 · 4,9 · ×2,02 |
+| NQZ26 phiên 2026-10-08 (hai hộp) | 72,609 | 15 | 871 | 2 | 31220,50 – 31253,25 · 31246,75 · 0,171 · 7,9 · ×4,77 ; 30921,75 – 30954,50 · 30933,50 · 0,115 · 5,3 · ×3,47 |
+| NQZ26 tuần 2026-10-11 → 10-16 (bốn hộp) | 70,454 | 14 | 845 | 4 | 30755,00 – 30786,75 ; 30140,50 – 30176,75 ; 29806,50 – 29843,00 ; 29375,50 – 29403,75 |
+| NQZ26 tuần 2026-11-08 → 11-13 | 102,667 | 21 | 1232 | 3 | 28340,00 – 28386,25 · 28354,75 · 0,065 · 14,9 · ×2,01 |
+| GCZ26 phiên 2026-10-29 | 11,430 | 6 | 343 | 2 | 4034,5 – 4040,6 · 4037,6 · 0,307 · 14,1 · ×3,87 (không đổi so với mục 10) |
+| GCZ26 phiên 2026-11-05 | 15,363 | 8 | 461 | 2 | 4131,2 – 4138,2 · 4134,3 · 0,201 · 9,2 · ×2,34 (mục 10: hai hộp) |
+| GCZ26 phiên 2026-11-03 | 10,241 | 5 | 307 | 2 | không có |
+| GCZ26 phiên 2026-10-28 | 9,496 | 5 | 285 | 2 | 4058,7 – 4063,0 · 4060,3 · 0,179 · 8,2 · ×2,52 (mục 10 lấy thềm 4051,3 – 4055,0) |
+| GCZ26 phiên 2026-11-02 (hai hộp) | 10,678 | 5 | 320 | 2 | 3966,5 – 3971,4 · 3969,5 · 0,142 ; 3906,6 – 3911,5 · 3909,5 · 0,147 |
+| GCZ26 tuần 2026-10-25 → 10-30 | 10,370 | 5 | 311 | 3 | 4030,2 – 4040,3 · 4037,5 · 0,155 · 35,6 · ×1,79 (qua nhờ ≥ 8 %, không nổi bật) |
+| GCZ26 tuần 2026-08-16 → 08-21 (ba hộp) | 12,286 | 6 | 369 | 4 | 4542,8 – 4548,4 ; 4447,7 – 4453,3 ; 4637,4 – 4642,9 |
+| GCZ26 tuần 2026-08-09 → 08-14 | 11,931 | 6 | 358 | 2 | không có |
+
+**b. Ca dựng tay** (số kỳ vọng lấy bằng cách chạy `hvn_cum2.clusters` trên đúng dãy dựng tay rồi chép vào test). Các ca của 10.5 b viết lại theo luật mới, thêm:
+- Lõi hẹp, hai sườn thoải ⇒ hộp nới đúng tới `HvnWidth × up`, phía dày hơn được lấy trước; hoà thì lấy phía giá thấp.
+- Sườn tụt dưới 50 % đỉnh trước khi đủ rộng ⇒ nới dừng ở đó, hộp hẹp hơn đích.
+- Bướu bên cạnh cách một đáy: nới dừng trước khi leo quá đáy + 5 % đỉnh.
+- Hai bướu cách nhau dưới 3 up ⇒ chỉ bướu cao thành hộp; cách nhau trên 3 up ⇒ hai hộp.
+- Bướu nhỏ (cao 30 % đỉnh lớn nhất) nằm xa, xung quanh mỏng, chứa ≥ 4,5 nến ⇒ thành hộp (nhánh nổi bật); cùng bướu đó đặt giữa vùng dày ⇒ không.
+- Hộp ≥ `massMin` nhưng không nổi bật ⇒ vẫn nhận (nhánh lớn).
+- Profile rộng 13 up ⇒ tối đa 2 hộp; 19 up ⇒ 3; 30 up ⇒ 4.
+- `HvnBoxes`: hộp cách giá 7,9 U được vẽ, 8,1 U không; ba hộp cùng phía ⇒ giữ hai hộp gần; hộp ngày trùng hộp tuần ⇒ một hộp nhãn `HVN ngày + tuần`.
+
+**c. Cả bộ máy — `fixture/expected_cum2.json`** thay `expected_cum.json` (cùng `m30_bars.csv`, `m30_levels.csv.gz`; 689 ca; 357 điểm va đập không đổi). Thêm trường `hvn_boxes[{name, lo, hi, peak, mass, label}]` mỗi ca = kết quả `HvnBoxes` với giá = `now`. Trong 689 ca: 232 ca có vùng vàng được vẽ (bản mục 10: 128), 393 ca có vùng dính HVN, trung bình 2,49 hộp HVN được vẽ (nhiều nhất 5).
+
+Năm ca ghi số (thay bảng ở 10.5 c):
+
+| Ca | j · giờ UTC · giá | Vùng được vẽ | Hộp HVN được vẽ |
+|---|---|---|---|
+| A | 1342 · 2026-10-30 02:00 · 4015,3 | `4020,6–4024,7` đỏ `Kháng cự · 4 lần · HVN ngày`; `4026,4–4028,6` đỏ `Kháng cự · 3 lần · HVN ngày + VAL hôm qua + VWAP hôm qua −1σ`; `4038,8–4042,0` vàng `★ Kháng cự rất mạnh · 3 lần · HVN tuần + HVN ngày + VAL tuần trước + VWAP hôm qua` | 4007,6–4012,6 ; 4021,8–4025,9 ; 4028,5–4032,7 (đều HVN ngày) |
+| B | 1042 · 2026-10-21 13:00 · 4155,3 | `4145,0–4148,3` xanh `Hỗ trợ · 3 lần · VWAP hôm qua`; `4158,4–4162,2` đỏ `Kháng cự · 3 lần · VAL tuần trước + VWAP hôm qua +1σ`; `4163,9–4168,1` đỏ `Kháng cự · 4 lần · HVN ngày + VAL tuần trước`; `4174,3–4177,7` vàng `★ Kháng cự rất mạnh · 5 lần · HVN tuần + HVN ngày + VWAP tuần trước` | 4113,9–4118,4 `HVN ngày + tuần` ; 4165,8–4172,0 ; 4173,6–4177,9 |
+| C | 935 · 2026-10-19 05:30 · 4204,8 | `4174,8–4178,6` vàng `★ Hỗ trợ rất mạnh · 6 lần · HVN tuần + HVN ngày + VWAP tuần trước`; `4192,0–4194,0` xanh `Hỗ trợ · 3 lần · HVN ngày + VWAP hôm qua`; `4197,2–4200,5` xanh `Hỗ trợ · 3 lần · HVN ngày`; `4206,7–4209,6` đỏ `Kháng cự · 4 lần · HVN ngày + VWAP tuần trước +1σ` | 4177,7–4182,2 `HVN tuần` ; 4192,6–4196,4 ; 4207,3–4211,4 |
+| D | 1502 · 2026-11-04 14:00 · 4043,6 | `4059,4–4062,8` đỏ `Kháng cự · 3 lần · HVN ngày` | 3966,5–3971,4 ; 4030,2–4040,3 `HVN ngày + tuần` ; 4058,7–4063,0 |
+| E | 1238 · 2026-10-27 19:00 · 4073,9 | `4032,3–4036,3` xanh `Hỗ trợ · 5 lần · HVN ngày + VWAP hôm qua +1σ`; `4042,4–4046,3` xanh `Hỗ trợ · 4 lần · VAL tuần trước` | 4007,6–4012,6 ; 4028,5–4032,7 ; 4103,5–4108,8 ; 4140,6–4145,2 `HVN ngày + tuần` |
+
+**d. NQZ26 — `fixture/nq_expected2.json`** thay `nq_expected.json` (cùng `nq_m30_bars.csv`, `nq_m30_levels.csv.gz`; `splice_jump = 0` — bộ chặn chỗ nối **tắt**, đúng như indicator chạy trên NQZ26; bản cũ để 50 điểm nên mất lịch sử trước 23/11). 13 ca: nến đóng giờ chẵn ngày 2026-11-24 và nến áp chót. Ca cuối (`2026-11-24 11:30`, giá 26.442,75, U 143,467):
+- mức HVN: ngày 26801,50–26876,50 · **25538,50–25609,75** · 27664,75–27750,50 · 27143,00–27206,25 · 26946,25–27002,00; tuần trước 27239,25–27299,00 · **25544,25–25604,00**; tất cả đủ "rời xa";
+- vùng được vẽ: `26909,00–26959,00` đỏ `Kháng cự · 5 lần · HVN ngày + VAH hôm qua`;
+- hộp HVN được vẽ: `25538,50–25609,75` nhãn `HVN ngày + tuần` (cách giá 5,81 U — với bán kính 4 U cũ sẽ không vẽ) ; `26801,50–26876,50` ; `26946,25–27002,00`.
+
+**e. Kiểm tay trên Quantower:** chart NQZ26 ⇒ hộp `HVN ngày + tuần` 25538,50 – 25609,75 và hộp `HVN ngày` 26801,50 – 26876,50. Chart GCZ26 phiên 2026-10-29 ⇒ 4034,5 – 4040,6.
+
+Sinh lại: `python hvn_cum2_fixture.py` (cần `prep1.py gc`, `prep1.py nq`). Sau khi C# PASS: xoá `hvn_cum_cases.json`, `expected_cum.json`, `nq_expected.json` và test đọc chúng.
+
+### 13.6 Việc của Opus
+
+1. `StrongZoneParams`: hằng 13.1, xoá `HvnSecond`. `SzHvnBox` thêm `CoreLo`, `CoreHi`.
+2. `HvnClusters`: thêm `nBars`, viết lại vòng lặp theo 13.2; cả hai overload; `AddHvn` truyền `nBars`.
+3. `HvnBoxes`: bán kính riêng, trần mỗi phía, nhãn gộp (13.4). Nhãn trên chart: `HVN ngày + tuần · 11 % khối lượng` (số % của hộp được giữ).
+4. Test 13.5 a–d; test cũ không liên quan HVN phải PASS không sửa kỳ vọng.
+5. Build `./build-tpo.sh zones`, kiểm tay 13.5 e trên 4 khung M1/M5/M15/M30.
+
+### 13.7 Cần người dùng chốt (đều đã đo, xem HVN-CUM-V2.md)
+
+1. **Hộp đổi chỗ ở một phần số phiên** so với bản đang chạy: trong các phiên bản cũ có hộp, NQ 7/36 phiên và GC 13/45 phiên hộp chuyển sang chỗ khác hoặc mất; thêm NQ 13 phiên, GC 20 phiên trước không có hộp nay có. Lý do chính: mỗi vùng ± 3 up giờ chỉ lấy đỉnh cao nhất, nên hộp "thứ hai" và hộp nằm ở thềm dưới một đỉnh nhọn không còn. Xem ảnh lưới trước/sau.
+2. **Vùng vàng trên GC tăng từ 15 % lên 23 % thời gian** (NQ giảm 19 % → 15 %), vì profile tuần giờ có nhiều hộp hơn và một cụm thường được đếm hai lần (HVN ngày + HVN tuần). Phương án đã đo: coi HVN ngày và HVN tuần là **một** nhóm khi đếm "≥ 3 nhóm" ⇒ vàng còn GC 10,5 %, NQ 6,8 %. Đây là đổi luật vàng gốc nên **chưa đưa vào spec**; fixture sinh theo luật hiện tại.
+3. **Đáy/đỉnh tuần làm mức hợp lưu**: mở rộng so với yêu cầu gốc, đã đo thử, mẫu quá nhỏ (GC 38 lệnh, NQ 20 lệnh) ⇒ **chưa đưa vào spec**.

@@ -30,7 +30,7 @@ static partial class Tests
     static string FxDir() => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
         "../../../../research/vung_manh_2026-11-25/fixture"));
 
-    static Fx LoadFixture(string pre = "", string exp = "expected_cum.json", double tick = 0.1)
+    static Fx LoadFixture(string pre = "", string exp = "expected_cum2.json", double tick = 0.1)
     {
         string dir = FxDir();
         if (!File.Exists(Path.Combine(dir, pre + "m30_bars.csv"))) return null;
@@ -55,7 +55,7 @@ static partial class Tests
                 f.Lv[int.Parse(c[0], IC)].Add(new KeyValuePair<double, double>(double.Parse(c[1], IC), double.Parse(c[2], IC)));
             }
         }
-        f.Exp = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, exp)));   // GC: HVN dạng cụm (PLAN §10.5c)
+        f.Exp = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, exp)));   // GC: HVN dạng cụm v2 (PLAN §13.5c)
         return f;
     }
 
@@ -254,131 +254,200 @@ static partial class Tests
         Check(ZonePolicy.CanMerge("lvn", "lvn_week") && !ZonePolicy.CanMerge("va_edge", "lvn"), "ZonePolicy: luat gop cu khong doi");
     }
 
-    // ------------------------------------------------------------------ HVN dạng cụm — ca dựng tay (PLAN §10.5b)
-    // Số kỳ vọng chép từ hvn_cum.clusters (Python) chạy trên đúng các dãy này: tick 0,1, up = 10,0 (100 bước giá) ⇒ h = 5,
-    // bề rộng tối thiểu 20 bước giá. Dãy bắt đầu ở bước giá 40000 (giá 4000,0); số trong ngoặc là chỉ số trong dãy.
+    // ------------------------------------------------------------------ HVN dạng cụm v2 — ca dựng tay (PLAN §13.5b)
+    // Số kỳ vọng chép từ hvn_cum2.clusters (Python) chạy trên đúng các dãy này: tick 0,1, up = 10,0 (100 bước giá) ⇒ h = 5,
+    // dn = 300, bề rộng đích 45, tối thiểu 20 bước giá. Dãy bắt đầu ở bước giá 40000 (giá 4000,0); số là chỉ số trong dãy.
     static double[] Seg(params (int n, double v)[] parts) => parts.SelectMany(x => Enumerable.Repeat(x.v, x.n)).ToArray();
+    // Dốc số nguyên a → b, n điểm: a ± (|b − a| × i) div (n − 1) — y như ramp() trong ca Python.
+    static double[] Ramp(int a, int b, int n)
+        => Enumerable.Range(0, n).Select(i => (double)(a + Math.Sign(b - a == 0 ? 1 : b - a) * ((Math.Abs(b - a) * i) / (n - 1)))).ToArray();
+    static double[] Cat(params double[][] parts) => parts.SelectMany(x => x).ToArray();
 
     static void HvnClusterHandCases(StrongZoneParams p)
     {
         const double tick = 0.1, up = 10.0;
-        List<SzHvnBox> Run(double[] w, double massMin = 0.10)
-            => StrongZones.HvnClusters(Enumerable.Range(0, w.Length).Select(i => 40000L + i).ToArray(), w, tick, up, massMin, p);
-        bool Box(SzHvnBox b, int lo, int hi, int peak, double mass)
-            => Near(b.Lo, (40000 + lo) / 10.0, 1e-9) && Near(b.Hi, (40000 + hi) / 10.0, 1e-9) && Near(b.Peak, (40000 + peak) / 10.0, 1e-9) && Near(b.Mass, mass, 1e-12);
-        string Show(List<SzHvnBox> r) => string.Join(" ; ", r.Select(b => $"{b.Lo:0.0}-{b.Hi:0.0} pk {b.Peak:0.0} m {b.Mass:R}"));
+        List<SzHvnBox> Run(double[] w, int nBars = 10, double massMin = 0.12)
+            => StrongZones.HvnClusters(Enumerable.Range(0, w.Length).Select(i => 40000L + i).ToArray(), w, tick, up, nBars, massMin, p);
+        bool Box(SzHvnBox b, int lo, int hi, int peak, int clo, int chi, double mass)
+            => Near(b.Lo, (40000 + lo) / 10.0, 1e-9) && Near(b.Hi, (40000 + hi) / 10.0, 1e-9) && Near(b.Peak, (40000 + peak) / 10.0, 1e-9)
+               && Near(b.CoreLo, (40000 + clo) / 10.0, 1e-9) && Near(b.CoreHi, (40000 + chi) / 10.0, 1e-9) && Near(b.Mass, mass, 1e-12);
+        string Show(List<SzHvnBox> r) => string.Join(" ; ", r.Select(b => $"{b.Lo:0.0}-{b.Hi:0.0} pk {b.Peak:0.0} loi {b.CoreLo:0.0}-{b.CoreHi:0.0} m {b.Mass:R} lon {b.Lon} noi {b.Noi}"));
+        double[] Ones(int n) => Enumerable.Repeat(1.0, n).ToArray();
+        double[] Hump(double h, int width = 30) => Enumerable.Repeat(h, width).ToArray();
 
-        Check(StrongZones.HvnHalfWindow(up, tick, p) == 5, "HVN cum: h = floor(0,05 x 100 + 0,5) = 5");
+        Check(StrongZones.HvnHalfWindow(up, tick, p) == 5 && StrongZones.HvnAroundTicks(up, tick, p) == 300,
+              "HVN cum v2: h = floor(0,05 x 100 + 0,5) = 5, vung xung quanh dn = 300");
         var r = Run(Seg((50, 1), (50, 50), (50, 1)));
-        Check(r.Count == 1 && Box(r[0], 53, 96, 55, 0.8461538461538461), "HVN cum: than phang giua hai duoi mong -> 1 hop om than", Show(r));
-        var spike = Enumerable.Repeat(1.0, 150).ToArray(); spike[75] = 100;
+        Check(r.Count == 1 && Box(r[0], 52, 97, 55, 53, 96, 0.8846153846153846), "HVN cum v2: than phang giua hai duoi mong -> 1 hop om than", Show(r));
+        var spike = Ones(150); spike[75] = 100;
         r = Run(spike);
-        Check(r.Count == 0, "HVN cum: dinh nhon (1 muc x100) -> than hep hon 0,20 up -> khong co hop", Show(r));
-        r = Run(Seg((40, 1), (30, 100), (15, 75), (30, 85), (40, 1)));
-        Check(r.Count == 1 && Box(r[0], 43, 72, 45, 0.43301258327165065), "HVN cum: vai (100 / day 75 / 85) -> 1 hop, buou thap khong thanh hop rieng", Show(r));
-        r = Run(Seg((40, 1), (30, 100), (30, 20), (30, 70), (40, 1)));
-        Check(r.Count == 2 && Box(r[0], 43, 66, 45, 0.41522491349480967) && Box(r[1], 102, 126, 105, 0.3027681660899654),
-              "HVN cum: hai buou 100 / 70, day 20 -> 2 hop, buou cao truoc", Show(r));
-        r = Run(Seg((40, 1), (30, 100), (30, 20), (30, 45), (40, 1)));
-        Check(r.Count == 1 && Box(r[0], 43, 66, 45, 0.47713717693836977), "HVN cum: buou thu hai 45 (< 50 % cua 100) -> 1 hop", Show(r));
-        r = Run(Seg((40, 1), (30, 60), (30, 10), (30, 60), (40, 1)));
-        Check(r.Count == 2 && Box(r[0], 43, 66, 45, 0.36180904522613067) && Box(r[1], 103, 126, 105, 0.36180904522613067),
-              "HVN cum: hoa (hai buou y het) -> buou gia thap tim truoc", Show(r));
-        // tỉ trọng: thân 30 × 10 giữa hai đuôi 1/ô; hộp 1053–1076 chứa 240 ⇒ tổng 2400 = đúng 10 % ⇒ nhận; thêm 1 ⇒ dưới 10 % ⇒ loại
-        r = Run(Seg((1050, 1), (30, 10), (1050, 1)));
-        Check(r.Count == 1 && Box(r[0], 1053, 1076, 1055, 0.1), "HVN cum: hop chua dung 10 % khoi luong -> nhan", Show(r));
-        r = Run(Seg((1050, 1), (30, 10), (1051, 1)));
-        Check(r.Count == 0, "HVN cum: hop chua duoi 10 % -> loai", Show(r));
+        Check(r.Count == 0, "HVN cum v2: dinh nhon (1 muc x100) -> noi bi chan o san 50 %, hep hon 0,20 up -> khong co hop", Show(r));
+        // lõi hẹp, hai sườn thoải: nới đúng tới 45 bước giá; sườn trái dày hơn được lấy trước
+        r = Run(Cat(Ones(40), Ramp(20, 100, 61), Ramp(100, 10, 61).Skip(1).ToArray(), Ones(40)));
+        Check(r.Count == 1 && Box(r[0], 76, 121, 100, 83, 115, 0.5509298998569385) && r[0].Hi - r[0].Lo > 4.5 - 1e-9 && r[0].Hi - r[0].Lo < 4.5 + 1e-9,
+              "HVN cum v2: loi hep, suon thoai -> noi dung 0,45 up, phia day hon (trai) lay truoc", Show(r));
+        var up61 = Ramp(20, 100, 61);
+        r = Run(Cat(Ones(40), up61, up61.Reverse().Skip(1).ToArray(), Ones(40)));
+        Check(r.Count == 1 && Box(r[0], 77, 122, 100, 83, 117, 0.534297520661157), "HVN cum v2: hai suon doi xung (hoa) -> lay phia gia thap truoc", Show(r));
+        // sườn tụt dưới 50 % đỉnh trước khi đủ rộng ⇒ dừng, hộp hẹp hơn đích nhưng ≥ 0,20 up
+        r = Run(Seg((40, 1), (10, 30), (28, 100), (10, 30), (40, 1)));
+        Check(r.Count == 1 && Box(r[0], 48, 79, 55, 52, 75, 0.8390804597701149) && r[0].Hi - r[0].Lo < 4.5,
+              "HVN cum v2: suon tut duoi 50 % dinh -> dung noi, hop hep hon dich", Show(r));
+        // bướu bên cạnh qua một đáy: nới dừng trước khi leo quá đáy + 5 % đỉnh
+        r = Run(Cat(Ones(40), Ramp(90, 60, 20), Ramp(60, 100, 6).Skip(1).ToArray(), Hump(100, 10), Ones(40)));
+        Check(r.Count == 1 && Box(r[0], 52, 74, 69, 62, 71, 0.647391159853772), "HVN cum v2: buou ben canh -> noi dung o day, khong leo sang", Show(r));
+        // hai bướu cách nhau dưới / trên 3 up
+        r = Run(Cat(Ones(40), Hump(100), Enumerable.Repeat(5.0, 200).ToArray(), Hump(70), Ones(40)));
+        Check(r.Count == 1 && Box(r[0], 40, 69, 45, 43, 66, 0.4854368932038835), "HVN cum v2: hai buou cach nhau < 3 up -> chi buou cao", Show(r));
+        r = Run(Cat(Ones(40), Hump(100), Enumerable.Repeat(5.0, 320).ToArray(), Hump(70), Ones(40)));
+        Check(r.Count == 2 && Box(r[0], 40, 69, 45, 43, 66, 0.4424778761061947) && Box(r[1], 390, 419, 395, 393, 416, 0.30973451327433627)
+              && r.All(b => b.Lon && !b.Noi), "HVN cum v2: hai buou cach nhau > 3 up -> 2 hop, buou cao truoc", Show(r));
+        // bướu nhỏ (30 % đỉnh lớn nhất) nằm xa, xung quanh mỏng ⇒ thành hộp nhờ nổi bật; đặt giữa vùng dày ⇒ không
+        r = Run(Cat(Ones(40), Hump(100, 60), Ones(400), Hump(30), Ones(400)), nBars: 40);
+        Check(r.Count == 2 && Box(r[0], 43, 96, 45, 43, 96, 0.6976744186046512) && Box(r[1], 500, 529, 505, 503, 526, 0.11627906976744186)
+              && !r[1].Lon && r[1].Noi && r[1].Bars >= 4.5, "HVN cum v2: buou nho xa, xung quanh mong, >= 4,5 nen -> hop (nhanh noi bat)", Show(r));
+        r = Run(Cat(Ones(40), Hump(100, 60), Ones(400), Enumerable.Repeat(20.0, 150).ToArray(), Hump(30), Enumerable.Repeat(20.0, 150).ToArray(), Ones(100)), nBars: 40);
+        Check(r.Count == 1 && Box(r[0], 43, 96, 45, 43, 96, 0.4017857142857143), "HVN cum v2: cung buou do giua vung day -> khong", Show(r));
+        // đủ massMin nhưng không nổi bật ⇒ vẫn nhận (nhánh lớn)
+        r = Run(Seg((200, 10), (40, 14), (200, 10)), nBars: 40, massMin: 0.08);
+        Check(r.Count == 1 && Box(r[0], 197, 242, 205, 198, 241, 0.13596491228070176) && r[0].Lon && !r[0].Noi,
+              "HVN cum v2: hop >= massMin nhung khong noi bat -> van nhan", Show(r));
+        // số hộp tối đa theo biên độ profile
+        Check(StrongZones.HvnMaxBoxes(1300, 100, p) == 2 && StrongZones.HvnMaxBoxes(1900, 100, p) == 3 && StrongZones.HvnMaxBoxes(3000, 100, p) == 4
+              && StrongZones.HvnMaxBoxes(10, 100, p) == 2 && StrongZones.HvnMaxBoxes(100000, 100, p) == 4,
+              "HVN cum v2: so hop toi da: 13 up -> 2, 19 up -> 3, 30 up -> 4 (tran 4, san 2)");
+        double[] Humps(int k, int gap, int tail) { var x = new List<double>(); for (int i = 0; i < k; i++) { x.AddRange(Ones(gap)); x.AddRange(Hump(100 - 5 * i, 40)); } x.AddRange(Ones(tail)); return x.ToArray(); }
+        r = Run(Humps(3, 350, 50), nBars: 200, massMin: 0.08);
+        Check(r.Count == 2 && Near(r[0].Lo, 4035.0, 1e-9) && Near(r[1].Lo, 4074.0, 1e-9), "HVN cum v2: 3 buou, profile 12 up -> 2 hop", Show(r));
+        r = Run(Humps(5, 300, 300), nBars: 200, massMin: 0.08);
+        Check(r.Count == 3 && Near(r[0].Lo, 4030.0, 1e-9) && Near(r[1].Lo, 4064.0, 1e-9) && Near(r[2].Lo, 4098.0, 1e-9), "HVN cum v2: 5 buou, profile 20 up -> 3 hop", Show(r));
+        r = Run(Humps(6, 400, 0), nBars: 200, massMin: 0.08);
+        Check(r.Count == 4 && Near(r[0].Lo, 4040.0, 1e-9) && Near(r[3].Lo, 4172.0, 1e-9) && Near(r[3].Mass, 0.1452991452991453, 1e-12),
+              "HVN cum v2: 6 buou, profile 26 up -> 4 hop", Show(r));
         // bản (giá, khối lượng): cộng dồn theo bước giá, thứ tự bất kỳ
         var lv = new List<KeyValuePair<double, double>>();
         var wv = Seg((50, 1), (50, 50), (50, 1));
         for (int i = wv.Length - 1; i >= 0; i--) { lv.Add(new KeyValuePair<double, double>((40000 + i) / 10.0, wv[i] - 0.5)); lv.Add(new KeyValuePair<double, double>((40000 + i) / 10.0 + 1e-9, 0.5)); }
-        r = StrongZones.HvnClusters(lv, tick, up, 0.10, p);
-        Check(r.Count == 1 && Box(r[0], 53, 96, 55, 0.8461538461538461), "HVN cum: ban (gia, khoi luong) chua sap + trung muc -> nhu ban so nguyen", Show(r));
-        Check(StrongZones.HvnClusters(new long[0], new double[0], tick, up, 0.1, p).Count == 0
-              && StrongZones.HvnClusters(new long[] { 1, 2 }, new double[] { 5, 5 }, tick, up, 0.1, p).Count == 0
-              && StrongZones.HvnClusters(new long[] { 1, 2, 3 }, new double[] { 0, 0, 0 }, tick, up, 0.1, p).Count == 0,
-              "HVN cum: rong / duoi 3 buoc gia / tong 0 -> khong co hop");
+        r = StrongZones.HvnClusters(lv, tick, up, 10, 0.12, p);
+        Check(r.Count == 1 && Box(r[0], 52, 97, 55, 53, 96, 0.8846153846153846), "HVN cum v2: ban (gia, khoi luong) chua sap + trung muc -> nhu ban so nguyen", Show(r));
+        Check(StrongZones.HvnClusters(new long[0], new double[0], tick, up, 10, 0.12, p).Count == 0
+              && StrongZones.HvnClusters(new long[] { 1, 2 }, new double[] { 5, 5 }, tick, up, 10, 0.12, p).Count == 0
+              && StrongZones.HvnClusters(new long[] { 1, 2, 3 }, new double[] { 0, 0, 0 }, tick, up, 10, 0.12, p).Count == 0
+              && StrongZones.HvnClusters(new long[] { 1, 2, 3 }, new double[] { 1, 2, 1 }, tick, 0, 10, 0.12, p).Count == 0,
+              "HVN cum v2: rong / duoi 3 buoc gia / tong 0 / up 0 -> khong co hop");
     }
 
-    // Lớp hộp HVN hiển thị (PLAN §11): chỉ hộp đã "rời xa", trong bán kính 4 U, chồng nhau > 50 % ⇒ giữ hộp mới hơn.
+    // Lớp hộp HVN hiển thị (PLAN §11, v2 §13.4): đã "rời xa", trong bán kính 8 U, chồng > 50 % ⇒ giữ hộp mới hơn
+    // (khác loại ⇒ nhãn "HVN ngày + tuần"), mỗi phía giá tối đa 2 hộp gần nhất, hộp chứa giá luôn giữ.
     static void HvnBoxDisplayCases(StrongZoneParams p)
     {
         int n = 30;
-        var r = new SzResult { J = 20, U = 1.0, Highs = Enumerable.Repeat(100.5, n).ToArray(), Lows = Enumerable.Repeat(99.5, n).ToArray() };
-        r.Highs[15] = 110;   // sau nến 10 giá từng lên 110 ⇒ hộp nào End ≤ 14 có mép trên ≤ 108 đều "đã rời xa"
-        SzLevel H(string nm, double lo, double hi, int end) => new SzLevel { Name = nm, Lo = lo, Hi = hi, Peak = (lo + hi) / 2, IsHvn = true, End = end, Mass = 0.2 };
+        SzResult R() => new SzResult { J = 20, U = 1.0, Highs = Enumerable.Repeat(100.5, n).ToArray(), Lows = Enumerable.Repeat(99.5, n).ToArray() };
+        SzLevel H(string nm, double lo, double hi, int end, double mass = 0.2) => new SzLevel { Name = nm, Lo = lo, Hi = hi, Peak = (lo + hi) / 2, IsHvn = true, End = end, Mass = mass };
+        string Show(List<SzHvnShown> b) => string.Join(" ; ", b.Select(x => $"{x.Lo}-{x.Hi} {x.Label} d{x.Dist}"));
+        Check(p.HvnRadius == 8.0 && p.HvnMaxSide == 2 && p.Radius == 4.0, "hop HVN: ban kinh rieng 8 U (vung manh van 4 U), toi da 2 hop moi phia");
+
+        var r = R();
+        r.Highs[15] = 120; r.Lows[16] = 80;   // sau nến 10 giá từng lên 120 và xuống 80 ⇒ hộp End ≤ 14 đều "đã rời xa"
         r.Levels.Add(new SzLevel { Name = "vwap_d", Lo = 100, Hi = 100 });
-        r.Levels.Add(H("hvn_d", 99, 101, 10));      // mới nhất
-        r.Levels.Add(H("hvn_d", 99.5, 101.5, 8));   // chồng 75 % hộp nhỏ ⇒ bỏ
-        r.Levels.Add(H("hvn_w", 100.8, 102.8, 8));  // giao 0,2 / 2,0 = 10 % ⇒ giữ
-        r.Levels.Add(H("hvn_d", 95, 96, 20));       // End = j ⇒ chưa đóng/đủ điều kiện ⇒ không vẽ
-        r.Levels.Add(H("hvn_d", 106, 107, 5));      // mép dưới cách giá 100 đúng 6 U > 4 U ⇒ không vẽ
-        r.Levels.Add(H("hvn_w", 103, 104, 5));      // cách 3 U ⇒ vẽ
+        r.Levels.Add(H("hvn_d", 99, 101, 10));      // chứa giá
+        r.Levels.Add(H("hvn_d", 99.5, 101.5, 8));   // chồng 75 % hộp nhỏ, cùng loại ⇒ bỏ, nhãn giữ "HVN ngày"
+        r.Levels.Add(H("hvn_d", 95, 96, 20));       // End = j ⇒ chưa đủ điều kiện ⇒ không vẽ
+        r.Levels.Add(H("hvn_d", 107.9, 108.5, 5));  // mép dưới cách giá 7,9 U ⇒ vẽ
+        r.Levels.Add(H("hvn_w", 91.9, 92.5, 5));    // mép trên cách 7,5 U ⇒ vẽ
+        r.Levels.Add(H("hvn_d", 108.1, 109, 4));    // cách 8,1 U ⇒ không
+        r.Levels.Add(H("hvn_w", 91, 91.85, 6));     // cách 8,15 U ⇒ không
         var b = StrongZones.HvnBoxes(r, 100, p);
-        Check(b.Count == 3 && Near(b[0].Lo, 99, 1e-12) && b[0].Label == "HVN ngày" && Near(b[1].Lo, 100.8, 1e-12) && b[1].Label == "HVN tuần"
-              && Near(b[2].Lo, 103, 1e-12) && Near(b[2].Dist, 3, 1e-12) && b[0].Dist == 0,
-              "hop HVN: loc da roi xa + ban kinh 4U + chong > 50 % giu hop moi; nhan 'HVN ngay'/'HVN tuan'",
-              string.Join(" ; ", b.Select(x => $"{x.Lo}-{x.Hi} {x.Label} d{x.Dist}")));
-        // cùng End: hộp ngày trước hộp tuần
-        var r2 = new SzResult { J = 20, U = 1.0, Highs = r.Highs, Lows = r.Lows };
-        r2.Levels.Add(H("hvn_w", 99, 101, 10)); r2.Levels.Add(H("hvn_d", 99.2, 101.2, 10));
+        Check(b.Count == 3 && Near(b[0].Lo, 91.9, 1e-12) && b[0].Label == "HVN tuần" && Near(b[0].Dist, 7.5, 1e-12)
+              && Near(b[1].Lo, 99, 1e-12) && b[1].Label == "HVN ngày" && b[1].Dist == 0
+              && Near(b[2].Lo, 107.9, 1e-12) && Near(b[2].Dist, 7.9, 1e-9),
+              "hop HVN: ban kinh 8 U (7,9 U ve, 8,1 U khong); chong cung loai giu hop moi, nhan khong doi", Show(b));
+        // ba hộp cùng phía (trên giá) ⇒ giữ hai hộp gần; hộp chứa giá không tính vào trần
+        var r2 = R(); r2.Highs[15] = 120;
+        r2.Levels.Add(H("hvn_d", 99, 101, 10));
+        r2.Levels.Add(H("hvn_d", 102, 103, 9)); r2.Levels.Add(H("hvn_d", 104, 105, 8)); r2.Levels.Add(H("hvn_w", 106, 107, 7));
         b = StrongZones.HvnBoxes(r2, 100, p);
-        Check(b.Count == 1 && b[0].Name == "hvn_d", "hop HVN: cung End, chong nhau -> giu hop ngay");
+        Check(b.Count == 3 && b.Select(x => x.Lo).SequenceEqual(new[] { 99.0, 102.0, 104.0 }), "hop HVN: 3 hop phia tren -> giu 2 hop gan nhat (+ hop chua gia)", Show(b));
+        var r2b = R(); r2b.Lows[16] = 80;
+        r2b.Levels.Add(H("hvn_d", 97, 98, 9)); r2b.Levels.Add(H("hvn_d", 95, 96, 8)); r2b.Levels.Add(H("hvn_d", 93, 94, 7));
+        b = StrongZones.HvnBoxes(r2b, 100, p);
+        Check(b.Count == 2 && b.Select(x => x.Lo).SequenceEqual(new[] { 95.0, 97.0 }), "hop HVN: 3 hop phia duoi -> giu 2 hop gan nhat", Show(b));
+        // hộp ngày trùng hộp tuần ⇒ một hộp, nhãn "HVN ngày + tuần", số % của hộp được giữ
+        var r3 = R(); r3.Highs[15] = 120;
+        r3.Levels.Add(H("hvn_w", 102.1, 103.9, 9, 0.026)); r3.Levels.Add(H("hvn_d", 102, 104, 10, 0.111));
+        b = StrongZones.HvnBoxes(r3, 100, p);
+        Check(b.Count == 1 && b[0].Name == "hvn_d" && b[0].Label == "HVN ngày + tuần" && Near(b[0].Lo, 102, 1e-12) && Near(b[0].Mass, 0.111, 1e-12),
+              "hop HVN: hop ngay trung hop tuan -> 1 hop nhan 'HVN ngay + tuan'", Show(b));
+        Check(StrongZones.HvnBoxText(b[0]) == "HVN ngày + tuần · 11 % khối lượng", "hop HVN: chu tren chart 'HVN ngay + tuan · 11 % khoi luong'", StrongZones.HvnBoxText(b[0]));
+        // cùng End, chồng nhau ⇒ giữ hộp ngày (và gộp nhãn)
+        var r4 = R(); r4.Highs[15] = 120;
+        r4.Levels.Add(H("hvn_w", 99, 101, 10)); r4.Levels.Add(H("hvn_d", 99.2, 101.2, 10));
+        b = StrongZones.HvnBoxes(r4, 100, p);
+        Check(b.Count == 1 && b[0].Name == "hvn_d" && b[0].Label == "HVN ngày + tuần", "hop HVN: cung End, chong nhau -> giu hop ngay, nhan gop", Show(b));
         Check(StrongZones.HvnBoxes(new SzResult(), 100, p).Count == 0 && StrongZones.HvnBoxes(r, double.NaN, p).Count == 0, "hop HVN: ket qua rong / gia NaN -> khong ve");
         var line = StrongZones.HvnSummaryLine(StrongZones.HvnBoxes(r, 100, p), x => x.ToString("0.0", IC));
-        Check(line == "Hộp HVN (cụm khối lượng, chưa kiểm định): 99.0–101.0 (HVN ngày) · 100.8–102.8 (HVN tuần) · 103.0–104.0 (HVN tuần)",
+        Check(line == "Hộp HVN (cụm khối lượng, chưa kiểm định): 99.0–101.0 (HVN ngày) · 91.9–92.5 (HVN tuần) · 107.9–108.5 (HVN ngày)",
               "hop HVN: dong Telegram toi da 3 hop, gan gia truoc", line);
     }
 
-    // ------------------------------------------------------------------ HVN dạng cụm — 11 profile thật (PLAN §10.5a)
+    // ------------------------------------------------------------------ HVN dạng cụm v2 — 19 profile thật (PLAN §13.5a)
     static void HvnClusterFixture()
     {
-        Console.WriteLine("\n[3b] HVN dang cum - C# = Python tren 11 profile that (hvn_cum_cases.json)");
-        string path = Path.Combine(FxDir(), "hvn_cum_cases.json");
-        if (!File.Exists(path)) { Check(false, "doc hvn_cum_cases.json", path); return; }
+        Console.WriteLine("\n[3b] HVN dang cum v2 - C# = Python tren 19 profile that (hvn_cum2_cases.json)");
+        string path = Path.Combine(FxDir(), "hvn_cum2_cases.json");
+        if (!File.Exists(path)) { Check(false, "doc hvn_cum2_cases.json", path); return; }
         var p = new StrongZoneParams();
         using var doc = JsonDocument.Parse(File.ReadAllText(path));
+        var pr = doc.RootElement.GetProperty("params");
+        double P(string k) => pr.GetProperty(k).GetDouble();
+        Check(Near(P("SM"), p.HvnSmooth, 1e-12) && Near(P("X"), p.HvnBody, 1e-12) && Near(P("WT"), p.HvnWidth, 1e-12) && Near(P("XMIN"), p.HvnWidenFloor, 1e-12)
+              && Near(P("VD"), p.HvnWidenClimb, 1e-12) && Near(P("DOM"), p.HvnAround, 1e-12) && Near(P("CK"), p.HvnContrast, 1e-12) && Near(P("B"), p.HvnBars, 1e-12)
+              && Near(P("Y"), p.HvnMassDay, 1e-12) && Near(P("Y_W"), p.HvnMassWeek, 1e-12) && Near(P("WMIN"), p.HvnMinWidth, 1e-12)
+              && pr.GetProperty("MAXC").GetInt32() == p.HvnMaxPerProfile && Near(P("MAXC_STEP"), p.HvnMaxStep, 1e-12) && pr.GetProperty("MAXC_CAP").GetInt32() == p.HvnMaxCap
+              && Near(P("FLOOR"), p.HvnFloor, 1e-12), "thong so HVN v2 C# = Python (PLAN 13.1)");
         int nCase = 0, bad = 0, nBox = 0; double maxMass = 0, maxPx = 0;
+        var got = new Dictionary<string, List<SzHvnBox>>();
         foreach (var cs in doc.RootElement.GetProperty("cases").EnumerateArray())
         {
             nCase++;
             string ten = cs.GetProperty("ten").GetString();
-            double tick = cs.GetProperty("tick").GetDouble(), up = cs.GetProperty("up").GetDouble(), y = cs.GetProperty("Y").GetDouble();
-            bool parOk = Near(cs.GetProperty("SM").GetDouble(), p.HvnSmooth, 1e-12) && Near(cs.GetProperty("X").GetDouble(), p.HvnBody, 1e-12)
-                      && Near(cs.GetProperty("PK2").GetDouble(), p.HvnSecond, 1e-12) && Near(cs.GetProperty("WMIN").GetDouble(), p.HvnMinWidth, 1e-12)
-                      && cs.GetProperty("MAXC").GetInt32() == p.HvnMaxPerProfile && (Near(y, p.HvnMassDay, 1e-12) || Near(y, p.HvnMassWeek, 1e-12));
+            double tick = cs.GetProperty("tick").GetDouble(), up = cs.GetProperty("up").GetDouble(), y = cs.GetProperty("mass_min").GetDouble();
+            int nb = cs.GetProperty("so_nen_m30").GetInt32();
             var lv = cs.GetProperty("levels").EnumerateArray().Select(a => new KeyValuePair<double, double>(a[0].GetDouble(), a[1].GetDouble())).ToList();
-            var got = StrongZones.HvnClusters(lv, tick, up, y, p);
+            var g = StrongZones.HvnClusters(lv, tick, up, nb, y, p);
+            got[ten] = g;
             var want = cs.GetProperty("clusters").EnumerateArray().ToList();
-            int h = StrongZones.HvnHalfWindow(up, tick, p);
-            bool ok = parOk && h == cs.GetProperty("h").GetInt32() && got.Count == want.Count;
+            int h = StrongZones.HvnHalfWindow(up, tick, p), dn = StrongZones.HvnAroundTicks(up, tick, p);
+            long span = lv.Count == 0 ? 0 : (long)Math.Round(lv.Max(x => x.Key) / tick) - (long)Math.Round(lv.Min(x => x.Key) / tick);
+            int mb = StrongZones.HvnMaxBoxes(span, up / tick, p);
+            bool ok = (Near(y, p.HvnMassDay, 1e-12) || Near(y, p.HvnMassWeek, 1e-12)) && h == cs.GetProperty("h").GetInt32() && dn == cs.GetProperty("dn").GetInt32()
+                      && mb == cs.GetProperty("max_boxes").GetInt32() && g.Count == want.Count;
             for (int k = 0; k < want.Count && ok; k++)
             {
-                var e = want[k]; var g = got[k];
-                double dpx = Math.Max(Math.Abs(g.Lo - e.GetProperty("lo").GetDouble()), Math.Max(Math.Abs(g.Hi - e.GetProperty("hi").GetDouble()), Math.Abs(g.Peak - e.GetProperty("peak").GetDouble())));
-                double dm = Math.Abs(g.Mass - e.GetProperty("mass").GetDouble());
+                var e = want[k]; var b = g[k];
+                double dpx = new[] { Math.Abs(b.Lo - e.GetProperty("lo").GetDouble()), Math.Abs(b.Hi - e.GetProperty("hi").GetDouble()), Math.Abs(b.Peak - e.GetProperty("peak").GetDouble()),
+                                     Math.Abs(b.CoreLo - e.GetProperty("core_lo").GetDouble()), Math.Abs(b.CoreHi - e.GetProperty("core_hi").GetDouble()) }.Max();
+                double dm = Math.Abs(b.Mass - e.GetProperty("mass").GetDouble());
                 maxPx = Math.Max(maxPx, dpx); maxMass = Math.Max(maxMass, dm);
-                ok &= dpx < tick / 2 && dm <= 1e-6 && Near(g.Rel, e.GetProperty("rel").GetDouble(), 1e-6);
+                ok &= dpx < tick / 2 && dm <= 1e-6 && b.Lon == e.GetProperty("lon").GetBoolean() && b.Noi == e.GetProperty("noi").GetBoolean()
+                      && Math.Abs(b.Bars - e.GetProperty("bars").GetDouble()) <= 1e-4 && Math.Abs(b.Con - e.GetProperty("con").GetDouble()) <= 1e-4;
                 nBox++;
             }
             if (!ok) bad++;
             string fmt = Math.Abs(tick - 0.1) < 1e-12 ? "0.0" : "0.00";
-            Console.WriteLine($"       {ten,-28} h={h,3}  " + (got.Count == 0 ? "khong co hop" : string.Join(" ; ", got.Select(b => $"{b.Lo.ToString(fmt, IC)}-{b.Hi.ToString(fmt, IC)} pk {b.Peak.ToString(fmt, IC)} {b.Mass:0.000}")))
+            Console.WriteLine($"       {ten,-28} h={h,3} dn={dn,5} toi da {mb}  " + (g.Count == 0 ? "khong co hop" : string.Join(" ; ", g.Select(b => $"{b.Lo.ToString(fmt, IC)}-{b.Hi.ToString(fmt, IC)} pk {b.Peak.ToString(fmt, IC)} {b.Mass:0.000} {(b.Lon ? "L" : "")}{(b.Noi ? "N" : "")}")))
                               + (ok ? "" : "   <-- LECH"));
         }
-        Check(nCase == 11 && bad == 0, $"11 profile: h, so hop, lo/hi/peak (< tick/2), mass (<= 1e-6), rel", $"lech {bad}/{nCase}; {nBox} hop; sai so gia lon nhat {maxPx:E2}, mass {maxMass:E2}");
-        // ca người dùng vẽ (NQ 23/11) + ca GC 29/10 ghi số trong PLAN §10.5d
-        var all = doc.RootElement.GetProperty("cases").EnumerateArray().ToList();
-        var nq = all.First(c => c.GetProperty("ten").GetString().Contains("2026-11-23"));
-        var g1 = StrongZones.HvnClusters(nq.GetProperty("levels").EnumerateArray().Select(a => new KeyValuePair<double, double>(a[0].GetDouble(), a[1].GetDouble())),
-                                         0.25, nq.GetProperty("up").GetDouble(), 0.10, p);
-        Check(g1.Count == 1 && Near(g1[0].Lo, 26802.50, 1e-9) && Near(g1[0].Hi, 26874.75, 1e-9) && Near(g1[0].Peak, 26817.75, 1e-9) && Near(g1[0].Mass, 0.285, 5e-4),
-              "NQZ26 phien 23/11: 1 hop 26802,50-26874,75 dinh 26817,75 ti trong 28,5 %");
-        var gc = all.First(c => c.GetProperty("ten").GetString().Contains("phiên 2026-10-29"));
-        var g2 = StrongZones.HvnClusters(gc.GetProperty("levels").EnumerateArray().Select(a => new KeyValuePair<double, double>(a[0].GetDouble(), a[1].GetDouble())),
-                                         0.1, gc.GetProperty("up").GetDouble(), 0.10, p);
-        Check(g2.Count == 1 && Near(g2[0].Lo, 4034.5, 1e-9) && Near(g2[0].Hi, 4040.6, 1e-9), "GCZ26 phien 29/10: 1 hop 4034,5-4040,6");
+        Check(nCase == 19 && bad == 0, "19 profile: h, dn, so hop toi da, so hop, lo/hi/peak/core_lo/core_hi (< tick/2), mass (<= 1e-6), lon/noi, bars/con (<= 1e-4)",
+              $"lech {bad}/{nCase}; {nBox} hop; sai so gia lon nhat {maxPx:E2}, mass {maxMass:E2}");
+        // ca bắt buộc (PLAN §13.5a, ca người dùng báo sót + ca người dùng vẽ)
+        bool Has(string ten, params (double lo, double hi)[] want)
+            => got.TryGetValue(ten, out var g) && g.Count == want.Length && want.Select((w, k) => Near(g[k].Lo, w.lo, 1e-9) && Near(g[k].Hi, w.hi, 1e-9)).All(x => x);
+        string S(string ten) => got.TryGetValue(ten, out var g) ? string.Join(" ; ", g.Select(b => $"{b.Lo:0.00}-{b.Hi:0.00}")) : "khong co ca";
+        Check(Has("NQZ26 phiên 2026-11-20", (25538.50, 25609.75)), "NQZ26 phien 20/11 (ca bao sot): 1 hop 25538,50-25609,75", S("NQZ26 phiên 2026-11-20"));
+        Check(Has("NQZ26 tuần 2026-11-20", (27239.25, 27299.00), (25544.25, 25604.00)), "NQZ26 tuan 15->20/11 (ca bao sot): 27239,25-27299,00 va 25544,25-25604,00", S("NQZ26 tuần 2026-11-20"));
+        Check(Has("NQZ26 phiên 2026-11-23", (26801.50, 26876.50)), "NQZ26 phien 23/11 (ca nguoi dung ve): 1 hop 26801,50-26876,50", S("NQZ26 phiên 2026-11-23"));
+        Check(Has("GCZ26 phiên 2026-10-29", (4034.5, 4040.6)), "GCZ26 phien 29/10: 1 hop 4034,5-4040,6 (khong doi so voi v1)", S("GCZ26 phiên 2026-10-29"));
     }
 
     // ------------------------------------------------------------------ [4] C# = Python
@@ -424,6 +493,8 @@ static partial class Tests
         var firstErr = new List<string>();
         void Err(string s) { if (firstErr.Count < 12) firstErr.Add(s); }
         var byJ = new Dictionary<int, (SzResult r, List<SzZone> sh)>();
+        var boxByJ = new Dictionary<int, List<SzHvnShown>>();
+        int nBx = 0, maxBx = 0, badBx = 0;
         foreach (var cs in root.GetProperty("cases").EnumerateArray())
         {
             nCase++;
@@ -511,18 +582,36 @@ static partial class Tests
             if (sh.Any(z => z.Gold)) nGoldCase++;
             if (sh.Any(z => z.Hvn)) nHvnCase++;
             if (!shOk) badSh++;
+
+            // hộp HVN được vẽ (PLAN §13.4) — giá = now
+            var bxe = cs.GetProperty("hvn_boxes").EnumerateArray().ToList();
+            var bxc = StrongZones.HvnBoxes(r, now, p);
+            boxByJ[j] = bxc;
+            nBx += bxe.Count; maxBx = Math.Max(maxBx, bxe.Count);
+            bool bxOk = bxe.Count == bxc.Count;
+            for (int k = 0; k < bxe.Count && bxOk; k++)
+            {
+                var e = bxe[k]; var x = bxc[k];
+                bxOk &= x.Name == e.GetProperty("name").GetString() && Math.Abs(Math.Round(x.Lo, 1) - e.GetProperty("lo").GetDouble()) < 1e-9
+                        && Math.Abs(Math.Round(x.Hi, 1) - e.GetProperty("hi").GetDouble()) < 1e-9 && Math.Abs(Math.Round(x.Peak, 1) - e.GetProperty("peak").GetDouble()) < 1e-9
+                        && Math.Abs(x.Mass - e.GetProperty("mass").GetDouble()) <= 1e-6 && x.Label == e.GetProperty("label").GetString();
+            }
+            if (!bxOk) { badBx++; Err($"j={j} hop HVN C#=[{string.Join(" ; ", bxc.Select(x => $"{x.Lo:0.0}-{x.Hi:0.0} {x.Label}"))}] Py=[{string.Join(" ; ", bxe.Select(e => $"{e.GetProperty("lo")}-{e.GetProperty("hi")} {e.GetProperty("label").GetString()}"))}]"); }
         }
         foreach (var s in firstErr) Console.WriteLine("       " + s);
         Check(nCase == 689, "so ca = 689", $"{nCase}");
         Check(badU == 0, $"U moi ca (<= 1e-6)", $"lech {badU}/{nCase}, sai so lon nhat {maxU:E2}");
         Check(badLv == 0, $"muc hop luu moi ca ({nLv} muc, {nHvn} hop HVN, {nHvnOk} du dieu kien): ten, VWAP/sigma <= 1e-4, VAH/VAL/hop HVN lo/hi/peak bang dung, mass <= 1e-6, src/end/ok",
               $"lech {badLv}/{nCase}; sai so lon nhat VWAP {maxVw:E2}, VAH/VAL/HVN {maxExact:E2}, mass {maxRatio:E2}");
-        Check(nGoldCase == 128 && nHvnCase == 411, "689 ca: 128 ca co vung vang duoc ve, 411 ca co vung dinh HVN (PLAN 10.5c)", $"vang {nGoldCase}, HVN {nHvnCase}");
+        Check(nGoldCase == 232 && nHvnCase == 393, "689 ca: 232 ca co vung vang duoc ve, 393 ca co vung dinh HVN (PLAN 13.5c)", $"vang {nGoldCase}, HVN {nHvnCase}");
+        Check(badBx == 0 && Math.Abs(nBx / 689.0 - 2.49) < 0.005 && maxBx == 5,
+              $"hop HVN duoc ve moi ca ({nBx} hop, TB {nBx / 689.0:0.00}, nhieu nhat {maxBx}): name/lo/hi/peak bang dung, mass <= 1e-6, nhan UTF-8 nguyen van",
+              $"lech {badBx}/{nCase}");
         Check(badCl == 0, $"cum moi ca ({nCl} cum): lo/hi/n/pmin/pmax/names/ngroup/hvn/gold", $"lech {badCl}/{nCase}");
         Check(badNg == 0, "cum khi SzGroupEdges=false: ngroup_khong_gop, gold_khong_gop", $"lech {badNg}/{nCase}");
         Check(badSh == 0, $"vung duoc ve moi ca ({nSh} vung): lo/hi/side/color/label UTF-8 nguyen van", $"lech {badSh}/{nCase}");
 
-        // 8.2: năm ca ghi số
+        // 13.5c: năm ca ghi số (vùng được vẽ + hộp HVN được vẽ)
         void CaseShown(string name, int j, double u, params (double lo, double hi, string col, string lab)[] want)
         {
             if (!byJ.TryGetValue(j, out var x)) { Check(false, name, "khong co ca"); return; }
@@ -531,10 +620,20 @@ static partial class Tests
                 ok &= Near(x.sh[k].Lo, want[k].lo, 1e-6) && Near(x.sh[k].Hi, want[k].hi, 1e-6) && x.sh[k].Color == want[k].col && x.sh[k].Label == want[k].lab;
             Check(ok, name, string.Join(" | ", x.sh.Select(z => $"{z.Lo:0.0}-{z.Hi:0.0} {z.Color} {z.Label}")));
         }
+        void CaseBoxes(string name, int j, params (double lo, double hi, string lab)[] want)
+        {
+            if (!boxByJ.TryGetValue(j, out var b)) { Check(false, name, "khong co ca"); return; }
+            bool ok = b.Count == want.Length;
+            for (int k = 0; k < want.Length && ok; k++)
+                ok &= Math.Abs(Math.Round(b[k].Lo, 1) - want[k].lo) < 1e-9 && Math.Abs(Math.Round(b[k].Hi, 1) - want[k].hi) < 1e-9 && b[k].Label == want[k].lab;
+            Check(ok, name, string.Join(" | ", b.Select(z => $"{z.Lo:0.0}-{z.Hi:0.0} {z.Label}")));
+        }
+        const string HD = "HVN ngày", HW = "HVN tuần", HB = "HVN ngày + tuần";
         CaseShown("Ca A (j=1342, vung vang)", 1342, 10.028261,
-            (4026.4, 4028.6, "do", "Kháng cự · 3 lần · VAL hôm qua + VWAP hôm qua −1σ"),
-            (4032.3, 4036.3, "do", "Kháng cự · 6 lần · HVN tuần + HVN ngày"),
+            (4020.6, 4024.7, "do", "Kháng cự · 4 lần · HVN ngày"),
+            (4026.4, 4028.6, "do", "Kháng cự · 3 lần · HVN ngày + VAL hôm qua + VWAP hôm qua −1σ"),
             (4038.8, 4042.0, "vang", "★ Kháng cự rất mạnh · 3 lần · HVN tuần + HVN ngày + VAL tuần trước + VWAP hôm qua"));
+        CaseBoxes("Ca A: hop HVN 4007,6-4012,6 ; 4021,8-4025,9 ; 4028,5-4032,7 (deu HVN ngay)", 1342, (4007.6, 4012.6, HD), (4021.8, 4025.9, HD), (4028.5, 4032.7, HD));
         if (byJ.TryGetValue(1342, out var ca))
         {
             var lv = ca.r.Levels;
@@ -542,11 +641,11 @@ static partial class Tests
             Check(Near(L("vwap_d"), 4041.8706, 1e-4) && Near(L("vwap_d_tren"), 4054.7866, 1e-4) && Near(L("vwap_d_duoi"), 4028.9546, 1e-4)
                   && Near(L("vah_d"), 4052.8, 1e-9) && Near(L("val_d"), 4029.2, 1e-9) && Near(L("vwap_w"), 4111.5234, 1e-4)
                   && Near(L("vah_w"), 4176.4, 1e-9) && Near(L("val_w"), 4042.8, 1e-9), "Ca A: so tung muc VWAP/sigma/VAH/VAL dung PLAN");
-            var hd = lv.First(x => x.Name == "hvn_d");
-            var hw = lv.First(x => x.Name == "hvn_w");
-            Check(Near(hd.Lo, 4034.5, 1e-9) && Near(hd.Hi, 4040.6, 1e-9) && Near(hd.Peak, 4037.6, 1e-9) && Near(hd.Mass, 0.30678, 1e-5) && hd.Src == 1
-                  && lv.Count(x => x.Name == "hvn_d") == 5 && Near(hw.Lo, 4032.8, 1e-9) && Near(hw.Hi, 4040.3, 1e-9) && Near(hw.Mass, 0.166402, 1e-6) && hw.Src == 0,
-                  "Ca A: HVN ngay hom qua 4034,5-4040,6 (30,7 %), 5 hop ngay; HVN tuan nay 4032,8-4040,3 (16,6 %)");
+            var hd = lv.First(x => x.Name == "hvn_d" && x.Src == 1);
+            var hw = lv.First(x => x.Name == "hvn_w" && x.Src == 0);
+            Check(Near(hd.Lo, 4034.5, 1e-9) && Near(hd.Hi, 4040.6, 1e-9) && Near(hd.Peak, 4037.6, 1e-9) && Near(hd.Mass, 0.30678, 1e-5)
+                  && lv.Count(x => x.Name == "hvn_d") == 6 && Near(hw.Lo, 4032.8, 1e-9) && Near(hw.Hi, 4040.3, 1e-9) && Near(hw.Mass, 0.166402, 1e-6),
+                  "Ca A: HVN ngay hom qua 4034,5-4040,6 (30,7 %), 6 hop ngay; HVN tuan nay 4032,8-4040,3 (16,6 %)");
             var gz = ca.r.Clusters.First(z => z.Gold && Near(z.Lo, 4038.8, 1e-6));
             Check(gz.N == 3 && Near(gz.Pmin, 4039.4, 1e-9) && Near(gz.Pmax, 4041.4, 1e-9), "Ca A: vung vang = 3 diem 4039,4..4041,4");
         }
@@ -554,28 +653,34 @@ static partial class Tests
             (4145.0, 4148.3, "xanh", "Hỗ trợ · 3 lần · VWAP hôm qua"),
             (4158.4, 4162.2, "do", "Kháng cự · 3 lần · VAL tuần trước + VWAP hôm qua +1σ"),
             (4163.9, 4168.1, "do", "Kháng cự · 4 lần · HVN ngày + VAL tuần trước"),
-            (4174.3, 4177.7, "do", "Kháng cự · 5 lần · HVN ngày + VWAP tuần trước"));
+            (4174.3, 4177.7, "vang", "★ Kháng cự rất mạnh · 5 lần · HVN tuần + HVN ngày + VWAP tuần trước"));
+        CaseBoxes("Ca B: hop HVN 4113,9-4118,4 'HVN ngay + tuan' ; 4165,8-4172,0 ; 4173,6-4177,9", 1042, (4113.9, 4118.4, HB), (4165.8, 4172.0, HD), (4173.6, 4177.9, HD));
         CaseShown("Ca C (j=935, gia trong vung)", 935, 9.806087,
-            (4180.4, 4184.0, "xanh", "Hỗ trợ · 6 lần · HVN ngày + VAL hôm qua + VWAP hôm qua −1σ"),
+            (4174.8, 4178.6, "vang", "★ Hỗ trợ rất mạnh · 6 lần · HVN tuần + HVN ngày + VWAP tuần trước"),
             (4192.0, 4194.0, "xanh", "Hỗ trợ · 3 lần · HVN ngày + VWAP hôm qua"),
             (4197.2, 4200.5, "xanh", "Hỗ trợ · 3 lần · HVN ngày"),
             (4206.7, 4209.6, "do", "Kháng cự · 4 lần · HVN ngày + VWAP tuần trước +1σ"));
+        CaseBoxes("Ca C: hop HVN 4177,7-4182,2 'HVN tuan' ; 4192,6-4196,4 ; 4207,3-4211,4", 935, (4177.7, 4182.2, HW), (4192.6, 4196.4, HD), (4207.3, 4211.4, HD));
         {
-            // Ca C với SzGroupEdges = false: vùng 4180,4–4184,0 thành 3 nhóm ⇒ vàng
+            // Ca C với SzGroupEdges = false: cụm 4180,4–4184,0 (HVN tuần + VAL hôm qua + VWAP hôm qua −1σ) từ 2 nhóm thành 3 ⇒ vàng
             var pg = p.Clone(); pg.GroupEdges = false;
             var r = StrongZones.Compute(Series(f, 0, 936, pg), pg);
-            var sh = StrongZones.Display(r, f.C[935], pg);
-            var z = sh.FirstOrDefault(q => Near(q.Lo, 4180.4, 1e-6));
-            Check(z != null && z.Gold && z.Color == "vang" && z.Label == "★ Hỗ trợ rất mạnh · 6 lần · HVN ngày + VAL hôm qua + VWAP hôm qua −1σ",
-                  "Ca C khong gop: 4180,4-4184,0 -> 3 nhom, vang", z?.Label ?? "khong thay");
+            var z = r.Clusters.FirstOrDefault(q => Near(q.Lo, 4180.4, 1e-6));
+            var z0 = byJ.TryGetValue(935, out var c0) ? c0.r.Clusters.FirstOrDefault(q => Near(q.Lo, 4180.4, 1e-6)) : null;
+            Check(z != null && z0 != null && z.Gold && z.NGroup == 3 && !z0.Gold && z0.NGroup == 2 && z.Names.SequenceEqual(new[] { "hvn_w", "val_d", "vwap_d_duoi" }),
+                  "Ca C khong gop: cum 4180,4-4184,0 (HVN tuan + VAL hom qua + VWAP hom qua -1sigma) 2 nhom -> 3 nhom, vang",
+                  z == null ? "khong thay" : $"{string.Join("+", z.Names)} g{z.NGroup} {z.Gold}");
         }
-        CaseShown("Ca D (j=1502, mot vung)", 1502, 10.927826, (4046.4, 4050.4, "do", "Kháng cự · 6 lần · HVN ngày"));
+        CaseShown("Ca D (j=1502, mot vung)", 1502, 10.927826, (4059.4, 4062.8, "do", "Kháng cự · 3 lần · HVN ngày"));
+        CaseBoxes("Ca D: hop HVN 3966,5-3971,4 ; 4030,2-4040,3 'HVN ngay + tuan' ; 4058,7-4063,0", 1502, (3966.5, 3971.4, HD), (4030.2, 4040.3, HB), (4058.7, 4063.0, HD));
         if (byJ.TryGetValue(1502, out var cd))
             Check(cd.r.Clusters.Count == 7 && cd.r.Levels.Any(x => x.Name == "hvn_w" && x.Src == 1 && Near(x.Lo, 4030.2, 1e-9) && Near(x.Hi, 4040.3, 1e-9)),
                   "Ca D: 7 cum; HVN tuan truoc 4030,2-4040,3");
         CaseShown("Ca E (j=1238, chi ho tro)", 1238, 10.236522,
             (4032.3, 4036.3, "xanh", "Hỗ trợ · 5 lần · HVN ngày + VWAP hôm qua +1σ"),
-            (4042.4, 4046.3, "xanh", "Hỗ trợ · 4 lần · HVN ngày + VAL tuần trước"));
+            (4042.4, 4046.3, "xanh", "Hỗ trợ · 4 lần · VAL tuần trước"));
+        CaseBoxes("Ca E: hop HVN 4007,6-4012,6 ; 4028,5-4032,7 ; 4103,5-4108,8 ; 4140,6-4145,2 'HVN ngay + tuan' (2 moi phia)", 1238,
+            (4007.6, 4012.6, HD), (4028.5, 4032.7, HD), (4103.5, 4108.8, HD), (4140.6, 4145.2, HB));
     }
 
     // ------------------------------------------------------------------ [5] bất biến khung + bộ đệm
@@ -782,7 +887,7 @@ static partial class Tests
     static string UiDir() => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../research/vung_manh_2026-11-25/ui"));
     static readonly Color HvnCol = Color.FromArgb(0xFF, 0x8F, 0x00);   // mặc định HvnColor của SessionZones
 
-    static void RenderPng(Fx f, int j, List<SzZone> shown, List<SzHvnShown> boxes, string path, Color sup, Color res, Color gold, string title)
+    static void RenderPng(Fx f, int j, List<SzZone> shown, List<SzHvnShown> boxes, string path, Color sup, Color res, Color gold, string title, double nowPrice = double.NaN)
     {
         int W = 1500, H = 820, padR = 80;
         int from = Math.Max(0, j - 90), to = j + 1;
@@ -831,7 +936,7 @@ static partial class Tests
         }
         using (var fnt = new Font("Arial", 8, FontStyle.Bold))
             StrongZonePainter.Paint(g, clip, Y, shown, sup, res, gold, f.Tick, fnt, boxes, HvnCol);
-        double now = f.C[j];
+        double now = double.IsNaN(nowPrice) ? f.C[j] : nowPrice;
         using (var pn = new Pen(Color.FromArgb(200, 255, 255, 255), 1f) { DashStyle = DashStyle.Dot })
             g.DrawLine(pn, clip.Left, Y(now), clip.Right, Y(now));
         using (var ft = new Font("Arial", 9, FontStyle.Bold))
@@ -841,23 +946,27 @@ static partial class Tests
     }
 
     // ------------------------------------------------------------------ [7] NQZ26 (giá thật, bước giá 0,25)
-    // (a) C# = Python ở 12 ca ngày 2026-11-24 (bộ chặn chỗ nối BẬT 50 điểm như Python);
-    // (b) render PNG đúng như indicator trên chart NQZ26 (một hợp đồng ⇒ bộ chặn TẮT): hộp HVN 23/11 + vùng mạnh.
+    // (a) C# = Python ở 13 ca ngày 2026-11-24 (nq_expected2.json; bộ chặn chỗ nối TẮT — đúng như indicator trên NQZ26);
+    // (b) ca bắt buộc PLAN §13.5d; (c) render PNG đúng như indicator, có ảnh thời điểm cuối dữ liệu.
     static void NqTests()
     {
-        Console.WriteLine("\n[7] NQZ26 23/11-24/11 - hop HVN + vung manh (gia that, tick 0,25)");
-        var f = LoadFixture("nq_", "nq_expected.json", 0.25);
+        Console.WriteLine("\n[7] NQZ26 23/11-24/11 - hop HVN v2 + vung manh (gia that, tick 0,25)");
+        var f = LoadFixture("nq_", "nq_expected2.json", 0.25);
         if (f == null) { Check(false, "doc fixture NQ", FxDir()); return; }
         var root = f.Exp.RootElement;
-        var pPy = new StrongZoneParams { SpliceJump = root.GetProperty("splice_jump").GetDouble() };
-        int n = 0, bad = 0, nShown = 0, nBox = 0;
+        // như indicator: NQZ26 là một hợp đồng ⇒ bộ chặn chỗ nối tắt; fixture sinh với splice_jump = 0
+        var p = new StrongZoneParams { SpliceJump = ZonePolicy.IsSingleContract("NQZ26") ? 0 : 20.0 * 10 * f.Tick };
+        Check(p.SpliceJump == 0 && root.GetProperty("splice_jump").GetDouble() == 0, "NQZ26 -> bo chan cho noi tat (C# va fixture Python)");
+        int n = 0, bad = 0, nShown = 0, nBox = 0, nDrawn = 0;
         var errs = new List<string>();
+        SzResult rLast = null; List<SzZone> shLast = null; List<SzHvnShown> bxLast = null; int jLast = -1;
         foreach (var cs in root.GetProperty("cases").EnumerateArray())
         {
             n++;
             int j = cs.GetProperty("j").GetInt32();
-            var r = StrongZones.Compute(Series(f, 0, j + 1, pPy), pPy);
-            var sh = StrongZones.Display(r, f.C[j], pPy);
+            var r = StrongZones.Compute(Series(f, 0, j + 1, p), p);
+            var sh = StrongZones.Display(r, f.C[j], p);
+            var bx = StrongZones.HvnBoxes(r, f.C[j], p);
             bool ok = Near(r.U, cs.GetProperty("U").GetDouble(), 1e-6) && Near(f.C[j], cs.GetProperty("now").GetDouble(), 1e-9);
             var hv = r.Levels.Where(x => x.IsHvn).OrderBy(x => x.Name, StringComparer.Ordinal).ThenBy(x => x.Lo).ToList();
             var he = cs.GetProperty("hvn").EnumerateArray().OrderBy(e => e.GetProperty("name").GetString(), StringComparer.Ordinal).ThenBy(e => e.GetProperty("lo").GetDouble()).ToList();
@@ -867,7 +976,7 @@ static partial class Tests
                 var e = he[k]; var x = hv[k]; nBox++;
                 ok &= x.Name == e.GetProperty("name").GetString() && Near(x.Lo, e.GetProperty("lo").GetDouble(), 1e-6) && Near(x.Hi, e.GetProperty("hi").GetDouble(), 1e-6)
                       && Near(x.Peak, e.GetProperty("peak").GetDouble(), 1e-6) && Math.Abs(x.Mass - e.GetProperty("mass").GetDouble()) <= 1e-6
-                      && x.Src == e.GetProperty("src").GetInt32() && StrongZones.HvnOk(x, r.Highs, r.Lows, r.J, r.U, pPy) == e.GetProperty("ok").GetBoolean();
+                      && x.Src == e.GetProperty("src").GetInt32() && StrongZones.HvnOk(x, r.Highs, r.Lows, r.J, r.U, p) == e.GetProperty("ok").GetBoolean();
             }
             var se = cs.GetProperty("shown").EnumerateArray().ToList();
             nShown += se.Count;
@@ -875,21 +984,46 @@ static partial class Tests
             for (int k = 0; k < se.Count && ok; k++)
                 ok &= Near(sh[k].Lo, se[k].GetProperty("lo").GetDouble(), 1e-6) && Near(sh[k].Hi, se[k].GetProperty("hi").GetDouble(), 1e-6)
                       && sh[k].Color == se[k].GetProperty("color").GetString() && sh[k].Label == se[k].GetProperty("label").GetString();
-            if (!ok) { bad++; if (errs.Count < 5) errs.Add($"j={j} U {r.U} hvn {string.Join(",", hv.Select(x => $"{x.Name} {x.Lo}-{x.Hi}"))} shown {string.Join(" | ", sh.Select(z => $"{z.Lo}-{z.Hi} {z.Label}"))}"); }
+            var be = cs.GetProperty("hvn_boxes").EnumerateArray().ToList();
+            nDrawn += be.Count;
+            ok &= be.Count == bx.Count;
+            for (int k = 0; k < be.Count && ok; k++)
+                ok &= bx[k].Name == be[k].GetProperty("name").GetString() && Near(bx[k].Lo, be[k].GetProperty("lo").GetDouble(), 1e-6) && Near(bx[k].Hi, be[k].GetProperty("hi").GetDouble(), 1e-6)
+                      && Near(bx[k].Peak, be[k].GetProperty("peak").GetDouble(), 1e-6) && Math.Abs(bx[k].Mass - be[k].GetProperty("mass").GetDouble()) <= 1e-6
+                      && bx[k].Label == be[k].GetProperty("label").GetString();
+            if (!ok) { bad++; if (errs.Count < 5) errs.Add($"j={j} U {r.U} hvn {string.Join(",", hv.Select(x => $"{x.Name} {x.Lo}-{x.Hi}"))} shown {string.Join(" | ", sh.Select(z => $"{z.Lo}-{z.Hi} {z.Label}"))} hop {string.Join(" | ", bx.Select(b => $"{b.Lo}-{b.Hi} {b.Label}"))}"); }
+            if (j > jLast) { jLast = j; rLast = r; shLast = sh; bxLast = bx; }
         }
         foreach (var e in errs) Console.WriteLine("       " + e);
-        Check(n == 12 && bad == 0, $"NQ 24/11: 12 ca C# = Python (U, {nBox} hop HVN lo/hi/peak/mass/ok, {nShown} vung ve)", $"lech {bad}/{n}");
+        Check(n == 13 && bad == 0, $"NQ 24/11: 13 ca C# = Python (U <= 1e-6; {nBox} muc HVN lo/hi/peak <= 1e-6, mass <= 1e-6, src/ok; {nShown} vung ve; {nDrawn} hop HVN ve + nhan)", $"lech {bad}/{n}");
 
-        // như indicator: NQZ26 là một hợp đồng ⇒ bộ chặn chỗ nối tắt
-        var p = new StrongZoneParams { SpliceJump = ZonePolicy.IsSingleContract("NQZ26") ? 0 : 20.0 * 10 * f.Tick };
-        Check(p.SpliceJump == 0, "NQZ26 -> bo chan cho noi tat");
+        // ca cuối (2026-11-24 11:30, PLAN §13.5d)
+        if (rLast != null)
+        {
+            bool Lv(string nm, double lo, double hi) => rLast.Levels.Any(x => x.IsHvn && x.Name == nm && Near(x.Lo, lo, 1e-9) && Near(x.Hi, hi, 1e-9) && StrongZones.HvnOk(x, rLast.Highs, rLast.Lows, rLast.J, rLast.U, p));
+            Check(f.T[jLast] == new DateTime(2026, 11, 24, 11, 30, 0) && Near(f.C[jLast], 26442.75, 1e-9) && Near(rLast.U, 143.467, 5e-4),
+                  "NQ ca cuoi: nen 2026-11-24 11:30, gia 26442,75, U 143,467", $"{f.T[jLast]:yyyy-MM-dd HH:mm} {f.C[jLast]} U {rLast.U:0.000}");
+            Check(Lv("hvn_d", 26801.50, 26876.50) && Lv("hvn_d", 25538.50, 25609.75) && Lv("hvn_d", 27664.75, 27750.50) && Lv("hvn_d", 27143.00, 27206.25) && Lv("hvn_d", 26946.25, 27002.00)
+                  && Lv("hvn_w", 27239.25, 27299.00) && Lv("hvn_w", 25544.25, 25604.00) && rLast.Levels.Count(x => x.IsHvn) == 7,
+                  "NQ ca cuoi: HVN ngay 26801,50-26876,50 · 25538,50-25609,75 · 27664,75-27750,50 · 27143,00-27206,25 · 26946,25-27002,00; tuan truoc 27239,25-27299,00 · 25544,25-25604,00; deu da roi xa",
+                  string.Join(" ; ", rLast.Levels.Where(x => x.IsHvn).Select(x => $"{x.Name} {x.Lo:0.00}-{x.Hi:0.00}")));
+            Check(shLast.Count == 1 && Near(shLast[0].Lo, 26909.00, 1e-9) && Near(shLast[0].Hi, 26959.00, 1e-9) && shLast[0].Color == "do" && shLast[0].Label == "Kháng cự · 5 lần · HVN ngày + VAH hôm qua",
+                  "NQ ca cuoi: vung ve 26909,00-26959,00 do 'Khang cu · 5 lan · HVN ngay + VAH hom qua'", string.Join(" | ", shLast.Select(z => $"{z.Lo}-{z.Hi} {z.Label}")));
+            Check(bxLast.Count == 3 && Near(bxLast[0].Lo, 25538.50, 1e-9) && Near(bxLast[0].Hi, 25609.75, 1e-9) && bxLast[0].Label == "HVN ngày + tuần"
+                  && Near(bxLast[1].Lo, 26801.50, 1e-9) && Near(bxLast[1].Hi, 26876.50, 1e-9) && bxLast[1].Label == "HVN ngày"
+                  && Near(bxLast[2].Lo, 26946.25, 1e-9) && Near(bxLast[2].Hi, 27002.00, 1e-9)
+                  && bxLast[0].Dist / rLast.U > 4.0 && Near(bxLast[0].Dist / rLast.U, 5.81, 0.005),
+                  "NQ ca cuoi: hop ve 25538,50-25609,75 'HVN ngay + tuan' (cach 5,81 U > 4 U cu) ; 26801,50-26876,50 ; 26946,25-27002,00",
+                  string.Join(" | ", bxLast.Select(b => $"{b.Lo:0.00}-{b.Hi:0.00} {b.Label} {b.Dist / rLast.U:0.00}U")));
+        }
         int jd = -1;   // nến đầu phiên 24/11 (giờ nghỉ CME xong)
         for (int i = 1; i < f.N; i++) if (f.T[i].Date == new DateTime(2026, 11, 23) && f.T[i].Hour == 23 && (f.T[i] - f.T[i - 1]).TotalMinutes > 75) jd = i;
         var r0 = StrongZones.Compute(Series(f, 0, jd + 1, p), p);
         var hd = r0.Levels.Where(x => x.Name == "hvn_d" && x.Src == 1).ToList();
-        Check(hd.Count == 1 && Near(hd[0].Lo, 26802.50, 1e-9) && Near(hd[0].Hi, 26874.75, 1e-9),
-              "chart NQZ26 dau phien 24/11: hop HVN ngay hom qua = 26802,50-26874,75 (PLAN 10.5d)",
+        Check(hd.Count == 1 && Near(hd[0].Lo, 26801.50, 1e-9) && Near(hd[0].Hi, 26876.50, 1e-9),
+              "chart NQZ26 dau phien 24/11: hop HVN ngay hom qua = 26801,50-26876,50 (PLAN 13.5a)",
               string.Join(" ; ", hd.Select(x => $"{x.Lo:0.00}-{x.Hi:0.00}")) + $" · tong {r0.Levels.Count(x => x.IsHvn)} hop, chot nen {jd}");
+
         Color sup = Color.FromArgb(0x26, 0xA6, 0x9A), res = Color.FromArgb(0xEF, 0x53, 0x50), gold = Color.FromArgb(0xFF, 0xD6, 0x00);
         int nPng = 0, nWithBox = 0, nWithStrong = 0;
         try
@@ -909,9 +1043,25 @@ static partial class Tests
                           $"NQZ26 · {f.T[j]:yyyy-MM-dd HH:mm} UTC · giá {f.C[j]:0.00} · U {r.U:0.0}");
                 nPng++;
             }
+            {   // thời điểm cuối dữ liệu: nến đang chạy 12:00 (nến cuối của fixture), cấu trúc tới nến đã đóng 11:30,
+                // giá hiện tại = giá đóng của nến 12:00 — đúng như indicator đang chạy trên chart NQZ26 lúc đó
+                int jl = f.N - 2;
+                double nowL = f.C[f.N - 1];
+                var r = StrongZones.Compute(Series(f, 0, jl + 1, p), p);
+                var sh = StrongZones.Display(r, nowL, p);
+                var bx = StrongZones.HvnBoxes(r, nowL, p);
+                Console.WriteLine($"       NQ cuoi du lieu {f.T[f.N - 1]:yyyy-MM-dd HH:mm} gia {nowL:0.00} U {r.U:0.0}: hop HVN [{string.Join(" ; ", bx.Select(b => $"{StrongZones.HvnBoxText(b)} {b.Lo:0.00}-{b.Hi:0.00}"))}] vung [{string.Join(" | ", sh.Select(z => $"{z.Lo:0.00}-{z.Hi:0.00} {z.Label}"))}]");
+                RenderPng(f, jl, sh, bx, Path.Combine(outDir, "ca_NQ_2026-11-24_1200_cuoi_du_lieu.png"), sup, res, gold,
+                          $"NQZ26 · cuối dữ liệu {f.T[f.N - 1]:yyyy-MM-dd HH:mm} UTC (nến đang chạy) · giá {nowL:0.00} · U {r.U:0.0}", nowL);
+                nPng++;
+                Check(f.T[f.N - 1] == new DateTime(2026, 11, 24, 12, 0, 0)
+                      && bx.Any(b => b.Label == "HVN ngày + tuần" && Near(b.Lo, 25538.50, 1e-9) && Near(b.Hi, 25609.75, 1e-9)),
+                      "anh NQ cuoi du lieu 2026-11-24 12:00: co hop 'HVN ngay + tuan' 25538,50-25609,75",
+                      string.Join(" | ", bx.Select(b => $"{b.Lo:0.00}-{b.Hi:0.00} {b.Label}")));
+            }
         }
         catch (Exception ex) { Check(false, "render PNG NQ", ex.GetType().Name + ": " + ex.Message); }
-        Check(nPng == 3 && nWithBox >= 1 && nWithStrong >= 1, "render PNG NQ 24/11 (co hop HVN va vung manh)", $"{nPng} anh, {nWithBox} co hop HVN, {nWithStrong} co vung manh");
+        Check(nPng == 4 && nWithBox >= 1 && nWithStrong >= 1, "render PNG NQ 24/11 (co hop HVN va vung manh)", $"{nPng} anh, {nWithBox} co hop HVN, {nWithStrong} co vung manh");
     }
 
     static void StrongZoneTests()

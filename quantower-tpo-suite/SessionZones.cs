@@ -8,8 +8,9 @@
 //    VÙNG MẠNH (PLAN-VUNG-MANH.md, CHƯA KIỂM ĐỊNH): cụm ≥3 đỉnh/đáy M30 bật lại ≥1 U +
 //      hợp lưu với mức của phiên/tuần ĐÃ ĐÓNG (VWAP/±1σ, VAH/VAL hôm qua & tuần trước,
 //      hộp HVN); xanh hỗ trợ / đỏ kháng cự / vàng ≥3 nhóm có HVN.
-//    HỘP HVN (2026-11-25, §10–11): cụm khối lượng LỚN và ĐỀU (thân chữ D, đấu giá xong) của
-//      5 phiên / tuần trước + tuần này tới hôm qua. Giá quay lại: canh phản ứng đảo chiều HOẶC
+//    HỘP HVN (2026-11-25, §10–11, v2 §13): cụm khối lượng LỚN và ĐỀU (thân chữ D, đấu giá xong) của
+//      5 phiên / tuần trước + tuần này tới hôm qua; vẽ hộp trong 8 U, tối đa 2 hộp mỗi phía giá,
+//      hộp ngày trùng hộp tuần ⇒ một hộp "HVN ngày + tuần". Giá quay lại: canh phản ứng đảo chiều HOẶC
 //      phá vỡ — chưa kiểm định. (Đo cũ trên HVN đỉnh nhọn: "đi tiếp / mục tiêu, không fade";
 //      phép đo chưa phân xử với cách dùng mới.) HVN kiểu cũ (đỉnh nhọn + nền 90 %), mục tiêu
 //      chốt lời sinh từ nó, và các lớp "Đo ·" đã BỎ HẲN.

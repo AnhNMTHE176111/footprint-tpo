@@ -26,7 +26,7 @@ P = dict(
     HVN_TOP=3,
     HVN_AWAY=2.0,     # "đã rời xa": sau khi profile chốt, giá từng cách đỉnh cụm >= 2 U
     D_ONLY=False,     # chỉ nhận HVN của profile hình chữ D (2026-11-25: TẮT — HVN dạng cụm tự mang tiêu chí "lớn và đều")
-    HVN_MODE='cum',   # 'cum' = HVN dạng cụm (hvn_cum.py, PLAN mục 10) · 'dinh' = kiểu cũ (đỉnh nhọn + PeakSharpness 90 %), chỉ để so
+    HVN_MODE='cum',   # 'cum' = HVN dạng cụm v1 (hvn_cum.py, PLAN mục 10) · 'cum2' = v2 (hvn_cum2.py, PLAN mục 13; thông số ghi đè qua khoá HVN2) · 'dinh' = kiểu cũ (đỉnh nhọn + PeakSharpness 90 %), chỉ để so
     HVN_HL='giao',    # hợp lưu với hộp HVN: 'giao' = vùng va đập giao hộp (± TOL) · 'mep' = chỉ khi chạm MÉP hộp (± TOL)
     HVN_X=HC.HP['X'], HVN_SM=HC.HP['SM'], HVN_PK2=HC.HP['PK2'], HVN_Y=HC.HP['Y'], HVN_Y_W=HC.HP['Y_W'], HVN_WMIN=HC.HP['WMIN'], HVN_MAXC=HC.HP['MAXC'],
     D_POC_LO=0.30, D_POC_HI=0.70, D_VA_MAX=0.60,
@@ -36,17 +36,20 @@ P = dict(
     RADIUS=4.0,       # hiển thị: mép gần của vùng cách giá hiện tại tối đa (×U)
     MAX_SIDE=3,       # hiển thị: tối đa bấy nhiêu vùng mỗi phía giá
     SEP=0.15,         # hiển thị: hai vùng cách nhau dưới bấy nhiêu (×U) thì chỉ giữ vùng mạnh hơn
+    HVN_RADIUS=8.0,   # hiển thị HỘP HVN (PLAN mục 13.5): mép gần cách giá tối đa (×U) — riêng cho hộp HVN, vùng mạnh vẫn RADIUS
+    HVN_MAX_SIDE=2,   # hiển thị hộp HVN: tối đa bấy nhiêu hộp gần nhất mỗi phía giá (hộp đang chứa giá không tính)
 )
 
 # nhóm mức độc lập: VAH và VWAP+1σ của cùng một kỳ gần như trùng nhau do cấu tạo (vùng giá trị 70% ≈ ±1σ) ⇒ tính MỘT.
 GROUP = {'vwap_d': 'giua_d', 'vah_d': 'tren_d', 'vwap_d_tren': 'tren_d', 'val_d': 'duoi_d', 'vwap_d_duoi': 'duoi_d',
          'vwap_w': 'giua_w', 'vah_w': 'tren_w', 'vwap_w_tren': 'tren_w', 'val_w': 'duoi_w', 'vwap_w_duoi': 'duoi_w',
-         'hvn_d': 'hvn_d', 'hvn_w': 'hvn_w'}
+         'hvn_d': 'hvn_d', 'hvn_w': 'hvn_w', 'lo_w1': 'bien_w1', 'hi_w1': 'bien_w1', 'lo_w0': 'bien_w0', 'hi_w0': 'bien_w0'}
 TEN = {'vwap_d': 'VWAP hôm qua', 'vwap_d_tren': 'VWAP hôm qua +1σ', 'vwap_d_duoi': 'VWAP hôm qua −1σ',
        'vah_d': 'VAH hôm qua', 'val_d': 'VAL hôm qua',
        'vwap_w': 'VWAP tuần trước', 'vwap_w_tren': 'VWAP tuần trước +1σ', 'vwap_w_duoi': 'VWAP tuần trước −1σ',
-       'vah_w': 'VAH tuần trước', 'val_w': 'VAL tuần trước', 'hvn_d': 'HVN ngày', 'hvn_w': 'HVN tuần'}
-THU_TU = ['hvn_w', 'hvn_d', 'vah_w', 'val_w', 'vwap_w', 'vwap_w_tren', 'vwap_w_duoi', 'vah_d', 'val_d', 'vwap_d', 'vwap_d_tren', 'vwap_d_duoi']
+       'vah_w': 'VAH tuần trước', 'val_w': 'VAL tuần trước', 'hvn_d': 'HVN ngày', 'hvn_w': 'HVN tuần',
+       'lo_w1': 'đáy tuần trước', 'hi_w1': 'đỉnh tuần trước', 'lo_w0': 'đáy tuần này', 'hi_w0': 'đỉnh tuần này'}
+THU_TU = ['hvn_w', 'hvn_d', 'vah_w', 'val_w', 'vwap_w', 'vwap_w_tren', 'vwap_w_duoi', 'vah_d', 'val_d', 'vwap_d', 'vwap_d_tren', 'vwap_d_duoi', 'lo_w1', 'hi_w1', 'lo_w0', 'hi_w0']
 
 
 def peak_sharpness(pr, w, i, frac=0.90):
@@ -81,6 +84,16 @@ def day_levels(D, d, p=P):
     def add_hvn(a, b, name, src):
         st = profile_stats(D, a, b)
         if st is None: return
+        if p.get('HVN_MODE', 'dinh') == 'cum2':      # HVN dạng cụm v2 (hvn_cum2.py, PLAN mục 13)
+            import hvn_cum2 as HC2
+            tk, v = D.ticks_over(a, b)
+            up = float((D.m30['h'][a:b + 1] - D.m30['l'][a:b + 1]).mean())
+            hp = dict(HC2.HP2, **p.get('HVN2', {}))
+            cl, _ = HC2.clusters(tk, v, up / TICK, b - a + 1, hp, hp['Y_W'] if name == 'hvn_w' else hp['Y'])
+            for c in cl:
+                out.append(dict(name=name, lo=round(c['lo'] * TICK, 6), hi=round(c['hi'] * TICK, 6), peak=round(c['peak'] * TICK, 6),
+                                ratio=c['mass'], bars=c['bars'], con=c['con'], end=b, src=src, dshape=is_d_shape(st, p), cum=True))
+            return
         if p.get('HVN_MODE', 'dinh') == 'cum':
             tk, v = D.ticks_over(a, b)
             up = float((D.m30['h'][a:b + 1] - D.m30['l'][a:b + 1]).mean())
@@ -126,6 +139,16 @@ def day_levels(D, d, p=P):
     a = max(D.weeks[w][0], last_sp); b = a0 - 1
     if b - a + 1 >= 60:
         add_hvn(a, b, 'hvn_w', 0)
+    if p.get('WK_EXT'):       # THỬ NGHIỆM (HVN-CUM-V2.md mục 4, chưa vào spec): đáy/đỉnh tuần trước và tuần này tới hết hôm qua
+        if w >= 1:
+            a, b = D.weeks[w - 1]; a = max(a, last_sp)
+            if b - a + 1 >= 60:
+                out.append(dict(name='lo_w1', lo=float(D.m30['l'][a:b + 1].min()), hi=float(D.m30['l'][a:b + 1].min())))
+                out.append(dict(name='hi_w1', lo=float(D.m30['h'][a:b + 1].max()), hi=float(D.m30['h'][a:b + 1].max())))
+        a = max(D.weeks[w][0], last_sp); b = a0 - 1
+        if b - a + 1 >= MIN_DAY_BARS:
+            out.append(dict(name='lo_w0', lo=float(D.m30['l'][a:b + 1].min()), hi=float(D.m30['l'][a:b + 1].min())))
+            out.append(dict(name='hi_w0', lo=float(D.m30['h'][a:b + 1].max()), hi=float(D.m30['h'][a:b + 1].max())))
     return out
 
 
@@ -206,6 +229,7 @@ class Engine:
                     names.append(L['name'])
             names = [n for n in THU_TU if n in names]
             groups = set((GROUP[n] if p['GROUP_EDGES'] else n) for n in names)
+            if p.get('HVN_ONE_GROUP'): groups = set('hvn' if g_.startswith('hvn') else g_ for g_ in groups)   # THỬ NGHIỆM (HVN-CUM-V2.md mục 5): HVN ngày + HVN tuần tính MỘT nhóm
             has_hvn = any(n.startswith('hvn') for n in names)
             out.append(dict(lo=lo, hi=hi, n=len(g), n_hi=int((g['kind'] > 0).sum()), pmin=pmin, pmax=pmax,
                             newest=int(g['idx'].max()), oldest=int(g['idx'].min()), names=names, ngroup=len(groups),
@@ -255,3 +279,29 @@ def display(D, zs, j, now, p=P):
         g = sorted([z for z in cand if not z['inside'] and z['side'] == sd], key=lambda z: (not z['gold'], z['dist']))
         out += g[:p['MAX_SIDE']]
     return sorted(out, key=lambda z: z['lo'])
+
+
+def hvn_boxes(D, levels, j, now, p=P):
+    """Hộp HVN ĐƯỢC VẼ (PLAN mục 13.5) = StrongZones.HvnBoxes: đủ "rời xa", trong HVN_RADIUS × U, bỏ hộp trùng > 50 %,
+    rồi mỗi phía giá chỉ giữ HVN_MAX_SIDE hộp gần nhất. Trả list dict name, lo, hi, peak, mass, dist, label (sắp theo lo)."""
+    u = D.U[min(j + 1, D.n - 1)]
+    cand = []
+    for L in levels:
+        if not L['name'].startswith('hvn') or not hvn_ok(D, L, j, u, p): continue
+        dist = now - L['hi'] if now > L['hi'] else L['lo'] - now if now < L['lo'] else 0.0
+        if dist > p['HVN_RADIUS'] * u: continue
+        cand.append(dict(name=L['name'], lo=L['lo'], hi=L['hi'], peak=L['peak'], mass=L['ratio'], dist=dist, end=L['end'], src=L['src'],
+                         label='HVN tuần' if L['name'] == 'hvn_w' else 'HVN ngày'))
+    out = []
+    for c in sorted(cand, key=lambda x: (-x['end'], 0 if x['name'] == 'hvn_d' else 1, -x['mass'], x['lo'])):
+        dup = None
+        for k in out:
+            inter = min(k['hi'], c['hi']) - max(k['lo'], c['lo']); small = min(k['hi'] - k['lo'], c['hi'] - c['lo'])
+            if inter > 0 and inter > 0.5 * small: dup = k; break
+        if dup is None: out.append(c)
+        elif dup['name'] != c['name']: dup['label'] = 'HVN ngày + tuần'      # cùng một cụm thấy ở cả profile ngày lẫn tuần
+    keep = [c for c in out if c['dist'] == 0]
+    for below in (True, False):
+        g = sorted([c for c in out if c['dist'] > 0 and (c['hi'] < now) == below], key=lambda c: (c['dist'], c['lo']))
+        keep += g[:p['HVN_MAX_SIDE']]
+    return sorted(keep, key=lambda c: c['lo'])

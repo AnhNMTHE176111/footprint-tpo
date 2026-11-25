@@ -1208,10 +1208,10 @@ namespace TpoSuite
     //  Quantower, và không nhận tham số nào của khung chart ⇒ cùng history M30 thì cùng
     //  vùng dù chart là M1, M5 hay M30. Nến CUỐI luôn coi là nến đang chạy: j = n − 2.
     //  Bản tham chiếu Python (nguồn sự thật): research/vung_manh_2026-11-25/vung_manh.py
-    //  + vm.py + hvn_cum.py; bộ đối chiếu fixture/expected_cum.json (689 ca, 357 điểm va đập)
-    //  và fixture/hvn_cum_cases.json (11 profile) — tests/StrongZonesTests.cs.
+    //  + vm.py + hvn_cum2.py; bộ đối chiếu fixture/expected_cum2.json (689 ca, 357 điểm va đập),
+    //  fixture/hvn_cum2_cases.json (19 profile) và fixture/nq_expected2.json (13 ca NQZ26) — tests/StrongZonesTests.cs.
     //
-    //  HVN = HỘP cụm khối lượng lớn và đều (thân chữ D) của phiên/tuần đã đóng (§10, HvnClusters),
+    //  HVN = HỘP cụm khối lượng lớn và đều (thân chữ D) của phiên/tuần đã đóng (§10, v2 §13, HvnClusters),
     //  không còn là từng đỉnh nhọn. Giá quay lại hộp: canh phản ứng đảo chiều HOẶC phá vỡ.
     //  Ghi chú mâu thuẫn (giữ cả hai ý): đo cũ trên HVN đỉnh nhọn coi HVN là "nền — đi tiếp /
     //  mục tiêu, không fade"; ở đây HVN là một mức HỢP LƯU cho vùng canh đảo chiều và làm vùng
@@ -1229,14 +1229,25 @@ namespace TpoSuite
         public double Tol = 0.10;         // dung sai hợp lưu (×U)
         public int HvnDays = 5;           // HVN ngày lấy từ bao nhiêu phiên đã đóng
         public double HvnAway = 2.0;      // "đã rời xa" (×U), đo từ MÉP hộp; 0 = bỏ điều kiện
-        // HVN dạng cụm (PLAN-VUNG-MANH.md §10.1) — thân khối lượng lớn và đều của một profile đã đóng.
-        public double HvnSmooth = 0.05;   // nửa cửa sổ làm mượt (×up, up = TB High−Low nến M30 của chính profile)
-        public double HvnBody = 0.80;     // độ đều: mọi mức giá trong hộp có khối lượng mượt ≥ 80 % đỉnh của hộp
-        public double HvnSecond = 0.50;   // hộp thứ hai: đỉnh ≥ 50 % đỉnh lớn nhất của profile
-        public double HvnMassDay = 0.10;  // đủ lớn: hộp chứa ≥ 10 % khối lượng profile ngày
-        public double HvnMassWeek = 0.08; // … profile tuần
-        public double HvnMinWidth = 0.20; // hộp rộng ≥ 0,20 × up (hẹp hơn là đỉnh nhọn)
-        public int HvnMaxPerProfile = 2;  // tối đa 2 hộp mỗi profile
+        // HVN dạng cụm v2 (PLAN-VUNG-MANH.md §13.1) — cụm khối lượng lớn và đều của một profile đã đóng;
+        // tiêu chí không phụ thuộc biên độ profile. Mọi số là hằng (không có input).
+        public double HvnSmooth = 0.05;     // nửa cửa sổ làm mượt (×up, up = TB High−Low nến M30 của chính profile)
+        public double HvnBody = 0.80;       // lõi: khối lượng mượt ≥ 80 % đỉnh
+        public double HvnWidth = 0.45;      // bề rộng đích của hộp (×up): lõi hẹp hơn thì nới về phía dày hơn
+        public double HvnWidenFloor = 0.50; // khi nới không lấy mức có khối lượng mượt < 50 % đỉnh
+        public double HvnWidenClimb = 0.05; // khi nới không leo cao hơn (đáy đã qua ở phía đó + 5 % đỉnh) — không sang bướu bên cạnh
+        public double HvnAround = 3.0;      // "vùng xung quanh" = ± 3 × up (luật đỉnh cục bộ + luật nổi bật)
+        public double HvnContrast = 2.0;    // nổi bật: mật độ hộp ≥ 2 × mật độ phần profile trong vùng xung quanh, ngoài hộp
+        public double HvnBars = 4.5;        // nổi bật: khối lượng hộp ≥ 4,5 lần khối lượng TB một nến M30 của profile
+        public double HvnMassDay = 0.12;    // HOẶC hộp chứa ≥ 12 % khối lượng profile ngày
+        public double HvnMassWeek = 0.08;   // … profile tuần
+        public double HvnMinWidth = 0.20;   // hộp sau khi nới vẫn hẹp hơn 0,20 × up ⇒ bỏ
+        public int HvnMaxPerProfile = 2;    // số hộp tối đa khi profile hẹp
+        public double HvnMaxStep = 6.0;     // số hộp tối đa = min(HvnMaxCap, max(HvnMaxPerProfile, floor(biên độ / (6 × up))))
+        public int HvnMaxCap = 4;
+        public double HvnFloor = 0.10;      // dừng khi đỉnh còn lại < 10 % đỉnh lớn nhất (chặn vòng lặp)
+        public double HvnRadius = 8.0;      // hiển thị hộp HVN: mép gần cách giá ≤ 8 U (vùng mạnh vẫn Radius)
+        public int HvnMaxSide = 2;          // hiển thị hộp HVN: tối đa 2 hộp gần nhất mỗi phía giá
         public int GoldMin = 3;           // vàng: ≥ 3 nhóm mức và có HVN
         public bool GroupEdges = true;    // gộp VAH/VAL với VWAP ±1σ cùng kỳ thành một nhóm
         public int MinGroup = 1;          // hiển thị: số nhóm mức hợp lưu tối thiểu
@@ -1271,10 +1282,13 @@ namespace TpoSuite
         public int End = -1, Src;   // End = nến cuối của profile nguồn; Src = số phiên/tuần lùi lại
     }
 
-    // Một hộp HVN dạng cụm (StrongZones.HvnClusters). Lo/Hi/Peak là giá; Rel = đỉnh hộp / đỉnh lớn nhất profile.
+    // Một hộp HVN dạng cụm (StrongZones.HvnClusters, §13.2). Lo/Hi/Peak/CoreLo/CoreHi là giá (CoreLo–CoreHi = lõi ≥ 80 % đỉnh,
+    // Lo–Hi = hộp sau khi nới); Rel = đỉnh hộp / đỉnh lớn nhất profile; Bars = khối lượng hộp tính bằng số nến M30 TB;
+    // Con = mật độ hộp / mật độ xung quanh (≤ 999); Lon = qua nhờ ≥ massMin; Noi = qua nhờ nổi bật tại chỗ.
     public sealed class SzHvnBox
     {
-        public double Lo, Hi, Peak, Mass, Rel;
+        public double Lo, Hi, Peak, CoreLo, CoreHi, Mass, Rel, Bars, Con;
+        public bool Lon, Noi;
     }
 
     // Hộp HVN ĐƯỢC VẼ (StrongZones.HvnBoxes): đã đủ điều kiện "đã rời xa" và trong bán kính hiển thị.
@@ -1470,7 +1484,7 @@ namespace TpoSuite
             return (poc, hi, lo);
         }
 
-        // ---------------------------------------------------------------- HVN dạng cụm (§10.2)
+        // ---------------------------------------------------------------- HVN dạng cụm v2 (§13.2)
         // Giá chuẩn của bước giá k: k / (1/tick) khi 1/tick nguyên (0,1 → /10) — trùng tk × 0,1 của Python.
         public static double PriceOfTick(long k, double tick)
         {
@@ -1482,8 +1496,20 @@ namespace TpoSuite
         public static int HvnHalfWindow(double up, double tick, StrongZoneParams p)
             => Math.Max(1, (int)Math.Floor(p.HvnSmooth * up / tick + 0.5));
 
+        // "Vùng xung quanh" (số bước giá): dn = max(1, floor(HvnAround × up / tick + 0,5)).
+        public static int HvnAroundTicks(double up, double tick, StrongZoneParams p)
+            => Math.Max(1, (int)Math.Floor(Math.Min(p.HvnAround * up / tick, 1e9) + 0.5));
+
+        // Số hộp tối đa của một profile: span = bước giá cao nhất − thấp nhất, upTicks = up / tick.
+        public static int HvnMaxBoxes(long span, double upTicks, StrongZoneParams p)
+        {
+            double f = Math.Floor(span / (p.HvnMaxStep * upTicks));
+            if (double.IsNaN(f)) f = 0;
+            return (int)Math.Min(p.HvnMaxCap, Math.Max(p.HvnMaxPerProfile, f));
+        }
+
         // Bản (giá, khối lượng) — cộng dồn theo bước giá rồi gọi bản số nguyên.
-        public static List<SzHvnBox> HvnClusters(IEnumerable<KeyValuePair<double, double>> levels, double tick, double up, double massMin, StrongZoneParams p)
+        public static List<SzHvnBox> HvnClusters(IEnumerable<KeyValuePair<double, double>> levels, double tick, double up, int nBars, double massMin, StrongZoneParams p)
         {
             var acc = new SortedDictionary<long, double>();
             if (levels != null)
@@ -1492,15 +1518,16 @@ namespace TpoSuite
                     long k = (long)Math.Round(kv.Key / tick);
                     acc[k] = acc.TryGetValue(k, out var c0) ? c0 + kv.Value : kv.Value;
                 }
-            return HvnClusters(acc.Keys.ToArray(), acc.Values.ToArray(), tick, up, massMin, p);
+            return HvnClusters(acc.Keys.ToArray(), acc.Values.ToArray(), tick, up, nBars, massMin, p);
         }
 
-        // tk: bước giá (số nguyên, tăng dần, không trùng); v: khối lượng THÔ từng bước giá của cả profile.
-        // Trả các hộp theo thứ tự tìm thấy (đỉnh cao trước). Bản tham chiếu: hvn_cum.py clusters().
-        public static List<SzHvnBox> HvnClusters(long[] tk, double[] v, double tick, double up, double massMin, StrongZoneParams p)
+        // tk: bước giá (số nguyên, tăng dần, không trùng); v: khối lượng THÔ từng bước giá của cả profile;
+        // nBars = số nến M30 của profile. Trả các hộp theo thứ tự tìm thấy (đỉnh cao trước).
+        // Bản tham chiếu: hvn_cum2.py clusters(). Mọi phép so là tích số nguyên × hằng bằng double, không chia.
+        public static List<SzHvnBox> HvnClusters(long[] tk, double[] v, double tick, double up, int nBars, double massMin, StrongZoneParams p)
         {
             var outp = new List<SzHvnBox>();
-            if (tk == null || tk.Length == 0 || tick <= 0 || double.IsNaN(up)) return outp;
+            if (tk == null || tk.Length == 0 || tick <= 0 || double.IsNaN(up) || up <= 0) return outp;
             long t0 = tk[0];
             long nl = tk[tk.Length - 1] - t0 + 1;
             if (nl < 3 || nl > 50_000_000) return outp;
@@ -1510,37 +1537,75 @@ namespace TpoSuite
             for (int q = 0; q < tk.Length; q++) w[tk[q] - t0] += v[q];
             for (int i = 0; i < n; i++) tot += w[i];
             if (tot <= 0) return outp;
-            double upTicks = up / tick;
+            double upT = up / tick;
             int h = HvnHalfWindow(up, tick, p);
+            int dn = HvnAroundTicks(up, tick, p);
+            double wt = p.HvnWidth * upT;
+            int maxBoxes = HvnMaxBoxes(n - 1, upT, p);
             // S[i] = Σ w[max(0, i−h) .. min(n−1, i+h)] qua mảng cộng dồn (giống np.cumsum)
             var cs = new double[n + 1];
             for (int i = 0; i < n; i++) cs[i + 1] = cs[i] + w[i];
             var S = new double[n];
             double p1 = double.MinValue;
             for (int i = 0; i < n; i++) { S[i] = cs[Math.Min(n, i + h + 1)] - cs[Math.Max(0, i - h)]; if (S[i] > p1) p1 = S[i]; }
+            double Sum(int a, int b) { double m = 0; for (int i = a; i <= b; i++) m += w[i]; return m; }
             var used = new bool[n];
-            for (int it = 0; it < 200; it++)
+            void Mark(int a, int b) { for (int i = a; i <= b; i++) used[i] = true; }
+            for (int it = 0; it < 2000; it++)
             {
-                int ib = -1; double best = double.NegativeInfinity;
-                for (int i = 0; i < n; i++) { double c = used[i] ? -1.0 : S[i]; if (c > best) { best = c; ib = i; } }   // hoà ⇒ chỉ số nhỏ nhất
-                if (ib < 0 || best <= 0 || best < p.HvnSecond * p1) break;
-                double thr = p.HvnBody * S[ib];
+                // 1. đỉnh còn lại cao nhất (hoà ⇒ chỉ số nhỏ nhất)
+                int ib = -1; double P = double.NegativeInfinity;
+                for (int i = 0; i < n; i++) { double c = used[i] ? -1.0 : S[i]; if (c > P) { P = c; ib = i; } }
+                if (ib < 0 || P <= 0 || P < p.HvnFloor * p1) break;
+                // 2. lõi ≥ HvnBody × đỉnh
+                double thr = p.HvnBody * P;
                 int lo = ib, hi = ib;
                 while (lo > 0 && !used[lo - 1] && S[lo - 1] >= thr) lo--;
                 while (hi < n - 1 && !used[hi + 1] && S[hi + 1] >= thr) hi++;
                 bool vai = (lo > 0 && used[lo - 1] && S[lo - 1] >= thr) || (hi < n - 1 && used[hi + 1] && S[hi + 1] >= thr);
-                for (int i = lo; i <= hi; i++) used[i] = true;
-                if (vai) continue;                                  // vai của khối cao hơn, không có đáy tách
-                double m = 0; for (int i = lo; i <= hi; i++) m += w[i];
-                double mass = m / tot;
-                if (mass < massMin) continue;                       // không đủ lớn
-                if ((hi - lo) < p.HvnMinWidth * upTicks) continue;  // đỉnh nhọn, không phải thân
+                if (vai) { Mark(lo, hi); continue; }                 // vai của khối cao hơn, không có đáy tách
+                // 3. phải là đỉnh cao nhất trong ± dn (xét mọi ô, kể cả đã dùng); bằng nhau thì qua
+                double mxAround = double.MinValue;
+                for (int i = Math.Max(0, ib - dn), e = Math.Min(n - 1, ib + dn); i <= e; i++) if (S[i] > mxAround) mxAround = S[i];
+                if (P < mxAround) { Mark(lo, hi); continue; }
+                // 4. nới tới bề rộng đích, về phía dày hơn; không dưới sàn, không leo sang bướu bên cạnh
+                int coreLo = lo, coreHi = hi;
+                double fl = p.HvnWidenFloor * P, vd = p.HvnWidenClimb * P;
+                double mL = double.MaxValue, mR = double.MaxValue;
+                for (int i = lo; i <= ib; i++) mL = Math.Min(mL, S[i]);
+                for (int i = ib; i <= hi; i++) mR = Math.Min(mR, S[i]);
+                while ((hi - lo) < wt)
+                {
+                    bool okL = lo > 0 && !used[lo - 1] && S[lo - 1] >= fl && S[lo - 1] <= mL + vd;
+                    bool okR = hi < n - 1 && !used[hi + 1] && S[hi + 1] >= fl && S[hi + 1] <= mR + vd;
+                    if (!okL && !okR) break;
+                    if (okL && (!okR || S[lo - 1] >= S[hi + 1])) { lo--; mL = Math.Min(mL, S[lo]); }
+                    else { hi++; mR = Math.Min(mR, S[hi]); }
+                }
+                // 5. đánh dấu (kể cả khi bị loại dưới đây)
+                Mark(lo, hi);
+                // 6. vẫn hẹp ⇒ đỉnh nhọn
+                if ((hi - lo) < p.HvnMinWidth * upT) continue;
+                // 7. đủ lớn: lớn so với cả profile HOẶC nổi bật tại chỗ
+                double vIn = Sum(lo, hi);
+                int nIn = hi - lo + 1;
+                int A = Math.Max(0, lo - dn), Z = Math.Min(n - 1, hi + dn);
+                int nOut = (lo - A) + (Z - hi);
+                double vOut = Sum(A, lo - 1) + Sum(hi + 1, Z);
+                bool lon = vIn >= massMin * tot;
+                bool noi = vIn * nBars >= p.HvnBars * tot && vIn * nOut >= p.HvnContrast * vOut * nIn;
+                if (!(lon || noi)) continue;
+                double mass = vIn / tot;
+                // 8. ghi hộp
                 outp.Add(new SzHvnBox
                 {
                     Lo = PriceOfTick(t0 + lo, tick), Hi = PriceOfTick(t0 + hi, tick), Peak = PriceOfTick(t0 + ib, tick),
-                    Mass = mass, Rel = S[ib] / p1,
+                    CoreLo = PriceOfTick(t0 + coreLo, tick), CoreHi = PriceOfTick(t0 + coreHi, tick),
+                    Mass = mass, Rel = P / p1, Bars = mass * nBars,
+                    Con = vOut > 0 ? Math.Min((vIn * nOut) / (vOut * nIn), 999.0) : 999.0,
+                    Lon = lon, Noi = noi,
                 });
-                if (outp.Count >= p.HvnMaxPerProfile) break;
+                if (outp.Count >= maxBoxes) break;
             }
             return outp;
         }
@@ -1621,12 +1686,12 @@ namespace TpoSuite
                 var st = ProfileStats(s, a, b, p);
                 if (st == null) return;
                 apx |= st.Approx;
-                // HVN dạng cụm (§10.3): khối lượng THÔ từng bước giá (không qua hàng 2 tick), up của chính profile.
+                // HVN dạng cụm (§10.3, v2 §13.3): khối lượng THÔ từng bước giá (không qua hàng 2 tick), up của chính profile.
                 // Thiếu khối lượng theo giá ⇒ không có hộp (không đoán bằng TPO).
                 var (tk, tv) = s.TicksOver(a, b);
                 double up = 0; for (int i = a; i <= b; i++) up += s.H[i] - s.L[i];
                 up /= (b - a + 1);
-                foreach (var c in HvnClusters(tk, tv, s.Tick, up, name == "hvn_w" ? p.HvnMassWeek : p.HvnMassDay, p))
+                foreach (var c in HvnClusters(tk, tv, s.Tick, up, b - a + 1, name == "hvn_w" ? p.HvnMassWeek : p.HvnMassDay, p))
                     outp.Add(new SzLevel { Name = name, Lo = c.Lo, Hi = c.Hi, IsHvn = true, Peak = c.Peak, Mass = c.Mass, End = b, Src = src });
             }
 
@@ -1892,12 +1957,16 @@ namespace TpoSuite
             return "Vùng mạnh (va đập + hợp lưu, chưa kiểm định): " + string.Join(" · ", parts);
         }
 
-        // ---------------------------------------------------------------- hộp HVN (PLAN-VUNG-MANH.md §11)
-        // Lấy ĐÚNG các hộp hvn_d / hvn_w mà Compute đã tính (không tính lần hai). Vẽ hộp khi đủ điều kiện
-        // "đã rời xa" (HvnOk tại nến j) và mép gần cách giá ≤ Radius × U (giá trong hộp ⇒ 0).
-        // Hộp của các profile khác nhau chồng nhau: giữ hộp MỚI hơn (End lớn hơn; cùng End ⇒ hộp ngày trước
-        // hộp tuần, rồi tỉ trọng lớn hơn), bỏ hộp cũ hơn nếu phần giao > 50 % bề rộng hộp nhỏ hơn.
+        // ---------------------------------------------------------------- hộp HVN (PLAN-VUNG-MANH.md §11, v2 §13.4)
+        // Lấy ĐÚNG các hộp hvn_d / hvn_w mà Compute đã tính (không tính lần hai). Bản tham chiếu: vung_manh.hvn_boxes().
+        // 1. Ứng viên: đủ "đã rời xa" (HvnOk tại nến j) và mép gần cách giá ≤ HvnRadius × U (giá trong hộp ⇒ 0).
+        // 2. Hộp của các profile khác nhau chồng nhau: giữ hộp MỚI hơn (End lớn hơn; cùng End ⇒ hộp ngày trước
+        //    hộp tuần, rồi tỉ trọng lớn hơn, rồi Lo nhỏ hơn), bỏ hộp sau nếu phần giao > 50 % bề rộng hộp nhỏ hơn;
+        //    hộp bị bỏ khác loại (ngày ↔ tuần) ⇒ nhãn hộp giữ lại thành "HVN ngày + tuần".
+        // 3. Giữ mọi hộp đang chứa giá; mỗi phía giá chỉ giữ HvnMaxSide hộp gần nhất ("dưới giá" ⇔ Hi < now).
         // Trả theo Lo tăng dần. Rẻ — chạy lại mỗi khi giá đổi.
+        public const string HvnLabelBoth = "HVN ngày + tuần";
+
         public static List<SzHvnShown> HvnBoxes(SzResult r, double now, StrongZoneParams p)
         {
             var outp = new List<SzHvnShown>();
@@ -1907,7 +1976,7 @@ namespace TpoSuite
             {
                 if (!lv.IsHvn || !HvnOk(lv, r.Highs, r.Lows, r.J, r.U, p)) continue;
                 double dist = now > lv.Hi ? now - lv.Hi : now < lv.Lo ? lv.Lo - now : 0;
-                if (dist > p.Radius * r.U) continue;
+                if (dist > p.HvnRadius * r.U) continue;
                 cand.Add(new SzHvnShown
                 {
                     Name = lv.Name, Lo = lv.Lo, Hi = lv.Hi, Peak = lv.Peak, Mass = lv.Mass, Dist = dist, End = lv.End, Src = lv.Src,
@@ -1916,16 +1985,24 @@ namespace TpoSuite
             }
             foreach (var c in cand.OrderByDescending(x => x.End).ThenBy(x => x.Name == "hvn_d" ? 0 : 1).ThenByDescending(x => x.Mass).ThenBy(x => x.Lo))
             {
-                bool dup = outp.Any(k =>
+                var dup = outp.FirstOrDefault(k =>
                 {
                     double inter = Math.Min(k.Hi, c.Hi) - Math.Max(k.Lo, c.Lo);
                     double small = Math.Min(k.Hi - k.Lo, c.Hi - c.Lo);
                     return inter > 0 && inter > 0.5 * small;
                 });
-                if (!dup) outp.Add(c);
+                if (dup == null) outp.Add(c);
+                else if (dup.Name != c.Name) dup.Label = HvnLabelBoth;   // cùng một cụm thấy ở cả profile ngày lẫn tuần
             }
-            return outp.OrderBy(x => x.Lo).ToList();
+            var keep = outp.Where(c => c.Dist == 0).ToList();
+            foreach (bool below in new[] { true, false })
+                keep.AddRange(outp.Where(c => c.Dist > 0 && (c.Hi < now) == below).OrderBy(c => c.Dist).ThenBy(c => c.Lo).Take(Math.Max(0, p.HvnMaxSide)));
+            return keep.OrderBy(x => x.Lo).ToList();
         }
+
+        // Chữ trên chart của một hộp HVN: "HVN ngày + tuần · 11 % khối lượng" (tỉ trọng của hộp được giữ).
+        public static string HvnBoxText(SzHvnShown b)
+            => b == null ? "" : $"{b.Label} · {Math.Round(b.Mass * 100, MidpointRounding.AwayFromZero):0} % khối lượng";
 
         // Dòng Telegram: tối đa 3 hộp, gần giá trước.
         public static string HvnSummaryLine(IList<SzHvnShown> boxes, Func<double, string> fmt, int max = 3)
@@ -2056,7 +2133,7 @@ namespace TpoSuite
             }
             float textH = font.GetHeight(g) + 1f;
             var labels = vis.Select(v => (txt: TextOf(v.z, tick), v.top, v.bot, col: v.col))
-                            .Concat(boxes.Select(b => (txt: b.b.Label, b.top, b.bot, col: hvnColor))).ToList();
+                            .Concat(boxes.Select(b => (txt: StrongZones.HvnBoxText(b.b), b.top, b.bot, col: hvnColor))).ToList();
             var ys = LayoutLabels(labels.Select(v => (v.top, v.bot)).ToList(), textH, clip.Top, clip.Bottom);
             for (int i = 0; i < labels.Count; i++)
             {

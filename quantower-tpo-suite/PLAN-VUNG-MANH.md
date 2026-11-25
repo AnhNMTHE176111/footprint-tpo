@@ -624,3 +624,119 @@ Sinh lại: `python hvn_cum2_fixture.py` (cần `prep1.py gc`, `prep1.py nq`). S
 1. **Hộp đổi chỗ ở một phần số phiên** so với bản đang chạy: trong các phiên bản cũ có hộp, NQ 7/36 phiên và GC 13/45 phiên hộp chuyển sang chỗ khác hoặc mất; thêm NQ 13 phiên, GC 20 phiên trước không có hộp nay có. Lý do chính: mỗi vùng ± 3 up giờ chỉ lấy đỉnh cao nhất, nên hộp "thứ hai" và hộp nằm ở thềm dưới một đỉnh nhọn không còn. Xem ảnh lưới trước/sau.
 2. **Vùng vàng trên GC tăng từ 15 % lên 23 % thời gian** (NQ giảm 19 % → 15 %), vì profile tuần giờ có nhiều hộp hơn và một cụm thường được đếm hai lần (HVN ngày + HVN tuần). Phương án đã đo: coi HVN ngày và HVN tuần là **một** nhóm khi đếm "≥ 3 nhóm" ⇒ vàng còn GC 10,5 %, NQ 6,8 %. Đây là đổi luật vàng gốc nên **chưa đưa vào spec**; fixture sinh theo luật hiện tại.
 3. **Đáy/đỉnh tuần làm mức hợp lưu**: mở rộng so với yêu cầu gốc, đã đo thử, mẫu quá nhỏ (GC 38 lệnh, NQ 20 lệnh) ⇒ **chưa đưa vào spec**.
+
+## 14. Vùng đệm của hộp HVN (thêm vào mục 13; chỉ là lớp VẼ)
+
+Lý do, số đo, ảnh: [`research/vung_manh_2026-11-25/VUNG-DEM.md`](research/vung_manh_2026-11-25/VUNG-DEM.md). Bản tham chiếu: [`vung_dem.py`](research/vung_manh_2026-11-25/vung_dem.py) hàm `add_buffers()`; phần được vẽ: `vung_manh.hvn_boxes()` (trường `buf_lo`, `buf_hi`).
+
+Ca người dùng báo (NQZ26): hộp `HVN ngày + tuần` 25.538,50 – 25.609,75; ngày 2026-11-25 07:30 UTC giá đảo ở 25.637,25, trên mép hộp 27,5 điểm. Người dùng vẽ tay một vùng 25.610 – 25.670 ngay trên hộp. Trong profile phiên 20/11 đó là một bướu phụ của cụm (68 % đỉnh) mà hộp không lấy vì đã đủ bề rộng `HvnWidth`.
+
+**Trạng thái: chưa kiểm định, và số đo hiện có là KHÔNG thấy lợi thế** (điểm đảo quanh hộp thật phân phối như quanh hộp dời; không cách dựng vùng đệm nào hơn đệm cố định). Vùng đệm là phần mô tả cụm khối lượng, không phải tín hiệu. Không đưa vào hợp lưu, không đổi luật vàng, không đổi "rời xa".
+
+### 14.1 Thông số (hằng trong `StrongZoneParams`, không có input)
+
+| Hằng | Giá trị | Nghĩa |
+|---|---|---|
+| `HvnBufFloor` | 0,50 | vùng đệm: khối lượng mượt ≥ 50 % đỉnh cụm. Đặt bằng `HvnWidenFloor`; khai báo riêng để đọc code cho rõ |
+| `HvnBufCap` | 0,45 | bề rộng tối đa mỗi phía, × up. Đặt bằng `HvnWidth` |
+| `HvnBufMin` | 0,05 | phía nào hẹp hơn 0,05 × up thì không có vùng đệm |
+
+### 14.2 Thuật toán — cuối `StrongZones.HvnClusters`, sau khi đã có đủ danh sách hộp
+
+`SzHvnBox` thêm `BufLo`, `BufHi` (giá). Với `S`, `t0`, `n`, `upT = up / tick` như 13.2, cho từng hộp đã ghi (chỉ số ô `lo`, `hi`, `i*` của hộp):
+
+1. `cap = max(1, (int)Math.Floor(HvnBufCap × upT + 0.5))`; `mn = HvnBufMin × upT` (double); `thr = HvnBufFloor × S[i*]`.
+2. Phía trên: `i = hi`; lặp khi `i < n − 1 && (i − hi) < cap && S[i + 1] ≥ thr` ⇒ `i++`. `(i − hi) ≥ mn` ⇒ `BufHi = (t0 + i) × tick`, ngược lại `BufHi = Hi`.
+3. Phía dưới: `k = lo`; lặp khi `k > 0 && (lo − k) < cap && S[k − 1] ≥ thr` ⇒ `k−−`. `(lo − k) ≥ mn` ⇒ `BufLo = (t0 + k) × tick`, ngược lại `BufLo = Lo`.
+
+Ghi chú:
+- Không xét `used[]`, không có luật "không leo", không dừng vì đủ bề rộng — chỉ có sàn 50 % và trần `cap`. Vòng lặp chạy **sau** khi mọi hộp đã tìm xong nên không ảnh hưởng tới việc tìm hộp; kết quả 13.2 không đổi một số nào.
+- Vùng đệm của hai hộp cùng profile không thể chồng nhau trong thực tế (đỉnh cách nhau > 3 up, hộp + đệm ≤ 0,45 + 0,45 up mỗi phía); không cần luật cắt.
+
+### 14.3 Mang qua các lớp
+
+- `SzLevel` thêm `BufLo`, `BufHi` (mức không phải HVN: `= Lo`, `= Hi`). `AddHvn` chép từ `SzHvnBox`.
+- **Không dùng `BufLo`/`BufHi` ở bất cứ đâu ngoài `HvnBoxes` và phần vẽ**: luật giao hộp của hợp lưu (10.4), `HvnOk`, khoảng cách `Dist`, bán kính `HvnRadius`, luật bỏ hộp trùng và trần `HvnMaxSide` vẫn tính trên `Lo`/`Hi`. Đã đo: nếu hợp lưu tính cả vùng đệm, thời gian có vùng vàng tăng 23,0 → 31,7 % (GC) và 14,7 → 25,3 % (NQ).
+- `SzHvnShown` thêm `BufLo`, `BufHi` = phần **được vẽ**, gán trong `HvnBoxes` lúc tạo ứng viên:
+  - `BufHi = now ≥ lv.Lo ? lv.BufHi : lv.Hi` (giá ở trên hoặc trong hộp ⇒ vẽ đệm trên)
+  - `BufLo = now ≤ lv.Hi ? lv.BufLo : lv.Lo` (giá ở dưới hoặc trong hộp ⇒ vẽ đệm dưới)
+- Hộp trùng (ngày + tuần): hộp được giữ dùng vùng đệm của chính nó.
+
+### 14.4 Vẽ (`StrongZones.Paint`) và chữ
+
+- Vẽ vùng đệm **trước** hộp HVN (nằm dưới cùng): với mỗi hộp, nếu `BufHi > Hi` tô dải `Hi → BufHi`, nếu `BufLo < Lo` tô dải `BufLo → Lo`.
+- Màu: cùng `hvnColor` của hộp. Nền `HvnBufFillAlpha = 14` (hộp là 30). Không viền; một **nét đứt** 1 px ở mép ngoài (`BufHi` hoặc `BufLo`), `HvnBufEdgeAlpha = 110`, `DashStyle.Dash`.
+- Không có nhãn riêng; `HvnBoxText` không đổi. Vùng đệm không tham gia `LayoutLabels`.
+- Dòng Telegram `HvnSummaryLine`: sau mỗi hộp có vùng đệm được vẽ, thêm `, đệm tới <giá>` trong ngoặc — ví dụ `25538,50–25609,75 (HVN ngày + tuần, đệm tới 25652,25)`; cả hai phía thì `đệm <mép ngoài dưới>–<mép ngoài trên>`.
+- Công tắc: đi theo `ShowHvnBox`. Không thêm input. Mô tả indicator thêm một câu: "Dải cam nhạt sát hộp HVN = vùng đệm (sườn cụm còn ≥ 50 % đỉnh); giá có thể đảo trước khi chạm hộp; chưa kiểm định."
+- Bất biến khung: vùng đệm tính từ cùng mảng khối lượng M30 của hộp ⇒ không đổi khi đổi khung chart.
+
+### 14.5 Test
+
+**a. Mức hàm — `fixture/vung_dem_cases.json`**: 19 ca, **cùng thứ tự và cùng `ten`** với `hvn_cum2_cases.json` (đọc `levels`, `up`, `tick`, `so_nen_m30`, `mass_min` ở file đó). Mỗi ca: `cap` (số bước giá), `min_ticks`, `clusters[{lo, hi, peak, buf_lo, buf_hi}]`. So `cap` và `buf_lo`/`buf_hi` bằng đúng; `buf_lo = lo` nghĩa là không có đệm dưới.
+
+| Ca | cap | Hộp → đệm dưới tới · đệm trên tới |
+|---|---|---|
+| **NQZ26 phiên 2026-11-20** (ca người dùng) | 284 | 25538,50 – 25609,75 → không · **25652,25** |
+| NQZ26 tuần 2026-11-15 → 11-20 | 239 | 27239,25 – 27299,00 → 27179,50 (chạm trần) · 27316,25 ; 25544,25 – 25604,00 → 25534,25 · 25611,25 |
+| NQZ26 phiên 2026-11-23 | 300 | 26801,50 – 26876,50 → 26762,25 · 26899,25 |
+| NQZ26 phiên 2026-11-18 | 226 | 27143,00 – 27206,25 → 27099,25 · 27257,00 |
+| NQZ26 phiên 2026-11-10 | 185 | 27707,50 – 27753,75 → 27661,25 (chạm trần) · 27800,00 (chạm trần) |
+| NQZ26 phiên 2026-11-13 | 188 | 27794,50 – 27841,50 → 27769,25 · 27878,25 |
+| NQZ26 phiên 2026-11-17 | 223 | 26946,25 – 27002,00 → không · 27009,00 |
+| NQZ26 phiên 2026-11-11 | 132 | 28345,50 – 28378,50 → không · không |
+| NQZ26 phiên 2026-10-08 | 131 | 31220,50 – 31253,25 → 31187,75 (chạm trần) · 31258,75 ; 30921,75 – 30954,50 → 30899,25 · 30979,50 |
+| NQZ26 tuần 2026-10-11 → 10-16 | 127 | 30755,00 – 30786,75 → 30746,50 · 30801,25 ; 30140,50 – 30176,75 → 30130,00 · 30195,75 ; 29806,50 – 29843,00 → 29777,75 · 29874,75 (chạm trần) ; 29375,50 – 29403,75 → không · không |
+| NQZ26 tuần 2026-11-08 → 11-13 | 185 | 28340,00 – 28386,25 → 28293,75 (chạm trần) · 28393,75 |
+| GCZ26 phiên 2026-10-29 | 51 | 4034,5 – 4040,6 → 4031,4 · 4043,1 |
+| GCZ26 phiên 2026-11-05 | 69 | 4131,2 – 4138,2 → 4124,3 (chạm trần) · 4139,3 |
+| GCZ26 phiên 2026-11-03 | 46 | không có hộp |
+| GCZ26 phiên 2026-10-28 | 43 | 4058,7 – 4063,0 → 4054,4 (chạm trần) · 4067,0 |
+| GCZ26 phiên 2026-11-02 | 48 | 3966,5 – 3971,4 → không · không ; 3906,6 – 3911,5 → 3905,5 · 3916,3 (chạm trần) |
+| GCZ26 tuần 2026-10-25 → 10-30 | 47 | 4030,2 – 4040,3 → 4025,5 (chạm trần) · 4043,5 |
+| GCZ26 tuần 2026-08-16 → 08-21 | 55 | 4542,8 – 4548,4 → 4539,5 · 4553,9 (chạm trần) ; 4447,7 – 4453,3 → 4444,9 · 4458,8 (chạm trần) ; 4637,4 – 4642,9 → không · không |
+| GCZ26 tuần 2026-08-09 → 08-14 | 54 | không có hộp |
+
+**b. Ca dựng tay** (kỳ vọng lấy bằng cách chạy `hvn_cum2.clusters` + `vung_dem.add_buffers` trên đúng dãy dựng tay rồi chép vào test):
+- Sườn thoải đều: vùng đệm dừng đúng ở ô cuối còn ≥ 50 % đỉnh.
+- Sườn có một đáy 55 % rồi bướu phụ 70 % rồi tụt: vùng đệm ôm cả bướu phụ (luật nới hộp thì dừng ở đáy).
+- Sườn phẳng dài ở 60 % đỉnh: vùng đệm dừng ở trần `cap`, đúng `cap` bước giá.
+- Sườn dốc đứng (dưới 50 % ngay ô kề): `BufHi = Hi`.
+- Vùng đệm tính ra 0,04 × up ⇒ bỏ; 0,06 × up ⇒ giữ.
+- Hộp sát mép profile (`hi = n − 1`): không tràn mảng, `BufHi = Hi`.
+- `HvnBoxes`: giá trên hộp ⇒ `BufHi` = đệm trên, `BufLo = Lo`; giá dưới hộp ⇒ ngược lại; giá trong hộp ⇒ cả hai; giá nằm trong đệm trên (giữa `Hi` và mép đệm) ⇒ chỉ đệm trên.
+- Hợp lưu: một cụm va đập chỉ giao **vùng đệm** (không giao hộp ± dung sai) ⇒ **không** có tên HVN.
+
+**c. Cả bộ máy, NQZ26 tới 25/11 — `fixture/nq25_expected.json`** (cùng `nq25_m30_bars.csv`, `nq25_m30_levels.csv.gz`: 572 nến M30 từ 2026-11-08 23:00 tới 2026-11-25 08:30 UTC, nến cuối chưa đóng; `splice_jump = 0`). 19 ca = mọi nến đóng từ 2026-11-24 23:00. Mỗi ca: `hvn[]` có thêm `buf_lo`, `buf_hi` (cả hai phía), `shown[]`, `hvn_boxes[]` có thêm `buf_lo`, `buf_hi` (phần được vẽ). So mọi trường như 13.5 d, thêm bốn trường đệm bằng đúng.
+
+Ba ca ghi số (U = 146,775):
+
+| Nến đóng (UTC) · giá | Hộp HVN được vẽ → phần đệm được vẽ |
+|---|---|
+| 2026-11-25 07:00 · 25725,25 | `25538,50–25609,75` `HVN ngày + tuần` → trên tới **25652,25** ; `26249,50–26312,75` `HVN ngày + tuần` → dưới từ 26227,50 ; `26804,25–26873,50` `HVN ngày + tuần` → dưới từ 26767,25 |
+| 2026-11-25 07:30 · 25780,25 (nến có đáy 25637,25) | như trên |
+| 2026-11-25 08:00 · 25831,75 | như trên |
+
+Kiểm riêng cho ca người dùng: đáy 25637,25 của nến 07:30 thoả `Hi = 25609,75 < 25637,25 ≤ BufHi = 25652,25`.
+
+Mức HVN ở cả ba ca (đều đủ "rời xa"; đệm dưới – đệm trên): ngày `26249,50–26312,75` (26227,50 – 26340,25) · `26801,50–26876,50` (26762,25 – 26899,25) · `25538,50–25609,75` (không – 25652,25) · `27664,75–27750,50` (27648,25 – 27807,25) · `27143,00–27206,25` (27099,25 – 27257,00); tuần `27239,25–27299,00` (27179,50 – 27316,25) · `25544,25–25604,00` (25534,25 – 25611,25) · `26804,25–26873,50` (26767,25 – 26897,50) · `26249,50–26318,75` (26227,00 – 26341,75).
+
+**d. Không được đổi**: toàn bộ test 13.5 a–d PASS không sửa kỳ vọng (`hvn_cum2_cases.json`, `expected_cum2.json`, `nq_expected2.json` không đổi một byte sau khi thêm vùng đệm vào bản tham chiếu).
+
+**e. Kiểm tay trên Quantower** (NQZ26, bốn khung M1/M5/M15/M30): dưới giá có dải cam nhạt 25609,75 – 25652,25 nằm ngay trên hộp 25538,50 – 25609,75, mép trên nét đứt; đổi khung không đổi số.
+
+Sinh lại: `python vung_dem_prep.py` → `python vung_dem_fixture.py`.
+
+### 14.6 Việc của Opus
+
+1. `StrongZoneParams`: ba hằng 14.1. `SzHvnBox`, `SzLevel`, `SzHvnShown`: thêm `BufLo`, `BufHi`.
+2. `HvnClusters`: vòng lặp 14.2 sau khi tìm xong hộp (cả hai overload); `AddHvn` chép sang `SzLevel`.
+3. `HvnBoxes`: gán phần được vẽ theo 14.3. Không đụng luật lọc.
+4. `Paint`: vẽ dải đệm + nét đứt mép ngoài (14.4); `HvnSummaryLine` thêm chữ đệm; mô tả indicator thêm một câu.
+5. Test 14.5 a–d. Build `./build-tpo.sh zones`, kiểm tay 14.5 e.
+
+### 14.7 Cần người dùng chốt
+
+1. **Vẽ vùng đệm dù số đo không ủng hộ?** Trên 192 lần (NQ) và 274 lần (GC) giá quay lại hộp, điểm đảo không tụ quanh hộp thật hơn hộp dời, và vùng đệm (theo râu, theo sườn, hay cố định) chỉ bắt thêm điểm đảo đúng theo tỉ lệ bề rộng của nó. Vẽ là để chart khớp thứ người dùng nhìn thấy trong ca 25/11, không phải vì có lợi thế.
+2. **Cách dựng**: đề xuất theo sườn profile (≥ 50 % đỉnh). Nếu người dùng vẫn muốn đúng nghĩa "vùng râu" thì phương án thay thế đã đo là "từ mép tới trung vị đầu râu của các nến M30 có thân chạm hộp" — ca 25/11 ra 25609,75 – 25656,50, rộng hơn trung bình 0,38 U so với 0,26 U, số đo không hơn.
+3. **Chỉ vẽ phía giá đang đứng** (đề xuất) hay luôn vẽ cả hai phía.

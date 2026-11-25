@@ -190,6 +190,8 @@ static partial class Tests
         }
         HvnClusterHandCases(p);
         HvnBoxDisplayCases(p);
+        HvnBufferHandCases(p);
+        HvnBufferDisplayCases(p);
         // ---- nhóm / vàng
         {
             var pg = p.Clone(); pg.GroupEdges = false;
@@ -894,7 +896,7 @@ static partial class Tests
         double top = double.MinValue, bot = double.MaxValue;
         for (int i = from; i <= to; i++) { top = Math.Max(top, f.H[i]); bot = Math.Min(bot, f.L[i]); }
         foreach (var z in shown) { top = Math.Max(top, z.Hi); bot = Math.Min(bot, z.Lo); }
-        foreach (var z in boxes) { top = Math.Max(top, z.Hi); bot = Math.Min(bot, z.Lo); }
+        foreach (var z in boxes) { top = Math.Max(top, double.IsNaN(z.BufHi) ? z.Hi : Math.Max(z.Hi, z.BufHi)); bot = Math.Min(bot, double.IsNaN(z.BufLo) ? z.Lo : Math.Min(z.Lo, z.BufLo)); }
         double m = (top - bot) * 0.06; top += m; bot -= m;
         var clip = new Rectangle(0, 24, W - padR, H - 24);
         float Y(double pr) => (float)(clip.Top + (top - pr) / (top - bot) * clip.Height);
@@ -1074,5 +1076,7 @@ static partial class Tests
         InvarianceTests(f);
         UiTests(f);
         NqTests();
+        VungDemFixture();
+        Nq25Tests();
     }
 }

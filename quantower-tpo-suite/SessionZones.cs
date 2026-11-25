@@ -10,7 +10,8 @@
 //      hộp HVN); xanh hỗ trợ / đỏ kháng cự / vàng ≥3 nhóm có HVN.
 //    HỘP HVN (2026-11-25, §10–11, v2 §13): cụm khối lượng LỚN và ĐỀU (thân chữ D, đấu giá xong) của
 //      5 phiên / tuần trước + tuần này tới hôm qua; vẽ hộp trong 8 U, tối đa 2 hộp mỗi phía giá,
-//      hộp ngày trùng hộp tuần ⇒ một hộp "HVN ngày + tuần". Giá quay lại: canh phản ứng đảo chiều HOẶC
+//      hộp ngày trùng hộp tuần ⇒ một hộp "HVN ngày + tuần". Vùng đệm (§14): dải cam nhạt nét đứt sát
+//      ngoài mép hộp = sườn cụm còn ≥ 50 % đỉnh (≤ 0,45 up), chỉ phía giá đang đứng; chỉ để vẽ. Giá quay lại: canh phản ứng đảo chiều HOẶC
 //      phá vỡ — chưa kiểm định. (Đo cũ trên HVN đỉnh nhọn: "đi tiếp / mục tiêu, không fade";
 //      phép đo chưa phân xử với cách dùng mới.) HVN kiểu cũ (đỉnh nhọn + nền 90 %), mục tiêu
 //      chốt lời sinh từ nó, và các lớp "Đo ·" đã BỎ HẲN.
@@ -125,7 +126,7 @@ namespace SessionZonesNs
         public SessionZones() : base()
         {
             Name = "Session Zones";
-            Description = "Vùng mạnh = cụm đỉnh/đáy M30 va đập nhiều lần + hợp lưu với VWAP/±1σ, VAH/VAL hôm qua & tuần trước, hộp HVN (xanh hỗ trợ, đỏ kháng cự, vàng = ≥3 nhóm hợp lưu có HVN). Hộp HVN = cụm khối lượng lớn và đều của phiên/tuần đã đóng; giá quay lại thì canh phản ứng đảo chiều hoặc phá vỡ. Chưa kiểm định; không phải tín hiệu vào lệnh. Add vào chart bất kỳ — tự lấy dữ liệu M30, vùng không đổi khi đổi khung. Cần Volume Analysis.";
+            Description = "Vùng mạnh = cụm đỉnh/đáy M30 va đập nhiều lần + hợp lưu với VWAP/±1σ, VAH/VAL hôm qua & tuần trước, hộp HVN (xanh hỗ trợ, đỏ kháng cự, vàng = ≥3 nhóm hợp lưu có HVN). Hộp HVN = cụm khối lượng lớn và đều của phiên/tuần đã đóng; giá quay lại thì canh phản ứng đảo chiều hoặc phá vỡ. Dải cam nhạt sát hộp HVN = vùng đệm (sườn cụm còn ≥ 50 % đỉnh); giá có thể đảo trước khi chạm hộp; chưa kiểm định. Cả lớp chưa kiểm định; không phải tín hiệu vào lệnh. Add vào chart bất kỳ — tự lấy dữ liệu M30, vùng không đổi khi đổi khung. Cần Volume Analysis.";
             SeparateWindow = false;
         }
 

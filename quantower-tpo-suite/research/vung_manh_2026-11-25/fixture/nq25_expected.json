@@ -1,0 +1,3069 @@
+{
+"ghi_chu": "NQZ26 giá thật tới 2026-11-25 08:30 UTC; Python chạy trên giá chia 2,5 rồi nhân lại. Bộ chặn chỗ nối TẮT (splice_jump = 0). HVN v2 + vùng đệm (PLAN mục 14). hvn[].buf_* = vùng đệm cả hai phía; hvn_boxes[].buf_* = phần ĐƯỢC VẼ.",
+"tick": 0.25,
+"splice_jump": 0.0,
+"params": {
+"BF": 0.5,
+"BCAP": 0.45,
+"BMIN": 0.05
+},
+"cases": [
+{
+"j": 552,
+"time_utc": "2026-11-24 23:00:00",
+"now": 26258.5,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": false,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": false,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": 1,
+"color": "xanh",
+"label": "Hỗ trợ · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26496.75,
+"hi": 26532.25,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua +1σ"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"label": "HVN ngày",
+"buf_lo": 27099.25,
+"buf_hi": 27206.25
+}
+]
+},
+{
+"j": 553,
+"time_utc": "2026-11-24 23:30:00",
+"now": 26196.25,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": false,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": false,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": 1,
+"color": "xanh",
+"label": "Hỗ trợ · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26496.75,
+"hi": 26532.25,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua +1σ"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"label": "HVN ngày",
+"buf_lo": 27099.25,
+"buf_hi": 27206.25
+}
+]
+},
+{
+"j": 554,
+"time_utc": "2026-11-25 00:00:00",
+"now": 26162.5,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": false,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": false,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": 1,
+"color": "xanh",
+"label": "Hỗ trợ · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+},
+{
+"lo": 26496.75,
+"hi": 26532.25,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua +1σ"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"label": "HVN ngày",
+"buf_lo": 27099.25,
+"buf_hi": 27206.25
+}
+]
+},
+{
+"j": 555,
+"time_utc": "2026-11-25 00:30:00",
+"now": 26162.75,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": false,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": false,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": 1,
+"color": "xanh",
+"label": "Hỗ trợ · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+},
+{
+"lo": 26496.75,
+"hi": 26532.25,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua +1σ"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"label": "HVN ngày",
+"buf_lo": 27099.25,
+"buf_hi": 27206.25
+}
+]
+},
+{
+"j": 556,
+"time_utc": "2026-11-25 01:00:00",
+"now": 26191.5,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": false,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": false,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": 1,
+"color": "xanh",
+"label": "Hỗ trợ · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+},
+{
+"lo": 26496.75,
+"hi": 26532.25,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua +1σ"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"label": "HVN ngày",
+"buf_lo": 27099.25,
+"buf_hi": 27206.25
+}
+]
+},
+{
+"j": 557,
+"time_utc": "2026-11-25 01:30:00",
+"now": 26068.5,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": false,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": false,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+},
+{
+"lo": 26496.75,
+"hi": 26532.25,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua +1σ"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"label": "HVN ngày",
+"buf_lo": 27099.25,
+"buf_hi": 27206.25
+}
+]
+},
+{
+"j": 558,
+"time_utc": "2026-11-25 02:00:00",
+"now": 26022.0,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": false,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": false,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+},
+{
+"lo": 26496.75,
+"hi": 26532.25,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua +1σ"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"label": "HVN ngày",
+"buf_lo": 27099.25,
+"buf_hi": 27206.25
+}
+]
+},
+{
+"j": 559,
+"time_utc": "2026-11-25 02:30:00",
+"now": 25923.75,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": true,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": true,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26222.5,
+"hi": 26262.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · HVN tuần + HVN ngày"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"label": "HVN ngày + tuần",
+"buf_lo": 26227.5,
+"buf_hi": 26312.75
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+}
+]
+},
+{
+"j": 560,
+"time_utc": "2026-11-25 03:00:00",
+"now": 26003.25,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": true,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": true,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26222.5,
+"hi": 26262.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · HVN tuần + HVN ngày"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"label": "HVN ngày + tuần",
+"buf_lo": 26227.5,
+"buf_hi": 26312.75
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+}
+]
+},
+{
+"j": 561,
+"time_utc": "2026-11-25 03:30:00",
+"now": 26021.5,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": true,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": true,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26222.5,
+"hi": 26262.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · HVN tuần + HVN ngày"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"label": "HVN ngày + tuần",
+"buf_lo": 26227.5,
+"buf_hi": 26312.75
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+}
+]
+},
+{
+"j": 562,
+"time_utc": "2026-11-25 04:00:00",
+"now": 26022.25,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": true,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": true,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26222.5,
+"hi": 26262.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · HVN tuần + HVN ngày"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"label": "HVN ngày + tuần",
+"buf_lo": 26227.5,
+"buf_hi": 26312.75
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+}
+]
+},
+{
+"j": 563,
+"time_utc": "2026-11-25 04:30:00",
+"now": 25971.5,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": true,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": true,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26222.5,
+"hi": 26262.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · HVN tuần + HVN ngày"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"label": "HVN ngày + tuần",
+"buf_lo": 26227.5,
+"buf_hi": 26312.75
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+}
+]
+},
+{
+"j": 564,
+"time_utc": "2026-11-25 05:00:00",
+"now": 25901.0,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": true,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": true,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26222.5,
+"hi": 26262.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · HVN tuần + HVN ngày"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"label": "HVN ngày + tuần",
+"buf_lo": 26227.5,
+"buf_hi": 26312.75
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+}
+]
+},
+{
+"j": 565,
+"time_utc": "2026-11-25 05:30:00",
+"now": 25887.25,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": true,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": true,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26222.5,
+"hi": 26262.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · HVN tuần + HVN ngày"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"label": "HVN ngày + tuần",
+"buf_lo": 26227.5,
+"buf_hi": 26312.75
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+}
+]
+},
+{
+"j": 566,
+"time_utc": "2026-11-25 06:00:00",
+"now": 25888.0,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": true,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": true,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26222.5,
+"hi": 26262.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · HVN tuần + HVN ngày"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"label": "HVN ngày + tuần",
+"buf_lo": 26227.5,
+"buf_hi": 26312.75
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+}
+]
+},
+{
+"j": 567,
+"time_utc": "2026-11-25 06:30:00",
+"now": 25855.0,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": true,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": true,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26222.5,
+"hi": 26262.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · HVN tuần + HVN ngày"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"label": "HVN ngày + tuần",
+"buf_lo": 26227.5,
+"buf_hi": 26312.75
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+}
+]
+},
+{
+"j": 568,
+"time_utc": "2026-11-25 07:00:00",
+"now": 25725.25,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": true,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": true,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26222.5,
+"hi": 26262.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · HVN tuần + HVN ngày"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"label": "HVN ngày + tuần",
+"buf_lo": 26227.5,
+"buf_hi": 26312.75
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+}
+]
+},
+{
+"j": 569,
+"time_utc": "2026-11-25 07:30:00",
+"now": 25780.25,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": true,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": true,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26222.5,
+"hi": 26262.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · HVN tuần + HVN ngày"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"label": "HVN ngày + tuần",
+"buf_lo": 26227.5,
+"buf_hi": 26312.75
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+}
+]
+},
+{
+"j": 570,
+"time_utc": "2026-11-25 08:00:00",
+"now": 25831.75,
+"U": 146.77499999999986,
+"hvn": [
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"src": 1,
+"ok": true,
+"buf_lo": 26227.5,
+"buf_hi": 26340.25
+},
+{
+"name": "hvn_d",
+"lo": 26801.5,
+"hi": 26876.5,
+"peak": 26817.75,
+"mass": 0.293599,
+"src": 2,
+"ok": true,
+"buf_lo": 26762.25,
+"buf_hi": 26899.25
+},
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"src": 3,
+"ok": true,
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 27664.75,
+"hi": 27750.5,
+"peak": 27687.0,
+"mass": 0.129016,
+"src": 4,
+"ok": true,
+"buf_lo": 27648.25,
+"buf_hi": 27807.25
+},
+{
+"name": "hvn_d",
+"lo": 27143.0,
+"hi": 27206.25,
+"peak": 27190.25,
+"mass": 0.276464,
+"src": 5,
+"ok": true,
+"buf_lo": 27099.25,
+"buf_hi": 27257.0
+},
+{
+"name": "hvn_w",
+"lo": 27239.25,
+"hi": 27299.0,
+"peak": 27268.5,
+"mass": 0.083145,
+"src": 1,
+"ok": true,
+"buf_lo": 27179.5,
+"buf_hi": 27316.25
+},
+{
+"name": "hvn_w",
+"lo": 25544.25,
+"hi": 25604.0,
+"peak": 25583.25,
+"mass": 0.026468,
+"src": 1,
+"ok": true,
+"buf_lo": 25534.25,
+"buf_hi": 25611.25
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"src": 0,
+"ok": true,
+"buf_lo": 26767.25,
+"buf_hi": 26897.5
+},
+{
+"name": "hvn_w",
+"lo": 26249.5,
+"hi": 26318.75,
+"peak": 26267.75,
+"mass": 0.121305,
+"src": 0,
+"ok": true,
+"buf_lo": 26227.0,
+"buf_hi": 26341.75
+}
+],
+"shown": [
+{
+"lo": 26094.75,
+"hi": 26149.75,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 4 lần · VWAP tuần trước −1σ + VAL hôm qua + VWAP hôm qua −1σ"
+},
+{
+"lo": 26222.5,
+"hi": 26262.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · HVN tuần + HVN ngày"
+},
+{
+"lo": 26343.25,
+"hi": 26377.5,
+"side": -1,
+"color": "do",
+"label": "Kháng cự · 3 lần · VWAP hôm qua"
+}
+],
+"hvn_boxes": [
+{
+"name": "hvn_d",
+"lo": 25538.5,
+"hi": 25609.75,
+"peak": 25583.0,
+"mass": 0.110965,
+"label": "HVN ngày + tuần",
+"buf_lo": 25538.5,
+"buf_hi": 25652.25
+},
+{
+"name": "hvn_d",
+"lo": 26249.5,
+"hi": 26312.75,
+"peak": 26268.0,
+"mass": 0.244526,
+"label": "HVN ngày + tuần",
+"buf_lo": 26227.5,
+"buf_hi": 26312.75
+},
+{
+"name": "hvn_w",
+"lo": 26804.25,
+"hi": 26873.5,
+"peak": 26825.5,
+"mass": 0.174123,
+"label": "HVN ngày + tuần",
+"buf_lo": 26767.25,
+"buf_hi": 26873.5
+}
+]
+}
+]
+}

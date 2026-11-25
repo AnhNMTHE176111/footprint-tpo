@@ -1248,6 +1248,10 @@ namespace TpoSuite
         public double HvnFloor = 0.10;      // dừng khi đỉnh còn lại < 10 % đỉnh lớn nhất (chặn vòng lặp)
         public double HvnRadius = 8.0;      // hiển thị hộp HVN: mép gần cách giá ≤ 8 U (vùng mạnh vẫn Radius)
         public int HvnMaxSide = 2;          // hiển thị hộp HVN: tối đa 2 hộp gần nhất mỗi phía giá
+        // Vùng đệm của hộp HVN (§14.1) — chỉ là lớp VẼ: sườn cụm sát ngoài mép hộp; không dùng trong hợp lưu / "rời xa".
+        public double HvnBufFloor = 0.50;   // vùng đệm: khối lượng mượt ≥ 50 % đỉnh cụm (= HvnWidenFloor, khai riêng cho rõ)
+        public double HvnBufCap = 0.45;     // bề rộng tối đa mỗi phía (×up) (= HvnWidth)
+        public double HvnBufMin = 0.05;     // phía nào hẹp hơn 0,05 × up thì không có vùng đệm
         public int GoldMin = 3;           // vàng: ≥ 3 nhóm mức và có HVN
         public bool GroupEdges = true;    // gộp VAH/VAL với VWAP ±1σ cùng kỳ thành một nhóm
         public int MinGroup = 1;          // hiển thị: số nhóm mức hợp lưu tối thiểu
@@ -1280,6 +1284,7 @@ namespace TpoSuite
         public bool IsHvn;
         public double Peak = double.NaN, Mass;   // HVN: đỉnh (khối lượng mượt) + tỉ trọng khối lượng của hộp
         public int End = -1, Src;   // End = nến cuối của profile nguồn; Src = số phiên/tuần lùi lại
+        public double BufLo = double.NaN, BufHi = double.NaN;   // HVN: mép ngoài vùng đệm (§14.3); mức khác: NaN ⇒ coi như = Lo/Hi
     }
 
     // Một hộp HVN dạng cụm (StrongZones.HvnClusters, §13.2). Lo/Hi/Peak/CoreLo/CoreHi là giá (CoreLo–CoreHi = lõi ≥ 80 % đỉnh,
@@ -1289,6 +1294,7 @@ namespace TpoSuite
     {
         public double Lo, Hi, Peak, CoreLo, CoreHi, Mass, Rel, Bars, Con;
         public bool Lon, Noi;
+        public double BufLo, BufHi;   // vùng đệm (§14.2): mép ngoài dưới/trên; = Lo/Hi khi phía đó không có đệm
     }
 
     // Hộp HVN ĐƯỢC VẼ (StrongZones.HvnBoxes): đã đủ điều kiện "đã rời xa" và trong bán kính hiển thị.
@@ -1298,6 +1304,9 @@ namespace TpoSuite
         public double Lo, Hi, Peak, Mass, Dist;
         public int End, Src;
         public string Label = "";   // "HVN ngày" / "HVN tuần"
+        // Vùng đệm ĐƯỢC VẼ (§14.3): chỉ phía giá đang đứng (giá trong hộp ⇒ cả hai). = Lo/Hi khi không vẽ phía đó.
+        // Mặc định NaN (dựng tay không gán) ⇒ không vẽ đệm.
+        public double BufLo = double.NaN, BufHi = double.NaN;
     }
 
     public sealed class SzZone
@@ -1500,6 +1509,10 @@ namespace TpoSuite
         public static int HvnAroundTicks(double up, double tick, StrongZoneParams p)
             => Math.Max(1, (int)Math.Floor(Math.Min(p.HvnAround * up / tick, 1e9) + 0.5));
 
+        // Bề rộng tối đa vùng đệm mỗi phía (số bước giá, §14.2): cap = max(1, floor(HvnBufCap × upTicks + 0,5)).
+        public static int HvnBufCapTicks(double upTicks, StrongZoneParams p)
+            => Math.Max(1, (int)Math.Floor(Math.Min(p.HvnBufCap * upTicks, 1e9) + 0.5));
+
         // Số hộp tối đa của một profile: span = bước giá cao nhất − thấp nhất, upTicks = up / tick.
         public static int HvnMaxBoxes(long span, double upTicks, StrongZoneParams p)
         {
@@ -1550,6 +1563,7 @@ namespace TpoSuite
             for (int i = 0; i < n; i++) { S[i] = cs[Math.Min(n, i + h + 1)] - cs[Math.Max(0, i - h)]; if (S[i] > p1) p1 = S[i]; }
             double Sum(int a, int b) { double m = 0; for (int i = a; i <= b; i++) m += w[i]; return m; }
             var used = new bool[n];
+            var idx = new List<(int lo, int hi, int pk)>();
             void Mark(int a, int b) { for (int i = a; i <= b; i++) used[i] = true; }
             for (int it = 0; it < 2000; it++)
             {
@@ -1605,7 +1619,24 @@ namespace TpoSuite
                     Con = vOut > 0 ? Math.Min((vIn * nOut) / (vOut * nIn), 999.0) : 999.0,
                     Lon = lon, Noi = noi,
                 });
+                idx.Add((lo, hi, ib));
                 if (outp.Count >= maxBoxes) break;
+            }
+            // 9. vùng đệm (§14.2) — chạy SAU khi đã tìm xong mọi hộp ⇒ không ảnh hưởng việc tìm hộp.
+            //    Nới từ mép hộp ra ngoài chừng nào S ≥ HvnBufFloor × đỉnh cụm, tối đa cap bước; hẹp hơn mn thì bỏ.
+            //    Không xét used[], không có luật "không leo". Bản tham chiếu: vung_dem.py add_buffers().
+            int cap = HvnBufCapTicks(upT, p);
+            double mn = p.HvnBufMin * upT;
+            for (int q = 0; q < outp.Count; q++)
+            {
+                var (lo, hi, pk) = idx[q];
+                double thr = p.HvnBufFloor * S[pk];
+                int i = hi;
+                while (i < n - 1 && (i - hi) < cap && S[i + 1] >= thr) i++;
+                int k = lo;
+                while (k > 0 && (lo - k) < cap && S[k - 1] >= thr) k--;
+                outp[q].BufHi = PriceOfTick(t0 + ((i - hi) >= mn ? i : hi), tick);
+                outp[q].BufLo = PriceOfTick(t0 + ((lo - k) >= mn ? k : lo), tick);
             }
             return outp;
         }
@@ -1692,7 +1723,8 @@ namespace TpoSuite
                 double up = 0; for (int i = a; i <= b; i++) up += s.H[i] - s.L[i];
                 up /= (b - a + 1);
                 foreach (var c in HvnClusters(tk, tv, s.Tick, up, b - a + 1, name == "hvn_w" ? p.HvnMassWeek : p.HvnMassDay, p))
-                    outp.Add(new SzLevel { Name = name, Lo = c.Lo, Hi = c.Hi, IsHvn = true, Peak = c.Peak, Mass = c.Mass, End = b, Src = src });
+                    outp.Add(new SzLevel { Name = name, Lo = c.Lo, Hi = c.Hi, IsHvn = true, Peak = c.Peak, Mass = c.Mass, End = b, Src = src,
+                                           BufLo = c.BufLo, BufHi = c.BufHi });
             }
 
             // hôm qua = phiên đã đóng gần nhất có ≥ MinDayBars nến
@@ -1977,10 +2009,14 @@ namespace TpoSuite
                 if (!lv.IsHvn || !HvnOk(lv, r.Highs, r.Lows, r.J, r.U, p)) continue;
                 double dist = now > lv.Hi ? now - lv.Hi : now < lv.Lo ? lv.Lo - now : 0;
                 if (dist > p.HvnRadius * r.U) continue;
+                // vùng đệm được vẽ (§14.3): giá trên/trong hộp ⇒ đệm trên; giá dưới/trong hộp ⇒ đệm dưới. Lọc vẫn theo Lo/Hi.
+                double bLo = double.IsNaN(lv.BufLo) ? lv.Lo : lv.BufLo, bHi = double.IsNaN(lv.BufHi) ? lv.Hi : lv.BufHi;
                 cand.Add(new SzHvnShown
                 {
                     Name = lv.Name, Lo = lv.Lo, Hi = lv.Hi, Peak = lv.Peak, Mass = lv.Mass, Dist = dist, End = lv.End, Src = lv.Src,
                     Label = lv.Name == "hvn_w" ? "HVN tuần" : "HVN ngày",
+                    BufLo = now <= lv.Hi ? bLo : lv.Lo,
+                    BufHi = now >= lv.Lo ? bHi : lv.Hi,
                 });
             }
             foreach (var c in cand.OrderByDescending(x => x.End).ThenBy(x => x.Name == "hvn_d" ? 0 : 1).ThenByDescending(x => x.Mass).ThenBy(x => x.Lo))
@@ -2009,7 +2045,18 @@ namespace TpoSuite
         {
             if (boxes == null || boxes.Count == 0) return null;
             return "Hộp HVN (cụm khối lượng, chưa kiểm định): "
-                   + string.Join(" · ", boxes.OrderBy(b => b.Dist).Take(max).Select(b => $"{fmt(b.Lo)}–{fmt(b.Hi)} ({b.Label})"));
+                   + string.Join(" · ", boxes.OrderBy(b => b.Dist).Take(max).Select(b => $"{fmt(b.Lo)}–{fmt(b.Hi)} ({b.Label}{BufText(b, fmt)})"));
+        }
+
+        // Chữ vùng đệm trong dòng Telegram (§14.4): ", đệm tới <mép ngoài>" (một phía) hoặc ", đệm <dưới>–<trên>" (cả hai phía).
+        public static string BufText(SzHvnShown b, Func<double, string> fmt)
+        {
+            if (b == null) return "";
+            bool up = b.BufHi > b.Hi, dn = b.BufLo < b.Lo;
+            if (up && dn) return $", đệm {fmt(b.BufLo)}–{fmt(b.BufHi)}";
+            if (up) return $", đệm tới {fmt(b.BufHi)}";
+            if (dn) return $", đệm tới {fmt(b.BufLo)}";
+            return "";
         }
 
         // Cửa sổ history chuẩn hoá: chỉ dùng nến có TimeLeft ≥ (nến cuối − days ngày). M30 chính và M30 phụ
@@ -2086,6 +2133,8 @@ namespace TpoSuite
 
         // Hộp HVN: nền rất nhạt (cam nhạt trên nền tối) + viền liền rõ, để nhìn ra "thân" mà không lấn vùng mạnh.
         public const int HvnFillAlpha = 30, HvnEdgeAlpha = 220;
+        // Vùng đệm (§14.4): cùng màu hộp, nền bằng nửa độ đậm hộp, không viền, nét đứt 1 px ở mép ngoài.
+        public const int HvnBufFillAlpha = 14, HvnBufEdgeAlpha = 110;
 
         // Vẽ hộp HVN (dưới) rồi vùng mạnh (trên); nhãn của CẢ HAI xếp chung bằng LayoutLabels ⇒ không đè nhau.
         public static void Paint(Graphics g, Rectangle clip, Func<double, float> toY, IList<SzZone> zones,
@@ -2111,6 +2160,16 @@ namespace TpoSuite
                 if (bot < clip.Top || top > clip.Bottom) continue;
                 vis.Add((z, top, bot, ColorOf(z, sup, res, gold)));
             }
+            // vùng đệm vẽ TRƯỚC hộp (nằm dưới cùng); không nhãn, không tham gia LayoutLabels
+
+            if (hvnBoxes != null)
+                using (var bfill = new SolidBrush(Color.FromArgb(HvnBufFillAlpha, hvnColor)))
+                using (var dash = new Pen(Color.FromArgb(HvnBufEdgeAlpha, hvnColor), 1f) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dash })
+                    foreach (var b in hvnBoxes)
+                    {
+                        if (b.BufHi > b.Hi) PaintBuf(g, clip, bfill, dash, toY(b.Hi), toY(b.BufHi));
+                        if (b.BufLo < b.Lo) PaintBuf(g, clip, bfill, dash, toY(b.Lo), toY(b.BufLo));
+                    }
             if (vis.Count == 0 && boxes.Count == 0) return;
             foreach (var b in boxes)
             {
@@ -2145,6 +2204,16 @@ namespace TpoSuite
                 using (var br = new SolidBrush(labels[i].col))
                     g.DrawString(txt, font, br, x, ys[i]);
             }
+        }
+
+        // Một dải đệm: tô từ mép hộp (yEdge) tới mép ngoài (yOuter), nét đứt ở mép ngoài. Trả true nếu có vẽ.
+        static bool PaintBuf(Graphics g, Rectangle clip, Brush fill, Pen dash, float yEdge, float yOuter)
+        {
+            float top = Math.Min(yEdge, yOuter), bot = Math.Max(yEdge, yOuter);
+            if (bot < clip.Top || top > clip.Bottom) return false;
+            g.FillRectangle(fill, clip.Left, top, clip.Width, Math.Max(1f, bot - top));
+            if (yOuter >= clip.Top && yOuter <= clip.Bottom) g.DrawLine(dash, clip.Left, yOuter, clip.Right, yOuter);
+            return true;
         }
     }
 }

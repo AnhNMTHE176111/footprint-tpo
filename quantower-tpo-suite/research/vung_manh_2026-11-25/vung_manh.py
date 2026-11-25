@@ -89,10 +89,13 @@ def day_levels(D, d, p=P):
             tk, v = D.ticks_over(a, b)
             up = float((D.m30['h'][a:b + 1] - D.m30['l'][a:b + 1]).mean())
             hp = dict(HC2.HP2, **p.get('HVN2', {}))
-            cl, _ = HC2.clusters(tk, v, up / TICK, b - a + 1, hp, hp['Y_W'] if name == 'hvn_w' else hp['Y'])
+            cl, ex = HC2.clusters(tk, v, up / TICK, b - a + 1, hp, hp['Y_W'] if name == 'hvn_w' else hp['Y'])
+            import vung_dem as VD                       # vùng đệm (PLAN mục 14): chỉ để VẼ, không dùng trong hợp lưu / "rời xa"
+            VD.add_buffers(cl, ex, up / TICK)
             for c in cl:
                 out.append(dict(name=name, lo=round(c['lo'] * TICK, 6), hi=round(c['hi'] * TICK, 6), peak=round(c['peak'] * TICK, 6),
-                                ratio=c['mass'], bars=c['bars'], con=c['con'], end=b, src=src, dshape=is_d_shape(st, p), cum=True))
+                                ratio=c['mass'], bars=c['bars'], con=c['con'], end=b, src=src, dshape=is_d_shape(st, p), cum=True,
+                                blo=round(c['blo'] * TICK, 6), bhi=round(c['bhi'] * TICK, 6)))
             return
         if p.get('HVN_MODE', 'dinh') == 'cum':
             tk, v = D.ticks_over(a, b)
@@ -290,8 +293,11 @@ def hvn_boxes(D, levels, j, now, p=P):
         if not L['name'].startswith('hvn') or not hvn_ok(D, L, j, u, p): continue
         dist = now - L['hi'] if now > L['hi'] else L['lo'] - now if now < L['lo'] else 0.0
         if dist > p['HVN_RADIUS'] * u: continue
+        # vùng đệm được vẽ (PLAN mục 14.3): chỉ phía giá đang đứng — giá ở trên/trong hộp ⇒ đệm trên, giá ở dưới/trong hộp ⇒ đệm dưới
+        blo, bhi = L.get('blo', L['lo']), L.get('bhi', L['hi'])
         cand.append(dict(name=L['name'], lo=L['lo'], hi=L['hi'], peak=L['peak'], mass=L['ratio'], dist=dist, end=L['end'], src=L['src'],
-                         label='HVN tuần' if L['name'] == 'hvn_w' else 'HVN ngày'))
+                         label='HVN tuần' if L['name'] == 'hvn_w' else 'HVN ngày',
+                         buf_lo=blo if now <= L['hi'] else L['lo'], buf_hi=bhi if now >= L['lo'] else L['hi']))
     out = []
     for c in sorted(cand, key=lambda x: (-x['end'], 0 if x['name'] == 'hvn_d' else 1, -x['mass'], x['lo'])):
         dup = None

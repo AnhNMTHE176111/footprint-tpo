@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "FreeChart No Ads",
+  "version": "1.0",
+  "description": "Ẩn khung quảng cáo trên thefreechart.com",
+  "content_scripts": [
+    {
+      "matches": ["*://thefreechart.com/*", "*://*.thefreechart.com/*"],
+      "css": ["hide.css"],
+      "js": ["hide.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ]
+}

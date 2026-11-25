@@ -96,3 +96,25 @@ Cộng thêm điều kiện thuận xu hướng: đảo tại vùng 47 so với 
 VM_CACHE_DIR=$TEMP/vmc python vong20.py          # cả 20 vòng (~3 phút)
 VM_CACHE_DIR=$TEMP/vmc python vong20.py 19 20
 ```
+
+## Đưa vào SessionZones (lớp "Vùng cụm vol", 2026-11-25)
+
+Thuật toán của indicator nằm trong `cz_ref.py` (Python) và `ClusterZones` trong ProfileEngine.cs (C#). Test C# = Python trên 41 thời điểm thật NQ + GC: 83 vùng, trong đó 20 vùng đang bị chạm.
+
+Thuật toán:
+- Chỉ lấy **1 cụm nặng nhất** của mỗi phiên ngày.
+- Bộ máy trạng thái chạy trên **nến M15**, không phải M1.
+- Vùng chỉ hiện khi đủ luật (đã rời mạnh, lần chạm 1–2).
+
+**Đo lại đúng thuật toán này** (1 500 mốc ngẫu nhiên mỗi mã, chấm trên M1, so với vùng dời ngẫu nhiên áp cùng luật):
+- Đảo tại vùng: 42,0 % so với 31,9 % ở đối chứng, **Δ +10,1** [+1,0, +19,8].
+- Theo từng tập: NQ TRAIN +14,2, **NQ TEST −7,4**, GC +14,1.
+- Lợi thế thấp hơn bản nghiên cứu (+14 đến +17), và âm ở NQ TEST.
+
+**Lọc thuận xu hướng không ổn định:** ở bản M15 này, chạm ngược xu hướng lại tốt hơn (+16,1 so với +7,5). Vì vậy indicator **không** dùng điều kiện xu hướng.
+
+**Lỗi đã sửa khi port:** trên M15, giờ nghỉ CME (60 phút) làm hai nến mở cách nhau đúng 75 phút. Ngưỡng tách phiên phải là > 60 phút, không phải > 75 phút như trên M30; để > 75 thì các phiên bị dính vào nhau.
+
+**Báo Telegram:**
+- Gửi một tin khi lần chạm hợp lệ bắt đầu trong 30 phút gần nhất.
+- Khoá chống trùng = mã + phía + nến M15 bắt đầu lần chạm, lưu bằng file tạo nguyên tử. Nhiều tab hay mở lại chart cũng không gửi lại.

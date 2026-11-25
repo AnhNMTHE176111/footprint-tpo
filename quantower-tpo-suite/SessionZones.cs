@@ -5,6 +5,10 @@
 //  qua Symbol.GetHistory() nếu chart hiện tại không phải M30 (xem OnInit()).
 //  Gộp nến 30' thành khối phiên Á/Âu/Mỹ (theo giờ-trong-ngày + gap tách cuối
 //  tuần/bảo trì), gợi ý "Mỹ ưu tiên gì" cho Telegram, và vẽ:
+//    VÙNG CỤM VOL (2026-11-25, research/vung_quan_trong_2026-11-25, CHƯA KIỂM ĐỊNH — lớp chính, bật mặc định):
+//      cụm khối lượng nặng nhất của profile cố định 3 phiên ngày gần nhất (gộp khi chồng nhau), chỉ hiện khi giá đã
+//      RỜI dải ≥ 3 U15 trong ≤ 8 nến M15, cho lần chạm 1–2; rời lên = hỗ trợ (xanh), rời xuống = kháng cự (đỏ).
+//      Tự lấy nến M15 phụ. Báo Telegram MỘT lần khi giá chạm vùng (khoá file, nhiều tab không gửi trùng).
 //    VÙNG MẠNH (PLAN-VUNG-MANH.md, CHƯA KIỂM ĐỊNH): cụm ≥3 đỉnh/đáy M30 bật lại ≥1 U +
 //      hợp lưu với mức của phiên/tuần ĐÃ ĐÓNG (VWAP/±1σ, VAH/VAL hôm qua & tuần trước,
 //      hộp HVN); xanh hỗ trợ / đỏ kháng cự / vàng ≥3 nhóm có HVN.
@@ -40,10 +44,13 @@ namespace SessionZonesNs
         //  Quantower bỏ qua giá trị đã lưu của ô không còn tồn tại ⇒ workspace cũ mở được.
         //  Ô hộp HVN dùng tên thuộc tính MỚI (ShowHvnBox) để giá trị "tắt" của ô ShowHvn cũ không dính sang.
         // ---------- Hiển thị ----------
+        [InputParameter("Hiện vùng cụm vol (cụm khối lượng ngày, giá đã rời mạnh)", 9)]
+        public bool ShowClusterZones { get; set; } = true;
+        // 2026-11-25: vùng mạnh + hộp HVN đo ra không hơn vùng dời ngẫu nhiên (KET-QUA-10-VONG.md) ⇒ tắt mặc định.
         [InputParameter("Hiện vùng mạnh (va đập nhiều + hợp lưu)", 10)]
-        public bool ShowStrongZones { get; set; } = true;
+        public bool ShowStrongZones { get; set; } = false;
         [InputParameter("Hiện hộp HVN (cụm khối lượng lớn của ngày/tuần trước)", 11)]
-        public bool ShowHvnBox { get; set; } = true;
+        public bool ShowHvnBox { get; set; } = false;
         [InputParameter("Hiện LVN (chỗ khối lượng mỏng, giá hay xuyên nhanh)", 12)]
         public bool ShowLvn { get; set; } = false;
         [InputParameter("Hiện VAH/VAL hôm nay", 13)]
@@ -84,6 +91,8 @@ namespace SessionZonesNs
         public bool TeleTestNow { get; set; } = false;
         [InputParameter("Kèm lịch tin Forex Factory", 45)]
         public bool TeleShowNews { get; set; } = true;
+        [InputParameter("Báo Telegram khi giá chạm vùng cụm vol (1 tin mỗi lần chạm)", 46)]
+        public bool TeleTouchAlert { get; set; } = true;
 
         // ======================= HẰNG SỐ (bằng đúng mặc định cũ của các ô đã gỡ — §12.2) =======================
         private const int AsiaStart = 300;            // 05:00 giờ VN
@@ -122,11 +131,18 @@ namespace SessionZonesNs
         private HistoricalData _hd30;         // history M30 dùng để tính — của chart chính hoặc phụ
         private bool _ownHd30;                // true nếu _hd30 là history PHỤ (tự lấy, phải tự Dispose)
         private static readonly Period Period30 = new Period(BasePeriod.Minute, 30);
+        // Vùng cụm vol: nến M15 phụ (chỉ OHLC) cho bộ máy trạng thái + bộ đệm hàng profile từng phiên ngày.
+        private HistoricalData _hd15;
+        private static readonly Period Period15 = new Period(BasePeriod.Minute, 15);
+        private const int CzHistoryDays = 14;         // ≥ 5 phiên cho U15 + 3 phiên nguồn + cuối tuần
+        private const int CzAlertFreshMin = 30;       // chỉ báo lần chạm bắt đầu trong 30' gần nhất (dữ liệu live)
+        private readonly Dictionary<string, (double[] pr, double[] v)> _czRows = new();
+        private readonly HashSet<string> _czSent = new();
 
         public SessionZones() : base()
         {
             Name = "Session Zones";
-            Description = "Vùng mạnh = cụm đỉnh/đáy M30 va đập nhiều lần + hợp lưu với VWAP/±1σ, VAH/VAL hôm qua & tuần trước, hộp HVN (xanh hỗ trợ, đỏ kháng cự, vàng = ≥3 nhóm hợp lưu có HVN). Hộp HVN = cụm khối lượng lớn và đều của phiên/tuần đã đóng; giá quay lại thì canh phản ứng đảo chiều hoặc phá vỡ. Dải cam nhạt sát hộp HVN = vùng đệm (sườn cụm còn ≥ 50 % đỉnh); giá có thể đảo trước khi chạm hộp; chưa kiểm định. Cả lớp chưa kiểm định; không phải tín hiệu vào lệnh. Add vào chart bất kỳ — tự lấy dữ liệu M30, vùng không đổi khi đổi khung. Cần Volume Analysis.";
+            Description = "Vùng cụm vol (lớp chính, chưa kiểm định) = cụm khối lượng nặng nhất của 3 phiên ngày gần nhất, chỉ hiện khi giá đã rời mạnh (≥ 3 U15 trong 2 giờ), cho lần chạm 1–2; xanh hỗ trợ, đỏ kháng cự, tô đậm khi đang chạm; báo Telegram 1 lần mỗi lần chạm. Vùng mạnh = cụm đỉnh/đáy M30 va đập nhiều lần + hợp lưu với VWAP/±1σ, VAH/VAL hôm qua & tuần trước, hộp HVN (xanh hỗ trợ, đỏ kháng cự, vàng = ≥3 nhóm hợp lưu có HVN). Hộp HVN = cụm khối lượng lớn và đều của phiên/tuần đã đóng; giá quay lại thì canh phản ứng đảo chiều hoặc phá vỡ. Dải cam nhạt sát hộp HVN = vùng đệm (sườn cụm còn ≥ 50 % đỉnh); giá có thể đảo trước khi chạm hộp; chưa kiểm định. Cả lớp chưa kiểm định; không phải tín hiệu vào lệnh. Add vào chart bất kỳ — tự lấy dữ liệu M30, vùng không đổi khi đổi khung. Cần Volume Analysis.";
             SeparateWindow = false;
         }
 
@@ -178,6 +194,14 @@ namespace SessionZonesNs
                 var prog = _hd30.CalculateVolumeProfile(new VolumeAnalysisCalculationParameters { CalculatePriceLevels = true });
                 if (prog != null) prog.StateChanged += OnVaStateChanged; else { lock (_calc) _vaLoaded = true; }
             }
+            try
+            {
+                var agg = HistoricalData?.Aggregation as HistoryAggregationTime;
+                DateTime? lastB15 = HistoricalData != null && HistoricalData.Count > 0 ? HistoricalData[0, SeekOriginHistory.End]?.TimeLeft : null;
+                _hd15 = Symbol.GetHistory(Period15, agg?.HistoryType ?? HistoryType.Last, ZonePolicy.AuxHistoryFrom(lastB15, DateTime.UtcNow, CzHistoryDays));
+                if (_hd15 != null) _hd15.NewHistoryItem += OnHd30NewBar;
+            }
+            catch { _hd15 = null; }
         }
 
         private void OnVaStateChanged(object sender, VolumeAnalysisTaskEventArgs e)
@@ -193,6 +217,8 @@ namespace SessionZonesNs
         protected override void OnClear()
         {
             if (_ownHd30 && _hd30 != null) { _hd30.NewHistoryItem -= OnHd30NewBar; _hd30.Dispose(); }
+            if (_hd15 != null) { _hd15.NewHistoryItem -= OnHd30NewBar; _hd15.Dispose(); _hd15 = null; }
+            lock (_calc) _czRows.Clear();
             lock (_calc) { _vaLoaded = false; _sz.Reset(); lock (_sync) _render = null; }
         }
         protected override void OnUpdate(UpdateArgs args)
@@ -313,7 +339,11 @@ namespace SessionZonesNs
                         note = (note == null ? "" : note + "\n") + "⚠ Thiếu khối lượng theo giá — mức hợp lưu tính gần đúng, không có hộp HVN";
                 }
 
-                lock (_sync) _render = new ZoneRenderState { Zones = zones, Strong = strong, HvnBoxes = hvnBoxes, Note = note, NowPrice = nowPrice, Tick = tick };
+                // ---- VÙNG CỤM VOL (chưa kiểm định): profile cố định từng phiên ngày (M30) + trạng thái trên nến M15 phụ.
+                List<CzZone> cz = ShowClusterZones || TeleTouchAlert ? ClusterStructure(hd, rowStep) : null;
+
+                lock (_sync) _render = new ZoneRenderState { Zones = zones, Strong = strong, HvnBoxes = hvnBoxes, Note = note, NowPrice = nowPrice, Tick = tick,
+                                                             Cluster = ShowClusterZones ? cz : null };
 
                 // ---- tổng hợp GỌN cho Telegram ----
                 var tele = new List<string>();
@@ -336,8 +366,19 @@ namespace SessionZonesNs
                 if (hvnLine != null) tele.Add(hvnLine);
                 var szLine = StrongZones.SummaryLine(strong, Fmt);
                 if (szLine != null) tele.Add(szLine);
+                if (cz != null && cz.Count > 0)
+                    tele.Add("Vùng cụm vol (chưa kiểm định): " + string.Join(" · ", cz.Select(z => (z.Side > 0 ? "S " : "R ") + Fmt(z.Lo) + "–" + Fmt(z.Hi))));
                 ConfigTele();
                 _tele.Run(hd, Symbol?.Name, "zone", tele);
+                // Báo chạm vùng: mỗi lần chạm đúng 1 tin (bộ nhớ trong + khoá file dùng chung giữa các tab).
+                if (TeleEnabled && TeleTouchAlert && cz != null)
+                    foreach (var z in cz)
+                    {
+                        if (!ClusterZones.ShouldAlert(z, DateTime.UtcNow, CzAlertFreshMin, _czSent, Symbol?.Name)) continue;
+                        string key = ClusterZones.TouchKey(Symbol?.Name, z);
+                        _czSent.Add(key);
+                        _tele.SendOnce(key, ClusterZones.AlertText(Symbol?.Name, z, Fmt, TzOffset));
+                    }
             }
         }
 
@@ -372,6 +413,36 @@ namespace SessionZonesNs
                     i => win[i].VolumeAnalysisData?.PriceLevels?.Select(kv => new KeyValuePair<double, double>(kv.Key, kv.Value.Volume)).ToList(),
                     tick, rowStep, p);
             }, p);
+        }
+
+        // Vùng cụm vol tại nến M15 cuối. Hàng profile mỗi phiên ngày lấy từ M30 (đệm theo giờ nến đầu + số nến).
+        private List<CzZone> ClusterStructure(HistoricalData hd30, double rowStep)
+        {
+            var h15 = _hd15;
+            if (h15 == null || h15.Count < 10) return null;
+            var bars = new List<CzBar>(h15.Count);
+            for (int i = 0; i < h15.Count; i++)
+                if (h15[i, SeekOriginHistory.Begin] is HistoryItemBar b) bars.Add(new CzBar { T = b.TimeLeft, H = b.High, L = b.Low, C = b.Close });
+            if (bars.Count < 10) return null;
+            var spans = ProfileEngine.GroupByGap(hd30, GapMinutes);
+            var days = new List<CzDay>();
+            var keep = new HashSet<string>();
+            for (int k = Math.Max(0, spans.Count - 6); k < spans.Count; k++)
+            {
+                var (from, to) = spans[k];
+                if (hd30[from, SeekOriginHistory.Begin] is not HistoryItemBar fb) continue;
+                string key = fb.TimeLeft.Ticks + "|" + (to - from + 1) + "|" + rowStep;
+                keep.Add(key);
+                if (!_czRows.TryGetValue(key, out var rows))
+                {
+                    var r = ProfileEngine.RowsOver(hd30, from, to, rowStep, UseVolume);
+                    rows = (r.Keys.ToArray(), r.Values.ToArray());
+                    if (k < spans.Count - 1) _czRows[key] = rows;      // phiên đang chạy không đệm (khối lượng còn đổi)
+                }
+                days.Add(new CzDay { T0 = fb.TimeLeft, N30 = to - from + 1, Prices = rows.pr, Vols = rows.v });
+            }
+            foreach (var old in _czRows.Keys.Where(x => !keep.Contains(x)).ToList()) _czRows.Remove(old);
+            return ClusterZones.Compute(bars, days, rowStep, new CzParams(), out _);
         }
 
         private void ConfigTele()
@@ -642,6 +713,13 @@ namespace SessionZonesNs
             // HỘP HVN + VÙNG MẠNH: dải kéo hết bề ngang; hộp HVN vẽ dưới, vùng mạnh đè lên; nhãn của cả hai
             // sát mép phải, xếp CHUNG bằng StrongZonePainter.LayoutLabels để không đè nhau (có test).
             var strong = ShowStrongZones ? rs.Strong : null;
+            if (ShowClusterZones && rs.Cluster != null && rs.Cluster.Count > 0)
+            {
+                strong = strong == null ? new List<SzZone>() : new List<SzZone>(strong);
+                foreach (var c in rs.Cluster)      // đang chạm ⇒ tô đậm hơn (Gold chỉ dùng cho độ đậm nền, màu vẫn theo phía)
+                    strong.Add(new SzZone { Lo = c.Lo, Hi = c.Hi, Side = c.Side, Gold = c.Live, Color = c.Side > 0 ? "xanh" : "do",
+                                            Label = ClusterZones.Label(c, TzOffset) });
+            }
             var boxes = ShowHvnBox ? rs.HvnBoxes : null;
             if ((strong?.Count ?? 0) + (boxes?.Count ?? 0) > 0)
             {
@@ -695,6 +773,7 @@ namespace SessionZonesNs
         public List<Zone> Zones;
         public List<SzZone> Strong;          // vùng mạnh đã lọc hiển thị (StrongZones.Display) — vẽ bằng StrongZonePainter
         public List<SzHvnShown> HvnBoxes;    // hộp HVN đã lọc hiển thị (StrongZones.HvnBoxes) — vẽ cùng vùng mạnh
+        public List<CzZone> Cluster;         // vùng cụm vol (ClusterZones.Compute) — vẽ bằng StrongZonePainter
         public string Note;  // cảnh báo 1 dòng nhỏ góc dưới-phải (thay cho bảng cũ)
         public double NowPrice;
         public double Tick;

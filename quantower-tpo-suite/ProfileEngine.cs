@@ -890,6 +890,24 @@ namespace TpoSuite
             SendAsync(text, null);
         }
 
+        // Gửi 1 tin MỘT LẦN DUY NHẤT theo khoá (vd báo chạm vùng): khoá = FILE tạo nguyên tử (CreateNew) trong thư mục chung
+        // ⇒ nhiều tab / mở lại chart cũng không gửi lại. Chỉ instance được phép gửi (IsSender). Trả true nếu đã gửi.
+        public bool SendOnce(string key, string text)
+        {
+            if (!Enabled || !IsSender || string.IsNullOrEmpty(key)) return false;
+            if (string.IsNullOrWhiteSpace(BotToken) || string.IsNullOrWhiteSpace(ChatId)) return false;
+            try
+            {
+                string path = Path.Combine(Dir(), "touch_" + Safe(key) + ".lock");
+                using (new FileStream(path, FileMode.CreateNew, FileAccess.Write)) { }
+            }
+            catch (IOException) { return false; }          // đã có khoá ⇒ đã gửi
+            catch (Exception ex) { Log("LỖI khoá chạm: " + ex.Message); return false; }
+            Log("Báo chạm vùng: " + key);
+            SendAsync(text, null);
+            return true;
+        }
+
         // Nút "gửi thử" bản THÔ: gửi đúng testText của indicator gọi (không dùng Compose TPO).
         public void PollTestRaw(string testText)
         {
@@ -2214,6 +2232,207 @@ namespace TpoSuite
             g.FillRectangle(fill, clip.Left, top, clip.Width, Math.Max(1f, bot - top));
             if (yOuter >= clip.Top && yOuter <= clip.Bottom) g.DrawLine(dash, clip.Left, yOuter, clip.Right, yOuter);
             return true;
+        }
+    }
+
+    // ============================================================================
+    //  VÙNG CỤM VOL (2026-11-25, research/vung_quan_trong_2026-11-25/KET-QUA-20-VONG-VE-SAN.md, cz_ref.py) — CHƯA KIỂM ĐỊNH
+    //  Mỗi phiên ngày đã đóng (3 phiên gần nhất, ≥ 20 nến M30): 1 cụm khối lượng nặng nhất của profile cố định
+    //  (làm mượt ± 0,1 U15, đỉnh ≥ 1,5 × TB hàng, dải = hàng liên tục còn ≥ 70 % đỉnh). Dải chồng/sát (≤ 0,1 U15) ⇒ gộp.
+    //  Trạng thái chạy trên nến M15 từ đầu phiên nguồn: chỉ HIỆN khi giá đã rời dải ≥ 3 U15 trong ≤ 8 nến M15 và mới tới gần
+    //  ≤ 1 lần (lần sắp tới là lần 1 hoặc 2); hoặc đang trong một lần chạm hợp lệ (hết khi giá cách dải ≥ 1 U15).
+    //  Rời lên = hỗ trợ, rời xuống = kháng cự. U15 = TB (H − L) nến M15 của 5 phiên trước. Port 1:1 từ cz_ref.py (test C# = Python).
+    // ============================================================================
+    public sealed class CzParams
+    {
+        public double Sm = 0.10, Ratio = 1.5, Frac = 0.70, GapM = 0.10, Imp = 3.0, Trig = 0.6, Away = 1.25, Rearm = 1.0;
+        public int NDays = 3, MinBars30 = 20, SessGapMin = 60, UDays = 5, KBars = 8, MaxTouch = 2;
+    }
+
+    public sealed class CzBar { public DateTime T; public double H, L, C; }
+
+    public sealed class CzDay
+    {
+        public DateTime T0; public int N30;
+        public double[] Prices, Vols;      // hàng profile (giá thật, bội số rowStep)
+    }
+
+    public sealed class CzZone
+    {
+        public double Lo, Hi, Imp;
+        public int Side, Touch, Nm;        // Side +1 hỗ trợ / −1 kháng cự; Touch = lần chạm (sắp tới hoặc đang chạm)
+        public bool Live;                  // đang trong lần chạm
+        public DateTime? EpT;              // nến M15 bắt đầu lần chạm đang diễn ra
+        public List<DateTime> Days = new List<DateTime>();
+    }
+
+    public static class ClusterZones
+    {
+        public static int[] Sessions(IList<CzBar> b, int gapMin)
+        {
+            var s = new int[b.Count];
+            for (int i = 1; i < b.Count; i++) s[i] = s[i - 1] + ((b[i].T - b[i - 1].T).TotalMinutes > gapMin ? 1 : 0);
+            return s;
+        }
+
+        public static double U15(IList<CzBar> b, int[] sess, int k, int nd)
+        {
+            int lo = Math.Max(0, k - nd);
+            if (k - lo < 2) return double.NaN;
+            double sum = 0; int n = 0;
+            for (int i = 0; i < b.Count; i++) if (sess[i] >= lo && sess[i] < k) { sum += b[i].H - b[i].L; n++; }
+            return n > 0 ? sum / n : double.NaN;
+        }
+
+        // 1 cụm nặng nhất: (lo, hi, peak, ratio) hoặc null.
+        public static (double lo, double hi, double peak, double ratio)? Cluster(double[] prices, double[] vols, double u, double row, CzParams p)
+        {
+            if (prices == null || prices.Length < 5 || double.IsNaN(u) || u <= 0) return null;
+            var idx = new long[prices.Length];
+            long mn = long.MaxValue, mx = long.MinValue;
+            for (int i = 0; i < prices.Length; i++) { idx[i] = (long)Math.Round(prices[i] / row); mn = Math.Min(mn, idx[i]); mx = Math.Max(mx, idx[i]); }
+            int n = (int)(mx - mn + 1);
+            var W = new double[n];
+            for (int i = 0; i < prices.Length; i++) W[idx[i] - mn] += vols[i];
+            int kk = Math.Max(1, (int)Math.Floor(p.Sm * u / row + 0.5));
+            var cs = new double[n + 1];
+            for (int i = 0; i < n; i++) cs[i + 1] = cs[i] + W[i];
+            var sm = new double[n];
+            for (int i = 0; i < n; i++) { int a = Math.Max(0, i - kk), z = Math.Min(n - 1, i + kk); sm[i] = (cs[z + 1] - cs[a]) / (z - a + 1); }
+            double tot = 0; int nz = 0;
+            for (int i = 0; i < n; i++) if (W[i] > 0) { tot += W[i]; nz++; }
+            if (nz == 0) return null;
+            double avg = tot / nz;
+            int best = -1;
+            for (int i = 1; i < n - 1; i++)
+                if (sm[i] >= sm[i - 1] && sm[i] >= sm[i + 1] && sm[i] >= p.Ratio * avg)
+                    if (best < 0 || sm[i] > sm[best]) best = i;
+            if (best < 0) return null;
+            double thr = p.Frac * sm[best]; int l2 = best, h2 = best;
+            while (l2 > 0 && sm[l2 - 1] >= thr) l2--;
+            while (h2 < n - 1 && sm[h2 + 1] >= thr) h2++;
+            int ipk = l2;
+            for (int i = l2; i <= h2; i++) if (W[i] > W[ipk]) ipk = i;
+            return ((mn + l2) * row, (mn + h2) * row, (mn + ipk) * row, sm[best] / avg);
+        }
+
+        public sealed class State { public int Side, Nt, Ep, EpNt, EpI = -1, LastIn = -1; public double Imp; public bool Armed; }
+
+        // Bộ máy trạng thái trên nến M15 [s0..e] — đúng cz_ref.run_state.
+        public static State Run(IList<CzBar> b, double lo, double hi, int s0, int e, double u, CzParams p)
+        {
+            int lastIn = -1, side = 0, nt = 0, ep = 0, epNt = 0, epI = -1; double imp = 0, aw = 0; bool ready = false;
+            for (int i = s0; i <= e; i++)
+            {
+                double h = b[i].H, l = b[i].L;
+                if (l <= hi && h >= lo) { lastIn = i; side = 0; imp = 0; nt = 0; aw = 0; ready = false; continue; }
+                int cs = l > hi ? 1 : -1;
+                if (side != cs) { if (side != 0) lastIn = i; side = cs; imp = 0; nt = 0; aw = 0; ready = false; }
+                double near = cs > 0 ? l - hi : lo - h;
+                double far = cs > 0 ? h - hi : lo - l;
+                if (ep != 0 && far >= p.Rearm * u) ep = 0;
+                if (near <= p.Trig * u)
+                {
+                    if (ready)
+                    {
+                        if (lastIn >= 0 && imp >= p.Imp * u && nt < p.MaxTouch) { ep = cs; epNt = nt + 1; epI = i; }
+                        nt++;
+                    }
+                    ready = false; aw = 0;
+                    continue;
+                }
+                aw = Math.Max(aw, far);
+                if (lastIn >= 0 && i - lastIn <= p.KBars) imp = Math.Max(imp, far);
+                if (!ready && aw >= (nt == 0 ? p.Away : p.Rearm) * u) ready = true;
+            }
+            return new State { Side = side, Imp = imp / u, Nt = nt, Ep = ep, EpNt = epNt, EpI = ep != 0 ? epI : -1, LastIn = lastIn,
+                               Armed = lastIn >= 0 && side != 0 && imp >= p.Imp * u && nt < p.MaxTouch };
+        }
+
+        // Vùng hiện tại nến cuối của bars. days: profile phiên ngày theo thời gian (có thể gồm phiên đang chạy — tự bỏ).
+        public static List<CzZone> Compute(IList<CzBar> bars, IList<CzDay> days, double row, CzParams p, out double u)
+        {
+            u = double.NaN;
+            var res = new List<CzZone>();
+            int e = (bars?.Count ?? 0) - 1;
+            if (e < 1 || days == null) return res;
+            var sess = Sessions(bars, p.SessGapMin);
+            int k = sess[e];
+            u = U15(bars, sess, k, p.UDays);
+            if (double.IsNaN(u) || u <= 0) return res;
+            DateTime curT0 = bars[e].T;
+            for (int i = 0; i <= e; i++) if (sess[i] == k) { curT0 = bars[i].T; break; }
+            var src = new List<(double lo, double hi, int s0, List<DateTime> days)>();
+            int got = 0;
+            for (int di = days.Count - 1; di >= 0; di--)
+            {
+                var d = days[di];
+                if (d.T0 >= curT0 || d.N30 < p.MinBars30) continue;
+                got++;
+                var cl = Cluster(d.Prices, d.Vols, u, row, p);
+                int s0 = LowerBound(bars, d.T0);
+                if (cl.HasValue && s0 <= e) src.Add((cl.Value.lo, cl.Value.hi, s0, new List<DateTime> { d.T0 }));
+                if (got >= p.NDays) break;
+            }
+            var sorted = src.Select((z, i) => (z, i)).OrderBy(x => x.z.lo).ThenBy(x => x.z.hi).ThenBy(x => x.i).Select(x => x.z).ToList();
+            var mg = new List<(double lo, double hi, int s0, List<DateTime> days, int nm)>();
+            foreach (var z in sorted)
+            {
+                if (mg.Count > 0 && z.lo <= mg[mg.Count - 1].hi + p.GapM * u)
+                {
+                    var m = mg[mg.Count - 1];
+                    m.days.AddRange(z.days);
+                    mg[mg.Count - 1] = (m.lo, Math.Max(m.hi, z.hi), Math.Min(m.s0, z.s0), m.days, m.nm + 1);
+                }
+                else mg.Add((z.lo, z.hi, z.s0, new List<DateTime>(z.days), 1));
+            }
+            foreach (var z in mg)
+            {
+                var st = Run(bars, z.lo, z.hi, z.s0, e, u, p);
+                int side, touch; bool live;
+                if (st.Ep != 0) { side = st.Ep; touch = st.EpNt; live = true; }
+                else if (st.Armed) { side = st.Side; touch = st.Nt + 1; live = false; }
+                else continue;
+                res.Add(new CzZone { Lo = z.lo, Hi = z.hi, Side = side, Touch = touch, Live = live, Nm = z.nm, Imp = st.Imp,
+                                     Days = z.days.OrderBy(x => x).ToList(), EpT = live ? bars[st.EpI].T : (DateTime?)null });
+            }
+            return res;
+        }
+
+        static int LowerBound(IList<CzBar> b, DateTime t)
+        {
+            int lo = 0, hi = b.Count;
+            while (lo < hi) { int m = (lo + hi) / 2; if (b[m].T < t) lo = m + 1; else hi = m; }
+            return lo;
+        }
+
+        public static string SideText(int side) => side > 0 ? "hỗ trợ" : "kháng cự";
+
+        // Nhãn trên chart: "Cụm vol 24/11 · hỗ trợ · chờ chạm lần 1" (đang chạm: "đang chạm lần 1").
+        public static string Label(CzZone z, int tzOffset)
+        {
+            string ds = string.Join("+", z.Days.Select(d => d.AddHours(tzOffset).ToString("dd/MM")));
+            return $"Cụm vol {ds} · {SideText(z.Side)} · {(z.Live ? "đang chạm" : "chờ chạm")} lần {z.Touch}";
+        }
+
+        // Khoá chống gửi trùng cho một lần chạm: symbol + phía + nến M15 bắt đầu lần chạm.
+        public static string TouchKey(string symbol, CzZone z)
+            => z.EpT.HasValue ? $"{symbol}|{z.Side}|{z.EpT.Value.Ticks}" : null;
+
+        // Có nên báo Telegram: đang chạm, nến bắt đầu lần chạm còn mới (≤ freshMin phút so với giờ thật), khoá chưa gửi.
+        public static bool ShouldAlert(CzZone z, DateTime utcNow, int freshMin, ISet<string> sent, string symbol)
+        {
+            if (z == null || !z.Live || !z.EpT.HasValue) return false;
+            if ((utcNow - z.EpT.Value).TotalMinutes > freshMin) return false;
+            var key = TouchKey(symbol, z);
+            return key != null && (sent == null || !sent.Contains(key));
+        }
+
+        public static string AlertText(string symbol, CzZone z, Func<double, string> fmt, int tzOffset)
+        {
+            string ds = string.Join(", ", z.Days.Select(d => d.AddHours(tzOffset).ToString("dd/MM")));
+            return $"🎯 {symbol}: giá chạm vùng cụm vol {fmt(z.Lo)}–{fmt(z.Hi)} ({SideText(z.Side)}, lần {z.Touch}) · cụm ngày {ds}.\n"
+                 + "Canh phản ứng tại mép vùng — chưa kiểm định, không phải tín hiệu vào lệnh.";
         }
     }
 }

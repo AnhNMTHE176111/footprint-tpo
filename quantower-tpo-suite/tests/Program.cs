@@ -215,6 +215,7 @@ static partial class Tests
         ZonePolicyCases();
         RealData();
         StrongZoneTests();
+        ClusterZoneTests();
         Console.WriteLine(_fail == 0 ? "\n=> TAT CA PASS" : $"\n=> CO {_fail} TEST HONG");
         return _fail == 0 ? 0 : 1;
     }

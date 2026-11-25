@@ -1,0 +1,94 @@
+== GCX_M1 D=5 R=8 W=1380: 108 vong; nguong dau tien luc 2026-09-01 17:41:00; vong nho nhat 36.0
+   chon: 8 ngay; vong/ngay TV 6.5 TB 7.50 (4-16) [7, 5, 7, 4, 11, 16, 4, 6]; phien A/Au/My 1.0/3.5/1.0; nguong TV A/Au/My 67/57.0/67
+   kiem: 7 ngay; vong/ngay TV 6 TB 5.86 (1-15) [1, 3, 7, 2, 15, 7, 6]; phien A/Au/My 1/1/1; nguong TV A/Au/My 44.0/42.0/39.0
+   moi ngay danh gia (15): TB 6.73, TV 6, max 16; tong phut nen co nguong 21768, vong / 1380 phut nen = 6.85
+   lenh lon nhat tung phien (moi phien, khong loc 5x): no 35/45; sot: 3/9 My lon nhat 57 nguong 67; 4/9 A lon nhat 25 nguong 59; 9/9 A lon nhat 33 nguong 57; 10/9 My lon nhat 41 nguong 68; 11/9 My lon nhat 50 nguong 76; 14/9 Au lon nhat 50 nguong 68; 14/9 My lon nhat 60 nguong 64; 16/9 A lon nhat 32 nguong 50; 16/9 Au lon nhat 34 nguong 50; 17/9 My lon nhat 34 nguong 39
+== GCX_M1 D=5 R=6 W=1380: 82 vong; nguong dau tien luc 2026-09-01 17:41:00; vong nho nhat 42.0
+   chon: 8 ngay; vong/ngay TV 5.0 TB 6.12 (2-13) [3, 4, 7, 2, 11, 13, 3, 6]; phien A/Au/My 1.0/2.5/0.5; nguong TV A/Au/My 75/76.5/78
+   kiem: 7 ngay; vong/ngay TV 4 TB 3.86 (0-7) [1, 3, 7, 0, 6, 6, 4]; phien A/Au/My 1/0/1; nguong TV A/Au/My 50.0/50.0/50.0
+== GCX_M1 D=5 R=10 W=1380: 135 vong; nguong dau tien luc 2026-09-01 17:41:00; vong nho nhat 34.0
+   chon: 8 ngay; vong/ngay TV 8.5 TB 9.25 (4-18) [11, 6, 8, 4, 12, 18, 6, 9]; phien A/Au/My 1.5/4.5/1.0; nguong TV A/Au/My 49/48.0/50
+   kiem: 7 ngay; vong/ngay TV 7 TB 7.71 (3-17) [3, 4, 7, 5, 17, 7, 11]; phien A/Au/My 1/1/2; nguong TV A/Au/My 37.0/35.0/34.0
+== GCX_M1 D=5 R=8 W=690: 109 vong; nguong dau tien luc 2026-09-01 06:11:00; vong nho nhat 36.0
+   chon: 8 ngay; vong/ngay TV 6.5 TB 7.50 (4-16) [7, 5, 7, 4, 11, 16, 4, 6]; phien A/Au/My 1.0/3.5/1.0; nguong TV A/Au/My 67/57.0/67
+   kiem: 7 ngay; vong/ngay TV 6 TB 5.86 (1-15) [1, 3, 7, 2, 15, 7, 6]; phien A/Au/My 1/1/1; nguong TV A/Au/My 44.0/42.0/39.0
+== GCX_M1 D=3 R=8 W=1380: 114 vong; nguong dau tien luc 2026-09-01 17:41:00; vong nho nhat 34.0
+   chon: 8 ngay; vong/ngay TV 6.5 TB 7.50 (3-15) [7, 5, 8, 4, 12, 15, 3, 6]; phien A/Au/My 1.0/3.0/1.0; nguong TV A/Au/My 67/60.0/67
+   kiem: 7 ngay; vong/ngay TV 6 TB 6.71 (3-16) [3, 4, 7, 5, 16, 6, 6]; phien A/Au/My 1/1/2; nguong TV A/Au/My 39.0/39.0/39.0
+== GCX_M1 D=10 R=8 W=1380: 89 vong; nguong dau tien luc 2026-09-01 17:41:00; vong nho nhat 49.0
+   chon: 8 ngay; vong/ngay TV 6.5 TB 7.50 (4-16) [7, 5, 7, 4, 11, 16, 4, 6]; phien A/Au/My 1.0/3.5/1.0; nguong TV A/Au/My 66/57.0/67
+   kiem: 7 ngay; vong/ngay TV 3 TB 3.29 (0-7) [1, 3, 7, 0, 5, 3, 4]; phien A/Au/My 1/0/1; nguong TV A/Au/My 50.0/50.0/50.0
+== GCX_M5 D=5 R=8 W=1380: 110 vong; nguong dau tien luc 2026-09-01 20:20:00; vong nho nhat 35.0
+   chon: 8 ngay; vong/ngay TV 7.0 TB 8.12 (4-16) [11, 5, 8, 4, 11, 16, 4, 6]; phien A/Au/My 1.5/3.5/1.0; nguong TV A/Au/My 57.0/50.0/66.0
+   kiem: 7 ngay; vong/ngay TV 5 TB 5.86 (1-16) [1, 3, 7, 2, 16, 7, 5]; phien A/Au/My 1/1/1; nguong TV A/Au/My 44.0/42.0/39.0
+   moi ngay danh gia (15): TB 7.07, TV 6, max 16; tong phut nen co nguong 21520, vong / 1380 phut nen = 7.05
+   lenh lon nhat tung phien (moi phien, khong loc 5x): no 35/45; sot: 3/9 My lon nhat 57 nguong 66; 4/9 A lon nhat 25 nguong 52; 9/9 A lon nhat 33 nguong 57; 10/9 My lon nhat 41 nguong 68; 11/9 My lon nhat 50 nguong 69; 14/9 Au lon nhat 50 nguong 68; 14/9 My lon nhat 60 nguong 64; 16/9 A lon nhat 32 nguong 50; 16/9 Au lon nhat 34 nguong 50; 17/9 My lon nhat 34 nguong 39
+== GCX_M5 D=5 R=6 W=1380: 81 vong; nguong dau tien luc 2026-09-01 20:20:00; vong nho nhat 42.0
+   chon: 8 ngay; vong/ngay TV 5.5 TB 6.50 (3-13) [4, 5, 7, 3, 11, 13, 3, 6]; phien A/Au/My 1.0/2.5/1.0; nguong TV A/Au/My 73.0/69.0/75.0
+   kiem: 7 ngay; vong/ngay TV 3 TB 3.71 (0-7) [1, 3, 7, 0, 6, 6, 3]; phien A/Au/My 1/0/1; nguong TV A/Au/My 50.0/50.0/50.0
+== GCX_M5 D=5 R=10 W=1380: 135 vong; nguong dau tien luc 2026-09-01 20:20:00; vong nho nhat 34.0
+   chon: 8 ngay; vong/ngay TV 9.0 TB 9.75 (4-18) [14, 6, 9, 4, 12, 18, 6, 9]; phien A/Au/My 1.5/4.5/1.0; nguong TV A/Au/My 48.0/47.0/49.0
+   kiem: 7 ngay; vong/ngay TV 7 TB 7.57 (3-17) [3, 4, 7, 5, 17, 7, 10]; phien A/Au/My 1/1/2; nguong TV A/Au/My 37.0/35.0/34.0
+== GCX_M5 D=5 R=8 W=690: 113 vong; nguong dau tien luc 2026-09-01 08:50:00; vong nho nhat 35.0
+   chon: 8 ngay; vong/ngay TV 7.0 TB 8.12 (4-16) [11, 5, 8, 4, 11, 16, 4, 6]; phien A/Au/My 1.5/3.5/1.0; nguong TV A/Au/My 57.0/50.0/66.0
+   kiem: 7 ngay; vong/ngay TV 5 TB 5.86 (1-16) [1, 3, 7, 2, 16, 7, 5]; phien A/Au/My 1/1/1; nguong TV A/Au/My 44.0/42.0/39.0
+== GCX_M5 D=3 R=8 W=1380: 114 vong; nguong dau tien luc 2026-09-01 20:20:00; vong nho nhat 34.0
+   chon: 8 ngay; vong/ngay TV 7.0 TB 8.00 (3-15) [11, 5, 8, 4, 12, 15, 3, 6]; phien A/Au/My 1.5/3.0/1.0; nguong TV A/Au/My 57.0/60.0/66.0
+   kiem: 7 ngay; vong/ngay TV 5 TB 6.57 (3-16) [3, 4, 7, 5, 16, 6, 5]; phien A/Au/My 1/1/2; nguong TV A/Au/My 39.0/39.0/39.0
+== GCX_M5 D=10 R=8 W=1380: 94 vong; nguong dau tien luc 2026-09-01 20:20:00; vong nho nhat 49.0
+   chon: 8 ngay; vong/ngay TV 7.5 TB 8.50 (4-18) [11, 5, 8, 4, 11, 18, 4, 7]; phien A/Au/My 1.5/3.5/1.0; nguong TV A/Au/My 52.0/50.0/64.0
+   kiem: 7 ngay; vong/ngay TV 3 TB 3.29 (0-7) [2, 3, 7, 0, 5, 3, 3]; phien A/Au/My 1/0/1; nguong TV A/Au/My 50.0/50.0/50.0
+== NQ_M1 D=5 R=8 W=1380: 59 vong; nguong dau tien luc 2026-10-26 22:00:00; vong nho nhat 71.0
+   chon: 2 ngay; vong/ngay TV 6.0 TB 6.00 (5-7) [5, 7]; phien A/Au/My 0.5/1.0/4.5; nguong TV A/Au/My 75.0/72.0/72.5
+   kiem: 3 ngay; vong/ngay TV 14 TB 14.67 (8-22) [8, 22, 14]; phien A/Au/My 3/1/9; nguong TV A/Au/My 73.0/75.0/78.0
+   moi ngay danh gia (5): TB 11.20, TV 8, max 22; tong phut nen co nguong 7641, vong / 1380 phut nen = 10.66
+   lenh lon nhat tung phien (moi phien, khong loc 5x): no 12/15; sot: 28/10 A lon nhat 52 nguong 75; 28/10 Au lon nhat 50 nguong 70; 29/10 Au lon nhat 50 nguong 72
+== NQ_M1 D=5 R=6 W=1380: 44 vong; nguong dau tien luc 2026-10-26 22:00:00; vong nho nhat 80.0
+   chon: 2 ngay; vong/ngay TV 3.5 TB 3.50 (3-4) [3, 4]; phien A/Au/My 0.5/1.0/2.0; nguong TV A/Au/My 80.0/78.0/78.5
+   kiem: 3 ngay; vong/ngay TV 12 TB 11.33 (6-16) [6, 16, 12]; phien A/Au/My 3/1/6; nguong TV A/Au/My 80.0/81.0/82.0
+== NQ_M1 D=5 R=10 W=1380: 72 vong; nguong dau tien luc 2026-10-26 22:00:00; vong nho nhat 63.0
+   chon: 2 ngay; vong/ngay TV 8.0 TB 8.00 (6-10) [6, 10]; phien A/Au/My 0.5/1.0/6.5; nguong TV A/Au/My 71.0/64.5/68.5
+   kiem: 3 ngay; vong/ngay TV 16 TB 17.00 (11-24) [11, 24, 16]; phien A/Au/My 3/2/10; nguong TV A/Au/My 70.0/71.0/72.0
+== NQ_M1 D=5 R=8 W=690: 70 vong; nguong dau tien luc 2026-10-26 09:30:00; vong nho nhat 41.0
+   chon: 2 ngay; vong/ngay TV 6.0 TB 6.00 (5-7) [5, 7]; phien A/Au/My 0.5/1.0/4.5; nguong TV A/Au/My 75.0/72.0/72.5
+   kiem: 3 ngay; vong/ngay TV 14 TB 14.67 (8-22) [8, 22, 14]; phien A/Au/My 3/1/9; nguong TV A/Au/My 73.0/75.0/78.0
+== NQ_M1 D=3 R=8 W=1380: 56 vong; nguong dau tien luc 2026-10-26 22:00:00; vong nho nhat 70.0
+   chon: 2 ngay; vong/ngay TV 6.0 TB 6.00 (5-7) [5, 7]; phien A/Au/My 0.5/1.0/4.5; nguong TV A/Au/My 75.0/72.0/72.5
+   kiem: 3 ngay; vong/ngay TV 11 TB 13.67 (9-21) [9, 21, 11]; phien A/Au/My 3/1/8; nguong TV A/Au/My 73.0/79.0/80.0
+== NQ_M1 D=10 R=8 W=1380: 60 vong; nguong dau tien luc 2026-10-26 22:00:00; vong nho nhat 71.0
+   chon: 2 ngay; vong/ngay TV 6.0 TB 6.00 (5-7) [5, 7]; phien A/Au/My 0.5/1.0/4.5; nguong TV A/Au/My 75.0/72.0/72.5
+   kiem: 3 ngay; vong/ngay TV 13 TB 14.33 (8-22) [8, 22, 13]; phien A/Au/My 3/1/9; nguong TV A/Au/My 73.0/75.0/78.0
+== NQ_M15 D=5 R=8 W=1380: 53 vong; nguong dau tien luc 2026-10-26 22:00:00; vong nho nhat 71.0
+   chon: 2 ngay; vong/ngay TV 5.5 TB 5.50 (4-7) [4, 7]; phien A/Au/My 0.5/0.5/4.5; nguong TV A/Au/My 75.0/72.0/72.5
+   kiem: 3 ngay; vong/ngay TV 12 TB 13.00 (8-19) [8, 19, 12]; phien A/Au/My 3/1/8; nguong TV A/Au/My 73.0/75.0/78.0
+   moi ngay danh gia (5): TB 10.00, TV 8, max 19; tong phut nen co nguong 7620, vong / 1380 phut nen = 9.60
+   lenh lon nhat tung phien (moi phien, khong loc 5x): no 12/15; sot: 28/10 A lon nhat 52 nguong 75; 28/10 Au lon nhat 50 nguong 70; 29/10 Au lon nhat 50 nguong 72
+== NQ_M15 D=5 R=6 W=1380: 38 vong; nguong dau tien luc 2026-10-26 22:00:00; vong nho nhat 80.0
+   chon: 2 ngay; vong/ngay TV 3.0 TB 3.00 (2-4) [2, 4]; phien A/Au/My 0.5/0.5/2.0; nguong TV A/Au/My 80.0/78.0/77.0
+   kiem: 3 ngay; vong/ngay TV 10 TB 10.00 (6-14) [6, 14, 10]; phien A/Au/My 3/1/6; nguong TV A/Au/My 80.0/81.0/82.0
+== NQ_M15 D=5 R=10 W=1380: 65 vong; nguong dau tien luc 2026-10-26 22:00:00; vong nho nhat 63.0
+   chon: 2 ngay; vong/ngay TV 7.5 TB 7.50 (5-10) [5, 10]; phien A/Au/My 0.5/0.5/6.5; nguong TV A/Au/My 71.0/64.5/68.0
+   kiem: 3 ngay; vong/ngay TV 14 TB 15.33 (11-21) [11, 21, 14]; phien A/Au/My 3/2/9; nguong TV A/Au/My 70.0/71.0/72.0
+== NQ_M15 D=5 R=8 W=690: 63 vong; nguong dau tien luc 2026-10-26 09:30:00; vong nho nhat 41.0
+   chon: 2 ngay; vong/ngay TV 5.5 TB 5.50 (4-7) [4, 7]; phien A/Au/My 0.5/0.5/4.5; nguong TV A/Au/My 75.0/72.0/72.5
+   kiem: 3 ngay; vong/ngay TV 12 TB 13.00 (8-19) [8, 19, 12]; phien A/Au/My 3/1/8; nguong TV A/Au/My 73.0/75.0/78.0
+== NQ_M15 D=3 R=8 W=1380: 50 vong; nguong dau tien luc 2026-10-26 22:00:00; vong nho nhat 70.0
+   chon: 2 ngay; vong/ngay TV 5.5 TB 5.50 (4-7) [4, 7]; phien A/Au/My 0.5/0.5/4.5; nguong TV A/Au/My 75.0/72.0/72.5
+   kiem: 3 ngay; vong/ngay TV 9 TB 12.33 (9-19) [9, 19, 9]; phien A/Au/My 3/1/6; nguong TV A/Au/My 73.0/79.0/80.0
+== NQ_M15 D=10 R=8 W=1380: 53 vong; nguong dau tien luc 2026-10-26 22:00:00; vong nho nhat 71.0
+   chon: 2 ngay; vong/ngay TV 5.5 TB 5.50 (4-7) [4, 7]; phien A/Au/My 0.5/0.5/4.5; nguong TV A/Au/My 75.0/72.0/72.5
+   kiem: 3 ngay; vong/ngay TV 11 TB 12.67 (8-19) [8, 19, 11]; phien A/Au/My 3/1/8; nguong TV A/Au/My 73.0/75.0/78.0
+== GCZ_M1 D=5 R=8 W=1380: 37 vong; nguong dau tien luc 2026-11-11 00:42:00; vong nho nhat 40.0
+   ngoai: 5 ngay; vong/ngay TV 5 TB 5.40 (1-10) [10, 4, 1, 5, 7]; phien A/Au/My 1/3/1; nguong TV A/Au/My 43.0/42/45
+   moi ngay danh gia (5): TB 5.40, TV 5, max 10; tong phut nen co nguong 4137, vong / 1380 phut nen = 12.34
+   lenh lon nhat tung phien (moi phien, khong loc 5x): no 11/14; sot: 17/11 Au lon nhat 20 nguong 42; 18/11 A lon nhat 34 nguong 42; 18/11 My lon nhat 37 nguong 43
+== GCZ_M1 D=5 R=6 W=1380: 31 vong; nguong dau tien luc 2026-11-11 00:42:00; vong nho nhat 49.0
+   ngoai: 5 ngay; vong/ngay TV 5 TB 4.20 (1-7) [7, 3, 1, 5, 5]; phien A/Au/My 0/2/1; nguong TV A/Au/My 48.0/48/50
+== GCZ_M1 D=5 R=10 W=1380: 44 vong; nguong dau tien luc 2026-11-11 00:42:00; vong nho nhat 36.0
+   ngoai: 5 ngay; vong/ngay TV 7 TB 6.80 (1-12) [12, 6, 1, 8, 7]; phien A/Au/My 1/3/1; nguong TV A/Au/My 35.0/35/37
+== GCZ_M1 D=5 R=8 W=690: 40 vong; nguong dau tien luc 2026-11-10 00:16:00; vong nho nhat 40.0
+   ngoai: 7 ngay; vong/ngay TV 4 TB 4.43 (1-10) [3, 1, 10, 4, 1, 5, 7]; phien A/Au/My 1/2/0; nguong TV A/Au/My 43.0/42.0/45
+== GCZ_M1 D=3 R=8 W=1380: 37 vong; nguong dau tien luc 2026-11-11 00:42:00; vong nho nhat 40.0
+   ngoai: 5 ngay; vong/ngay TV 5 TB 5.40 (1-10) [10, 4, 1, 5, 7]; phien A/Au/My 1/3/1; nguong TV A/Au/My 42.0/42/45
+== GCZ_M1 D=10 R=8 W=1380: 37 vong; nguong dau tien luc 2026-11-11 00:42:00; vong nho nhat 40.0
+   ngoai: 5 ngay; vong/ngay TV 5 TB 5.40 (1-10) [10, 4, 1, 5, 7]; phien A/Au/My 1/3/1; nguong TV A/Au/My 43.0/42/45

@@ -158,14 +158,6 @@ static class CellBigTests
         b3.TryGetMedian(out double y2);
         Check(y1 == y2 && b3.Count == 6, "nen live tinh lai nhieu lan khong nap trung muc nen");
 
-        Console.WriteLine("[BigTrade] ranh gioi: lenh don >= ngưỡng (mac dinh 10); 0 = khong co so lieu");
-        Check(!BigTradeLogic.Hit(9, 10), "9 < 10 -> khong no");
-        Check(BigTradeLogic.Hit(10, 10), "10 = ngưỡng -> no");
-        Check(BigTradeLogic.Hit(60, 10), "60 -> no");
-        Check(!BigTradeLogic.Hit(0, 10), "0 (lich su khong co so lenh don) -> khong no");
-        Check(!BigTradeLogic.Hit(-1, 10) && !BigTradeLogic.Hit(0, 0), "am / ngưỡng 0 voi so lieu 0 -> khong no");
-        Check(BigTradeLogic.Hit(5, 5) && !BigTradeLogic.Hit(4.9, 5), "ngưỡng tuy chinh 5: 5 no, 4,9 khong");
-
         Console.WriteLine("[BigTrade] cỡ: 1,0 x be ngang nen o ngưỡng -> 2,5 tu 6 x ngưỡng, can bac hai");
         Check(Math.Abs(BigTradeLogic.SizeFrac(10, 10) - 1.0) < 1e-9, "o ngưỡng: 1,0");
         Check(Math.Abs(BigTradeLogic.SizeFrac(60, 10) - 2.5) < 1e-9 && BigTradeLogic.SizeFrac(186, 10) == 2.5, "tu 6 x ngưỡng: 2,5 va khong vuot");

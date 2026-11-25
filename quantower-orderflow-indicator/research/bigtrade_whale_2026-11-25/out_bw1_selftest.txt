@@ -1,0 +1,45 @@
+DAT K(R=10, 1380 phut) = 10
+DAT K(R=10, 690 phut) = 5
+DAT K(R=10, 60 phut) = 1 (khong bao gio 0) | rhu(10*60/1380)=0
+DAT K(R=10, 0 phut) = 1
+DAT 12 lenh 100, K=10 -> nguong 100 | nguong=100.0
+DAT lenh 100 khong no, 101 no | giu=[1]
+DAT gop tham lam: cach <= g bi bo, bang nhau tick thap truoc | [1, 3]
+DAT gia tri > 4095 don o cuoi, so sanh dung gia tri that
+DAT A(D=5,R=10) = logic bw0_quick tren du lieu hien tai [GCX_M1] | vong/ngay     8.2  nguong p10/p50/p90 33/47/51  co vong p10/p50 39/73  nho nhat 34 || vong/ngay     8.2  nguong p10/p50/p90 33/47/51  co vong p10/p50 39/73  nho nhat 34
+   so voi dong trong out_bw0_quick.txt: TRUNG | file: vong/ngay     8.2  nguong p10/p50/p90 33/47/51  co vong p10/p50 39/73  nho nhat 34
+DAT A(D=5,R=10) tai lap dong out_bw0_quick.txt [GCX_M1] (nhat ky vang khong doi tu 10/11)
+DAT A(D=5,R=10) = logic bw0_quick tren du lieu hien tai [GCX_M5] | vong/ngay     8.3  nguong p10/p50/p90 33/46/50  co vong p10/p50 39/70  nho nhat 34 || vong/ngay     8.3  nguong p10/p50/p90 33/46/50  co vong p10/p50 39/70  nho nhat 34
+   so voi dong trong out_bw0_quick.txt: TRUNG | file: vong/ngay     8.3  nguong p10/p50/p90 33/46/50  co vong p10/p50 39/70  nho nhat 34
+DAT A(D=5,R=10) tai lap dong out_bw0_quick.txt [GCX_M5] (nhat ky vang khong doi tu 10/11)
+DAT A(D=5,R=10) = logic bw0_quick tren du lieu hien tai [NQ_M1] | vong/ngay    11.0  nguong p10/p50/p90 63/70/75  co vong p10/p50 71/86  nho nhat 63 || vong/ngay    11.0  nguong p10/p50/p90 63/70/75  co vong p10/p50 71/86  nho nhat 63
+   so voi dong trong out_bw0_quick.txt: KHAC | file: vong/ngay    11.1  nguong p10/p50/p90 63/70/75  co vong p10/p50 71/86  nho nhat 63
+   (NQ: nhat ky _NQZ26_XCME_Time_1Minute.csv da ghi them sau khi chay bw0_quick (sua luc 08:15-08:17), nen chi doi chieu logic tren du lieu hien tai)
+DAT A(D=5,R=10) = logic bw0_quick tren du lieu hien tai [NQ_M15] | vong/ngay    10.9  nguong p10/p50/p90 61/70/74  co vong p10/p50 71/86  nho nhat 63 || vong/ngay    10.9  nguong p10/p50/p90 61/70/74  co vong p10/p50 71/86  nho nhat 63
+   so voi dong trong out_bw0_quick.txt: TRUNG | file: vong/ngay    10.9  nguong p10/p50/p90 61/70/74  co vong p10/p50 71/86  nho nhat 63
+   (NQ: nhat ky _NQZ26_XCME_Time_15Minute.csv da ghi them sau khi chay bw0_quick (sua luc 08:15-08:17), nen chi doi chieu logic tren du lieu hien tai)
+DAT khong nhin truoc [NQ_M15] ung vien A (nen i=359/599) | vong <= i: 36; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [NQ_M15] ung vien B (nen i=359/599) | vong <= i: 44; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [NQ_M15] ung vien C (nen i=359/599) | vong <= i: 34; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [NQ_M15] ung vien Cx (nen i=359/599) | vong <= i: 24; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [NQ_M15] ung vien D (nen i=359/599) | vong <= i: 40; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [NQ_M15] ung vien E (nen i=359/599) | vong <= i: 63; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [NQ_M15] ung vien F (nen i=359/599) | vong <= i: 0; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [NQ_M15] ung vien G (nen i=359/599) | vong <= i: 10; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [NQ_M15] moc CUR
+DAT khong nhin truoc [NQ_M15] moc ADAPT
+DAT khong nhin truoc [NQ_M15] g gop vong
+DAT khong nhin truoc [GCX_M5] ung vien A (nen i=2748/4580) | vong <= i: 94; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [GCX_M5] ung vien B (nen i=2748/4580) | vong <= i: 100; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [GCX_M5] ung vien C (nen i=2748/4580) | vong <= i: 119; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [GCX_M5] ung vien Cx (nen i=2748/4580) | vong <= i: 72; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [GCX_M5] ung vien D (nen i=2748/4580) | vong <= i: 115; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [GCX_M5] ung vien E (nen i=2748/4580) | vong <= i: 83; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [GCX_M5] ung vien F (nen i=2748/4580) | vong <= i: 7; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [GCX_M5] ung vien G (nen i=2748/4580) | vong <= i: 28; nguong sau i doi (chung to co xao): True
+DAT khong nhin truoc [GCX_M5] moc CUR
+DAT khong nhin truoc [GCX_M5] moc ADAPT
+DAT khong nhin truoc [GCX_M5] g gop vong
+DAT ngay du GCX M1 = 16 | 16
+DAT ngay du NQ M1 = 6 (dem lai) | ['26/10', '27/10', '28/10', '29/10', '30/10', '2/11']
+KET QUA: DAT HET

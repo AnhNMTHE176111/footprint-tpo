@@ -159,41 +159,16 @@ static class StatThresholdTests
         }
 
         // ---------------- 8.5 Big Trade ----------------
-        Console.WriteLine("[Stat] 8.5 Big Trade (1% lon nhat 240 phut nen co so lieu)");
+        // 2026-11-25: Big Trade không còn thuộc chế độ thống kê (StatBigTrade đã xóa); cả hai chế độ dùng BigTradeWhale (BigTradeWhaleTests.cs).
+        Console.WriteLine("[Stat] 8.5 chon vong Big Trade (strict = lon hon han)");
         {
-            var bt = new StatBigTrade(1, 100, 240);
-            for (int b = 0; b < 5; b++) bt.AddClosedBar(Enumerable.Range(1 + b * 100, 100).Select(v => ((long)v, (double)v)).ToList());
-            bool ok = bt.TryThreshold(out int thr);
-            Check(ok && thr == 495, "500 lenh don 1..500 trong 5 nen -> nguong 495", $"{thr}");
             var cells = new List<(long tick, double mot)> { (0, 496), (10, 495) };
-            var sel = BigTradeAdaptive.Select(cells, thr, 2, 0, true);
+            var sel = BigTradeAdaptive.Select(cells, 495, 2, 0, true);
             Check(sel.Count == 1 && cells[sel[0]].mot == 496, "o 496 no, o 495 khong (lon hon han)");
-            var bt2 = new StatBigTrade(1, 100, 240);
-            for (int b = 0; b < 5; b++) bt2.AddClosedBar(Enumerable.Range(1 + b * 100, b == 4 ? 99 : 100).Select(v => ((long)v, (double)v)).ToList());
-            Check(!bt2.TryThreshold(out _), "499 lenh don -> khong vong nao");
-            Check(BigTradeAdaptive.Select(cells, 495, 2, 0, false).Count == 2, "che do cu (strict = false) giu >= nhu cu");
-        }
-        {
-            var bt = new StatBigTrade(5, 100, 240);
-            Check(bt.WindowBars == 48, "M5: cua so max(5, lam tron(240 / 5)) = 48 nen", $"{bt.WindowBars}");
-            bt.AddClosedBar(Enumerable.Range(0, 20).Select(i => ((long)i * 10, 4000.0)).ToList());
-            for (int b = 1; b < 48; b++) bt.AddClosedBar(Enumerable.Range(1, 11).Select(v => ((long)v * 10, (double)v)).ToList());
-            bt.TryThreshold(out int thrA);
-            Check(bt.Count == 48 && bt.Samples == 20 + 47 * 11 && thrA == 4000, "48 nen (nen dau 20 lenh 4000) -> nguong 4000", $"{bt.Count} nen, {bt.Samples} mau, thr {thrA}");
-            bt.AddClosedBar(Enumerable.Range(1, 11).Select(v => ((long)v * 10, (double)v)).ToList());
-            bt.TryThreshold(out int thrB);
-            Check(bt.Count == 48 && bt.Samples == 48 * 11 && thrB == 11, "nen thu 49 nop -> nen dau roi hang doi, mang dem tru dung (nguong 11)", $"{bt.Count} nen, {bt.Samples} mau, thr {thrB}");
-            bt.AddClosedBar(new List<(long, double)> { (5, 0), (6, 0) });
-            Check(bt.Count == 48 && bt.Samples == 48 * 11, "nen khong co lenh don > 0: so nen va so mau khong doi");
-        }
-        {
-            var cells = new List<(long tick, double mot)> { (0, 600), (2, 550), (5, 520) };
-            var sel = BigTradeAdaptive.Select(cells, 495, 2, 0, true).Select(i => cells[i].tick).OrderBy(x => x).ToList();
-            Check(string.Join(",", sel) == "0,5", "gop: 600 / 550 / 520 o tick 0 / 2 / 5, g = 2 -> giu 0 va 5", string.Join(",", sel));
-            var bt = new StatBigTrade(5);
-            Check(bt.MergeTicks() == 2, "g = 2 khi chua du 5 nen");
-            for (int b = 0; b < 5; b++) bt.AddClosedBar(new List<(long, double)> { (0, 3), (40, 2) });
-            Check(bt.MergeTicks() == 5, "bien do TB 40 tick -> g = max(2, lam tron(40 / 8)) = 5", $"{bt.MergeTicks()}");
+            Check(BigTradeAdaptive.Select(cells, 495, 2, 0, false).Count == 2, "strict = false giu >=");
+            var c3 = new List<(long tick, double mot)> { (0, 600), (2, 550), (5, 520) };
+            var sel3 = BigTradeAdaptive.Select(c3, 495, 2, 0, true).Select(i => c3[i].tick).OrderBy(x => x).ToList();
+            Check(string.Join(",", sel3) == "0,5", "gop: 600 / 550 / 520 o tick 0 / 2 / 5, g = 2 -> giu 0 va 5", string.Join(",", sel3));
         }
 
         Console.WriteLine(_fail == 0 ? "[Stat] TAT CA PASS" : $"[Stat] {_fail} FAIL");

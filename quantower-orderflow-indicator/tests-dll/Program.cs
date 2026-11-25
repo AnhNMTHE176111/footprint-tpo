@@ -5,19 +5,19 @@ var t = typeof(OrderFlowBubbles.OrderFlowBubbles);
 var props = t.GetProperties(BindingFlags.Public|BindingFlags.Instance).Where(p => p.GetCustomAttributes().Any(a => a.GetType().Name=="InputParameterAttribute")).ToList();
 Console.WriteLine($"InputParameter count = {props.Count}");
 foreach (var p in props) Console.WriteLine("  " + p.Name);
-int fail = props.Count == 27 ? 0 : 1;   // 2026-11-25: +2 o che do nguong (ThresholdMode, StatRarePbp)
+int fail = props.Count == 23 ? 0 : 1;   // 2026-11-25: +2 o che do nguong (ThresholdMode, StatRarePbp); Big Trade "lenh ca map": -4 o mat do (27 -> 23)
 object o = null; try { o = Activator.CreateInstance(t); } catch (Exception e) { Console.WriteLine("Khong tao duoc instance: " + e.GetType().Name); }
 if (o != null) {
   void chk(string n, object exp){ var v=t.GetProperty(n).GetValue(o); bool ok=Equals(v,exp); if(!ok) fail++; Console.WriteLine($"  {(ok?"OK  ":"FAIL")} {n} = {v} (mong doi {exp})"); }
   chk("DeltaFontSize",7); chk("DeltaYOffsetPx",8); chk("DLineEnabled",false); chk("DeltaMinBarWidthPx",6);
-  chk("CellDotAllLevels",false); chk("CellDotNasdaqAuto",true); chk("CellDotFloorEnabled",true); chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhMinWickTicks",3); chk("ExhSumLevels",6); chk("ExhSumHistRatio",1.1); chk("BigTradeMinContracts",10.0); chk("BigTradeOpacity",35); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellDotMedianRatio",2.8); chk("CellDotLocalTicks",4); chk("CellDotHideBuyNearSellTicks",6); chk("CellDotEnabled",true); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true); chk("ImbMaxBars",20); chk("ImbFarBars",60);
-  chk("CellDotAdaptive",true); chk("CellDotPreset",0); chk("AdaptiveBaseline",true); chk("BigTradeAdaptiveEnabled",true); chk("BigTradeDensity",1.0); chk("BigTradeFloor",5.0); chk("BigTradeMaxPerBar",3); chk("ExhTailMedianRatio",0.8); chk("BigTradeMergeDiv",8.0); chk("BigTradeMergeMin",2); chk("BigTradeCeil",0.0);
+  chk("CellDotAllLevels",false); chk("CellDotNasdaqAuto",true); chk("CellDotFloorEnabled",true); chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhMinWickTicks",3); chk("ExhSumLevels",6); chk("ExhSumHistRatio",1.1); chk("BigTradeOpacity",35); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellDotMedianRatio",2.8); chk("CellDotLocalTicks",4); chk("CellDotHideBuyNearSellTicks",6); chk("CellDotEnabled",true); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true); chk("ImbMaxBars",20); chk("ImbFarBars",60);
+  chk("CellDotAdaptive",true); chk("CellDotPreset",0); chk("AdaptiveBaseline",true); chk("ExhTailMedianRatio",0.8);
   { var pa = t.GetProperty("CellDotPreset").GetCustomAttributes().First(a => a.GetType().Name=="InputParameterAttribute");
     var vf = pa.GetType().GetProperties().FirstOrDefault(pp => pp.Name.ToLower().Contains("variant"));
     var vv = vf?.GetValue(pa) as System.Collections.IEnumerable; int nv = 0; if (vv != null) foreach (var _ in vv) nv++;
     bool okv = nv == 6; if(!okv) fail++; Console.WriteLine($"  {(okv?"OK  ":"FAIL")} CellDotPreset co 3 lua chon (variants {nv}/6)"); }
   // ---- 2026-11-25: che do nguong "Khong theo CORVEN (thong ke)" (research/stat_anomaly_2026-11-24/SPEC.md muc 6, 8.6) ----
-  chk("ThresholdMode",0); chk("StatRarePbp",200); chk("StatDotDays",5); chk("StatDotNeighbors",true); chk("StatDotMinDays",2); chk("StatDotFallbackMinutes",120); chk("StatBtMinutes",240); chk("StatBtRarePbp",100);
+  chk("ThresholdMode",0); chk("StatRarePbp",200); chk("StatDotDays",5); chk("StatDotNeighbors",true); chk("StatDotMinDays",2); chk("StatDotFallbackMinutes",120);
   foreach (var (pn, want) in new[] { ("ThresholdMode", 4), ("StatRarePbp", 6) })
   { var pa = t.GetProperty(pn).GetCustomAttributes().First(a => a.GetType().Name=="InputParameterAttribute");
     var vf = pa.GetType().GetProperties().FirstOrDefault(pp => pp.Name.ToLower().Contains("variant"));
@@ -28,20 +28,20 @@ if (o != null) {
     var fpo = Activator.CreateInstance(t);
     t.GetField("TestBarSource", F).SetValue(fpo, (Func<int, TradingPlatform.BusinessLayer.HistoryItemBar>)(i => null));
     string Fp(double m, int mode, int pbp) { t.GetField("TestBarMinutes", F).SetValue(fpo, m); t.GetProperty("ThresholdMode").SetValue(fpo, mode); t.GetProperty("StatRarePbp").SetValue(fpo, pbp); return (string)t.GetMethod("ComputeSettingsFingerprint", F).Invoke(fpo, null); }
-    // dau van tay cua ban TRUOC khi them che do moi (dist DLL commit 674e744), m = 5 va m = 0
-    const string old5 = "False|10|True|20|9|0|0|True|2.8|4|False|6|cellbig-v18|100|40|5|20|noabs-v1|True|0.3|3|0.8|True|10|bigtrade-v1|False|0.35|4|1|True|3|6|1.1|20|1|exh-v3|True|250|3|5|False|3|1.5|3|False|8|False|True|60|60|8|3|2|5|stophunt-v8|nbase-v1:20|dotu-v2:0|bta-v1:1/5/0/3/8/2|exhtail-v1:0.8";
+    // dau van tay (2026-11-25, research/bigtrade_whale_2026-11-25/SPEC.md muc 6): Big Trade "lenh ca map" = "bigtrade-whale-v1:5/8/1380/<m>"
+    // thay "10|bigtrade-v1" va bo "|bta-v1:..."; che do thong ke "|stat-v2:" bo hai so Big Trade. Moi phan khac giu nguyen tung ky tu.
+    string Nw(string m) => "False|10|True|20|9|0|0|True|2.8|4|False|6|cellbig-v18|100|40|5|20|noabs-v1|True|0.3|3|0.8|True|bigtrade-whale-v1:5/8/1380/" + m + "|False|0.35|4|1|True|3|6|1.1|20|1|exh-v3|True|250|3|5|False|3|1.5|3|False|8|False|True|60|60|8|3|2|5|stophunt-v8|nbase-v1:20|dotu-v2:0|exhtail-v1:0.8";
     void fc(bool ok, string name, string got) { if(!ok) fail++; Console.WriteLine($"  {(ok?"OK  ":"FAIL")} {name}" + (ok ? "" : " -> " + got)); }
-    string a0 = Fp(5, 0, 200); fc(a0 == old5, "ThresholdMode = 0, m = 5: dau van tay y het ban cu", a0);
-    string a1 = Fp(5, 1, 200); fc(a1 == old5 + "|stat-v1:5/200/5/True/2/120/240/100", "ThresholdMode = 1, m = 5: them |stat-v1:5/200/5/True/2/120/240/100", a1);
-    string a2 = Fp(5, 1, 100); fc(a2 != a1 && a2.EndsWith("|stat-v1:5/100/5/True/2/120/240/100"), "doi StatRarePbp -> dau van tay doi", a2);
-    string b0 = Fp(0, 0, 200), b1 = Fp(0, 1, 200); fc(b0 == old5 && b1 == b0, "ThresholdMode = 1, m = 0 (khong phai nen thoi gian): y het che do cu", b1);
-    string c1 = Fp(2.5, 1, 200); fc(c1 == old5, "ThresholdMode = 1, m = 2,5 (khong nguyen): y het che do cu", c1);
-    string bk0 = (string)t.GetMethod("BaseKey", F).Invoke(fpo, null);
+    string a0 = Fp(5, 0, 200); fc(a0 == Nw("5"), "ThresholdMode = 0, m = 5: bigtrade-whale-v1:5/8/1380/5, khong con bta-v1", a0);
+    string a1 = Fp(5, 1, 200); fc(a1 == Nw("5") + "|stat-v2:5/200/5/True/2/120", "ThresholdMode = 1, m = 5: them |stat-v2:5/200/5/True/2/120", a1);
+    string a2 = Fp(5, 1, 100); fc(a2 != a1 && a2.EndsWith("|stat-v2:5/100/5/True/2/120"), "doi StatRarePbp -> dau van tay doi", a2);
+    string b0 = Fp(0, 0, 200), b1 = Fp(0, 1, 200); fc(b0 == Nw("1") && b1 == b0, "m = 0 (khong phai nen thoi gian): Big Trade nhu m = 1, ThresholdMode = 1 y het che do cu", b1);
+    string c1 = Fp(2.5, 1, 200); fc(c1 == Nw("2.5"), "ThresholdMode = 1, m = 2,5 (khong nguyen): cham nhu che do cu, Big Trade m = 2.5", c1);
     t.GetField("TestBarMinutes", F).SetValue(fpo, 5.0); t.GetProperty("ThresholdMode").SetValue(fpo, 0);
     string bkOld = (string)t.GetMethod("BaseKey", F).Invoke(fpo, null);
     t.GetProperty("ThresholdMode").SetValue(fpo, 1);
     string bkNew = (string)t.GetMethod("BaseKey", F).Invoke(fpo, null);
-    fc(bkOld == "20|1" && bkNew == "20|1|stat:5/200/5/True/2/120/240/100", "BaseKey: che do cu \"20|1\", che do moi them |stat:...", bkOld + " / " + bkNew);
+    fc(bkOld == "20|bw:5" && bkNew == "20|bw:5|stat:5/200/5/True/2/120", "BaseKey: \"20|bw:5\", che do thong ke them |stat:...", bkOld + " / " + bkNew);
   }
   chk("StopHuntEnabled",true); chk("StopHuntBoxSmall",60); chk("StopHuntBoxLarge",60); chk("StopHuntBoxMaxMult",8.0); chk("StopHuntTolTicks",3); chk("StopHuntConfirmBars",2); chk("StopHuntCooldown",5);
   chk("CellBigStopHuntColor",System.Drawing.Color.MediumOrchid);
@@ -56,7 +56,7 @@ if (o != null) {
     bool ok2 = rel2 != null && rel2.GetType().Name == "SettingItemRelationVisibility";
     if (!ok2) fail++; Console.WriteLine($"  {(ok2?"OK  ":"FAIL")} o Muc hiem chi hien khi chon Khong theo CORVEN (Relation = {rel2?.GetType().Name ?? "null"})");
   } catch (Exception e) { Console.WriteLine("  (bo qua kiem Settings ngoai Quantower: " + (e.InnerException ?? e).GetType().Name + ")"); }
-  foreach (var gn in new[] { "CellBigRowTicks", "CellBigRowOffset", "CellBigRatio", "CellDotRatio", "ExhSumRel", "CellBigMaxSideRatio", "CellBigLocalTicks", "CellBigMinImbalance", "CellBigOpacity", "BigZ", "BigVolMult", "BigTradeTopN", "BigTradeRequireRealTrades", "BigTradeSkipOnAbsorption", "CellDotTradesRatio", "AbsorptionEnabled", "AbsEffortZ", "AbsScoreMin", "AbsMaxDisplaceTicks", "AbsorptionTopN", "AbsRangeRatio", "AbsImpactZ", "AbsSwingPeriod", "AbsPocProminence", "AbsDivergencePct", "AbsTwoSidedPct", "AbsMultiBarLookback", "AbsConfirmBars", "AbsBreakTicks", "WNoResult", "WProminent", "WDivergence", "WTwoSided", "WMulti", "WSwing", "CellBigSkipOnAbsorption", "BaselineTopLevels", "BigTradeFixedContracts", "BigTradeAbsFloor", "HaloTransparency" }) { bool g2 = t.GetProperty(gn) == null; if(!g2) fail++; Console.WriteLine($"  {(g2?"OK  ":"FAIL")} {gn} da bo"); }
+  foreach (var gn in new[] { "CellBigRowTicks", "CellBigRowOffset", "CellBigRatio", "CellDotRatio", "ExhSumRel", "CellBigMaxSideRatio", "CellBigLocalTicks", "CellBigMinImbalance", "CellBigOpacity", "BigZ", "BigVolMult", "BigTradeTopN", "BigTradeRequireRealTrades", "BigTradeSkipOnAbsorption", "CellDotTradesRatio", "AbsorptionEnabled", "AbsEffortZ", "AbsScoreMin", "AbsMaxDisplaceTicks", "AbsorptionTopN", "AbsRangeRatio", "AbsImpactZ", "AbsSwingPeriod", "AbsPocProminence", "AbsDivergencePct", "AbsTwoSidedPct", "AbsMultiBarLookback", "AbsConfirmBars", "AbsBreakTicks", "WNoResult", "WProminent", "WDivergence", "WTwoSided", "WMulti", "WSwing", "CellBigSkipOnAbsorption", "BaselineTopLevels", "BigTradeFixedContracts", "BigTradeAbsFloor", "HaloTransparency", "BigTradeMinContracts", "BigTradeAdaptiveEnabled", "BigTradeDensity", "BigTradeFloor", "BigTradeMaxPerBar", "BigTradeCeil", "BigTradeMergeDiv", "BigTradeMergeMin", "StatBtMinutes", "StatBtRarePbp" }) { bool g2 = t.GetProperty(gn) == null; if(!g2) fail++; Console.WriteLine($"  {(g2?"OK  ":"FAIL")} {gn} da bo"); }
   { bool gone = t.GetProperty("StopHuntLookback") == null; if(!gone) fail++; Console.WriteLine($"  {(gone?"OK  ":"FAIL")} StopHuntLookback da bo"); }
 }
 

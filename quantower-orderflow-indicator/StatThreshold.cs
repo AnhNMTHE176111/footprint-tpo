@@ -7,7 +7,7 @@
 //  1) CHẤM Bid/Ask: giá trị của từng bên (Bid, Ask) của từng ô so với tập tham chiếu = mọi Bid và Ask > 0 của CÙNG KHUNG GIỜ
 //     trong ngày (giờ Chicago) của 5 ngày giao dịch trước (gộp thêm hai khung liền kề). Nổ khi lớn hơn hẳn giá trị lớn thứ K + 1,
 //     K = mức hiếm x số mẫu (2% mặc định). Chưa đủ ngày: dùng 120 phút nến đóng gần nhất. Ô sát nhau gộp trong ±w tick.
-//  2) BIG TRADE: lệnh đơn lớn nhất của ô so với mọi lệnh đơn > 0 của 240 phút nến có số liệu gần nhất, mức 1%.
+//  2) BIG TRADE không còn thuộc chế độ này (2026-11-25): cả hai chế độ dùng chung "lệnh cá mập" (BigTradeWhale trong CellBigLogic.cs).
 //  Làm tròn: Floor(x + 0,5) (khớp Python), KHÔNG dùng Math.Round.
 // ============================================================================
 using System;
@@ -265,68 +265,6 @@ namespace OrderFlowBubbles
             while (_ranges.Count > _nRange) _ranges.Dequeue();
 
             if (_mainValid && _mainDay != day) _mainValid = false;
-        }
-    }
-
-    /// <summary>Big Trade theo thống kê (SPEC mục 3): lệnh đơn so với mọi lệnh đơn > 0 của n nến có số liệu gần nhất, n = max(5, làm tròn(240 / phút)).</summary>
-    public sealed class StatBigTrade
-    {
-        public const int MergeMin = 2;
-        public const double RangePerMerge = 8.0;
-
-        private readonly int _n, _pbp, _nRange;
-        private readonly Queue<int[]> _bars = new Queue<int[]>();
-        private readonly int[] _hist = new int[StatRank.Cap + 1];
-        private long _count;
-        private readonly Queue<double> _ranges = new Queue<double>();
-
-        public StatBigTrade(int minutes, int pbp = 100, int windowMinutes = 240)
-        {
-            int m = Math.Max(1, minutes);
-            _pbp = pbp;
-            _n = Math.Max(5, BaselineWindow.RoundHalfUp((double)windowMinutes / m));
-            _nRange = BaselineWindow.BarsFor(m);
-        }
-
-        public int WindowBars => _n;
-        public int Count => _bars.Count;
-        public long Samples => _count;
-
-        public bool TryThreshold(out int thr)
-        {
-            thr = StatRank.Threshold(_hist, _count, _pbp);
-            return thr >= 0;
-        }
-
-        /// <summary>g = max(2, làm tròn(biên độ TB / 8)) khi đã có >= 5 nến; ngược lại 2.</summary>
-        public int MergeTicks()
-        {
-            if (_ranges.Count < 5) return MergeMin;
-            double s = 0; foreach (var r in _ranges) s += r;
-            double avg = s / _ranges.Count;
-            return avg > 0 ? Math.Max(MergeMin, BaselineWindow.RoundHalfUp(avg / RangePerMerge)) : MergeMin;
-        }
-
-        /// <summary>Nộp nến vừa đóng (ĐÚNG 1 lần). Nến không có ô lệnh đơn > 0 -> không nộp, không tính là một nến của hàng đợi.</summary>
-        public void AddClosedBar(IReadOnlyList<(long tick, double mot)> cells)
-        {
-            if (cells == null) return;
-            var vals = new List<int>(); long lo = long.MaxValue, hi = long.MinValue;
-            foreach (var c in cells)
-                if (c.mot > 0) { vals.Add(StatRank.Index(c.mot)); if (c.tick < lo) lo = c.tick; if (c.tick > hi) hi = c.tick; }
-            if (vals.Count == 0) return;
-            var arr = vals.ToArray();
-            _bars.Enqueue(arr);
-            foreach (int v in arr) _hist[v]++;
-            _count += arr.Length;
-            while (_bars.Count > _n)
-            {
-                var old = _bars.Dequeue();
-                foreach (int v in old) _hist[v]--;
-                _count -= old.Length;
-            }
-            _ranges.Enqueue(hi - lo);
-            while (_ranges.Count > _nRange) _ranges.Dequeue();
         }
     }
 }

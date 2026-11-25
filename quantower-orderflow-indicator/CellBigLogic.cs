@@ -9,8 +9,9 @@
 //     cùng nến (tick vắng = 0; bằng nhau không tính là lớn hơn) VÀ bid(p) >= sàn CellBigMinSide (9). Chấm XANH (buy) tương tự với ask. Một tick có thể có cả hai.
 //     Luật che (CORVEN vẽ đỏ đè xanh): chấm xanh bị bỏ nếu cùng nến có chấm đỏ cách <= CellDotHideBuyNearSellTicks (6) tick. Danh sách trả về: xanh trước, đỏ sau (đỏ vẽ sau = nằm trên).
 //     Chế độ ngưỡng cố định (UseFixedThreshold): giá trị của bên >= max(ngưỡng cố định, sàn), vẫn cần lớn hơn hẳn trong ±4 tick và áp luật che.
-//  2) BIG TRADE (vòng tròn mờ) — KHÔNG còn suy từ volume của ô (bản 07efb1f đã bỏ): đó là MỘT lệnh đơn chủ động rất lớn
-//     (MaxOneTradeVolume của mức giá, chỉ feed SỐNG mới cấp). Nổ khi MaxOneTradeVolume >= BigTradeMinContracts (mặc định 10). Xem BigTradeLogic.
+//  2) BIG TRADE (vòng tròn mờ) — KHÔNG suy từ volume của ô: đó là MỘT lệnh đơn chủ động rất lớn (MaxOneTradeVolume của mức giá,
+//     chỉ feed SỐNG mới cấp; lịch sử lấy từ nhật ký lệnh đơn). "Lệnh cá mập" (2026-11-25): lớn hơn hẳn nhóm 8 lệnh lớn nhất mỗi ngày,
+//     tính trên 5 ngày nến gần nhất. Xem BigTradeWhale.
 //  Bóng TÍM chỉ còn nghĩa stop hunt, do OrderFlowBubbles.cs tô.
 // ============================================================================
 using System;
@@ -261,73 +262,109 @@ namespace OrderFlowBubbles
         }
     }
 
-    // BIG TRADE thích nghi — "lớn thứ K trong N nến trước" (Bookmap cùng họ: ngưỡng cuốn theo phân phối gần đây; dùng thứ hạng vì lệnh đơn có đuôi rất dài).
-    //   Mỗi nến ĐÃ ĐÓNG có số liệu lệnh đơn (ít nhất một ô > 0) nộp K lệnh đơn lớn nhất của nó; K = max(1, làm tròn(mật độ x N)).
-    //   Ngưỡng dùng = max(sàn, giá trị lớn thứ K trong gộp hàng đợi) (trần > 0 thì kẹp); chưa đủ 5 nến có số liệu -> ngưỡng cố định.
-    //   Gộp vòng cách nhau <= g = max(gộp tối thiểu, làm tròn(biên độ TB các nến trước / chia)) tick (giữ lệnh lớn hơn), tối đa cap vòng/nến.
-    //   Đo (nhật ký lệnh đơn, vòng/nến Á/Âu/Mỹ): NQ M15 cố định 10 = 2,04 / 3,09 / 15,05 -> thích nghi 0,77 / 1,12 / 0,96.
-    public sealed class BigTradeAdaptive
+    // BIG TRADE "LỆNH CÁ MẬP" (2026-11-25, research/bigtrade_whale_2026-11-25/SPEC.md; bản Python chuẩn từng nến: bw2_ref.py).
+    //   MỘT định nghĩa cho cả hai chế độ ngưỡng ("Theo CORVEN" và "Không theo CORVEN"). Tham số là HẰNG SỐ, không có ô chỉnh mật độ.
+    //   Hàng đợi n = max(1, làm tròn(5 x 1380 / m)) nến ĐÃ ĐÓNG có số liệu lệnh đơn (m = phút một nến; m <= 0 -> 1), giữ MỌI lệnh đơn > 0.
+    //   phút = số nến hàng đợi x m. phút < 1380 (chưa đủ một "ngày nến") -> chưa có ngưỡng, không vẽ vòng nào.
+    //   K = max(1, làm tròn(8 x phút / 1380)) (8 lệnh mỗi ngày nến; đủ 5 ngày thì K = 40). Ngưỡng = giá trị lớn thứ K của hàng đợi.
+    //   Vòng: lệnh đơn LỚN HƠN HẲN ngưỡng; gộp ô cách nhau <= g = max(2, làm tròn(biên độ TB / 8)) tick; không giới hạn số vòng mỗi nến.
+    //   Đây là ĐỊNH NGHĨA HIỂN THỊ "lệnh thật sự lớn", KHÔNG phải lợi thế giao dịch đã kiểm định. Làm tròn Floor(x + 0,5) khớp Python.
+    public sealed class BigTradeWhale
     {
-        public const int MinBars = 5;
-        private readonly int _n, _k;
-        private readonly Queue<double[]> _tops = new Queue<double[]>();
+        public const int Days = 5, PerDay = 8, DayMinutes = 1380, WarmMinutes = 1380, MergeMin = 2;
+        public const double RangePerMerge = 8.0;
+
+        private readonly double _m;
+        private readonly int _n, _nRange;
+        private readonly Queue<int[]> _bars = new Queue<int[]>();
+        private readonly int[] _hist = new int[StatRank.Cap + 1];
+        private long _count;
         private readonly Queue<double> _ranges = new Queue<double>();
 
-        public BigTradeAdaptive(int n, double density)
+        /// <summary>minutesPerBar &lt;= 0 (hoặc không phải số) -> 1.</summary>
+        public BigTradeWhale(double minutesPerBar)
         {
-            _n = Math.Max(1, n);
-            _k = Math.Max(1, BaselineWindow.RoundHalfUp(density * _n));
-        }
-        public int Count => _tops.Count;
-        public int K => _k;
-
-        /// <summary>Giá trị lớn thứ K trong gộp các mảng (0 nếu chưa đủ K giá trị).</summary>
-        public static double KthLargest(IEnumerable<double[]> tops, int k)
-        {
-            var v = new List<double>();
-            foreach (var a in tops) v.AddRange(a);
-            if (k < 1 || v.Count < k) return 0;
-            v.Sort((a, b) => b.CompareTo(a));
-            return v[k - 1];
+            _m = minutesPerBar > 0 ? minutesPerBar : 1.0;
+            _n = Math.Max(1, BaselineWindow.RoundHalfUp(Days * DayMinutes / _m));
+            _nRange = BaselineWindow.BarsFor(_m);
         }
 
-        /// <summary>Ngưỡng dùng cho nến đang xét (chỉ từ các nến ĐÃ ĐÓNG trước).</summary>
-        public double Threshold(double fixedMin, double floor, double ceil)
+        /// <summary>Phút một nến sau khi quy (m &lt;= 0 -> 1). Dùng cho dấu vân tay / khóa dựng lại.</summary>
+        public static double NormMinutes(double minutesPerBar) => minutesPerBar > 0 ? minutesPerBar : 1.0;
+
+        public double MinutesPerBar => _m;
+        public int WindowBars => _n;
+        public int Count => _bars.Count;
+        public long Samples => _count;
+        public double Minutes => _bars.Count * _m;
+
+        /// <summary>Hạng K hiện tại (0 khi chưa đủ WarmMinutes phút nến).</summary>
+        public int K
         {
-            if (_tops.Count < MinBars) return fixedMin;
-            double thr = Math.Max(floor, KthLargest(_tops, _k));
-            if (ceil > 0) thr = Math.Min(thr, ceil);
-            return thr;
+            get
+            {
+                double mn = Minutes;
+                if (mn < WarmMinutes) return 0;
+                return Math.Max(1, BaselineWindow.RoundHalfUp(PerDay * mn / DayMinutes));
+            }
         }
 
-        /// <summary>Khoảng gộp (tick) theo biên độ TB của các nến trước.</summary>
-        public int MergeTicks(double div, int gmin)
+        /// <summary>Ngưỡng cho nến đang xét (chỉ từ nến ĐÃ ĐÓNG trước) = chỉ số lớn thứ K. false = chưa có ngưỡng.</summary>
+        public bool TryThreshold(out int thr)
         {
-            if (_ranges.Count < MinBars || div <= 0) return gmin;
+            thr = 0;
+            int k = K;
+            if (k <= 0 || _count < k) return false;
+            long c = 0;
+            for (int v = StatRank.Cap; v >= 1; v--)
+            {
+                c += _hist[v];
+                if (c >= k) { thr = v; return true; }
+            }
+            return false;
+        }
+
+        /// <summary>g = max(2, làm tròn(biên độ TB / 8)) khi đã có >= 5 nến và TB > 0; ngược lại 2.</summary>
+        public int MergeTicks()
+        {
+            if (_ranges.Count < 5) return MergeMin;
             double s = 0; foreach (var r in _ranges) s += r;
             double avg = s / _ranges.Count;
-            return avg > 0 ? Math.Max(gmin, BaselineWindow.RoundHalfUp(avg / div)) : gmin;
+            return avg > 0 ? Math.Max(MergeMin, BaselineWindow.RoundHalfUp(avg / RangePerMerge)) : MergeMin;
         }
 
-        /// <summary>Nộp nến vừa đóng (ĐÚNG 1 lần, SAU khi đã xét nến đó). Nến không có ô nào lệnh đơn &gt; 0 -> bỏ qua (không nộp số 0).</summary>
+        /// <summary>Nộp nến vừa đóng (ĐÚNG 1 lần, SAU khi đã xét nến đó): mọi lệnh đơn &gt; 0 + biên độ các ô đó.
+        /// Nến không có ô nào lệnh đơn &gt; 0 -> không nộp, không tính là một nến.</summary>
         public void AddClosedBar(IReadOnlyList<(long tick, double mot)> cells)
         {
             if (cells == null) return;
-            var vals = new List<double>(); long lo = long.MaxValue, hi = long.MinValue;
+            var vals = new List<int>(); long lo = long.MaxValue, hi = long.MinValue;
             foreach (var c in cells)
-                if (c.mot > 0) { vals.Add(c.mot); if (c.tick < lo) lo = c.tick; if (c.tick > hi) hi = c.tick; }
+                if (c.mot > 0) { vals.Add(StatRank.Index(c.mot)); if (c.tick < lo) lo = c.tick; if (c.tick > hi) hi = c.tick; }
             if (vals.Count == 0) return;
-            vals.Sort((a, b) => b.CompareTo(a));
-            if (vals.Count > _k) vals.RemoveRange(_k, vals.Count - _k);
-            _tops.Enqueue(vals.ToArray()); _ranges.Enqueue(hi - lo);
-            while (_tops.Count > _n) { _tops.Dequeue(); _ranges.Dequeue(); }
+            var arr = vals.ToArray();
+            _bars.Enqueue(arr);
+            foreach (int v in arr) _hist[v]++;
+            _count += arr.Length;
+            while (_bars.Count > _n)
+            {
+                var old = _bars.Dequeue();
+                foreach (int v in old) _hist[v]--;
+                _count -= old.Length;
+            }
+            _ranges.Enqueue(hi - lo);
+            while (_ranges.Count > _nRange) _ranges.Dequeue();
         }
+    }
 
+    // Chọn vòng Big Trade trong MỘT nến (hàm thuần, BigTradeWhale dùng với strict = true).
+    public static class BigTradeAdaptive
+    {
         /// <summary>Chọn vòng: ô đạt (mot &gt; 0 và &gt;= thr), duyệt mot giảm dần (bằng nhau: tick thấp trước), bỏ ô cách ô đã giữ &lt;= g tick
         /// (g &lt;= 0: không gộp), dừng khi đủ cap vòng (cap &lt;= 0: không giới hạn). Trả CHỈ SỐ trong cells, theo thứ tự giữ.</summary>
         public static List<int> Select(IReadOnlyList<(long tick, double mot)> cells, double thr, int g, int cap) => Select(cells, thr, g, cap, false);
 
-        /// <summary>Như trên; strict = true: ô phải LỚN HƠN HẲN ngưỡng (mot &gt; thr) — chế độ "Không theo CORVEN (thống kê)".</summary>
+        /// <summary>Như trên; strict = true: ô phải LỚN HƠN HẲN ngưỡng (mot &gt; thr) — Big Trade "lệnh cá mập" dùng cách này.</summary>
         public static List<int> Select(IReadOnlyList<(long tick, double mot)> cells, double thr, int g, int cap, bool strict)
         {
             var kept = new List<int>();
@@ -396,15 +433,12 @@ namespace OrderFlowBubbles
         }
     }
 
-    // BIG TRADE: một lệnh đơn chủ động lớn tại một mức giá (VolumeAnalysisItem.MaxOneTradeVolume).
+    // BIG TRADE: cỡ vòng của một lệnh đơn chủ động lớn tại một mức giá (VolumeAnalysisItem.MaxOneTradeVolume). Ngưỡng: BigTradeWhale.
     public static class BigTradeLogic
     {
         public const double SizeMinFrac = 1.0;    // cỡ ở ngưỡng (x bề ngang nến)
         public const double SizeMaxFrac = 2.5;    // cỡ tối đa
         public const double SizeFullMult = 6.0;   // từ lệnh >= 6 x ngưỡng trở lên = cỡ tối đa
-
-        /// <summary>Nổ khi lệnh đơn >= ngưỡng (0 / âm = không có số liệu lệnh đơn -> không nổ).</summary>
-        public static bool Hit(double maxOneTrade, double minContracts) => maxOneTrade > 0 && maxOneTrade >= minContracts;
 
         /// <summary>Cỡ (x bề ngang nến): 1,0 ở ngưỡng, 2,5 từ 6 x ngưỡng trở lên, đường cong căn bậc hai.</summary>
         public static double SizeFrac(double maxOneTrade, double minContracts)

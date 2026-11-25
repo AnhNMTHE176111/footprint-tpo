@@ -1,5 +1,5 @@
 // Test cho ngưỡng TỰ THÍCH NGHI (2026-11-24, research/adaptive_2026-11-24/README.md mục 6.1 — cùng ví dụ đã chạy đạt trong bt_selftest.py,
-// dot_selftest.py, exh_selftest.py): cửa sổ nền theo khung, Big Trade "lớn thứ K trong N nến trước", chấm công thức chung, kiệt sức thêm điều kiện đuôi.
+// dot_selftest.py, exh_selftest.py): cửa sổ nền theo khung, hàm chọn vòng Big Trade, chấm công thức chung, kiệt sức thêm điều kiện đuôi.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,33 +21,6 @@ static class AdaptiveTests
 
     static List<(long, double)> C(params (long, double)[] x) => x.ToList();
 
-    // chuỗi 8 nến của README 6.1 (N = 5, mật độ 0,6 -> K = 3)
-    static readonly List<(long, double)>[] Seq =
-    {
-        C((100, 1), (101, 6), (102, 2)),
-        C((100, 3), (104, 8)),
-        C((99, 12), (100, 1)),
-        C((101, 2), (102, 4)),
-        C((100, 7), (103, 5), (110, 1)),
-        C((100, 7), (101, 9), (102, 7), (105, 6), (108, 15), (109, 7)),
-        C((100, 0), (101, 0)),
-        C((100, 9), (103, 9), (106, 9), (109, 30)),
-    };
-
-    static List<(double thr, int g, string kept)> RunSeq(double floor, double ceil, double div)
-    {
-        var a = new BigTradeAdaptive(5, 0.6);
-        var res = new List<(double, int, string)>();
-        foreach (var cells in Seq)
-        {
-            double thr = a.Threshold(10, floor, ceil);
-            int g = a.MergeTicks(div, 2);
-            res.Add((thr, g, Fmt(Sel(cells, thr, g, 3))));
-            a.AddClosedBar(cells);
-        }
-        return res;
-    }
-
     static List<CellMark> Ev(CellBigSettings s, double B, params (long t, double bid, double ask)[] xs)
         => CellBigLogic.Evaluate(xs.Select(x => new CellLevel(x.t, x.ask, x.bid, x.ask + x.bid, 1)).ToList(), true, B, s);
     static string Ticks(List<CellMark> m, int side) => string.Join(",", m.Where(x => x.Side == side).Select(x => x.Tick).OrderBy(x => x));
@@ -61,9 +34,8 @@ static class AdaptiveTests
         Check(got.SequenceEqual(exp), "M1 M2 M5 M10 M15 M20 M30 H1 H4 / khong ro", string.Join(",", got));
         Check(BaselineWindow.RoundHalfUp(4.5) == 5 && BaselineWindow.RoundHalfUp(2.5) == 3 && BaselineWindow.RoundHalfUp(3.49) == 3, "lam tron nua len (khong ve so chan)");
 
-        Console.WriteLine("[Adaptive] Big Trade: lon thu K, gop, gioi han");
-        Check(BigTradeAdaptive.KthLargest(new[] { new double[] { 12, 7, 3 }, new double[] { 9, 2 }, new double[] { 30 } }, 3) == 9, "lon thu 3 cua [[12,7,3],[9,2],[30]] = 9");
-        Check(BigTradeAdaptive.KthLargest(new[] { new double[] { 12 }, new double[] { 9 } }, 3) == 0, "chua du 3 gia tri -> 0");
+        // 2026-11-25: trạng thái "lớn thứ K trong N nến" (mật độ / sàn / trần / tối đa vòng) đã thay bằng BigTradeWhale (BigTradeWhaleTests.cs); chỉ còn hàm chọn vòng.
+        Console.WriteLine("[Adaptive] Big Trade: chon vong (gop, gioi han)");
         var cs = C((100, 20), (101, 30), (110, 20), (104, 25));
         Check(Fmt(Sel(cs, 1, 2, 3)) == "(101,30) (104,25) (110,20)", "g 2, toi da 3", Fmt(Sel(cs, 1, 2, 3)));
         Check(Fmt(Sel(cs, 1, 2, 2)) == "(101,30) (104,25)", "g 2, toi da 2", Fmt(Sel(cs, 1, 2, 2)));
@@ -74,38 +46,6 @@ static class AdaptiveTests
         Check(Fmt(Sel(cs3, 1, 2, 3)) == "(100,9) (103,9)", "bang nhau: tick thap truoc", Fmt(Sel(cs3, 1, 2, 3)));
         Check(Sel(C((100, 0), (101, 0)), 0, 0, 0).Count == 0, "lenh don 0 khong bao gio no (ke ca nguong 0)");
         Check(Fmt(Sel(C((100, 9), (101, 10)), 10, 0, 0)) == "(101,10)", "dung nguong: 10 >= 10 no, 9 khong");
-
-        Console.WriteLine("[Adaptive] Big Trade: khoang gop theo bien do TB");
-        foreach (var (rng, div, want) in new[] { (3.6, 8.0, 2), (183.0, 8.0, 23), (20.0, 8.0, 3), (0.0, 8.0, 2), (183.0, 0.0, 2) })
-        {
-            var a = new BigTradeAdaptive(5, 1);
-            // 5 nen co bien do TB = rng: 4 nen bien do 0 + ... -> dung 5 nen cung bien do (lam tron xuong tick khong duoc) -> dung tong bang 5 x rng
-            var rs = new double[] { rng, rng, rng, rng, rng };
-            foreach (var r in rs) a.AddClosedBar(new List<(long, double)> { (0, 1), ((long)Math.Round(r), 1) });
-            if (Math.Abs(rng - Math.Round(rng)) > 1e-9)
-            {   // 3,6 = TB của 2,4,1,1,10 (chuỗi README)
-                a = new BigTradeAdaptive(5, 1);
-                foreach (var r in new long[] { 2, 4, 1, 1, 10 }) a.AddClosedBar(new List<(long, double)> { (0, 1), (r, 1) });
-            }
-            int gg = a.MergeTicks(div, 2);
-            Check(gg == want, $"bien do {rng}, chia {div} -> {want}", gg.ToString());
-        }
-        Check(new BigTradeAdaptive(5, 1).MergeTicks(8, 2) == 2, "chua du 5 nen -> gop toi thieu");
-
-        Console.WriteLine("[Adaptive] Big Trade: chuoi 8 nen (N 5, mat do 0,6 -> K 3, san 5, co dinh 10, toi da 3, chia 8)");
-        var r0 = RunSeq(5, 0, 8);
-        var wantThr = new double[] { 10, 10, 10, 10, 10, 7, 9, 9 };
-        var wantKept = new[] { "", "", "(99,12)", "", "", "(108,15) (101,9)", "", "(109,30) (100,9) (103,9)" };
-        for (int i = 0; i < 8; i++)
-            Check(r0[i].thr == wantThr[i] && r0[i].kept == wantKept[i], $"nen {i}: nguong {wantThr[i]}, giu [{wantKept[i]}]", $"{r0[i].thr} [{r0[i].kept}] g={r0[i].g}");
-        var a7 = new BigTradeAdaptive(5, 0.6);
-        foreach (var c in Seq) a7.AddClosedBar(c);
-        Check(a7.Count == 5, "nen 6 (khong co so lieu) khong vao hang doi; hang doi cuon 5", a7.Count.ToString());
-        var r1 = RunSeq(5, 0, 2);
-        Check(r1[7].g == 3 && r1[7].kept == "(109,30) (100,9)", "chia 2: nen 7 g = 3", $"g={r1[7].g} [{r1[7].kept}]");
-        Check(RunSeq(8, 0, 8)[5].thr == 8, "san 8: nguong nen 5 = 8");
-        Check(RunSeq(5, 6, 8)[5].thr == 6, "tran 6: nguong nen 5 = 6");
-        Check(new BigTradeAdaptive(20, 1.0).K == 20 && new BigTradeAdaptive(8, 1.0).K == 8 && new BigTradeAdaptive(5, 0.5).K == 3 && new BigTradeAdaptive(5, 0.01).K == 1, "K = max(1, lam tron(mat do x N))");
 
         Console.WriteLine("[Adaptive] cham: cong thuc chung (nguong, w, che)");
         (double thr, int w, int h) U(int preset, double B, double R)

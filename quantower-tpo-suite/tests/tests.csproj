@@ -11,7 +11,10 @@
       <HintPath>$(HOME)/quantower-libs/TradingPlatform.BusinessLayer.dll</HintPath><Private>false</Private>
     </Reference>
     <Reference Include="System.Drawing.Common">
-      <HintPath>$(HOME)/quantower-libs/System.Drawing.Common.dll</HintPath><Private>false</Private>
+      <HintPath>$(HOME)/quantower-libs/System.Drawing.Common.dll</HintPath><Private>true</Private>
+    </Reference>
+    <Reference Include="System.Private.Windows.Core" Condition="Exists('$(HOME)/quantower-libs/System.Private.Windows.Core.dll')">
+      <HintPath>$(HOME)/quantower-libs/System.Private.Windows.Core.dll</HintPath><Private>true</Private>
     </Reference>
     <Compile Include="../ProfileEngine.cs" />
   </ItemGroup>

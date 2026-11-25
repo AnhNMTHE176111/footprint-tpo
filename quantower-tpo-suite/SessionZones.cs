@@ -10,6 +10,10 @@
 //                 đường VWAP dùng của nền tảng (PLAN-MOC-PHAN-UNG.md §0.3);
 //    CẠNH RANGE = VAH/VAL NGÀY HÔM NAY đang hình thành (từ đầu phiên Á tới nay; gọi chế độ cân bằng / vừa phá, fade phá hụt);
 //    NỀN        = HVN ngày + HVN tuần (đi tiếp / mục tiêu, KHÔNG fade) + LVN ngày.
+//  2026-11-25 VÙNG MẠNH (PLAN-VUNG-MANH.md, CHƯA KIỂM ĐỊNH): cụm ≥3 đỉnh/đáy M30 bật lại
+//  ≥1 U + hợp lưu với mức của phiên/tuần ĐÃ ĐÓNG; xanh hỗ trợ / đỏ kháng cự / vàng ≥3 nhóm
+//  có HVN. Logic ở StrongZones (ProfileEngine.cs), test C# = Python 689 ca. VAH/VAL hôm nay,
+//  HVN, LVN nay TẮT mặc định (bật lại được) để khỏi chồng lên vùng mạnh.
 //  Đã TẮT mặc định (bật lại được trong nhóm "Lọc vùng theo đo"): đỉnh/đáy phiên,
 //  naked POC phiên, cụm POC, băng giá trị, LVN tuần. Luật nằm ở ZonePolicy
 //  (ProfileEngine.cs) để test được.
@@ -50,12 +54,48 @@ namespace SessionZonesNs
         public bool UseVolume { get; set; } = true;
         [InputParameter("Số phiên gần nhất xét vùng", 23, 2, 40, 1, 0)]
         public int ZoneLookbackSessions { get; set; } = 10;
+        // 2026-11-25: HVN đã đi vào VÙNG MẠNH dưới dạng mức hợp lưu ⇒ dải HVN cũ TẮT mặc định
+        // (để cả hai thì chồng dải). Bật lại được — code cũ giữ nguyên.
         [InputParameter("Hiện HVN tuần/ngày (nút khối lượng)", 24)]
-        public bool ShowHvn { get; set; } = true;
+        public bool ShowHvn { get; set; } = false;
         [InputParameter("Số HVN tối đa mỗi khung", 25, 1, 8, 1, 0)]
         public int MaxHvn { get; set; } = 3;
         [InputParameter("Hiện LVN (nơi giá xuyên nhanh)", 26)]
-        public bool ShowLvn { get; set; } = true;
+        public bool ShowLvn { get; set; } = false;   // 2026-11-25: tắt mặc định để khỏi chồng lên vùng mạnh
+        // v4 (2026-10-23) VAH/VAL ngày hôm nay — 2026-11-25 tắt mặc định: vùng mạnh không dùng
+        // profile hôm nay (đang phát triển). Bật lại được.
+        [InputParameter("Hiện VAH/VAL hôm nay", 30)]
+        public bool ShowTodayVa { get; set; } = false;
+
+        // ---------- VÙNG MẠNH: va đập nhiều + hợp lưu (PLAN-VUNG-MANH.md) — CHƯA KIỂM ĐỊNH ----------
+        //  Chỉ tính từ history M30 (nến đã đóng), chỉ tính lại khi có nến M30 mới ⇒ đổi khung
+        //  M1/M5/M15 không đổi vùng. Logic thuần ở StrongZones (ProfileEngine.cs), có test C# = Python.
+        [InputParameter("Hiện vùng mạnh (va đập + hợp lưu, chưa kiểm định)", 80)]
+        public bool ShowStrongZones { get; set; } = true;
+        [InputParameter("Vùng mạnh · Số lần va đập tối thiểu", 81, 2, 6, 1, 0)]
+        public int SzMinTouches { get; set; } = 3;
+        [InputParameter("Vùng mạnh · Bật lại tối thiểu (×biên độ M30)", 82, 0.5, 3.0, 0.25, 2)]
+        public double SzBounceU { get; set; } = 1.0;
+        [InputParameter("Vùng mạnh · Số phiên nhìn lại", 83, 2, 15, 1, 0)]
+        public int SzLookbackDays { get; set; } = 5;
+        [InputParameter("Vùng mạnh · Bề rộng cụm tối đa (×biên độ M30)", 84, 0.15, 0.60, 0.05, 2)]
+        public double SzClusterU { get; set; } = 0.30;
+        [InputParameter("Vùng mạnh · Dung sai hợp lưu (×biên độ M30)", 85, 0.0, 0.30, 0.05, 2)]
+        public double SzConfluenceTolU { get; set; } = 0.10;
+        [InputParameter("Vùng mạnh · Số nhóm mức hợp lưu tối thiểu (0 = vẽ cả cụm không hợp lưu)", 86, 0, 3, 1, 0)]
+        public int SzMinConfluence { get; set; } = 1;
+        [InputParameter("Vùng mạnh · HVN chỉ nhận profile hình chữ D", 87)]
+        public bool SzHvnDOnly { get; set; } = true;
+        [InputParameter("Vùng mạnh · HVN phải từng rời xa (×biên độ M30, 0 = bỏ)", 88, 0.0, 6.0, 0.5, 1)]
+        public double SzHvnAwayU { get; set; } = 2.0;
+        [InputParameter("Vùng mạnh · Gộp VAH/VAL với VWAP ±1σ cùng kỳ thành một nhóm", 89)]
+        public bool SzGroupEdges { get; set; } = true;
+        [InputParameter("Vùng mạnh · Bán kính hiển thị (×biên độ M30)", 90, 1.0, 12.0, 0.5, 1)]
+        public double SzRadiusU { get; set; } = 4.0;
+        [InputParameter("Vùng mạnh · Số vùng tối đa mỗi phía", 91, 1, 6, 1, 0)]
+        public int SzMaxPerSide { get; set; } = 3;
+        [InputParameter("Màu vùng rất mạnh (vàng: ≥3 nhóm hợp lưu + có HVN)", 92)]
+        public Color StrongGoldColor { get; set; } = Color.FromArgb(0xFF, 0xD6, 0x00);
         [InputParameter("Số LVN tối đa", 27, 1, 4, 1, 0)]
         public int MaxLvn { get; set; } = 2;
         // ---- D1: lọc vùng theo TẦM VỚI, không phải theo độ mạnh lý thuyết ----
@@ -210,6 +250,7 @@ namespace SessionZonesNs
         private ZoneRenderState _render;
         private int _digits = 1;
         private readonly TeleReport _tele = new();  // gửi tổng hợp lên Telegram
+        private readonly StrongZoneEngine _sz = new();   // vùng mạnh: bộ đệm theo nến M30 (PLAN-VUNG-MANH.md §2)
 
         // ---- Tự nhận diện timeframe chart: nếu KHÔNG phải M30, tự lấy history
         // M30 phụ của cùng symbol qua Symbol.GetHistory() thay vì bắt người dùng
@@ -221,7 +262,7 @@ namespace SessionZonesNs
         public SessionZones() : base()
         {
             Name = "Session Zones";
-            Description = "Gộp phiên Á/Âu/Mỹ + tường thuật + gợi ý bias Mỹ + vùng theo đo: VWAP tuần/ngày (canh), VAH/VAL ngày hôm nay (cạnh range), HVN/LVN (nền). Cần Volume Analysis. Add vào chart bất kỳ — tự lấy dữ liệu M30.";
+            Description = "Gộp phiên Á/Âu/Mỹ + tường thuật + gợi ý bias Mỹ. Vùng mạnh = cụm đỉnh/đáy M30 va đập nhiều lần + hợp lưu với VWAP/±1σ, VAH/VAL hôm qua & tuần trước, HVN ngày/tuần (xanh = hỗ trợ, đỏ = kháng cự, vàng = ≥3 nhóm hợp lưu có HVN) — CHƯA KIỂM ĐỊNH, đo trên 589 phiên chưa thấy lợi thế so với vùng ngẫu nhiên; không phải tín hiệu vào lệnh. Lớp cũ (VAH/VAL hôm nay, HVN/LVN) tắt mặc định, bật lại được. Cần Volume Analysis. Add vào chart bất kỳ — tự lấy dữ liệu M30, vùng không đổi khi đổi khung.";
             SeparateWindow = false;
         }
 
@@ -231,6 +272,16 @@ namespace SessionZonesNs
         {
             base.OnInit();
             bool isM30 = HistoricalData?.Aggregation is HistoryAggregationTime t && t.Period.Equals(Period30);
+            // Vùng mạnh cắt history về cùng cửa sổ (StrongZoneParams.HistoryDays = 35 ngày trước nến cuối) để
+            // chart M30 và chart khung khác ra CÙNG vùng. Chart M30 tải ít hơn ~36 ngày thì không đủ cửa sổ đó
+            // ⇒ dùng history M30 phụ 45 ngày như các khung khác.
+            if (isM30 && HistoricalData.Count > 0)
+            {
+                var first = HistoricalData[0, SeekOriginHistory.Begin]?.TimeLeft;
+                var lastB = HistoricalData[0, SeekOriginHistory.End]?.TimeLeft;
+                if (first.HasValue && lastB.HasValue && (lastB.Value - first.Value).TotalDays < new StrongZoneParams().HistoryDays + 1)
+                    isM30 = false;
+            }
             if (isM30)
             {
                 _hd30 = HistoricalData;
@@ -264,7 +315,7 @@ namespace SessionZonesNs
         protected override void OnClear()
         {
             if (_ownHd30 && _hd30 != null) { _hd30.NewHistoryItem -= OnHd30NewBar; _hd30.Dispose(); }
-            lock (_calc) { _vaLoaded = false; lock (_sync) _render = null; }
+            lock (_calc) { _vaLoaded = false; _sz.Reset(); lock (_sync) _render = null; }
         }
         protected override void OnUpdate(UpdateArgs args)
         {
@@ -366,7 +417,22 @@ namespace SessionZonesNs
                 var canhRange = zones.Where(z => !z.IsTarget && RoleOf(z) == "canh_range").ToList();
                 var nenList = zones.Where(z => !z.IsTarget && RoleOf(z) == "nen").ToList();
 
-                lock (_sync) _render = new ZoneRenderState { Zones = zones, Note = note, NowPrice = nowPrice, Tick = tick };
+                // ---- VÙNG MẠNH (va đập + hợp lưu, chưa kiểm định): cấu trúc chỉ tính lại khi có nến M30 mới,
+                //  mỗi tick chỉ lọc hiển thị theo giá. Không đi qua MergeZones / LimitAndBalance / bán kính cũ.
+                List<SzZone> strong = null;
+                if (ShowStrongZones)
+                {
+                    var szp = SzParams(tick);
+                    var szr = StrongStructure(hd, tick, rowStep, szp);
+                    strong = StrongZones.Display(szr, nowPrice, szp);
+                    foreach (var s in strong)
+                        zones.Add(new Zone { Type = "strong", Lo = s.Lo, Hi = s.Hi, Center = (s.Lo + s.Hi) / 2, Side = s.Side,
+                            Strength = ZonePolicy.StrongStrength(s.Gold), Label = s.Label, IsMarker = false });
+                    if (szr.Approx)
+                        note = (note == null ? "" : note + "\n") + "⚠ Thiếu khối lượng theo giá — mức hợp lưu tính gần đúng";
+                }
+
+                lock (_sync) _render = new ZoneRenderState { Zones = zones, Strong = strong, Note = note, NowPrice = nowPrice, Tick = tick };
 
                 // ---- tổng hợp GỌN cho Telegram ----
                 var tele = new List<string>();
@@ -387,9 +453,44 @@ namespace SessionZonesNs
                     tele.Add($"Cạnh range Âu: {string.Join(" · ", canhRange.Select(z => $"{z.Label} {Fmt(z.Center)}"))}");
                 if (nenList.Count > 0)
                     tele.Add($"Nền HVN (đi tiếp/mục tiêu): {string.Join(" · ", nenList.OrderBy(z => Math.Abs(z.Center - nowPrice)).Take(3).Select(z => Fmt(z.Center)))}");
+                var szLine = StrongZones.SummaryLine(strong, Fmt);
+                if (szLine != null) tele.Add(szLine);
                 ConfigTele();
                 _tele.Run(hd, Symbol?.Name, "zone", tele);
             }
+        }
+
+        private StrongZoneParams SzParams(double tick) => new StrongZoneParams
+        {
+            NMin = SzMinTouches, R = SzBounceU, LB = SzLookbackDays, WC = SzClusterU, Tol = SzConfluenceTolU,
+            MinGroup = SzMinConfluence, DOnly = SzHvnDOnly, HvnAway = SzHvnAwayU, GroupEdges = SzGroupEdges,
+            Radius = SzRadiusU, MaxSide = SzMaxPerSide, GapMinutes = GapMinutes, WeekGapHours = WeekGapHours,
+            SpliceJump = SpliceGuard ? MinSpliceJumpPrices * 10.0 * tick : 0,
+        };
+
+        // Cấu trúc vùng mạnh từ history M30 — chỉ dựng lại mảng + tính lại khi khoá đổi (số nến, nến đầu,
+        // nến j = n−2 vừa đóng, nến cuối đang chạy, thông số). Nến cuối luôn coi là nến đang chạy.
+        private SzResult StrongStructure(HistoricalData hd, double tick, double rowStep, StrongZoneParams p)
+        {
+            int n = hd.Count;
+            if (n < 3) return new SzResult();
+            var first = hd[0, SeekOriginHistory.Begin] as HistoryItemBar;
+            var barJ = hd[n - 2, SeekOriginHistory.Begin] as HistoryItemBar;
+            var lastB = hd[n - 1, SeekOriginHistory.Begin] as HistoryItemBar;
+            if (first == null || barJ == null || lastB == null) return new SzResult();
+            string key = StrongZoneEngine.KeyOf(n, first.TimeLeft, barJ.TimeLeft, lastB.TimeLeft, p) + "|" + tick + "|" + rowStep;
+            return _sz.Structure(key, () =>
+            {
+                var bars = new List<HistoryItemBar>(n);
+                for (int i = 0; i < n; i++) if (hd[i, SeekOriginHistory.Begin] is HistoryItemBar b) bars.Add(b);
+                int st = StrongZones.CanonicalStart(bars.Select(b => b.TimeLeft).ToList(), p.HistoryDays);
+                var win = bars.GetRange(st, bars.Count - st);
+                return new SzSeries(win.Select(b => b.TimeLeft).ToList(), win.Select(b => b.Open).ToList(),
+                    win.Select(b => b.High).ToList(), win.Select(b => b.Low).ToList(), win.Select(b => b.Close).ToList(),
+                    win.Select(b => b.VolumeAnalysisData?.Total?.Volume ?? b.Volume).ToList(),
+                    i => win[i].VolumeAnalysisData?.PriceLevels?.Select(kv => new KeyValuePair<double, double>(kv.Key, kv.Value.Volume)).ToList(),
+                    tick, rowStep, p);
+            }, p);
         }
 
         private void ConfigTele()
@@ -625,7 +726,7 @@ namespace SessionZonesNs
             //  lấy riêng phiên Á/Âu/Mỹ. Đổi theo giá trong ngày; chưa đủ TodayVaMinBars nến
             //  M30 thì không vẽ. Cắt ở chỗ nối hợp đồng như HVN ngày.
             int todayBlk = ZonePolicy.TodayStartBlock(blocks.Select(x => x.lab).ToList());
-            if (todayBlk >= 0)
+            if (ShowTodayVa && todayBlk >= 0)   // 2026-11-25: tắt mặc định (input "Hiện VAH/VAL hôm nay")
             {
                 int tFrom = blocks[todayBlk].from, tTo = blocks[blocks.Count - 1].to;
                 double spJ = SpliceGuard ? MinSpliceJumpPrices * 10.0 * tick : 0;
@@ -765,13 +866,14 @@ namespace SessionZonesNs
             var conv = win.CoordinatesConverter;
             var clip = win.ClientRectangle;
 
-            if (ShowZones && rs.Zones != null)
+            bool oldLayers = ShowZones && rs.Zones != null;
+            if (oldLayers)
             {
                 // B3 (PLAN-MOC-PHAN-UNG.md): vẽ LỚP NỀN trước (dải mờ, không phải
                 // chỗ đặt lệnh — HVN tuần gộp nhiều phiên + LVN + mốc bị B4 hạ
                 // cấp vì quá bẹt), rồi vẽ LỚP MỐC sau đè lên (đường mảnh + nhãn +
                 // khoảng cách tới giá — đây mới là chỗ đặt lệnh).
-                foreach (var z in rs.Zones.Where(z => !z.IsMarker && !z.IsTarget).OrderBy(z => z.Strength))
+                foreach (var z in rs.Zones.Where(z => !z.IsMarker && !z.IsTarget && z.Type != "strong").OrderBy(z => z.Strength))
                 {
                     bool isLvn = z.Type == "lvn";
                     Color col = isLvn ? Color.FromArgb(0x90, 0x90, 0x90) : HvnColor;
@@ -799,6 +901,16 @@ namespace SessionZonesNs
                     using var br = new SolidBrush(Color.FromArgb(170, col));
                     gr.DrawString(z.Label, f, br, clip.Right - 190, Math.Min(yTop, yBot) - 10);
                 }
+            }
+            // VÙNG MẠNH: sau lớp nền cũ, trước lớp mốc + ghi chú. Dải kéo hết bề ngang, nhãn sát mép phải
+            // (vị trí chữ tính bởi StrongZonePainter.LayoutLabels để không đè nhau — có test).
+            if (ShowStrongZones && rs.Strong != null && rs.Strong.Count > 0)
+            {
+                using var fs = new Font("Arial", 8, FontStyle.Bold);
+                StrongZonePainter.Paint(gr, clip, pr => (float)conv.GetChartY(pr), rs.Strong, SupColor, ResColor, StrongGoldColor, rs.Tick, fs);
+            }
+            if (oldLayers)
+            {
                 // B8: MỤC TIÊU CHỐT LỜI — nét đứt dài, màu riêng, nhãn ghi rõ vai trò.
                 // Vẽ khác hẳn lớp mốc để mắt không nhầm đây là chỗ vào lệnh.
                 foreach (var z in rs.Zones.Where(z => z.IsTarget))
@@ -813,7 +925,7 @@ namespace SessionZonesNs
                     using var br = new SolidBrush(TargetColor);
                     gr.DrawString($"{z.Label} · cách {distGia:0.0} giá", f, br, clip.Right - 190, ym - 12);
                 }
-                foreach (var z in rs.Zones.Where(z => z.IsMarker).OrderBy(z => z.Strength))   // yếu vẽ trước
+                foreach (var z in rs.Zones.Where(z => z.IsMarker && z.Type != "strong").OrderBy(z => z.Strength))   // yếu vẽ trước
                 {
                     bool isVwap = z.Type == "vwap_week" || z.Type == "vwap_day";
                     if (isVwap && !DrawVwapLines) continue;   // dùng đường VWAP của nền tảng
@@ -890,7 +1002,8 @@ namespace SessionZonesNs
     internal sealed class ZoneRenderState
     {
         public List<Zone> Zones;
-        public string Note;   // cảnh báo 1 dòng nhỏ góc dưới-phải (thay cho bảng cũ)
+        public List<SzZone> Strong;   // vùng mạnh đã lọc hiển thị (StrongZones.Display) — vẽ bằng StrongZonePainter
+        public string Note;  // cảnh báo 1 dòng nhỏ góc dưới-phải (thay cho bảng cũ)
         public double NowPrice;
         public double Tick;   // B2: cần để quy đổi khoảng cách ra "giá" khi vẽ nhãn
     }

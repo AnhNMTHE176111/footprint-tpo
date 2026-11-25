@@ -7,6 +7,7 @@ Bộ 2 indicator, dùng chung `ProfileEngine`. Xem thiết kế đầy đủ ở
 | `ProfileEngine.cs` | Lõi dùng chung: dựng profile phiên, POC/VA (rule 2 hàng 70%), IB, gom phiên theo gap, cụm POC, naked POC, HVN/LVN, thống kê. **Không build riêng** — được concat vào đầu mỗi indicator. |
 | `DailyTpoBias.cs` | **Bias ngày real-time**: value relationship + POC migration + IB/range-extension + delta → nhãn Tăng/Giảm + độ tin + bảng chữ VN; vẽ VAH/VAL/POC/IB (nay + hôm qua). |
 | `SessionZones.cs` | **Phiên + vùng**: gộp Á/Âu/Mỹ, tường thuật "phiên nào làm gì" + gợi ý "Mỹ ưu tiên gì"; **v3 (2026-10-17) chỉ giữ vùng đã qua phép đo:** VÙNG CANH = VWAP tuần (hạng 1) + VWAP ngày (hạng 2), ghi trên bảng; CẠNH RANGE = VAH/VAL phiên Âu; NỀN = HVN ngày/tuần (đi tiếp/mục tiêu, không fade) + LVN ngày. Đỉnh/đáy phiên, naked POC phiên, cụm POC, băng giá trị, LVN tuần **tắt mặc định** (nhóm input "Đo ·", bật lại được). Luật nằm ở `ZonePolicy` trong `ProfileEngine.cs`, có test. Add vào chart bất kỳ (M1, M5...) — **tự lấy dữ liệu M30** của cùng symbol nếu chart không phải M30 (xem `OnInit()`). |
+| `SessionZones` · **vùng mạnh** (2026-11-25) | Cụm ≥ 3 đỉnh/đáy M30 bật lại ≥ 1 U (U = biên độ TB nến M30 của 5 phiên đã đóng) trong 5 phiên gần nhất, **hợp lưu** với mức của phiên/tuần **đã đóng**: VWAP/±1σ và VAH/VAL hôm qua + tuần trước, HVN ngày/tuần (chữ D, giá đã rời xa). **Xanh** = hỗ trợ, **đỏ** = kháng cự, **vàng** = ≥ 3 nhóm hợp lưu có HVN; nhãn ghi số lần va đập + tên mức. Chỉ tính từ history M30, chỉ tính lại khi có nến M30 mới ⇒ **không đổi khi đổi khung M1/M5/M15/M30**. Input nhóm "Vùng mạnh ·". **Chưa kiểm định** (589 phiên: ngang vùng ngẫu nhiên) — không phải tín hiệu vào lệnh. Lớp cũ VAH/VAL hôm nay, HVN, LVN **tắt mặc định** (bật lại được). Spec: [PLAN-VUNG-MANH.md](PLAN-VUNG-MANH.md); logic `StrongZones` trong `ProfileEngine.cs`; test C# = Python 689 ca ở `tests/`; ảnh mẫu `research/vung_manh_2026-11-25/ui/`. |
 | `build-tpo.sh` | Build Linux: concat `ProfileEngine.cs` + từng indicator → `dist/*.dll`. |
 | `prototype_test.py` | Prototype Python đã test thuật toán trên `../data-export/` (POC khớp nền tảng 90%@5t). |
 
@@ -17,6 +18,11 @@ Bộ 2 indicator, dùng chung `ProfileEngine`. Xem thiết kế đầy đủ ở
 ./build-tpo.sh zones    # chỉ SessionZones
 ```
 Ra `dist/DailyTpoBias.dll` và `dist/SessionZones.dll` (đã build sạch 0 warning).
+
+## Test (chạy trước khi build)
+```bash
+dotnet run --project tests   # ProfileEngine + vùng mạnh (C# = Python trên fixture, bất biến khung, UI → PNG)
+```
 
 ## Deploy (Windows / Optimus Flow)
 Chép mỗi DLL vào `...\Settings\Scripts\Indicators\<tên>\`, mở chart có Volume Analysis, add indicator. `SessionZones` add được vào chart bất kỳ (kể cả M1 để canh entry) — nó tự lấy M30 phía sau; `DailyTpoBias` vẫn cần chart ngày/phù hợp như cũ.

@@ -8,7 +8,7 @@ using System.IO;
 using System.Linq;
 using TpoSuite;
 
-static class Tests
+static partial class Tests
 {
     static int _fail;
 
@@ -206,6 +206,7 @@ static class Tests
         UnitCases();
         ZonePolicyCases();
         RealData();
+        StrongZoneTests();
         Console.WriteLine(_fail == 0 ? "\n=> TAT CA PASS" : $"\n=> CO {_fail} TEST HONG");
         return _fail == 0 ? 0 : 1;
     }

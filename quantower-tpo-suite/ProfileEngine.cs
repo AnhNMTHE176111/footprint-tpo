@@ -1096,7 +1096,8 @@ namespace TpoSuite
                 case "hvn_day":
                 case "hvn_week":
                 case "lvn":
-                case "lvn_week": return false;
+                case "lvn_week":
+                case "strong": return false;   // vùng mạnh: dải tô màu, vẽ riêng (StrongZonePainter)
                 default: return true;
             }
         }
@@ -1115,6 +1116,7 @@ namespace TpoSuite
                 case "hvn_week": return "nen";
                 case "lvn":
                 case "lvn_week": return "lvn";
+                case "strong": return "manh";   // vùng va đập nhiều + hợp lưu (PLAN-VUNG-MANH.md) — chưa kiểm định
                 default: return "khac";
             }
         }
@@ -1127,13 +1129,18 @@ namespace TpoSuite
                 case "vwap_week": return 95;
                 case "vwap_day": return 85;
                 case "va_edge": return 60;
+                case "strong": return 90;
                 default: return 40;
             }
         }
+        // Vùng mạnh: 90, vùng vàng (≥3 nhóm hợp lưu + có HVN) 98. Chỉ để xếp thứ tự, không phải xác suất.
+        public static double StrongStrength(bool gold) => gold ? 98 : 90;
 
         // Chỉ gộp hai vùng cùng lớp: không để dải nền HVN "nuốt" một mốc VWAP/cạnh
-        // range rồi kéo giãn Lo/Hi của mốc đó.
-        public static bool CanMerge(string typeA, string typeB) => IsMarkerType(typeA) == IsMarkerType(typeB);
+        // range rồi kéo giãn Lo/Hi của mốc đó. Vùng mạnh KHÔNG gộp với loại nào —
+        // biên của nó chỉ do các điểm va đập quyết định (PLAN-VUNG-MANH.md §4.5).
+        public static bool CanMerge(string typeA, string typeB)
+            => typeA != "strong" && typeB != "strong" && IsMarkerType(typeA) == IsMarkerType(typeB);
 
         // Số nến M30 tối thiểu của "ngày hôm nay" để VAH/VAL có nghĩa (4 nến = 2 giờ);
         // ít hơn thì profile quá mỏng, không vẽ.
@@ -1170,6 +1177,756 @@ namespace TpoSuite
                 for (int i = labels.Count - 1; i >= 0; i--)
                     if (labels[i] == "AU") return i;
             return labels.Count - 1;
+        }
+    }
+
+    // ========================================================================
+    //  StrongZones — VÙNG VA ĐẬP NHIỀU + HỢP LƯU (PLAN-VUNG-MANH.md, 2026-11-25)
+    // ========================================================================
+    //  ⚠ CHƯA KIỂM ĐỊNH: trên 589 phiên GC vùng này cho kết quả ngang vùng dời ngẫu
+    //  nhiên (thắng 1:1 48,8 % / 47,2 % so với đối chứng 47,9 % / 47,5 %). Không sinh
+    //  signal vào lệnh từ đây; không viết "vùng đảo chiều", "xác suất cao".
+    //
+    //  Chỉ nhận MẢNG THUẦN (nến M30 + khối lượng từng mức giá) ⇒ test được không cần
+    //  Quantower, và không nhận tham số nào của khung chart ⇒ cùng history M30 thì cùng
+    //  vùng dù chart là M1, M5 hay M30. Nến CUỐI luôn coi là nến đang chạy: j = n − 2.
+    //  Bản tham chiếu Python (nguồn sự thật): research/vung_manh_2026-11-25/vung_manh.py
+    //  + vm.py; bộ đối chiếu fixture/ (689 ca, 357 điểm va đập) — tests/Program.cs.
+    //
+    //  Ghi chú mâu thuẫn (giữ cả hai ý): ZonePolicy coi HVN là "nền — đi tiếp / mục
+    //  tiêu, không fade" (đo cũ); ở đây HVN lại là một mức HỢP LƯU cho vùng canh đảo
+    //  chiều và làm vùng thành vàng (yêu cầu người học). Phép đo 2026-11-25 không phân
+    //  xử được (vùng có HVN: TRAIN −0,17 R, TEST +0,16 R ở 1:2).
+    public sealed class StrongZoneParams
+    {
+        public int K = 2;                 // đỉnh/đáy cục bộ: so với K nến mỗi bên
+        public int M = 6;                 // cửa sổ "đi tới" và "bật lại" (nến M30)
+        public double R = 1.0;            // bật lại tối thiểu (×U)
+        public int LB = 5;                // số phiên ĐÃ ĐÓNG nhìn lại (cộng phiên đang chạy)
+        public double WC = 0.30;          // bề rộng cụm tối đa (×U)
+        public int NMin = 3;              // số lần va đập tối thiểu
+        public double Pad = 0.05;         // nới mỗi mép vùng (×U)
+        public double WMin = 0.20;        // bề rộng vùng tối thiểu (×U)
+        public double Tol = 0.10;         // dung sai hợp lưu (×U)
+        public int HvnDays = 5;           // HVN ngày lấy từ bao nhiêu phiên đã đóng
+        public double HvnRatio = 2.5;     // "lớn": đỉnh làm mượt ≥ 2,5 × trung bình hàng
+        public int HvnTop = 3;
+        public double HvnAway = 2.0;      // "đã rời xa" (×U); 0 = bỏ điều kiện
+        public bool DOnly = true;         // chỉ nhận HVN của profile hình chữ D
+        public double DPocLo = 0.30, DPocHi = 0.70, DVaMax = 0.60;
+        public int GoldMin = 3;           // vàng: ≥ 3 nhóm mức và có HVN
+        public bool GroupEdges = true;    // gộp VAH/VAL với VWAP ±1σ cùng kỳ thành một nhóm
+        public int MinGroup = 1;          // hiển thị: số nhóm mức hợp lưu tối thiểu
+        public double Radius = 4.0;       // hiển thị: mép gần cách giá tối đa (×U)
+        public int MaxSide = 3;           // hiển thị: số vùng tối đa mỗi phía
+        public double Sep = 0.15;         // hiển thị: hai vùng cách nhau dưới bấy nhiêu (×U) chỉ giữ vùng mạnh hơn
+        public int MinDayBars = 20;       // phiên ngắn hơn (lễ) không làm "hôm qua", không đếm vào HVN ngày
+        public int UnitDays = 5;          // U = TB (High − Low) nến M30 của 5 phiên đã đóng
+        public int MinWeekBars = 60;
+        public double GapMinutes = 75;    // phiên mới khi nghỉ > 75 phút (GroupByGap)
+        public double WeekGapHours = 30;  // tuần mới khi nghỉ > 30 giờ (WeekSpans)
+        public double SpliceJump = 20;    // chỗ nối hợp đồng: nhảy ≥ bấy nhiêu (đơn vị giá); 0 = tắt
+        public double SpliceMinGapMin = 30, SpliceMaxGapMin = 150;
+        public int SideLookback = 400;    // giá trong vùng: lùi tối đa bấy nhiêu nến tìm phía đi vào
+        public double VaFrac = 0.70, SharpFrac = 0.90;
+        public int HistoryDays = 35;      // cửa sổ history chuẩn hoá (bất biến theo khung chart)
+
+        public StrongZoneParams Clone() => (StrongZoneParams)MemberwiseClone();
+        // Dấu vân tay của MỌI thông số — đổi input thì bộ đệm tự tính lại.
+        public string Fingerprint()
+            => string.Join("|", GetType().GetFields().Select(f => f.Name + "=" + Convert.ToString(f.GetValue(this), System.Globalization.CultureInfo.InvariantCulture)));
+    }
+
+    public sealed class SzPivot { public int I, Conf, Kind; public double Price; }   // Kind: +1 đỉnh, −1 đáy
+
+    public sealed class SzLevel
+    {
+        public string Name = "";
+        public double Lo, Hi;
+        public bool IsHvn;
+        public double Peak = double.NaN, Ratio;
+        public int End = -1, Src;   // End = nến cuối của profile nguồn; Src = số phiên/tuần lùi lại
+        public bool DShape;
+    }
+
+    public sealed class SzZone
+    {
+        public double Lo, Hi, Pmin, Pmax, U;
+        public int N, NHigh, Newest, Oldest;
+        public List<string> Names = new List<string>();
+        public int NGroup;
+        public bool Hvn, Gold;
+        // ---- hiển thị (Display) ----
+        public int Side;            // +1 hỗ trợ, −1 kháng cự, 0 chưa rõ
+        public double Dist;         // khoảng cách mép gần tới giá (0 khi giá trong vùng)
+        public bool Inside;
+        public string Color = "";   // "xanh" / "do" / "vang" / "xam"
+        public string Label = "";
+        public SzZone CloneZone() { var z = (SzZone)MemberwiseClone(); z.Names = new List<string>(Names); return z; }
+    }
+
+    public sealed class SzProfile
+    {
+        public double[] Pr, W;
+        public double Poc, Vah, Val, Vwap, Sigma, PocPos, VaFrac;
+        public bool Approx;          // thiếu khối lượng theo giá ⇒ TPO + giá điển hình
+    }
+
+    // Chuỗi nến M30 + ranh giới phiên / tuần / chỗ nối + đơn vị U từng phiên.
+    public sealed class SzSeries
+    {
+        public readonly int N;
+        public readonly DateTime[] T;
+        public readonly double[] O, H, L, C, V;
+        public readonly double Tick, RowStep;
+        public readonly List<(int a, int b)> Days = new List<(int a, int b)>();
+        public readonly List<(int a, int b)> Weeks = new List<(int a, int b)>();
+        public readonly int[] DayOf, WeekOf, Seg;
+        public readonly List<int> Splices = new List<int>();
+        public readonly double[] UnitDay;
+        private readonly Func<int, IEnumerable<KeyValuePair<double, double>>> _levelsOf;
+        private readonly long[][] _lvTick;
+        private readonly double[][] _lvVol;
+        private readonly double _invTick;
+        private readonly bool _intInv;
+
+        public SzSeries(IList<DateTime> t, IList<double> o, IList<double> h, IList<double> l, IList<double> c,
+                        IList<double> vol, Func<int, IEnumerable<KeyValuePair<double, double>>> levelsOf,
+                        double tick, double rowStep, StrongZoneParams p)
+        {
+            p ??= new StrongZoneParams();
+            N = t?.Count ?? 0;
+            T = t?.ToArray() ?? new DateTime[0];
+            O = o?.ToArray() ?? new double[N]; H = h?.ToArray() ?? new double[N];
+            L = l?.ToArray() ?? new double[N]; C = c?.ToArray() ?? new double[N];
+            V = vol?.ToArray() ?? new double[N];
+            Tick = tick; RowStep = rowStep;
+            _levelsOf = levelsOf;
+            _lvTick = new long[N][]; _lvVol = new double[N][];
+            double inv = 1.0 / tick;
+            _intInv = Math.Abs(inv - Math.Round(inv)) < 1e-9;
+            _invTick = _intInv ? Math.Round(inv) : inv;
+            DayOf = new int[N]; WeekOf = new int[N]; Seg = new int[N];
+            UnitDay = new double[0];
+            if (N == 0) return;
+
+            // phiên (GroupByGap) + tuần (WeekSpans)
+            int ds = 0, ws = 0;
+            for (int i = 1; i < N; i++)
+            {
+                double gm = (T[i] - T[i - 1]).TotalMinutes;
+                if (gm > p.GapMinutes) { Days.Add((ds, i - 1)); ds = i; }
+                if (gm > p.WeekGapHours * 60) { Weeks.Add((ws, i - 1)); ws = i; }
+            }
+            Days.Add((ds, N - 1)); Weeks.Add((ws, N - 1));
+            for (int k = 0; k < Days.Count; k++) for (int i = Days[k].a; i <= Days[k].b; i++) DayOf[i] = k;
+            for (int k = 0; k < Weeks.Count; k++) for (int i = Weeks[k].a; i <= Weeks[k].b; i++) WeekOf[i] = k;
+            // chỗ nối hợp đồng (LastSpliceIndex): nghỉ 30–150 phút + nhảy ≥ SpliceJump
+            int sg = 0;
+            for (int i = 0; i < N; i++)
+            {
+                if (i >= 1 && p.SpliceJump > 0)
+                {
+                    double gm = (T[i] - T[i - 1]).TotalMinutes;
+                    if (gm >= p.SpliceMinGapMin && gm <= p.SpliceMaxGapMin && Math.Abs(O[i] - C[i - 1]) >= p.SpliceJump)
+                    { Splices.Add(i); sg++; }
+                }
+                Seg[i] = sg;
+            }
+            // U(k) = TB (High − Low) mọi nến từ phiên max(0, k−5) tới phiên k−1; cần ≥ 2 phiên
+            UnitDay = new double[Days.Count];
+            for (int k = 0; k < Days.Count; k++)
+            {
+                int lo = Math.Max(0, k - p.UnitDays);
+                if (k - lo < 2) { UnitDay[k] = double.NaN; continue; }
+                int a = Days[lo].a, b = Days[k - 1].b;
+                double s = 0; for (int i = a; i <= b; i++) s += H[i] - L[i];
+                UnitDay[k] = s / (b - a + 1);
+            }
+        }
+
+        public double U(int i) => UnitDay[DayOf[i]];
+        public long TickOf(double price) => (long)Math.Round(price / Tick);
+        // Giá chuẩn của một tick: k / (1/tick) khi 1/tick nguyên (0,1 → /10) — trùng tk/10.0 của Python.
+        public double PriceOfTick(long k) => _intInv ? k / _invTick : k * Tick;
+
+        private void LoadLevels(int i)
+        {
+            if (_lvTick[i] != null) return;
+            var acc = new Dictionary<long, double>();
+            var src = _levelsOf?.Invoke(i);
+            if (src != null)
+                foreach (var kv in src)
+                {
+                    long k = TickOf(kv.Key);
+                    acc[k] = acc.TryGetValue(k, out var c0) ? c0 + kv.Value : kv.Value;
+                }
+            var ks = acc.Keys.ToArray(); Array.Sort(ks);
+            _lvTick[i] = ks; _lvVol[i] = ks.Select(k => acc[k]).ToArray();
+        }
+
+        // (tick, khối lượng) cộng dồn trên nến [a..b], theo tick tăng dần.
+        public (long[] tk, double[] v) TicksOver(int a, int b)
+        {
+            var acc = new Dictionary<long, double>();
+            for (int i = Math.Max(0, a); i <= b && i < N; i++)
+            {
+                LoadLevels(i);
+                var kk = _lvTick[i]; var vv = _lvVol[i];
+                for (int q = 0; q < kk.Length; q++) acc[kk[q]] = acc.TryGetValue(kk[q], out var c0) ? c0 + vv[q] : vv[q];
+            }
+            var ks = acc.Keys.ToArray(); Array.Sort(ks);
+            return (ks, ks.Select(k => acc[k]).ToArray());
+        }
+    }
+
+    public sealed class SzResult
+    {
+        public int J = -1, D = -1;
+        public double U = double.NaN;
+        public List<SzPivot> Pivots = new List<SzPivot>();     // mọi điểm va đập tìm được (cả conf > j)
+        public List<SzLevel> Levels = new List<SzLevel>();     // mức hợp lưu của hôm nay
+        public List<SzZone> Clusters = new List<SzZone>();     // cụm ≥ NMin điểm, kèm hợp lưu
+        public bool Approx;                                     // có mức tính gần đúng (thiếu PriceLevels)
+        public double[] Closes = new double[0];
+        public double[] Highs = new double[0], Lows = new double[0];
+    }
+
+    public static class StrongZones
+    {
+        // nhóm mức độc lập: VAH và VWAP+1σ của cùng một kỳ gần như trùng nhau (VA 70 % ≈ ±1σ) ⇒ tính MỘT
+        public static readonly Dictionary<string, string> Group = new Dictionary<string, string>
+        {
+            ["vwap_d"] = "giua_d", ["vah_d"] = "tren_d", ["vwap_d_tren"] = "tren_d", ["val_d"] = "duoi_d", ["vwap_d_duoi"] = "duoi_d",
+            ["vwap_w"] = "giua_w", ["vah_w"] = "tren_w", ["vwap_w_tren"] = "tren_w", ["val_w"] = "duoi_w", ["vwap_w_duoi"] = "duoi_w",
+            ["hvn_d"] = "hvn_d", ["hvn_w"] = "hvn_w",
+        };
+        public static readonly Dictionary<string, string> Ten = new Dictionary<string, string>
+        {
+            ["vwap_d"] = "VWAP hôm qua", ["vwap_d_tren"] = "VWAP hôm qua +1σ", ["vwap_d_duoi"] = "VWAP hôm qua −1σ",
+            ["vah_d"] = "VAH hôm qua", ["val_d"] = "VAL hôm qua",
+            ["vwap_w"] = "VWAP tuần trước", ["vwap_w_tren"] = "VWAP tuần trước +1σ", ["vwap_w_duoi"] = "VWAP tuần trước −1σ",
+            ["vah_w"] = "VAH tuần trước", ["val_w"] = "VAL tuần trước", ["hvn_d"] = "HVN ngày", ["hvn_w"] = "HVN tuần",
+        };
+        public static readonly string[] ThuTu =
+            { "hvn_w", "hvn_d", "vah_w", "val_w", "vwap_w", "vwap_w_tren", "vwap_w_duoi", "vah_d", "val_d", "vwap_d", "vwap_d_tren", "vwap_d_duoi" };
+
+        // ---------------------------------------------------------------- profile
+        // POC + VA (luật 2 hàng) trên mảng đã sắp theo giá. Trả chỉ số hàng.
+        public static (int poc, int hi, int lo) ValueAreaIdx(double[] w, double frac = 0.70)
+        {
+            int n = w.Length;
+            if (n == 0) return (-1, -1, -1);
+            double tot = 0; for (int i = 0; i < n; i++) tot += w[i];
+            if (tot <= 0) return (-1, -1, -1);
+            int poc = 0; for (int i = 1; i < n; i++) if (w[i] > w[poc]) poc = i;
+            double acc = w[poc], target = tot * frac; int lo = poc, hi = poc;
+            while (acc < target && (lo > 0 || hi < n - 1))
+            {
+                double up = (hi < n - 1 ? w[hi + 1] : 0) + (hi < n - 2 ? w[hi + 2] : 0);
+                double dn = (lo > 0 ? w[lo - 1] : 0) + (lo > 1 ? w[lo - 2] : 0);
+                if (hi >= n - 1) { acc += dn; lo = Math.Max(0, lo - 2); }
+                else if (lo <= 0) { acc += up; hi = Math.Min(n - 1, hi + 2); }
+                else if (up >= dn) { acc += up; hi = Math.Min(n - 1, hi + 2); }
+                else { acc += dn; lo = Math.Max(0, lo - 2); }
+            }
+            return (poc, hi, lo);
+        }
+
+        // Port ProfileEngine.FindHvn trên mảng (mạnh trước): (chỉ số hàng, giá, tỉ lệ so TB).
+        public static List<(int idx, double price, double ratio)> FindHvnIdx(double[] pr, double[] w, double tick,
+                                                                             int smoothK = 5, double minRatio = 1.5)
+        {
+            var res = new List<(int, double, double)>();
+            int n = w.Length;
+            if (n < 3) return res;
+            double avg = w.Average();
+            if (avg <= 0) return res;
+            double minSep = Math.Clamp((pr[n - 1] - pr[0]) / tick * 0.08, 20, 120);
+            var sm = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                int a = Math.Max(0, i - smoothK), z = Math.Min(n - 1, i + smoothK);
+                double s = 0; for (int k = a; k <= z; k++) s += w[k];
+                sm[i] = s / (z - a + 1);
+            }
+            var pk = new List<(int i, double wt)>();
+            for (int i = 1; i < n - 1; i++)
+                if (sm[i] >= sm[i - 1] && sm[i] >= sm[i + 1] && sm[i] >= minRatio * avg) pk.Add((i, sm[i]));
+            foreach (var (i, wt) in pk.OrderByDescending(x => x.wt))
+                if (res.All(r => Math.Abs(pr[i] - r.Item2) / tick >= minSep)) res.Add((i, pr[i], wt / avg));
+            return res;
+        }
+
+        // PeakSharpness theo CHỈ SỐ: nới liên tục (hàng liền kề đúng 1 bước) khi khối lượng thô ≥ frac × đỉnh.
+        public static (double lo, double hi) PeakBand(double[] pr, double[] w, int i, double rowStep, double frac = 0.90)
+        {
+            double thr = frac * w[i];
+            int lo = i, hi = i;
+            while (lo > 0 && Math.Abs(pr[lo] - pr[lo - 1] - rowStep) < 1e-6 && w[lo - 1] >= thr) lo--;
+            while (hi < w.Length - 1 && Math.Abs(pr[hi + 1] - pr[hi] - rowStep) < 1e-6 && w[hi + 1] >= thr) hi++;
+            return (pr[lo], pr[hi]);
+        }
+
+        public static (double vwap, double sigma) VwapSigma(IList<double> prices, IList<double> vols)
+        {
+            double sv = 0, spv = 0;
+            for (int i = 0; i < prices.Count; i++) { sv += vols[i]; spv += prices[i] * vols[i]; }
+            if (prices.Count == 0 || sv <= 0) return (double.NaN, double.NaN);
+            double m = spv / sv, s2 = 0;
+            for (int i = 0; i < prices.Count; i++) { double d = prices[i] - m; s2 += d * d * vols[i]; }
+            return (m, Math.Sqrt(s2 / sv));
+        }
+
+        public static bool IsDShape(double pocPos, double vaFrac, StrongZoneParams p)
+            => p.DPocLo <= pocPos && pocPos <= p.DPocHi && vaFrac <= p.DVaMax;
+
+        public static SzProfile ProfileStats(SzSeries s, int a, int b, StrongZoneParams p)
+        {
+            if (a < 0 || b < a) return null;
+            var (tk, tv) = s.TicksOver(a, b);
+            double[] pr, w; double vwap, sigma; bool approx = false;
+            if (tk.Length > 0)
+            {
+                var rows = new SortedDictionary<long, double>();
+                var px = new double[tk.Length];
+                for (int q = 0; q < tk.Length; q++)
+                {
+                    px[q] = s.PriceOfTick(tk[q]);
+                    long rid = (long)Math.Round(px[q] / s.RowStep);
+                    rows[rid] = rows.TryGetValue(rid, out var c0) ? c0 + tv[q] : tv[q];
+                }
+                pr = rows.Keys.Select(r => r * s.RowStep).ToArray(); w = rows.Values.ToArray();
+                (vwap, sigma) = VwapSigma(px, tv);
+            }
+            else
+            {
+                // Thiếu PriceLevels: hàng = TPO (đếm nến phủ), VWAP = giá điển hình × khối lượng nến (0 ⇒ trọng số 1)
+                approx = true;
+                var rows = new SortedDictionary<long, double>();
+                var px = new List<double>(); var vv = new List<double>();
+                for (int i = a; i <= b; i++)
+                {
+                    long r0 = (long)Math.Round(s.L[i] / s.RowStep), r1 = (long)Math.Round(s.H[i] / s.RowStep);
+                    for (long r = r0; r <= r1; r++) rows[r] = rows.TryGetValue(r, out var c0) ? c0 + 1 : 1;
+                    px.Add((s.H[i] + s.L[i] + s.C[i]) / 3.0); vv.Add(s.V[i] > 0 ? s.V[i] : 1);
+                }
+                pr = rows.Keys.Select(r => r * s.RowStep).ToArray(); w = rows.Values.ToArray();
+                (vwap, sigma) = VwapSigma(px, vv);
+            }
+            if (w.Length < 3) return null;
+            var (poc, vh, vl) = ValueAreaIdx(w, p.VaFrac);
+            if (poc < 0) return null;
+            double rng = Math.Max(pr[pr.Length - 1] - pr[0], 1e-9);
+            return new SzProfile
+            {
+                Pr = pr, W = w, Poc = pr[poc], Vah = pr[vh], Val = pr[vl], Vwap = vwap, Sigma = sigma,
+                PocPos = (pr[poc] - pr[0]) / rng, VaFrac = (pr[vh] - pr[vl]) / rng, Approx = approx,
+            };
+        }
+
+        // ---------------------------------------------------------------- mức hợp lưu
+        // Mức của phiên d — chỉ từ phiên/tuần ĐÃ ĐÓNG trước d; HVN tuần này tính tới hết hôm qua.
+        public static List<SzLevel> DayLevels(SzSeries s, int d, StrongZoneParams p, out bool approx)
+        {
+            var outp = new List<SzLevel>();
+            bool apx = false;
+            int a0 = s.Days[d].a;
+            int seg = s.Seg[a0];
+            int lastSp = 0; foreach (var sp in s.Splices) if (sp <= a0 && sp > lastSp) lastSp = sp;
+
+            void AddPoints(SzProfile st, string pre)
+            {
+                apx |= st.Approx;
+                void Add(string nm, double v) { if (!double.IsNaN(v)) outp.Add(new SzLevel { Name = nm, Lo = v, Hi = v }); }
+                Add("vwap_" + pre, st.Vwap); Add("vwap_" + pre + "_tren", st.Vwap + st.Sigma); Add("vwap_" + pre + "_duoi", st.Vwap - st.Sigma);
+                Add("vah_" + pre, st.Vah); Add("val_" + pre, st.Val);
+            }
+            void AddHvn(int a, int b, string name, int src)
+            {
+                var st = ProfileStats(s, a, b, p);
+                if (st == null) return;
+                apx |= st.Approx;
+                bool dsh = IsDShape(st.PocPos, st.VaFrac, p);
+                foreach (var (i, pk, ratio) in FindHvnIdx(st.Pr, st.W, s.Tick).Take(p.HvnTop))
+                {
+                    if (ratio < p.HvnRatio) continue;
+                    var (lo, hi) = PeakBand(st.Pr, st.W, i, s.RowStep, p.SharpFrac);
+                    outp.Add(new SzLevel { Name = name, Lo = lo, Hi = hi, IsHvn = true, Peak = pk, Ratio = ratio, End = b, Src = src, DShape = dsh });
+                }
+            }
+
+            // hôm qua = phiên đã đóng gần nhất có ≥ MinDayBars nến
+            int y = d - 1;
+            while (y >= 0 && (s.Days[y].b - s.Days[y].a + 1) < p.MinDayBars) y--;
+            if (y >= 0 && s.Seg[s.Days[y].a] == seg)
+            {
+                var st = ProfileStats(s, s.Days[y].a, s.Days[y].b, p);
+                if (st != null) AddPoints(st, "d");
+            }
+            // HVN ngày: 5 phiên đã đóng gần nhất (cùng hợp đồng, bỏ phiên ngắn)
+            int cnt = 0, yy = d - 1;
+            while (yy >= 0 && cnt < p.HvnDays)
+            {
+                var (a, b) = s.Days[yy];
+                if (s.Seg[a] != seg) break;
+                if (b - a + 1 >= p.MinDayBars) { AddHvn(a, b, "hvn_d", d - yy); cnt++; }
+                yy--;
+            }
+            // tuần trước (cắt ở chỗ nối gần nhất ≤ a0)
+            int w = s.WeekOf[a0];
+            if (w >= 1)
+            {
+                var (a, b) = s.Weeks[w - 1];
+                a = Math.Max(a, lastSp);
+                if (b - a + 1 >= p.MinWeekBars)
+                {
+                    var st = ProfileStats(s, a, b, p);
+                    if (st != null) AddPoints(st, "w");
+                    AddHvn(a, b, "hvn_w", 1);
+                }
+            }
+            // tuần này tính tới hết hôm qua — chỉ sinh HVN
+            {
+                int a = Math.Max(s.Weeks[w].a, lastSp), b = a0 - 1;
+                if (b - a + 1 >= p.MinWeekBars) AddHvn(a, b, "hvn_w", 0);
+            }
+            approx = apx;
+            return outp;
+        }
+
+        // HVN đủ điều kiện tại nến j: (tuỳ chọn) chữ D, và sau khi profile chốt giá từng cách đỉnh ≥ HvnAway × U.
+        public static bool HvnOk(SzLevel lv, IList<double> h, IList<double> l, int j, double u, StrongZoneParams p)
+        {
+            if (p.DOnly && !lv.DShape) return false;
+            int a = lv.End + 1;
+            if (a > j) return false;
+            double mx = double.MinValue, mn = double.MaxValue;
+            for (int i = a; i <= j; i++) { if (h[i] > mx) mx = h[i]; if (l[i] < mn) mn = l[i]; }
+            return Math.Max(mx - lv.Peak, lv.Peak - mn) >= p.HvnAway * u;
+        }
+
+        // ---------------------------------------------------------------- điểm va đập
+        public static List<SzPivot> Pivots(SzSeries s, StrongZoneParams p)
+        {
+            var res = new List<SzPivot>();
+            int n = s.N, k = p.K, m = p.M;
+            var h = s.H; var l = s.L; var seg = s.Seg;
+            for (int i = m; i < n - 1; i++)
+            {
+                double u = s.U(i);
+                if (double.IsNaN(u)) continue;
+                if (seg[i - m] != seg[i]) continue;
+                if (i + k >= n) continue;
+                int e = Math.Min(n - 1, i + m);
+                // đỉnh
+                {
+                    bool ok = true;
+                    for (int q = i - k; q < i; q++) if (!(h[i] > h[q])) { ok = false; break; }
+                    if (ok) for (int q = i + 1; q <= i + k; q++) if (!(h[i] >= h[q])) { ok = false; break; }
+                    if (ok)
+                    {
+                        double mn = double.MaxValue; for (int q = i - m; q <= i; q++) mn = Math.Min(mn, l[q]);
+                        ok = h[i] - mn >= p.R * u;
+                    }
+                    if (ok)
+                        for (int q = i + 1; q <= e; q++)
+                        {
+                            if (h[q] > h[i] || seg[q] != seg[i]) break;
+                            if (h[i] - l[q] >= p.R * u) { res.Add(new SzPivot { I = i, Conf = Math.Max(i + k, q), Price = h[i], Kind = 1 }); break; }
+                        }
+                }
+                // đáy
+                {
+                    bool ok = true;
+                    for (int q = i - k; q < i; q++) if (!(l[i] < l[q])) { ok = false; break; }
+                    if (ok) for (int q = i + 1; q <= i + k; q++) if (!(l[i] <= l[q])) { ok = false; break; }
+                    if (ok)
+                    {
+                        double mx = double.MinValue; for (int q = i - m; q <= i; q++) mx = Math.Max(mx, h[q]);
+                        ok = mx - l[i] >= p.R * u;
+                    }
+                    if (ok)
+                        for (int q = i + 1; q <= e; q++)
+                        {
+                            if (l[q] < l[i] || seg[q] != seg[i]) break;
+                            if (h[q] - l[i] >= p.R * u) { res.Add(new SzPivot { I = i, Conf = Math.Max(i + k, q), Price = l[i], Kind = -1 }); break; }
+                        }
+                }
+            }
+            return res;
+        }
+
+        // ---------------------------------------------------------------- gom cụm
+        // prices TĂNG DẦN. Lặp: neo có nhiều điểm nhất trong [p, p + wc] (hoà → neo giá thấp hơn) → lấy nhóm → bỏ ra.
+        // Trả danh sách nhóm, mỗi nhóm là danh sách chỉ số vào prices.
+        public static List<List<int>> Cluster(IList<double> prices, double wc)
+        {
+            var alive = Enumerable.Range(0, prices.Count).ToList();
+            var res = new List<List<int>>();
+            while (alive.Count > 0)
+            {
+                int bestA = 0, bestC = -1, z = 0;
+                for (int a = 0; a < alive.Count; a++)
+                {
+                    double lim = prices[alive[a]] + wc + 1e-9;
+                    if (z < a) z = a;
+                    while (z < alive.Count && prices[alive[z]] <= lim) z++;
+                    int c = z - a;
+                    if (c > bestC) { bestC = c; bestA = a; }
+                }
+                var mem = alive.GetRange(bestA, bestC);
+                res.Add(mem);
+                alive.RemoveRange(bestA, bestC);
+            }
+            return res;
+        }
+
+        // Biên vùng từ giá thấp/cao nhất trong cụm (nới PAD, tối thiểu WMIN, ra mép tick).
+        public static (double lo, double hi) Bounds(double pmin, double pmax, double u, double tick, StrongZoneParams p)
+        {
+            double lo = pmin - p.Pad * u, hi = pmax + p.Pad * u;
+            if (hi - lo < p.WMin * u) { double mid = (pmin + pmax) / 2; lo = mid - p.WMin * u / 2; hi = mid + p.WMin * u / 2; }
+            lo = Math.Floor(lo / tick + 1e-6) * tick;
+            hi = Math.Ceiling(hi / tick - 1e-6) * tick;
+            return (lo, hi);
+        }
+
+        // Tên mức (đã khử lặp, đúng thứ tự cố định) ⇒ số nhóm, có HVN, vàng.
+        public static (List<string> names, int ngroup, bool hvn, bool gold) Grade(IEnumerable<string> hit, StrongZoneParams p)
+        {
+            var set = new HashSet<string>(hit);
+            var names = ThuTu.Where(set.Contains).ToList();
+            int ng = names.Select(nm => p.GroupEdges ? Group[nm] : nm).Distinct().Count();
+            bool hv = names.Any(nm => nm.StartsWith("hvn"));
+            return (names, ng, hv, ng >= p.GoldMin && hv);
+        }
+
+        // ---------------------------------------------------------------- tính toàn bộ cấu trúc tại j = n − 2
+        public static SzResult Compute(SzSeries s, StrongZoneParams p, Dictionary<string, (List<SzLevel> lv, bool apx)> levelCache = null)
+        {
+            p ??= new StrongZoneParams();
+            var res = new SzResult { Closes = s.C, Highs = s.H, Lows = s.L };
+            if (s.N < 3) return res;
+            int j = s.N - 2, jn = s.N - 1;
+            int d = s.DayOf[jn];
+            res.J = j; res.D = d;
+            res.Pivots = Pivots(s, p);
+            double u = s.UnitDay[d];
+            res.U = u;
+            if (double.IsNaN(u)) return res;
+
+            // mức hợp lưu của hôm nay — cố định suốt phiên (cache theo nến đầu phiên + độ dài phần trước nó)
+            int a0 = s.Days[d].a;
+            string lkey = s.T[0].Ticks + ":" + a0 + ":" + s.T[a0].Ticks + ":" + p.Fingerprint();
+            List<SzLevel> levels; bool apx;
+            if (levelCache != null && levelCache.TryGetValue(lkey, out var hitc)) { levels = hitc.lv; apx = hitc.apx; }
+            else
+            {
+                levels = DayLevels(s, d, p, out apx);
+                if (levelCache != null) { if (levelCache.Count > 4) levelCache.Clear(); levelCache[lkey] = (levels, apx); }
+            }
+            res.Levels = levels; res.Approx = apx;
+
+            int lbStart = s.Days[Math.Max(0, d - p.LB)].a;
+            int segNow = s.Seg[jn];
+            var act = res.Pivots.Where(q => q.Conf <= j && q.I >= lbStart && s.Seg[q.I] == segNow)
+                                .OrderBy(q => q.Conf).ToList();   // ổn định như Python: theo conf rồi theo giá
+            act = act.OrderBy(q => q.Price).ToList();
+            if (act.Count == 0) return res;
+            var groups = Cluster(act.Select(q => q.Price).ToList(), p.WC * u);
+            foreach (var g in groups)
+            {
+                if (g.Count < p.NMin) continue;
+                var pts = g.Select(ix => act[ix]).ToList();
+                double pmin = pts.Min(q => q.Price), pmax = pts.Max(q => q.Price);
+                var (lo, hi) = Bounds(pmin, pmax, u, s.Tick, p);
+                var hit = new List<string>();
+                foreach (var L in levels)
+                {
+                    if (L.Lo <= hi + p.Tol * u && L.Hi >= lo - p.Tol * u)
+                    {
+                        if (L.IsHvn && !HvnOk(L, s.H, s.L, j, u, p)) continue;
+                        hit.Add(L.Name);
+                    }
+                }
+                var (names, ng, hv, gold) = Grade(hit, p);
+                res.Clusters.Add(new SzZone
+                {
+                    Lo = lo, Hi = hi, N = pts.Count, NHigh = pts.Count(q => q.Kind > 0), Pmin = pmin, Pmax = pmax,
+                    Newest = pts.Max(q => q.I), Oldest = pts.Min(q => q.I), Names = names, NGroup = ng, Hvn = hv, Gold = gold, U = u,
+                });
+            }
+            return res;
+        }
+
+        // ---------------------------------------------------------------- hiển thị
+        // +1 = hỗ trợ (giá ở trên vùng), −1 = kháng cự; giá đang trong vùng → lùi về nến gần nhất đóng NGOÀI vùng.
+        public static int SideOf(IList<double> closes, double lo, double hi, int j, int back)
+        {
+            for (int i = j; i > Math.Max(j - back, -1); i--)
+            {
+                if (closes[i] > hi) return 1;
+                if (closes[i] < lo) return -1;
+            }
+            return 0;
+        }
+
+        public static string LabelOf(SzZone z, int side)
+        {
+            string head = side > 0 ? "Hỗ trợ" : side < 0 ? "Kháng cự" : "Vùng";
+            if (z.Gold) head = "★ " + head + " rất mạnh";
+            var parts = new List<string>();
+            foreach (var nm in z.Names) { var t = Ten[nm]; if (!parts.Contains(t)) parts.Add(t); }
+            return parts.Count > 0 ? $"{head} · {z.N} lần · {string.Join(" + ", parts)}" : $"{head} · {z.N} lần";
+        }
+
+        public static string ColorOf(bool gold, int side) => gold ? "vang" : side > 0 ? "xanh" : side < 0 ? "do" : "xam";
+
+        // Lọc hiển thị + gán phía/màu/nhãn. Rẻ — chạy lại mỗi khi giá đổi. Trả vùng ĐƯỢC VẼ, sắp theo Lo.
+        public static List<SzZone> Display(SzResult r, double now, StrongZoneParams p)
+        {
+            var outp = new List<SzZone>();
+            if (r == null || r.Clusters.Count == 0 || double.IsNaN(now)) return outp;
+            var pool = r.Clusters.Where(z => z.NGroup >= p.MinGroup).Select(z => z.CloneZone())
+                        .OrderBy(z => z.Gold ? 0 : 1).ThenBy(z => -z.NGroup).ThenBy(z => -z.N).ThenBy(z => -z.Newest).ThenBy(z => z.Lo).ToList();
+            var kept = new List<SzZone>();
+            foreach (var z in pool)
+                if (kept.All(k => Math.Max(z.Lo, k.Lo) - Math.Min(z.Hi, k.Hi) >= p.Sep * z.U)) kept.Add(z);
+            var cand = new List<SzZone>();
+            foreach (var z in kept)
+            {
+                if (now > z.Hi) { z.Side = 1; z.Dist = now - z.Hi; z.Inside = false; }
+                else if (now < z.Lo) { z.Side = -1; z.Dist = z.Lo - now; z.Inside = false; }
+                else { z.Side = SideOf(r.Closes, z.Lo, z.Hi, r.J, p.SideLookback); z.Dist = 0; z.Inside = true; }
+                if (z.Dist > p.Radius * z.U) continue;
+                z.Color = ColorOf(z.Gold, z.Side);
+                z.Label = LabelOf(z, z.Side) + (z.Inside ? " (giá đang trong vùng)" : "");
+                cand.Add(z);
+            }
+            outp.AddRange(cand.Where(z => z.Inside));
+            foreach (int sd in new[] { 1, -1 })
+                outp.AddRange(cand.Where(z => !z.Inside && z.Side == sd).OrderBy(z => z.Gold ? 0 : 1).ThenBy(z => z.Dist).Take(p.MaxSide));
+            return outp.OrderBy(z => z.Lo).ToList();
+        }
+
+        // Dòng tóm tắt cho Telegram: tối đa 4 vùng, gần giá trước, vùng vàng thêm ★.
+        public static string SummaryLine(IList<SzZone> shown, Func<double, string> fmt, int max = 4)
+        {
+            if (shown == null || shown.Count == 0) return null;
+            var parts = shown.OrderBy(z => z.Dist).Take(max)
+                .Select(z => $"{(z.Gold ? "★" : "")}{(z.Side > 0 ? "S" : z.Side < 0 ? "R" : "·")} {fmt(z.Lo)}–{fmt(z.Hi)}");
+            return "Vùng mạnh (va đập + hợp lưu, chưa kiểm định): " + string.Join(" · ", parts);
+        }
+
+        // Cửa sổ history chuẩn hoá: chỉ dùng nến có TimeLeft ≥ (nến cuối − days ngày). M30 chính và M30 phụ
+        // có độ dài history khác nhau; cắt về cùng cửa sổ ⇒ cùng đầu vào ⇒ cùng vùng.
+        public static int CanonicalStart(IList<DateTime> t, int days)
+        {
+            if (t == null || t.Count == 0) return 0;
+            var from = t[t.Count - 1].AddDays(-Math.Abs(days));
+            for (int i = 0; i < t.Count; i++) if (t[i] >= from) return i;
+            return t.Count - 1;
+        }
+    }
+
+    // Bộ đệm: cấu trúc vùng chỉ tính lại khi có nến M30 mới (khoá = số nến + giờ nến đầu, nến j, nến cuối
+    // + mọi thông số). Mỗi tick chỉ chạy Display với giá mới.
+    public sealed class StrongZoneEngine
+    {
+        public int Recomputes { get; private set; }
+        private string _key;
+        private SzResult _res;
+        private readonly Dictionary<string, (List<SzLevel> lv, bool apx)> _lvCache = new Dictionary<string, (List<SzLevel> lv, bool apx)>();
+
+        public static string KeyOf(int n, DateTime first, DateTime barJ, DateTime last, StrongZoneParams p)
+            => n + "|" + first.Ticks + "|" + barJ.Ticks + "|" + last.Ticks + "|" + p.Fingerprint();
+
+        public SzResult Structure(string key, Func<SzSeries> build, StrongZoneParams p)
+        {
+            if (key == _key && _res != null) return _res;
+            var s = build();
+            _res = s == null ? new SzResult() : StrongZones.Compute(s, p, _lvCache);
+            _key = key; Recomputes++;
+            return _res;
+        }
+
+        public void Reset() { _key = null; _res = null; _lvCache.Clear(); }
+    }
+
+    // Vẽ vùng mạnh — dùng chung cho OnPaintChart (Quantower) và test render ra PNG.
+    public static class StrongZonePainter
+    {
+        public static Color ColorOf(SzZone z, Color sup, Color res, Color gold)
+            => z.Color == "vang" ? gold : z.Color == "xanh" ? sup : z.Color == "do" ? res : Color.FromArgb(0x9E, 0x9E, 0x9E);
+
+        public static int FillAlpha(SzZone z) => z.Gold ? 70 : 40;
+
+        // "giá" = 10 tick như các mốc cũ của SessionZones.
+        public static string TextOf(SzZone z, double tick)
+            => z.Inside ? z.Label : $"{z.Label} · cách {z.Dist / (10.0 * tick):0.0} giá";
+
+        // Vị trí Y của nhãn (góc trên chữ). Ưu tiên nằm giữa dải; dải mỏng hơn chữ thì đặt ngay TRÊN dải.
+        // Sau đó đẩy cho các nhãn không đè nhau (cách nhau ≥ textH) và kẹp trong [clipTop, clipBot].
+        public static float[] LayoutLabels(IList<(float top, float bot)> bands, float textH, float clipTop, float clipBot)
+        {
+            int n = bands?.Count ?? 0;
+            var y = new float[n];
+            if (n == 0) return y;
+            var pref = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                float t = Math.Min(bands[i].top, bands[i].bot), b = Math.Max(bands[i].top, bands[i].bot);
+                pref[i] = (b - t >= textH) ? t + (b - t - textH) / 2f : t - textH - 1f;
+            }
+            var order = Enumerable.Range(0, n).OrderBy(i => pref[i]).ToArray();
+            float prev = float.NegativeInfinity;
+            foreach (int i in order) { y[i] = Math.Max(Math.Max(pref[i], clipTop), prev + textH); prev = y[i]; }
+            float limit = clipBot;
+            for (int k = order.Length - 1; k >= 0; k--)
+            {
+                int i = order[k];
+                if (y[i] + textH > limit) y[i] = limit - textH;
+                limit = y[i];
+            }
+            return y;
+        }
+
+        public static void Paint(Graphics g, Rectangle clip, Func<double, float> toY, IList<SzZone> zones,
+                                 Color sup, Color res, Color gold, double tick, Font font)
+        {
+            if (g == null || zones == null || zones.Count == 0) return;
+            var vis = new List<(SzZone z, float top, float bot, Color col)>();
+            foreach (var z in zones)
+            {
+                float y1 = toY(z.Lo), y2 = toY(z.Hi);
+                float top = Math.Min(y1, y2), bot = Math.Max(y1, y2);
+                if (bot < clip.Top || top > clip.Bottom) continue;
+                vis.Add((z, top, bot, ColorOf(z, sup, res, gold)));
+            }
+            foreach (var v in vis)
+            {
+                float h = Math.Max(1f, v.bot - v.top);
+                using (var fill = new SolidBrush(Color.FromArgb(FillAlpha(v.z), v.col)))
+                    g.FillRectangle(fill, clip.Left, v.top, clip.Width, h);
+                using (var pen = new Pen(Color.FromArgb(160, v.col), 1f))
+                {
+                    g.DrawLine(pen, clip.Left, v.top, clip.Right, v.top);
+                    g.DrawLine(pen, clip.Left, v.top + h, clip.Right, v.top + h);
+                }
+            }
+            float textH = font.GetHeight(g) + 1f;
+            var ys = LayoutLabels(vis.Select(v => (v.top, v.bot)).ToList(), textH, clip.Top, clip.Bottom);
+            for (int i = 0; i < vis.Count; i++)
+            {
+                string txt = TextOf(vis[i].z, tick);
+                var sz = g.MeasureString(txt, font);
+                float x = clip.Right - sz.Width - 6f;
+                using (var bg = new SolidBrush(Color.FromArgb(215, 16, 16, 20)))
+                    g.FillRectangle(bg, x - 2f, ys[i], sz.Width + 4f, textH);
+                using (var br = new SolidBrush(vis[i].col))
+                    g.DrawString(txt, font, br, x, ys[i]);
+            }
         }
     }
 }

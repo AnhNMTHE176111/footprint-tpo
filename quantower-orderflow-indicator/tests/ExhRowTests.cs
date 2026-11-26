@@ -68,6 +68,20 @@ static class ExhRowTests
         for (int i = 1; i <= 25; i++) q2.Add(i, 10 * i);
         Check(q2.TryGet(out var rb, out var vb) && rb == 15.5 && vb == 155, "N 20: nen 6..25 -> TB 15,5 / 155", $"{rb},{vb}");
 
+        // ---- Big Volume theo hàng (BigVolRows) ----
+        // G 2 off 1: hàng 0 = tick 1-2, hàng 1 = tick 3-4. rowBase 10 -> ngưỡng 42,5
+        var bv = new List<ExhLevel> { new ExhLevel(1, 10, 20, 30), new ExhLevel(2, 5, 10, 15), new ExhLevel(3, 30, 5, 35), new ExhLevel(4, 2, 1, 3), new ExhLevel(5, 1, 1, 2) };
+        var res = BigVolRows.Detect(bv, 2, 1, 5, 1, true, 10);
+        Check(res.Count == 1 && res[0].Row == 0 && res[0].Vol == 45 && res[0].Side == 1 && Math.Abs(res[0].Ratio - 4.5) < 1e-12 && res[0].CentreTick == 1.5,
+              "hang 0 (45 = 4,5 x nen) -> 1 vong buy (Ask 30 > Bid 15), tam tick 1,5; hang 1 (38) < 42,5 -> khong", res.Count > 0 ? $"{res[0].Row},{res[0].Vol},{res[0].Side},{res[0].CentreTick}" : "rong");
+        Check(Math.Abs(res[0].SizeMult - 1.40625) < 1e-12, "co = 4,5 / 3,2 = 1,40625 x cham", $"{res[0].SizeMult}");
+        var bvBig = BigVolRows.Detect(new List<ExhLevel> { new ExhLevel(8, 300, 100, 400) }, 8, 4, 8, 8, true, 10);
+        Check(bvBig.Count == 1 && bvBig[0].SizeMult == 4.7 && bvBig[0].Side == -1 && bvBig[0].CentreTick == 8, "40 x nen -> co kep 4,7; Bid > Ask -> sell; tam hang 7,5..11 kep vao [low, high] = 8");
+        Check(BigVolRows.Detect(bv, 2, 1, 5, 1, false, 10).Count == 0 && BigVolRows.Detect(bv, 2, 1, 5, 1, true, 0).Count == 0, "chua du nen / nen 0 -> khong");
+        var eq = BigVolRows.Detect(new List<ExhLevel> { new ExhLevel(1, 25, 25, 50) }, 1, 0, 1, 1, true, 10);
+        Check(eq.Count == 1 && eq[0].Side == -1, "Ask = Bid -> sell (nhu Python: buy chi khi Ask > Bid)");
+        Check(BigVolRows.Detect(new List<ExhLevel> { new ExhLevel(1, 20, 22.5, 42.5) }, 1, 0, 1, 1, true, 10).Count == 1, "dung 4,25 x nen -> co (>=)");
+
         Console.WriteLine(_fail == 0 ? "  -> ExhRow PASS" : $"  -> ExhRow {_fail} FAIL");
         return _fail;
     }

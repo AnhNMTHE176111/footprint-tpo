@@ -178,6 +178,49 @@ namespace OrderFlowBubbles
         }
     }
 
+    // ========================================================================
+    //  BIG TRADE = "BIG VOLUME THEO HÀNG" như chart M1 của CORVEN (2026-11-26, research/bigtrade_corven_2026-11-26/SPEC.md; Python chuẩn: ref_rule.py)
+    //  Cùng lưới hàng với kiệt sức (ExhRowGrid). Hàng có volume >= 4,25 x rowBase (TB volume mỗi hàng của N nến đóng trước) -> một vòng
+    //  tại tâm hàng (kẹp trong [low, high]); phía = Ask > Bid ? buy : sell; cỡ = clamp(ratio / 3,2; 1,33; 4,7) x chấm thường.
+    //  Không cần lệnh đơn (lịch sử không có) -> lịch sử và live ra như nhau. 3 mẫu M1 CORVEN: trùng 112 / thừa 66 / sót 32 (luật lệnh đơn cũ 0 / 0 / 144).
+    // ========================================================================
+    public readonly struct BigVolRow
+    {
+        public readonly long Row; public readonly double CentreTick; public readonly int Side; public readonly double Ratio, SizeMult, Bid, Ask, Vol;
+        public BigVolRow(long row, double centreTick, int side, double ratio, double sizeMult, double bid, double ask, double vol)
+        { Row = row; CentreTick = centreTick; Side = side; Ratio = ratio; SizeMult = sizeMult; Bid = bid; Ask = ask; Vol = vol; }
+    }
+
+    public static class BigVolRows
+    {
+        public const double K = 4.25, SizeDiv = 3.2, SizeMin = 1.33, SizeMax = 4.7;
+        public static string Key(int g, int off) => $"bigvol-rows-v1:{g}/{off}/{K}/{SizeDiv}/{SizeMin}/{SizeMax}";
+
+        /// <summary>Các hàng Big Volume của nến (hàng tăng dần). hasBase = đã đủ nền (>= 5 nến).</summary>
+        public static List<BigVolRow> Detect(IReadOnlyList<ExhLevel> levels, int g, int off, long highTick, long lowTick, bool hasBase, double rowBase)
+        {
+            var res = new List<BigVolRow>();
+            if (levels == null || !hasBase || !(rowBase > 0)) return res;
+            var acc = new SortedDictionary<long, (double bid, double ask, double vol)>();
+            foreach (var l in levels)
+            {
+                if (!(l.Volume > 0)) continue;
+                long r = ExhRowGrid.RowOf(l.Tick, g, off);
+                acc.TryGetValue(r, out var a);
+                acc[r] = (a.bid + l.Bid, a.ask + l.Ask, a.vol + l.Volume);
+            }
+            foreach (var kv in acc)
+            {
+                double ratio = kv.Value.vol / rowBase;
+                if (!(ratio >= K)) continue;
+                double c = Math.Min((double)highTick, Math.Max((double)lowTick, kv.Key * g + off + (g - 1) / 2.0));
+                double size = Math.Min(SizeMax, Math.Max(SizeMin, ratio / SizeDiv));
+                res.Add(new BigVolRow(kv.Key, c, kv.Value.ask > kv.Value.bid ? 1 : -1, ratio, size, kv.Value.bid, kv.Value.ask, kv.Value.vol));
+            }
+            return res;
+        }
+    }
+
     /// <summary>Nền của luật theo hàng: N nến đóng gần nhất có giao dịch, mỗi nến (volume TB mỗi hàng, tổng volume); cần >= 5 nến.</summary>
     public sealed class ExhRowBaseline
     {

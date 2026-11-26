@@ -30,7 +30,7 @@
 //  Luật mô phỏng hiển thị của CORVEN, fit lại 2026-11-19 trên chart M5 ngày 18/11, TẤT CẢ THEO TỪNG TICK (không gom hàng), bóng ở đúng giá khớp.
 //  CHẤM ĐẶC NHỎ xét RIÊNG TỪNG BÊN: đỏ khi Bid >= 2,8 x trung vị volume mỗi ô (TB 20 nến trước), lớn hơn hẳn Bid của mọi tick trong ±4 tick, sàn 9; xanh tương tự với Ask; xanh bị che nếu có đỏ cùng nến cách <= 6 tick.
 //  VÒNG TRÒN MỜ = BIG TRADE "lệnh cá mập": MỘT lệnh đơn chủ động lớn hơn hẳn nhóm 8 lệnh lớn nhất mỗi ngày, tính trên 5 ngày nến gần nhất
-//  (BigTradeWhale trong CellBigLogic.cs; chỉ feed sống cấp lệnh đơn, lịch sử lấy từ nhật ký lệnh đơn). Cả hai chế độ ngưỡng dùng chung luật này.
+//  2026-11-26: thay bằng Big Volume theo HÀNG giá như chart M1 CORVEN (BigVolRows trong ExhaustionLogic.cs) — không cần lệnh đơn.
 //  Kiệt sức: râu >= 3 tick và tổng bên soi trên 6 tick từ cực trị <= 1,1 x volume trung bình mỗi ô của 20 nến trước (ExhaustionLogic.cs).
 //  Trên 26 nến M5 mẫu: Dot 33 (10 xanh + 23 đỏ sau khi che), kiệt sức 13 (CORVEN: 16 cụm chấm, 11 kiệt sức; vòng mờ của CORVEN = lệnh đơn lớn, lịch sử không có số liệu nên không khớp được). Chỉ một biểu đồ nên chưa phải kiểm định.
 //  Chi tiết + bản Python gốc: research/corven_m5_2026-11-18/. KHÔNG phải lợi thế đã kiểm định.
@@ -116,7 +116,6 @@ namespace OrderFlowBubbles
 
         // ===================== baseline ROBUST (median + MAD) =====================
         private StopHuntDetector _stopHunt;     // stop hunt CORVEN (chỉ nạp nến ĐÃ ĐÓNG, đúng 1 lần/nến)
-        private BigTradeWhale _btWhale;         // Big Trade "lệnh cá mập": mọi lệnh đơn của 5 ngày nến có số liệu TRƯỚC (2026-11-25), cả hai chế độ
         private StatDots _statDots;             // chế độ "Không theo CORVEN (thống kê)": chấm (null khi chế độ tắt)
         private ExhRowBaseline _exhRowBase;     // kiệt sức theo HÀNG giá (2026-11-26): (volume TB mỗi hàng, tổng volume) của N nến đóng TRƯỚC
         private string _baseKey;                // N nến nền + phút một nến của Big Trade lúc dựng nền; đổi -> ResetState
@@ -295,7 +294,8 @@ namespace OrderFlowBubbles
 
         // ---------- 2) Big Trade — MỘT LỆNH ĐƠN chủ động THẬT SỰ LỚN: "lệnh cá mập" (2026-11-25, research/bigtrade_whale_2026-11-25/SPEC.md) ----------
         //  Vòng tròn MỜ = một lệnh đơn rất lớn đánh vào một mức giá (VolumeAnalysisItem.MaxOneTradeVolume; lịch sử lấy từ nhật ký lệnh đơn).
-        //  Luật (BigTradeWhale, CellBigLogic.cs): nổ khi lệnh đơn LỚN HƠN HẲN lệnh lớn thứ K của mọi lệnh đơn trong 5 ngày nến gần nhất
+        //  ⚠ 2026-11-26: THAY bằng Big Volume theo hàng (BigVolRows, ExhaustionLogic.cs): hàng volume >= 4,25 x TB mỗi hàng 20 nến trước, vòng MỜ to dần.
+        //  Luật cũ (BigTradeWhale, CellBigLogic.cs, không còn dùng): nổ khi lệnh đơn LỚN HƠN HẲN lệnh lớn thứ K của mọi lệnh đơn trong 5 ngày nến gần nhất
         //  (1380 phút nến có số liệu = một ngày nến), K = 8 lệnh mỗi ngày nến (đủ 5 ngày: K = 40). Chưa đủ một ngày nến có số liệu -> không vẽ vòng.
         //  Gộp vòng cách nhau <= max(2, biên độ TB / 8) tick, không giới hạn số vòng mỗi nến. Tham số là HẰNG SỐ, không có ô chỉnh dày / thưa,
         //  áp y hệt cho "Theo CORVEN" và "Không theo CORVEN". Đo trên nhật ký: ngưỡng vàng ~34–76 hợp đồng, NQ ~67–82.
@@ -504,6 +504,7 @@ namespace OrderFlowBubbles
         private string SymbolNameNow => TestBarSource != null ? TestSymbolName : Symbol?.Name;
         private (int g, int off) ExhGridNow => ExhRowGrid.For(SymbolNameNow);
         private string ExhKey() { var (g, off) = ExhGridNow; return ExhRowGrid.Key(g, off); }
+        private string BigVolKey() { var (g, off) = ExhGridNow; return BigVolRows.Key(g, off); }
         private bool IsNasdaqNow => SymbolPreset.IsNasdaq(TestBarSource != null ? TestSymbolName : Symbol?.Name);
         // 2026-11-26: NQ/MNQ như chart CORVEN (gom 8 tick một hàng) — TỰ BẬT khi chế độ đang chạy "Theo CORVEN" và mã là NQ/MNQ,
         // không có ô riêng (người dùng không muốn thêm ô phải chỉnh tay). Khi bật, thắng "Tự co dãn" và "Nổ ở mọi mức giá" cho NQ/MNQ.
@@ -521,7 +522,7 @@ namespace OrderFlowBubbles
                 CellBigEnabled, CellBigBaselineBars, CellBigMinSide, CellBigTopN, CellBigMergeTicks, CellDotEnabled, CellDotMedianRatio, CellDotLocalTicks, CellDotAllLevels, CellDotHideBuyNearSellTicks, "cellbig-v18",
                 BaselineBars, MinBars, MinLevelVolFloor, MinBarVolFloor, "noabs-v1",
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
-                BigTradeEnabled, BigTradeWhaleKey(),
+                BigTradeEnabled, BigVolKey(),
                 DLineEnabled, DLineFloor, DLineZ, DLineTopN,
                 ExhaustionEnabled, ExhKey(), ExhSweepTicks,
                 ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun, ImbMinVolume,
@@ -554,11 +555,8 @@ namespace OrderFlowBubbles
 
         // Số nến nền theo khung (BaselineWindow). Tắt "Nền tự co theo khung" = CellBigBaselineBars (20) như cũ.
         private int DesiredBaseBars() => AdaptiveBaseline ? BaselineWindow.BarsFor(BarMinutesNow, BaselineWindowMinutes) : CellBigBaselineBars;
-        private string BaseKey() => DesiredBaseBars() + "|bw:" + WhaleMinutesText()
+        private string BaseKey() => DesiredBaseBars().ToString()
             + (StatModeNow ? "|stat:" + StatKey() : "");
-        // Big Trade "lệnh cá mập": phút một nến sau khi quy (<= 0 -> 1), in InvariantCulture; đổi khung -> dựng lại hàng đợi.
-        private string WhaleMinutesText() => BigTradeWhale.NormMinutes(BarMinutesNow).ToString(System.Globalization.CultureInfo.InvariantCulture);
-        private string BigTradeWhaleKey() => $"bigtrade-whale-v1:{BigTradeWhale.Days}/{BigTradeWhale.PerDay}/{BigTradeWhale.DayMinutes}/" + WhaleMinutesText();
 
         private void InitBaselines()
         {
@@ -566,7 +564,6 @@ namespace OrderFlowBubbles
             _baseKey = BaseKey();
             _cellBigBase = new CellBigBaseline(CellBigBaselineBars, nb);
             _nqRowBase = new CellBigBaseline(CellBigBaselineBars, CellBigBaselineBars);
-            _btWhale = new BigTradeWhale(BarMinutesNow);   // mọi chế độ ngưỡng
             if (StatModeNow)
             {
                 int sm = StatMinutes();
@@ -726,7 +723,6 @@ namespace OrderFlowBubbles
 
             var dLineCands = new List<(double price, double z, int sign, double buy, double sell)>();
             var bigTradeCands = new List<Bubble>();
-            var btCells = new List<(long tick, double mot, double price, double buy, double sell)>();
             var cellBigCands = new List<(Bubble b, double magnitude, long lo, long hi)>();
 
             for (long k = loIdx; k <= hiIdx; k++)
@@ -739,8 +735,8 @@ namespace OrderFlowBubbles
 
                 // 1.5) Ô BID/ASK LỚN: xét theo từng tick, sau vòng ô — xem khối "Ô lớn theo từng tick" bên dưới.
 
-                // 2) BIG TRADE — gom lệnh đơn chủ động lớn nhất của từng mức giá; ngưỡng "lệnh cá mập" xét SAU vòng lặp. Vòng tròn MỜ, to dần theo cỡ lệnh.
-                //    Phía của lệnh đơn KHÔNG có trong dữ liệu: màu lấy theo phía TRỘI của ô (Ask > Bid -> buy xanh, ngược lại sell đỏ).
+                // 2) Nhật ký lệnh đơn (chỉ feed sống có): ghi lại để sau này đo vòng mờ kiểu chart M5 CORVEN. Big Trade hiển thị giờ là
+                //    Big Volume theo hàng (BigVolRows, xét SAU vòng lặp) — không cần lệnh đơn.
                 if (BigTradeEnabled)
                 {
                     double mot = it.MaxOneTradeVolume;
@@ -750,7 +746,6 @@ namespace OrderFlowBubbles
                         // Chỉ ghi lúc nến ĐÃ ĐÓNG (isClosed): nến đang chạy có thể còn tăng tiếp.
                         if (isClosed && _bigTradeLog != null)
                             _bigTradeLog.TryAppend(bar.TimeLeft.Ticks, bar.TimeLeft, price, mot, buy, sell);
-                        btCells.Add((k, mot, price, buy, sell));   // xét ngưỡng SAU vòng lặp (cần cả nến để gộp / giới hạn)
                     }
                 }
 
@@ -872,35 +867,28 @@ namespace OrderFlowBubbles
                 }
             }
 
-            // ---- BIG TRADE "lệnh cá mập" (2026-11-25, BigTradeWhale): một luật cho cả hai chế độ ngưỡng ----
+            // ---- BIG TRADE = Big Volume theo HÀNG giá như chart M1 CORVEN (2026-11-26, BigVolRows): vòng tròn MỜ to dần theo volume hàng ----
             if (BigTradeEnabled)
             {
-                // lịch sử không có lệnh đơn (luôn 0) -> lấy từ nhật ký lệnh đơn đã ghi lúc chạy sống (nếu có)
-                if (btCells.Count == 0 && _bigTradeLog != null) btCells = _bigTradeLog.CellsOf(bar.TimeLeft.Ticks, tick);
-                // lệnh đơn lớn hơn hẳn lệnh lớn thứ K của 5 ngày nến gần nhất; chưa đủ một ngày nến có số liệu -> không vẽ
-                if (btCells.Count > 0 && _btWhale != null && _btWhale.TryThreshold(out int wthr))
+                var (bg, boff) = ExhGridNow;
+                double bRowBase = 0;
+                bool bHas = _exhRowBase != null && _exhRowBase.TryGet(out bRowBase, out _);   // TB volume mỗi hàng, N nến đóng TRƯỚC
+                var bLv = new List<ExhLevel>(byTick.Count);
+                foreach (var kv in byTick) bLv.Add(new ExhLevel(kv.Key, kv.Value.it.SellVolume, kv.Value.it.BuyVolume, kv.Value.it.Volume));
+                long bH = (long)Math.Round(bar.High / tick), bL = (long)Math.Round(bar.Low / tick);
+                var invb = System.Globalization.CultureInfo.InvariantCulture;
+                foreach (var r in BigVolRows.Detect(bLv, bg, boff, bH, bL, bHas, bRowBase))
                 {
-                    int g = _btWhale.MergeTicks();
-                    var sel = BigTradeAdaptive.Select(btCells.Select(c => (c.tick, c.mot)).ToList(), wthr, g, 0, true);
-                    sel.Sort((a, b) => btCells[a].tick.CompareTo(btCells[b].tick));   // thứ tự vẽ: tick tăng dần (như bản cũ)
-                    var inv0 = System.Globalization.CultureInfo.InvariantCulture;
-                    // "tính trên 5 ngày gần nhất"; hàng đợi chưa đầy thì số ngày nến đang có, một chữ số thập phân
-                    string days = _btWhale.Count >= _btWhale.WindowBars
-                        ? BigTradeWhale.Days.ToString(inv0)
-                        : (_btWhale.Minutes / BigTradeWhale.DayMinutes).ToString("0.0", inv0);
-                    foreach (int si in sel)
+                    double lo = (r.Row * bg + boff) * tick, hi = (r.Row * bg + boff + bg - 1) * tick;
+                    string rng = bg > 1 ? $"{FmtPrice(lo)}–{FmtPrice(hi)}" : FmtPrice(lo);
+                    bigTradeCands.Add(new Bubble
                     {
-                        var c = btCells[si];
-                        int dir = c.buy > c.sell ? 1 : -1;
-                        bigTradeCands.Add(new Bubble
-                        {
-                            Price = c.price, Shape = Shape.Ellipse, Color = dir > 0 ? BuyColor : SellColor,
-                            Size = MidSize(), Transparency = SolidTransparency, Halo = false, UseBarWidth = true,
-                            SizeFrac = BigTradeLogic.SizeFrac(c.mot, Math.Max(1, wthr)),
-                            Tooltip = $"Big trade: 1 lệnh {c.mot:0} hợp đồng (ngưỡng > {wthr}: nhóm {BigTradeWhale.PerDay} lệnh lớn nhất mỗi ngày, tính trên {days} ngày gần nhất) | ô {c.sell:0} Bid {c.buy:0} Ask",
-                            CellBig = true, CellDot = false, CellBid = c.sell, CellAsk = c.buy, CellSide = dir
-                        });
-                    }
+                        Price = Math.Round(r.CentreTick * tick, 10), Shape = Shape.Ellipse, Color = r.Side > 0 ? BuyColor : SellColor,
+                        Size = MidSize(), Transparency = SolidTransparency, Halo = false, UseBarWidth = true,
+                        SizeFrac = CellBigLogic.DotSizeFrac * r.SizeMult,   // 0,60–2,1 bề ngang nến
+                        Tooltip = $"Big volume {rng}: {r.Vol.ToString("0", invb)} hợp đồng = {r.Ratio.ToString("0.0", invb)} × TB mỗi hàng 20 nến trước | {r.Bid.ToString("0", invb)} Bid {r.Ask.ToString("0", invb)} Ask",
+                        CellBig = true, CellDot = false, CellBid = r.Bid, CellAsk = r.Ask, CellSide = r.Side
+                    });
                 }
             }
 
@@ -1305,9 +1293,11 @@ namespace OrderFlowBubbles
         // Cỡ (px) của bóng: Big Trade = SizeFrac x bề ngang nến (1,0..2,5), sàn 8 px, trần 80 px; Dot = 45% bề ngang nến kẹp [5, 10] px.
         internal static int CellDrawSize(bool isDot, double sizeFrac, float barsW)
         {
-            if (isDot) return Math.Clamp((int)Math.Round(barsW * CellBigLogic.DotSizeFrac), 5, 10);
-            double f = sizeFrac > 0 ? sizeFrac : 1.0;
-            return Math.Clamp((int)Math.Round(barsW * f), 8, 80);
+            int dotPx = Math.Clamp((int)Math.Round(barsW * CellBigLogic.DotSizeFrac), 5, 10);
+            if (isDot) return dotPx;
+            // 2026-11-26 Big Volume: cỡ = (sizeFrac / DotSizeFrac) lần chấm thường (1,33–4,7 lần, như bóng to của CORVEN)
+            double mult = (sizeFrac > 0 ? sizeFrac : 1.0) / CellBigLogic.DotSizeFrac;
+            return Math.Clamp((int)Math.Round(dotPx * mult), 8, 80);
         }
 
         private void DrawShape(Graphics gr, Bubble b, float cx, float cy, int size, float barsW)
@@ -1422,7 +1412,7 @@ namespace OrderFlowBubbles
             {
                 if (_bubbles.TryGetValue(idx, out var shown))
                     foreach (var b in shown)
-                        if (b.CellBig) cells.Add(new ShCell { Centre = b.Price, Bid = b.CellBid, Ask = b.CellAsk, Side = b.CellSide });
+                        if (b.CellBig && b.CellDot) cells.Add(new ShCell { Centre = b.Price, Bid = b.CellBid, Ask = b.CellAsk, Side = b.CellSide });
             }
 
             var sigs = _stopHunt.OnBarClosed(idx, bar.High, bar.Low, bar.Close, StopHuntDetector.ToMinutes(bar.TimeLeft.Ticks), cells);
@@ -1541,16 +1531,6 @@ namespace OrderFlowBubbles
                     foreach (var c in cbLevels) exLv.Add(new ExhLevel(c.Tick, c.Sell, c.Buy, c.Vol));
                     var (g, off) = ExhGridNow;
                     if (ExhRowGrid.BarStats(exLv, g, off, out double erm, out double etot)) _exhRowBase.Add(erm, etot);
-                }
-                // Big Trade "lệnh cá mập": nộp MỌI lệnh đơn > 0 của nến (từ feed, hoặc nhật ký nếu lịch sử không có); nến không có số liệu -> không nộp
-                if (_btWhale != null)
-                {
-                    var bt = new List<(long tick, double mot)>();
-                    foreach (var kv in va.PriceLevels)
-                        if (kv.Value.MaxOneTradeVolume > 0) bt.Add(((long)Math.Round(kv.Key / tickSz), kv.Value.MaxOneTradeVolume));
-                    if (bt.Count == 0 && _bigTradeLog != null)
-                        foreach (var c in _bigTradeLog.CellsOf(bar.TimeLeft.Ticks, tickSz)) bt.Add((c.tick, c.mot));
-                    _btWhale.AddClosedBar(bt);
                 }
             }
             if (ads != null) _rLvlAbsDelta.AddBar(ads);

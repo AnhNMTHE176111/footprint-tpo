@@ -188,6 +188,17 @@ namespace OrderFlowBubbles
         public static (int endIdx, SiEnd end) CapLength(int zIdx, int endIdx, SiEnd end, int maxBars, int curIdx)
             => endIdx < 0 && maxBars > 0 && curIdx - zIdx >= maxBars ? (zIdx + maxBars, SiEnd.Expired) : (endIdx, end);
 
+        /// <summary>Khoảng dọc (px) để VẼ vùng: đúng [yTop, yBot] nếu đã dày >= minPx, ngược lại giãn đều quanh tâm cho đủ minPx
+        /// (2026-11-26: vùng NQ 3–7 tick chỉ còn vạch 2–4 px). Chỉ là cách vẽ, giá thật của vùng không đổi.</summary>
+        public static (float top, float height) VisualSpan(float yTop, float yBot, float minPx)
+        {
+            if (yBot < yTop) (yTop, yBot) = (yBot, yTop);
+            float h = yBot - yTop;
+            if (h >= minPx) return (yTop, h);
+            float mid = (yTop + yBot) / 2f;
+            return (mid - minPx / 2f, minPx);
+        }
+
         public static string PositionText(SiPosition p) => p switch
         {
             SiPosition.Body => "giữa thân nến",

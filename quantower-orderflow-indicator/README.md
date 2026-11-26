@@ -33,10 +33,18 @@ tiêu** → cùng cấu hình chạy đúng cho GC, MGC, hay feed proxy. Knob **
 | **Nến delta lớn** | **tô thân nến** | cả thân | **xanh (Δ>0) / đỏ (Δ<0)** |
 | **Số Delta** | chữ dưới nến | — | xanh/đỏ theo dấu |
 | Exhaustion / Divergence / Sweep | ▲ tam giác | vừa | đỉnh→cyan, đáy→đỏ |
-| Stacked Imbalance | ▭ vùng chữ nhật kéo sang phải, **tối đa 20 nến** (ô "Kéo dài tối đa", 0 = không giới hạn), vùng còn hiệu lực chỉ kéo tới nến đang chạy, không kéo hết màn hình | số mức | xanh lơ buy / hồng sell (nhạt = bị rút râu hoặc đã kết thúc; hover chỉ ghi "Stacked imbalance buy/sell N mức") |
+| Stacked Imbalance | ▭ vùng chữ nhật kéo sang phải, **tối đa 20 nến** (ô "Kéo dài tối đa", 0 = không giới hạn), vùng còn hiệu lực chỉ kéo tới nến đang chạy, không kéo hết màn hình | số mức; **vẽ dày tối thiểu 10 px** (giãn quanh tâm vùng) | xanh lơ buy / hồng sell, khối phẳng không viền (nhạt = bị rút râu; hover "Stacked imbalance buy/sell N mức · giá thấp – giá cao") |
 | Unfinished / Stop-hunt | ▭ / ⬤ halo | nhỏ / lớn | 2 phía / phe hấp thụ |
 
 Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score, deltaPct…).
+
+**Bảng màu theo chart CORVEN (2026-11-26).** Đo màu điểm ảnh trên khung hình Meet 07/11 (Sierra Chart của CORVEN): chấm buy **xanh dương** `#4A5AF5`
+(cũ Cyan), sell **đỏ** `#E0140A` (cũ OrangeRed), số delta chữ thường xanh dương / đỏ không dấu +, nến delta xanh lá / đỏ, tam giác kiệt sức đỉnh vàng đất `#E6B41E`,
+vùng stacked imbalance `#7AD8D8` / `#EFADAD` độ đậm 60% (ra đúng màu ~#A0D8D8 / ~#E4C0C0 của CORVEN trên nền xám). Cyan trên nền xám nhạt gần như
+không tương phản nên khó nhìn. Bóng khôi phục từ niêm phong cũ được vẽ theo VAI (buy / sell / tím stop hunt) nên cũng đổi màu ngay.
+Vùng của CORVEN **cao bằng vùng của ta** (soi khung 0:24:15, GC 06/11: vùng 4086,0–4086,6 = 7 mức, 4082,2–4082,4 = 3 mức, chiều cao khớp dữ liệu footprint; riêng vùng 7 mức 16:34 giờ VN bộ số mặc định 250% / sàn 5 của ta KHÔNG bắt được — chưa đo, chưa đổi);
+trông to hơn vì nến vàng M1 chỉ dài 10–25 tick, còn nến NQ M1 dài 40–100 tick nên vùng 3–7 tick chỉ còn vạch 2–4 px → thêm bề dày vẽ tối thiểu 10 px.
+Chỉ đổi cách vẽ: golden 6 kịch bản giống hệt từng dòng sau khi chuẩn hoá màu.
 
 ## Giải nghĩa & thuật toán (ngưỡng portable, default vàng M1)
 | # | Tín hiệu | Cơ chế + test | Default |

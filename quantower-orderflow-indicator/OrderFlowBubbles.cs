@@ -151,13 +151,15 @@ namespace OrderFlowBubbles
         // ================================================================
 
         // ---------- Appearance ----------
-        public Color BuyColor { get; set; } = Color.Cyan;
+        // 2026-11-26: bảng màu lấy theo chart Sierra của CORVEN (đo màu điểm ảnh trên khung hình Meet 07/11): chấm buy XANH DƯƠNG,
+        // sell ĐỎ, nến delta xanh lá / đỏ. Cũ: Cyan / OrangeRed / xanh ngọc — cyan trên nền xám nhạt gần như không tương phản (khó nhìn).
+        public Color BuyColor { get; set; } = Color.FromArgb(0x4A, 0x5A, 0xF5);
 
-        public Color SellColor { get; set; } = Color.OrangeRed;
+        public Color SellColor { get; set; } = Color.FromArgb(0xE0, 0x14, 0x0A);
 
-        public Color DeltaUpColor { get; set; } = Color.FromArgb(0x26, 0xA6, 0x9A);
+        public Color DeltaUpColor { get; set; } = Color.FromArgb(0x1E, 0xA8, 0x3C);
 
-        public Color DeltaDownColor { get; set; } = Color.FromArgb(0xEF, 0x53, 0x50);
+        public Color DeltaDownColor { get; set; } = Color.FromArgb(0xE5, 0x39, 0x35);
 
         public int MinBubbleSize { get; set; } = 8;
 
@@ -286,7 +288,7 @@ namespace OrderFlowBubbles
         [InputParameter("Số Delta · Hiện dưới nến", 35)]
         public bool ShowDeltaNumbers { get; set; } = true;
 
-        public int DeltaFontSize { get; set; } = 7;
+        public int DeltaFontSize { get; set; } = 8;
 
         public int DeltaYOffsetPx { get; set; } = 8;
 
@@ -343,7 +345,7 @@ namespace OrderFlowBubbles
         // độ đậm (%) của tam giác kiệt sức ĐÃ HẾT HIỆU LỰC so với tam giác còn hiệu lực (tô đặc, chỉ mờ đi)
         public int ExhDeadOpacity { get; set; } = 35;
 
-        public Color ExhTopColor { get; set; } = Color.FromArgb(0xFF, 0xC8, 0x00);
+        public Color ExhTopColor { get; set; } = Color.FromArgb(0xE6, 0xB4, 0x1E);
 
         public Color ExhBottomColor { get; set; } = Color.FromArgb(0x3D, 0xB8, 0xFF);
 
@@ -378,11 +380,17 @@ namespace OrderFlowBubbles
         // 60 nến (~1 giờ M1) > 95% thời gian chờ bị chạm đo được (42 nến).
         public int ImbFarBars { get; set; } = 60;
 
-        public Color ImbBuyZoneColor { get; set; } = Color.FromArgb(0x5F, 0xD3, 0xE0);
+        // 2026-11-26: màu + độ đậm tính ngược từ màu vùng trên chart CORVEN (xanh lơ ~#A0D8D8, hồng ~#E4C0C0 trên nền #D8D8D8).
+        public Color ImbBuyZoneColor { get; set; } = Color.FromArgb(0x7A, 0xD8, 0xD8);
 
-        public Color ImbSellZoneColor { get; set; } = Color.FromArgb(0xF2, 0x8F, 0xA6);
+        public Color ImbSellZoneColor { get; set; } = Color.FromArgb(0xEF, 0xAD, 0xAD);
 
-        public int ImbZoneOpacity { get; set; } = 45;
+        public int ImbZoneOpacity { get; set; } = 60;
+
+        // Bề dày TỐI THIỂU (px) khi vẽ vùng. Vùng 3–7 mức của NQ (tick 0,25, nến M1 dài 40–100 tick) chỉ còn 2–4 px = một vạch mảnh;
+        // trên vàng của CORVEN (nến 10–25 tick) cùng số mức chiếm 1/4–1/2 thân nến nên trông to. Chỉ đổi CÁCH VẼ (giãn đều quanh tâm vùng),
+        // giá thật của vùng vẫn hiện trong chữ rê chuột. 0 = vẽ đúng tỉ lệ giá (vẫn tối thiểu 3 px như cũ).
+        public int ImbZoneMinPx { get; set; } = 10;
 
         // ---------- 6) Delta Divergence ----------
         [InputParameter("Divergence · Bật", 100)]
@@ -937,6 +945,16 @@ namespace OrderFlowBubbles
             }
         }
 
+        // Màu VẼ của bóng Ô lớn / Big Trade theo VAI (tím stop hunt, xanh dương buy, đỏ sell) với bảng màu HIỆN TẠI — bóng khôi phục từ
+        // niêm phong cũ còn lưu màu cũ (Cyan / OrangeRed) vẫn vẽ đúng màu mới (2026-11-26). Bản ghi rất cũ CellSide = 0 giữ màu đã lưu.
+        private Color CellColor(Bubble b) => b.StopHunt ? CellBigStopHuntColor : b.CellSide > 0 ? BuyColor : b.CellSide < 0 ? SellColor : b.Color;
+
+        private string FmtPrice(double p)
+        {
+            try { if (Symbol != null) return Symbol.FormatPrice(p); } catch { }
+            return p.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         // Kiệt sức luôn hiện chữ NGẮN, kể cả bubble cũ trong SignalCache còn tooltip dài (2026-11-08).
         private static string ShortTip(Bubble b)
         {
@@ -1067,7 +1085,7 @@ namespace OrderFlowBubbles
             gr.SetClip(clip);
             try
             {
-                using var deltaFont = new Font("Arial", DeltaFontSize, FontStyle.Bold);
+                using var deltaFont = new Font("Arial", DeltaFontSize, FontStyle.Regular);   // CORVEN: chữ thường, xanh dương / đỏ, không dấu +
                 using var centerFmt = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
                 int tintAlpha = (int)Math.Round(255 * Math.Clamp(DeltaBarTintPct, 0, 100) / 100.0);
 
@@ -1115,7 +1133,8 @@ namespace OrderFlowBubbles
                         if (x1 < clip.Left || x0 > clip.Right) continue;
                         float yTop = (float)conv.GetChartY(b.PriceHi + tick / 2.0);
                         float yBot = (float)conv.GetChartY(b.Price - tick / 2.0);
-                        var rect = new RectangleF(x0, yTop, Math.Max((float)barsW / 2f, x1 - x0), Math.Max(3f, yBot - yTop));
+                        var (vTop, vH) = StackedImbalanceCalc.VisualSpan(yTop, yBot, Math.Max(3, ImbZoneMinPx));
+                        var rect = new RectangleF(x0, vTop, Math.Max((float)barsW / 2f, x1 - x0), vH);
 
                         int age = (endIdx >= 0 ? endIdx : last) - zIdx;
                         bool far = StackedImbalanceCalc.IsFar(endIdx, ImbFarBars, age);
@@ -1124,12 +1143,9 @@ namespace OrderFlowBubbles
                         if (b.ZoneWeak) op *= 0.5;    // bị rút râu → nhạt
                         var col = b.ZoneSide > 0 ? ImbBuyZoneColor : ImbSellZoneColor;
                         using (var zb = new SolidBrush(Color.FromArgb((int)Math.Round(255 * op), col)))
-                            gr.FillRectangle(zb, rect);
-                        if (endIdx < 0)               // còn hiệu lực → viền rõ
-                            using (var zp = new Pen(Color.FromArgb((int)Math.Round(255 * Math.Min(1.0, op * 2)), col), 1f))
-                                gr.DrawRectangle(zp, rect.X, rect.Y, rect.Width, rect.Height);
+                            gr.FillRectangle(zb, rect);   // CORVEN: khối màu phẳng, không viền
 
-                        zoneHits.Add((rect, b.Tooltip, col));
+                        zoneHits.Add((rect, b.Tooltip + " · " + FmtPrice(b.Price) + " – " + FmtPrice(b.PriceHi), col));
                     }
                 }
 
@@ -1183,7 +1199,7 @@ namespace OrderFlowBubbles
                                 {
                                     float ddx = mouse.X - cx, ddy = mouse.Y - y;
                                     float dr = Math.Max(drawSize / 2f, 6f);
-                                    if (ddx * ddx + ddy * ddy <= dr * dr) { dotHoverTip = ShortTip(b); dotHoverX = (int)cx; dotHoverY = (int)y; dotHoverCol = b.Color; }
+                                    if (ddx * ddx + ddy * ddy <= dr * dr) { dotHoverTip = ShortTip(b); dotHoverX = (int)cx; dotHoverY = (int)y; dotHoverCol = CellColor(b); }
                                 }
                                 continue;
                             }
@@ -1196,7 +1212,7 @@ namespace OrderFlowBubbles
                                 if (dx * dx + dy * dy <= r * r)
                                 {
                                     hoverTip = ShortTip(b); hoverX = (int)cx; hoverY = (int)y;
-                                    hoverCol = b.Shape == Shape.ExhTop ? ExhTopColor : b.Shape == Shape.ExhBottom ? ExhBottomColor : b.Color;
+                                    hoverCol = b.Shape == Shape.ExhTop ? ExhTopColor : b.Shape == Shape.ExhBottom ? ExhBottomColor : b.CellBig ? CellColor(b) : b.Color;
                                 }
                             }
                         }
@@ -1206,7 +1222,7 @@ namespace OrderFlowBubbles
                     if (ShowDeltaNumbers && barsW >= DeltaMinBarWidthPx && bar.VolumeAnalysisData?.Total != null)
                     {
                         double d = bar.VolumeAnalysisData.Total.Delta;
-                        string text = d.ToString("+0;-0;0");
+                        string text = d.ToString("0;-0;0");
                         float y = (float)conv.GetChartY(bar.Low) + DeltaYOffsetPx + DeltaFontSize / 2f;
                         if (y <= clip.Bottom)
                         {
@@ -1216,7 +1232,7 @@ namespace OrderFlowBubbles
                                 using var bg = new SolidBrush(Color.FromArgb(120, 0, 0, 0));
                                 gr.FillRectangle(bg, cx - sz.Width / 2 - 1, y - sz.Height / 2, sz.Width + 2, sz.Height);
                             }
-                            using var db = new SolidBrush(d > 0 ? DeltaUpColor : d < 0 ? DeltaDownColor : Color.Gray);
+                            using var db = new SolidBrush(d > 0 ? BuyColor : d < 0 ? SellColor : Color.Gray);
                             gr.DrawString(text, deltaFont, db, cx, y, centerFmt);
                         }
                     }
@@ -1308,17 +1324,18 @@ namespace OrderFlowBubbles
             if (b.CellBig)
             {
                 float cr = size / 2f;
+                var cc = CellColor(b);
                 if (b.CellDot)
                 {
-                    using var db = new SolidBrush(Color.FromArgb(255, b.Color));
+                    using var db = new SolidBrush(Color.FromArgb(255, cc));
                     gr.FillEllipse(db, cx - cr, cy - cr, size, size);
                 }
                 else
                 {
                     int fa = Math.Clamp((int)Math.Round(255 * BigTradeOpacity / 100.0), 10, 255);
-                    using var cb = new SolidBrush(Color.FromArgb(fa, b.Color));
+                    using var cb = new SolidBrush(Color.FromArgb(fa, cc));
                     gr.FillEllipse(cb, cx - cr, cy - cr, size, size);
-                    using var cpn = new Pen(Color.FromArgb(Math.Min(255, fa + 70), b.Color), 1f);
+                    using var cpn = new Pen(Color.FromArgb(Math.Min(255, fa + 70), cc), 1f);
                     gr.DrawEllipse(cpn, cx - cr, cy - cr, size, size);
                 }
                 return;

@@ -227,8 +227,23 @@ static class StackedImbalanceTests
         Check(zones == 9731, "C# dem dung bang Python (9731 vung)", $"C#={zones}");
     }
 
+    // [SI-11] bề dày tối thiểu khi vẽ vùng (2026-11-26)
+    static void VisualSpanMin()
+    {
+        Console.WriteLine("[SI-11] Be day toi thieu khi ve vung");
+        var a = StackedImbalanceCalc.VisualSpan(100f, 103f, 10f);
+        Check(Math.Abs(a.top - 96.5f) < 1e-4 && Math.Abs(a.height - 10f) < 1e-4, "vung 3 px -> gian thanh 10 px quanh tam 101,5", $"{a.top},{a.height}");
+        var b = StackedImbalanceCalc.VisualSpan(100f, 130f, 10f);
+        Check(b.top == 100f && b.height == 30f, "vung 30 px -> giu nguyen", $"{b.top},{b.height}");
+        var c = StackedImbalanceCalc.VisualSpan(110f, 100f, 4f);
+        Check(c.top == 100f && c.height == 10f, "yTop > yBot -> doi cho, giu 10 px", $"{c.top},{c.height}");
+        var d = StackedImbalanceCalc.VisualSpan(50f, 50f, 10f);
+        Check(d.top == 45f && d.height == 10f, "vung 0 px -> 10 px quanh tam", $"{d.top},{d.height}");
+    }
+
     public static void RunAll()
     {
+        VisualSpanMin();
         PureBuy(); RatioThreshold(); OneVsZero(); BrokenChain(); PureSell();
         BothSidesAndNoHorizontal(); PositionAndWeak(); EndRules(); TooltipAndFar(); CacheFields(); RealDataCrossCheck();
     }

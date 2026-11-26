@@ -38,9 +38,10 @@ tiêu** → cùng cấu hình chạy đúng cho GC, MGC, hay feed proxy. Knob **
 
 Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score, deltaPct…).
 
-**NQ/MNQ như chart CORVEN (2026-11-26).** Footprint NQ của CORVEN gom **8 tick (2 điểm) một hàng**, hàng bắt đầu ở số điểm lẻ. Ô "Mã NQ/MNQ · Gom 2 điểm một hàng" (bật mặc định)
-cho NQ/MNQ: stacked imbalance xét trên hàng 8 tick (250%, sàn 1), chấm xét trên hàng 8 tick (1,8 × trung vị mỗi hàng của 20 nến trước, lớn hơn hẳn hàng kề, không che, sàn người dùng),
+**NQ/MNQ như chart CORVEN (2026-11-26).** Footprint NQ của CORVEN gom **8 tick (2 điểm) một hàng**, hàng bắt đầu ở số điểm lẻ. **Không có ô riêng:** tự bật khi chế độ
+"Theo CORVEN" và mã là NQ/MNQ: stacked imbalance xét trên hàng 8 tick (250%, sàn 1), chấm xét trên hàng 8 tick (1,8 × trung vị mỗi hàng của 20 nến trước, lớn hơn hẳn hàng kề, không che, sàn người dùng),
 thắng "Tự co dãn" và "Nổ ở mọi mức giá". Số đo: [research/nq_rows_2026-11-26/](research/nq_rows_2026-11-26/README.md). Vàng không đổi.
+Sửa 2026-11-26: bản cũ chỉ giữ vùng stacked imbalance trong ~5000 nến gần nhất khi có trên 4000 vùng → vùng cũ hiện lúc tính rồi biến mất (NQ và cả vàng). Giờ giữ tới 200.000 vùng.
 
 **Bảng màu theo chart CORVEN (2026-11-26).** Đo màu điểm ảnh trên khung hình Meet 07/11 (Sierra Chart của CORVEN): chấm buy **xanh dương** `#4A5AF5`
 (cũ Cyan), sell **đỏ** `#E0140A` (cũ OrangeRed), số delta chữ thường xanh dương / đỏ không dấu +, nến delta xanh lá / đỏ, tam giác kiệt sức đỉnh vàng đất `#E6B41E`,

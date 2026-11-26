@@ -5,12 +5,12 @@ var t = typeof(OrderFlowBubbles.OrderFlowBubbles);
 var props = t.GetProperties(BindingFlags.Public|BindingFlags.Instance).Where(p => p.GetCustomAttributes().Any(a => a.GetType().Name=="InputParameterAttribute")).ToList();
 Console.WriteLine($"InputParameter count = {props.Count}");
 foreach (var p in props) Console.WriteLine("  " + p.Name);
-int fail = props.Count == 23 ? 0 : 1;   // 2026-11-25: +2 o che do nguong (ThresholdMode, StatRarePbp); Big Trade "lenh ca map": -4 o mat do (27 -> 23)
+int fail = props.Count == 22 ? 0 : 1;   // 2026-11-26: bo o "Ma NQ/MNQ gom 2 diem" (tu bat khi Theo CORVEN + NQ) 23 -> 22. 2026-11-25: +2 o che do nguong (ThresholdMode, StatRarePbp); Big Trade "lenh ca map": -4 o mat do (27 -> 23)
 object o = null; try { o = Activator.CreateInstance(t); } catch (Exception e) { Console.WriteLine("Khong tao duoc instance: " + e.GetType().Name); }
 if (o != null) {
   void chk(string n, object exp){ var v=t.GetProperty(n).GetValue(o); bool ok=Equals(v,exp); if(!ok) fail++; Console.WriteLine($"  {(ok?"OK  ":"FAIL")} {n} = {v} (mong doi {exp})"); }
   chk("DeltaFontSize",8); chk("ImbZoneMinPx",10); chk("ImbZoneOpacity",60); chk("BuyColor",System.Drawing.Color.FromArgb(0x4A,0x5A,0xF5)); chk("SellColor",System.Drawing.Color.FromArgb(0xE0,0x14,0x0A)); chk("DeltaYOffsetPx",8); chk("DLineEnabled",false); chk("DeltaMinBarWidthPx",6);
-  chk("CellDotAllLevels",false); chk("CellDotNasdaqAuto",true); chk("CellDotFloorEnabled",true); chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhMinWickTicks",3); chk("ExhSumLevels",6); chk("ExhSumHistRatio",1.1); chk("BigTradeOpacity",35); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellDotMedianRatio",2.8); chk("CellDotLocalTicks",4); chk("CellDotHideBuyNearSellTicks",6); chk("CellDotEnabled",true); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true); chk("ImbMaxBars",20); chk("ImbFarBars",60);
+  chk("CellDotAllLevels",false); chk("CellDotFloorEnabled",true); chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhMinWickTicks",3); chk("ExhSumLevels",6); chk("ExhSumHistRatio",1.1); chk("BigTradeOpacity",35); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellDotMedianRatio",2.8); chk("CellDotLocalTicks",4); chk("CellDotHideBuyNearSellTicks",6); chk("CellDotEnabled",true); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true); chk("ImbMaxBars",20); chk("ImbFarBars",60);
   chk("CellDotAdaptive",true); chk("CellDotPreset",0); chk("AdaptiveBaseline",true); chk("ExhTailMedianRatio",0.8);
   { var pa = t.GetProperty("CellDotPreset").GetCustomAttributes().First(a => a.GetType().Name=="InputParameterAttribute");
     var vf = pa.GetType().GetProperties().FirstOrDefault(pp => pp.Name.ToLower().Contains("variant"));

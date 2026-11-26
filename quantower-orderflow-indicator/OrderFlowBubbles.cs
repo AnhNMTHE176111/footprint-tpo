@@ -133,6 +133,7 @@ namespace OrderFlowBubbles
         private int _lastDivPivot = int.MinValue;     // cooldown divergence
 
         private readonly List<ZoneRec> _zones = new();    // vùng Stacked Imbalance (của nến ĐÃ ĐÓNG), lock(_sync)
+        private const int MaxZonesKept = 200000;          // ~ vài MB; đủ cho cả năm NQ M1
         private readonly List<ZoneRec> _activeZones = new();  // tập con của _zones còn hiệu lực (EndIdx < 0), cùng thứ tự — UpdateZones chỉ duyệt cái này (O(Z hoạt động) thay vì O(mọi vùng))
 
         // kiệt sức còn HIỆU LỰC (chưa bị râu nến sau quét qua) — xem ExhaustionLogic.cs
@@ -225,13 +226,6 @@ namespace OrderFlowBubbles
         // Bật = chấm Bid/Ask nổ ở MỌI mức giá vượt ngưỡng (bỏ điều kiện "lớn nhất trong ±CellDotLocalTicks tick"); tắt = như cũ.
         [InputParameter("Chấm Bid/Ask nhỏ · Nổ ở mọi mức giá (bỏ điều kiện lớn nhất quanh nó — rất dày ở NQ và từ M5, nên tắt)", 27)]
         public bool CellDotAllLevels { get; set; } = false;
-
-        // Bật (mặc định) = mã NQ/MNQ tự dùng bộ số Nasdaq cho chấm: 3,5 x trung vị, lớn nhất trong ±8 tick, che xanh cách đỏ <= 12 tick
-        // (thay cho CellDotMedianRatio / CellDotLocalTicks / CellDotHideBuyNearSellTicks). Mã khác (GC, MGC…) không đổi. Xem SymbolPreset trong CellBigLogic.cs.
-        // 2026-11-26: Bật = NQ/MNQ vẽ như chart CORVEN — gom 8 tick (2 điểm) một hàng cho chấm + stacked imbalance (xem NqRows trong CellBigLogic.cs).
-        // Khi bật, ô này thắng "Tự co dãn theo khung" và "Nổ ở mọi mức giá" cho mã NQ/MNQ (chế độ "Theo CORVEN"). Mã khác không đổi.
-        [InputParameter("Mã NQ/MNQ · Gom 2 điểm một hàng như chart CORVEN (chấm + stacked imbalance)", 28)]
-        public bool CellDotNasdaqAuto { get; set; } = true;
 
         // chấm xanh bị che (không vẽ) nếu cùng nến có chấm đỏ cách <= số tick này (CORVEN vẽ đỏ đè xanh); < 0 = tắt che
         public int CellDotHideBuyNearSellTicks { get; set; } = 6;
@@ -516,8 +510,10 @@ namespace OrderFlowBubbles
         }
 
         private bool IsNasdaqNow => SymbolPreset.IsNasdaq(TestBarSource != null ? TestSymbolName : Symbol?.Name);
-        // 2026-11-26: NQ/MNQ như chart CORVEN (gom 8 tick một hàng). Bộ Nasdaq theo từng tick cũ (SymbolPreset) không còn đường chạy.
-        private bool NqRowModeNow => CellDotNasdaqAuto && IsNasdaqNow;
+        // 2026-11-26: NQ/MNQ như chart CORVEN (gom 8 tick một hàng) — TỰ BẬT khi chế độ đang chạy "Theo CORVEN" và mã là NQ/MNQ,
+        // không có ô riêng (người dùng không muốn thêm ô phải chỉnh tay). Khi bật, thắng "Tự co dãn" và "Nổ ở mọi mức giá" cho NQ/MNQ.
+        // Bộ Nasdaq theo từng tick cũ (SymbolPreset) không còn đường chạy.
+        private bool NqRowModeNow => !StatModeNow && IsNasdaqNow;
         private bool UseNasdaqPresetNow => false;
 
         private string ComputeSettingsFingerprint()
@@ -1581,8 +1577,9 @@ namespace OrderFlowBubbles
                 if (_bubbles.TryGetValue(idx, out var l))
                     foreach (var b in l)
                         if (b.Shape == Shape.Zone) { var zr = new ZoneRec { Idx = idx, B = b }; _zones.Add(zr); _activeZones.Add(zr); }
-                // giữ bộ nhớ gọn: bỏ vùng ĐÃ kết thúc cũ nhất khi quá nhiều
-                if (_zones.Count > 4000) _zones.RemoveAll(z => z.EndIdx >= 0 && z.EndIdx < idx - 5000);
+                // giữ bộ nhớ gọn: chỉ khi RẤT nhiều mới bỏ vùng đã kết thúc cũ nhất. Lỗi cũ (sửa 2026-11-26): ngưỡng 4000 vùng / 5000 nến
+                // làm NQ hàng 8 tick (~4300 vùng mỗi 25 nghìn nến M1) xoá sạch vùng quá 5000 nến (~3,5 ngày) → lúc tính thấy vùng hiện rồi biến mất.
+                if (_zones.Count > MaxZonesKept) _zones.RemoveRange(0, _zones.Count - MaxZonesKept + MaxZonesKept / 10);
             }
         }
 

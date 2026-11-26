@@ -1,5 +1,5 @@
 // ============================================================================
-//  Benzo Trader — chuẩn setup CORVEN cho NQ M1 (làm lại từ đầu 2026-11-26, bản 2: chỉ Break + Test vùng stacked)
+//  Benzo Trader — chuẩn setup CORVEN cho NQ M1 (làm lại từ đầu 2026-11-26, bản 3: Break + Follow trend, không bias)
 // ============================================================================
 //  Add vào chart NQ / MNQ khung M1 có Volume Analysis. Tín hiệu order flow lấy từ lõi OrderFlowBubbles THẬT (nối nguồn lúc build,
 //  chạy qua khe TEST, tham số mặc định "Theo CORVEN") — đúng bộ chấm / Big Trade / kiệt sức / vùng stacked / stop hunt đã khớp chart CORVEN.
@@ -27,7 +27,7 @@ namespace BenzoTraderNs
         [InputParameter("Hiện bảng thống kê", 12)]
         public bool ShowTable { get; set; } = true;
 
-        public const string BacktestLine = "Backtest NQ 26/10–25/11 (bản 2): 81 lệnh, −0,02R/lệnh, ngang vào ngẫu nhiên · chạy thử, không phải khuyến nghị";
+        public const string BacktestLine = "Backtest bản 3: NQ 26/10–25/11 179 lệnh +0,09R/lệnh, nhưng 14/09–23/10 111 lệnh −0,15R/lệnh · chạy thử, không phải khuyến nghị";
 
         private sealed class BoxV { public DateTime T0, T1; public double Top, Bot; public RangeState St; }
         private sealed class RenderState
@@ -49,7 +49,7 @@ namespace BenzoTraderNs
         public BenzoTrader() : base()
         {
             Name = "Benzo Trader";
-            Description = "Benzo Trader — chuẩn setup CORVEN cho NQ M1: Break (retest cạnh range vừa phá) + Test vùng stacked (đi theo cấu trúc), "
+            Description = "Benzo Trader — chuẩn setup CORVEN cho NQ M1: Break (retest cạnh range vừa phá) + Follow trend (nhịp hồi nông của move đang đi), "
                         + "xác nhận bằng bóng + delta + một tín hiệu order flow nữa, SL sau mốc, TP 2R. Cần Volume Analysis. " + BacktestLine;
             SeparateWindow = false;
         }
@@ -153,7 +153,7 @@ namespace BenzoTraderNs
                 : $"{name} · {l.Count} lệnh · WR {100.0 * l.Count(t => t.R > 0) / l.Count:0} % · ΣR {l.Sum(t => t.R).ToString("+0.0;-0.0;0", CultureInfo.InvariantCulture)}";
             rs.Lines.Add("BENZO NQ CORVEN (" + NqCfg.Version + ") · " + Row("tất cả", closed) + (m.Open != null ? " · đang có 1 lệnh mở" : ""));
             rs.Lines.Add(Row("Break", closed.Where(t => t.Kind == "Break").ToList()));
-            rs.Lines.Add(Row("Test vùng stacked", closed.Where(t => t.Kind == "Test vùng stacked").ToList()));
+            rs.Lines.Add(Row("Follow trend", closed.Where(t => t.Kind == "Follow trend").ToList()));
             rs.Lines.Add(BacktestLine);
             lock (_sync) _render = rs;
         }

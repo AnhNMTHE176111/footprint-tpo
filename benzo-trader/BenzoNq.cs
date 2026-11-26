@@ -1,5 +1,5 @@
 // ============================================================================
-//  BenzoNq — lõi THUẦN của chuẩn setup CORVEN cho NQ M1 (bản 2: chỉ Break + Test vùng stacked)
+//  BenzoNq — lõi THUẦN của chuẩn setup CORVEN cho NQ M1 (bản 3: Break + Follow trend, không bias)
 //  Port y chữ benzo-trader/research/nq_setup_2026-11-26/nq_setup.py (SPEC-SETUP-NQ.md). Parity: tools/ReplayNq + parity_nq.py.
 //  Chạy TĂNG DẦN: Step(i) khi nến i đã đóng và nến i+1 đã mở (cần Open/thời gian của nến i+1 để vào lệnh / xét khoảng trống).
 //  Không phụ thuộc Quantower (test được). Range = RangeLogic.cs (Range Box), tín hiệu order flow = OrderFlowBubbles (NqSig).
@@ -28,10 +28,26 @@ namespace BenzoTraderNs
         public double BigNear = 10.0;
         public double Cost = 1.0;         // điểm/lệnh khứ hồi (chỉ để tính R)
         public int NoEntryMin = 16 * 60 + 45, CloseMin = 16 * 60 + 59;   // giờ New York
-        public bool UseD = true, UseBias = true;
-        public bool FailBreak = false;    // 2026-11-26 người học: bỏ Fail Break
+        public bool UseD = true;
+        public bool UseBias = false;      // bản 3 (người học): bỏ bias, đánh theo cấu trúc và bối cảnh
+        public bool FailBreak = false;    // bản 2 (người học): bỏ Fail Break
+        public bool ZoneTest = false;     // bản 3 (người học): follow trend không cần vùng stacked
+        public bool Follow = true;        // bản 3: Follow trend = nhịp hồi nông của move đang đi
+        public int FollowLook = 30;       //   move tìm trong 30 nến trước nến tín hiệu
+        public double FollowMoveMbr = 2.0;//   move ≥ 2 × mbr ("để ý momentum")
+        public double FollowDepth = 0.5;  //   hồi không sâu quá 50 % move ("không được test quá sâu")
+        public int FollowMaxPb = 10;      //   hồi 1–10 nến
         public double Tick = 0.25;
-        public const string Version = "nq-corven-2";
+        public const string Version = "nq-corven-3";
+
+        /// <summary>Bản cũ để đối chiếu parity: 1 = có Fail Break + Test vùng stacked + bias; 2 = bỏ Fail Break; 3 = hiện tại.</summary>
+        public static NqCfg ForVersion(string v)
+        {
+            var c = new NqCfg();
+            if (v == "1") { c.FailBreak = true; c.ZoneTest = true; c.Follow = false; c.UseBias = true; }
+            else if (v == "2") { c.ZoneTest = true; c.Follow = false; c.UseBias = true; }
+            return c;
+        }
     }
 
     public struct NqBar
@@ -184,6 +200,7 @@ namespace BenzoTraderNs
         List<(int Id, RangeState St, double Top, double Bot, double Tol, int BSide)> _snap = new();
         public IReadOnlyList<(int Id, RangeState St, double Top, double Bot, double Tol, int BSide)> Snap => _snap;
         public readonly List<(int I, string Kind, int Side, string Why)> Cands = new();
+        readonly HashSet<int> _usedLegs = new();   // bản 3: nến đỉnh/đáy của move đã vào Follow trend
         public bool KeepCands = false;
 
         public NqMachine(List<NqBar> bars, NqSig sig, NqCfg cfg = null)
@@ -216,7 +233,7 @@ namespace BenzoTraderNs
                 if (SimStep(Open, i)) Open = null;
             }
             if (b.T < CountFrom) return;
-            foreach (var c in CandsAt(i)) Consider(i, c.Kind, c.Side, c.Tb, c.Edge, c.Room, c.Zone, c.Note);
+            foreach (var c in CandsAt(i)) Consider(i, c.Kind, c.Side, c.Tb, c.Edge, c.Room, c.Zone, c.Note, c.Leg);
         }
 
         // ---------- tầng A: cấu trúc
@@ -397,7 +414,43 @@ namespace BenzoTraderNs
         readonly struct Cand
         {
             public readonly string Kind; public readonly int Side, Tb; public readonly double Edge; public readonly double? Room; public readonly NqZone Zone; public readonly string Note;
-            public Cand(string k, int s, int tb, double e, double? r, NqZone z, string n) { Kind = k; Side = s; Tb = tb; Edge = e; Room = r; Zone = z; Note = n; }
+            public readonly int Leg;     // Follow trend: nến đỉnh/đáy của move (−1 = không)
+            public Cand(string k, int s, int tb, double e, double? r, NqZone z, string n, int leg = -1) { Kind = k; Side = s; Tb = tb; Edge = e; Room = r; Zone = z; Note = n; Leg = leg; }
+        }
+
+        /// <summary>bản 3 — Follow trend: theo hướng cấu trúc; move trong FollowLook nến ≥ FollowMoveMbr × mbr; hồi 1–FollowMaxPb nến,
+        /// không sâu quá FollowDepth move. Mỗi move vào tối đa 1 lần. (port y chữ nq_setup._follow)</summary>
+        Cand? FollowAt(int i)
+        {
+            int side = Dir[i];
+            if (side == 0) return null;
+            int lo = Math.Max(0, i - Cfg.FollowLook);
+            int h = lo, a; double move, p, depth;
+            if (side > 0)
+            {
+                for (int k = lo; k < i; k++) if (B[k].H >= B[h].H) h = k;            // cao nhất, gần nhất nếu bằng
+                if (h <= lo) return null;
+                a = lo; for (int k = lo; k < h; k++) if (B[k].L < B[a].L) a = k;        // thấp nhất, sớm nhất nếu bằng
+                move = B[h].H - B[a].L;
+                if (h + 1 > i) return null;
+                p = double.MaxValue; for (int k = h + 1; k <= i; k++) p = Math.Min(p, B[k].L);
+                depth = B[h].H - p;
+            }
+            else
+            {
+                for (int k = lo; k < i; k++) if (B[k].L <= B[h].L) h = k;
+                if (h <= lo) return null;
+                a = lo; for (int k = lo; k < h; k++) if (B[k].H > B[a].H) a = k;
+                move = B[a].H - B[h].L;
+                if (h + 1 > i) return null;
+                p = double.MinValue; for (int k = h + 1; k <= i; k++) p = Math.Max(p, B[k].H);
+                depth = p - B[h].L;
+            }
+            int npb = i - h - 1;
+            if (npb < 1 || npb > Cfg.FollowMaxPb || _usedLegs.Contains(h)) return null;
+            if (move < Cfg.FollowMoveMbr * MbrPts - 1e-9) return null;
+            if (depth > Cfg.FollowDepth * move + 1e-9) return null;
+            return new Cand("Follow trend", side, h + 1, p, null, null, "", h);
         }
 
         List<Cand> CandsAt(int i)
@@ -431,7 +484,12 @@ namespace BenzoTraderNs
                     if (tb >= 0 && ok) o.Add(new Cand("Break", side, tb, edge, null, null, ""));
                 }
             }
-            if (!busy)
+            if (!busy && Cfg.Follow)
+            {
+                var fc = FollowAt(i);
+                if (fc != null) o.Add(fc.Value);
+            }
+            if (!busy && Cfg.ZoneTest)
                 foreach (var z in Zones)
                 {
                     if (z.Dead || z.Touch < 0 || z.Used) continue;
@@ -442,7 +500,7 @@ namespace BenzoTraderNs
             return o;
         }
 
-        void Consider(int i, string kind, int side, int tb, double edge, double? room, NqZone zone, string note)
+        void Consider(int i, string kind, int side, int tb, double edge, double? room, NqZone zone, string note, int leg)
         {
             var why = new List<string>();
             if (Open != null) why.Add("đang có lệnh");
@@ -458,7 +516,7 @@ namespace BenzoTraderNs
             {
                 if (!DeltaOk(i, side)) why.Add("delta nhỏ/ngược");
                 if (!BubbleSide(i, side)) why.Add("không bóng cùng phe");
-                sec = Second(i, side, kind != "Test vùng stacked" ? edge : (double?)null, kind == "Test vùng stacked");
+                sec = Second(i, side, kind == "Break" || kind == "Fail Break" ? edge : (double?)null, kind == "Test vùng stacked");
                 if (sec.Count == 0) why.Add("thiếu tín hiệu thứ hai");
                 if (ExhBlock(i, side)) why.Add("kiệt sức ngược phe");
             }
@@ -490,6 +548,7 @@ namespace BenzoTraderNs
                 SigTime = B[i].T, EntryTime = B[i + 1].T
             };
             if (zone != null) zone.Used = true;
+            if (leg >= 0) _usedLegs.Add(leg);
             Trades.Add(t);
             Open = t;
         }

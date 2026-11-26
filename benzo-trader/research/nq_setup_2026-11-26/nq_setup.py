@@ -49,9 +49,20 @@ CFG = dict(
     NO_ENTRY_NY=(16, 45),
     CLOSE_NY=(16, 59),
     USE_D=True,          # False = đối chứng "bỏ tầng D" (luật 15–18)
-    USE_BIAS=True,       # False = cột phụ "không lọc bias"
-    FAIL_BREAK=False,    # 2026-11-26 người học: "bỏ fail break, chỉ đánh break cấu trúc và follow trend" (bản 2)
+    USE_BIAS=False,      # bản 3 (người học): "bỏ bias đi, đánh theo cấu trúc và bối cảnh"
+    FAIL_BREAK=False,    # bản 2 (người học): "bỏ fail break, chỉ đánh break cấu trúc và follow trend"
+    ZONE_TEST=False,     # bản 3 (người học): "follow trend không cần stack imbalance, chỉ là theo 1 move đang đi"
+    FOLLOW=True,         # bản 3: Follow trend = nhịp hồi nông của move đang đi (số do agent chọn, dưới đây)
+    FOLLOW_LOOK=30,      #   move tìm trong 30 nến trước nến tín hiệu
+    FOLLOW_MOVE_MBR=2.0, #   move (đáy → đỉnh) ≥ 2 × biên độ nến trung vị  ("để ý momentum")
+    FOLLOW_DEPTH=0.5,    #   nhịp hồi không sâu quá 50 % move           ("giá không được phép test quá sâu")
+    FOLLOW_MAX_PB=10,    #   nhịp hồi 1–10 nến trước nến tín hiệu       ("move đang đi")
 )
+VERSIONS = {
+    "1": dict(FAIL_BREAK=True, ZONE_TEST=True, FOLLOW=False, USE_BIAS=True),
+    "2": dict(FAIL_BREAK=False, ZONE_TEST=True, FOLLOW=False, USE_BIAS=True),
+    "3": dict(),
+}
 
 
 # ------------------------------------------------------------------ nạp dữ liệu
@@ -272,6 +283,7 @@ class Machine:
         self.trades: list[Trade] = []
         self.cands = []                      # ứng viên đủ mốc + lý do bị loại
         self.open_until = -1                 # nến thoát của lệnh đang mở
+        self.used_legs = set()               # bản 3: nến đỉnh/đáy của move đã vào lệnh Follow trend
         self.snap = []                       # ảnh range sau nến i
 
     # ---------- tầng A: cấu trúc
@@ -472,7 +484,11 @@ class Machine:
                     ok = b.c[i] < bot
                 if tb >= 0 and ok:
                     out.append(("Break", side, tb, edge, None, None, ""))
-        if not busy:
+        if not busy and cfg["FOLLOW"]:
+            fc = self._follow(i)
+            if fc is not None:
+                out.append(fc)
+        if not busy and cfg["ZONE_TEST"]:
             for z in self.zones:
                 if z.dead or z.touch < 0 or z.used:
                     continue
@@ -481,6 +497,39 @@ class Machine:
                 if (z.side > 0 and b.c[i] >= z.hi) or (z.side < 0 and b.c[i] <= z.lo):
                     out.append(("Test vùng stacked", z.side, z.touch, z.lo if z.side > 0 else z.hi, None, z, ""))
         return out
+
+    def _follow(self, i):
+        """bản 3 — Follow trend: theo hướng cấu trúc, move đang đi (trong FOLLOW_LOOK nến, ≥ FOLLOW_MOVE_MBR × mbr),
+        nhịp hồi 1–FOLLOW_MAX_PB nến không sâu quá FOLLOW_DEPTH move. Trả ứng viên hoặc None. Mỗi move (theo nến đỉnh/đáy) vào tối đa 1 lần."""
+        b = self.b; cfg = self.cfg
+        side = self.dir[i]
+        if side == 0:
+            return None
+        lo = max(0, i - cfg["FOLLOW_LOOK"])
+        if side > 0:
+            h = max(range(lo, i), key=lambda k: (b.h[k], k))          # đỉnh move (gần nhất nếu bằng)
+            if h <= lo:
+                return None
+            a = min(range(lo, h), key=lambda k: (b.l[k], -k))         # đáy trước đỉnh
+            move = b.h[h] - b.l[a]
+            p = min(b.l[h + 1:i + 1]) if h + 1 <= i else None
+            depth = (b.h[h] - p) if p is not None else None
+        else:
+            h = max(range(lo, i), key=lambda k: (-b.l[k], k))
+            if h <= lo:
+                return None
+            a = min(range(lo, h), key=lambda k: (-b.h[k], -k))
+            move = b.h[a] - b.l[h]
+            p = max(b.h[h + 1:i + 1]) if h + 1 <= i else None
+            depth = (p - b.l[h]) if p is not None else None
+        npb = i - h - 1
+        if npb < 1 or npb > cfg["FOLLOW_MAX_PB"] or h in self.used_legs:
+            return None
+        if move < cfg["FOLLOW_MOVE_MBR"] * self.eng.mbr * TICK - 1e-9:
+            return None
+        if depth > cfg["FOLLOW_DEPTH"] * move + 1e-9:
+            return None
+        return ("Follow trend", side, h + 1, p, None, ("leg", h), "")
 
     def _retry2(self, i, side, top, bot):
         """luật 18: lần thò trước (trong 30 nến trước W) + nến trong W tạo đáy thấp hơn và mang kiệt sức đáy còn hiệu lực."""
@@ -537,7 +586,7 @@ class Machine:
                 why.append("delta nhỏ/ngược")
             if not self._bubble_side(i, side):
                 why.append("không bóng cùng phe")
-            sec = self._second(i, side, edge if kind != "Test vùng stacked" else None, kind == "Test vùng stacked")
+            sec = self._second(i, side, edge if kind == "Break" or kind == "Fail Break" else None, kind == "Test vùng stacked")
             if not sec:
                 why.append("thiếu tín hiệu thứ hai")
             if self._exh_block(i, side):
@@ -574,7 +623,9 @@ class Machine:
         t = Trade(i, kind, side, entry, sl, tp, dist, "+".join(sec), {1: "buy", -1: "sell", 0: "chưa có"}[self.bias[i]],
                   lab, lv, sess, note=note, edge=edge, room=room or 0.0, touch=tb)
         self._simulate(t)
-        if zone is not None:
+        if isinstance(zone, tuple):
+            self.used_legs.add(zone[1])
+        elif zone is not None:
             zone.used = True
         self.trades.append(t)
         self.open_until = t.exit_i

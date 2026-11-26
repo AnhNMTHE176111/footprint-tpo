@@ -67,8 +67,8 @@ def pct_of(x, dist):
 
 if __name__ == "__main__":
     BARS, SIG = build(START)
-    V = os.environ.get("NQ_VER", "2")
-    BASE = dict(FAIL_BREAK=(V == "1"))
+    V = os.environ.get("NQ_VER", "3")
+    BASE = dict(VERSIONS[V])
     _run = run
     run = lambda cfg=None: _run({**BASE, **(cfg or {})})
     main = run()
@@ -80,9 +80,12 @@ if __name__ == "__main__":
     w("")
     w(f"- Dữ liệu: NQZ26 M1, tháng kiểm tra {days[0]} → {days[-1]} ({len(days)} ngày giao dịch). Máy trạng thái chạy từ 2026-09-14.")
     w("- Spec: [SPEC-SETUP-NQ.md](SPEC-SETUP-NQ.md), chốt trước khi chạy; chạy một lần, không chỉnh số sau khi xem.")
-    if V != "1":
+    if V == "2":
         w("- **Bản 2** (người học 2026-11-26, sau khi xem bản 1): bỏ Fail Break, chỉ còn Break và Test vùng stacked (follow trend). "
           "Quyết định này có sau khi đã nhìn tháng kiểm tra ⇒ số dưới đây **không còn là kiểm tra mù**; cần dữ liệu mới (sau 25/11) để kiểm.")
+    if V == "3":
+        w("- **Bản 3** (người học 2026-11-26): Break + Follow trend = theo move đang đi (không cần vùng stacked: move ≥ 2 × mbr trong 30 nến, "
+          "hồi 1–10 nến, không sâu quá 50 % move); **bỏ bias phiên**. Có sau khi đã nhìn tháng kiểm tra ⇒ **không còn là kiểm tra mù**.")
     w(f"- Chi phí {CFG['COST']} điểm/lệnh; cùng nến chạm SL và TP tính SL; đóng lệnh 16:59 NY.")
     w("")
     w("## Tổng")
@@ -115,7 +118,7 @@ if __name__ == "__main__":
     w("")
     w("| Nhóm | Lệnh | R/lệnh thật | Ngẫu nhiên trung vị | Ngẫu nhiên phần trăm 95 | Vị trí của lệnh thật |")
     w("|---|---|---|---|---|---|")
-    for name, sel in [("Tất cả", T)] + [(k, [t for t in T if t.kind == k]) for k in ("Fail Break", "Break", "Test vùng stacked")]:
+    for name, sel in [("Tất cả", T)] + [(k, [t for t in T if t.kind == k]) for k in sorted({t.kind for t in T})]:
         if not sel:
             w(f"| {name} | 0 | – | – | – | – |"); continue
         dist = random_control(main, sel)
@@ -129,8 +132,8 @@ if __name__ == "__main__":
     w("|---|---|---|---|---|---|---|")
     w(f"| TP 4R (cùng lệnh) | {fmt(stats([t.r4 for t in T]))} |")
     w(f"| Chi phí 1,5 điểm (cùng lệnh) | {fmt(stats([(t.r_gross*t.dist-1.5)/t.dist for t in T]))} |")
-    nb = run(dict(USE_BIAS=False)).trades
-    w(f"| Không lọc bias | {fmt(stats([t.r for t in nb]))} |")
+    nb = run(dict(USE_BIAS=not BASE.get("USE_BIAS", CFG["USE_BIAS"]))).trades
+    w(f"| {'Không lọc' if BASE.get('USE_BIAS', CFG['USE_BIAS']) else 'Có lọc'} bias | {fmt(stats([t.r for t in nb]))} |")
     nd_ = run(dict(USE_D=False)).trades
     w(f"| Bỏ tầng xác nhận order flow (luật 15–18) | {fmt(stats([t.r for t in nd_]))} |")
     w("")

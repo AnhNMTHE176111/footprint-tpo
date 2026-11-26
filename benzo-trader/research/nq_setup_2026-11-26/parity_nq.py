@@ -10,7 +10,7 @@ START = datetime(2026, 9, 14, tzinfo=timezone.utc)
 
 def py_rows(failbreak):
     bars, sig = build(START)
-    m = Machine(bars, sig, dict(FAIL_BREAK=failbreak))
+    m = Machine(bars, sig, dict(VERSIONS[failbreak]))
     m.run(START)
     last = len(bars.t) - 1
     out = []
@@ -30,7 +30,7 @@ def norm(r):
 
 
 if __name__ == "__main__":
-    fb = "--failbreak" in sys.argv
+    fb = sys.argv[2] if len(sys.argv) > 2 else "3"   # bản: 1 / 2 / 3
     with open(sys.argv[1], encoding="utf-8") as f:
         cs = [norm(r) for r in list(csv.reader(f))[1:]]
     py = [norm(r) for r in py_rows(fb)]

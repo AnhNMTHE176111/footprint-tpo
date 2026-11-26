@@ -1,0 +1,81 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "Gd4/1.0.0": {
+        "dependencies": {
+          "BenzoTrader": "0.0.0.0",
+          "System.Drawing.Common": "9.0.0.0",
+          "System.Private.Windows.Core": "9.0.0.0",
+          "TradingPlatform.BusinessLayer": "1.146.4.0"
+        },
+        "runtime": {
+          "Gd4.dll": {}
+        }
+      },
+      "BenzoTrader/0.0.0.0": {
+        "runtime": {
+          "BenzoTrader.dll": {
+            "assemblyVersion": "0.0.0.0",
+            "fileVersion": "0.0.0.0"
+          }
+        }
+      },
+      "System.Drawing.Common/9.0.0.0": {
+        "runtime": {
+          "System.Drawing.Common.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.1025.47506"
+          }
+        }
+      },
+      "System.Private.Windows.Core/9.0.0.0": {
+        "runtime": {
+          "System.Private.Windows.Core.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.1025.47506"
+          }
+        }
+      },
+      "TradingPlatform.BusinessLayer/1.146.4.0": {
+        "runtime": {
+          "TradingPlatform.BusinessLayer.dll": {
+            "assemblyVersion": "1.146.4.0",
+            "fileVersion": "1.146.4.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Gd4/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "BenzoTrader/0.0.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "System.Drawing.Common/9.0.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "System.Private.Windows.Core/9.0.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "TradingPlatform.BusinessLayer/1.146.4.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

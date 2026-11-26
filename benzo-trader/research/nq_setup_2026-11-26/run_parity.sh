@@ -1,5 +1,5 @@
 #!/bin/bash
-# Parity Python (nq_setup.py) ↔ C# (tools/ReplayNq, lõi OrderFlowBubbles thật): bản 2 (mặc định) + bản 1 (--failbreak),
+# Parity Python (nq_setup.py) ↔ C# (tools/ReplayNq, lõi OrderFlowBubbles thật): bản 3 (mặc định) + bản 1, 2,
 # và C# nạp NGUỘI = chạy TĂNG DẦN từng nến (không nhìn trước). Tất cả phải KHỚP 100 %.
 set -e
 cd "$(dirname "$0")"
@@ -11,6 +11,8 @@ $R --levels $L --out $W/cold.csv --cold
 $R --levels $L --out $W/inc.csv
 cmp $W/cold.csv $W/inc.csv && echo "C# nạp nguội = tăng dần"
 python parity_nq.py $W/cold.csv
-$R --levels $L --out $W/fb.csv --cold --failbreak
-python parity_nq.py $W/fb.csv --failbreak
+for v in 1 2; do
+  $R --levels $L --out $W/v$v.csv --cold --ver $v
+  python parity_nq.py $W/v$v.csv $v
+done
 rm -rf "$W"

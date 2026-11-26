@@ -151,3 +151,43 @@ def test_no_lookahead_on_real_data():
     a = [(t.sig, t.kind, t.side, t.entry, t.sl, t.tp, t.exit_i, t.how) for t in full.trades if t.exit_i < nb - 1]
     p = [(t.sig, t.kind, t.side, t.entry, t.sl, t.tp, t.exit_i, t.how) for t in part.trades if t.exit_i < nb - 1]
     assert a and a == p
+
+
+# ---------- bản 3: Follow trend = nhịp hồi nông của move đang đi
+def follow_machine(ohlc, mbr_ticks=20.0, d=1):
+    m = ns.Machine(mk(ohlc), ns.Sig())
+    m.dir = [d] * len(ohlc)
+    m.eng.mbr = mbr_ticks            # mbr = 20 tick = 5 điểm → move tối thiểu 10 điểm
+    return m
+
+
+def up_leg(pb_low=108.0):
+    # đáy 100 (nến 1) → đỉnh 120 (nến 5), hồi 2 nến về pb_low, nến 8 là nến tín hiệu
+    return [(101, 102, 100.5, 101), (101, 101, 100, 100.5), (100.5, 106, 100.5, 105), (105, 112, 104, 111), (111, 116, 110, 115),
+            (115, 120, 114, 119), (119, 119, pb_low + 2, pb_low + 3), (pb_low + 3, pb_low + 4, pb_low, pb_low + 1), (pb_low + 1, 116, pb_low + 1, 115)]
+
+
+def test_follow_shallow_pullback_ok():
+    m = follow_machine(up_leg(112.0))
+    c = m._follow(8)
+    assert c is not None and c[0] == "Follow trend" and c[1] == 1 and c[2] == 6 and c[3] == 112.0 and c[5] == ("leg", 5)
+
+
+def test_follow_too_deep():
+    m = follow_machine(up_leg(108.0))      # hồi 12 / move 20 = 60 % > 50 %
+    assert m._follow(8) is None
+
+
+def test_follow_move_too_small_or_no_pullback():
+    m = follow_machine(up_leg(112.0), mbr_ticks=48.0)   # mbr 12 điểm → cần move ≥ 24
+    assert m._follow(8) is None
+    m2 = follow_machine(up_leg(112.0))
+    assert m2._follow(6) is None                      # chưa có nến hồi nào trước nến tín hiệu
+
+
+def test_follow_leg_used_once_and_needs_structure():
+    m = follow_machine(up_leg(112.0))
+    m.used_legs.add(5)
+    assert m._follow(8) is None
+    m2 = follow_machine(up_leg(112.0), d=-1)
+    assert m2._follow(8) is None or m2._follow(8)[1] == -1

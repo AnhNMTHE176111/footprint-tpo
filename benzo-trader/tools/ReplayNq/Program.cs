@@ -1,5 +1,5 @@
 // ReplayNq — chạy NqRunner (lõi OFB thật + NqMachine) trên file Footprint Export NQ → CSV lệnh cho parity với nq_setup.py.
-//   dotnet run -c Release --project tools/ReplayNq -- --levels <fp_..._293d16h.csv> --out trades_cs.csv [--start 2026-09-14] [--cold] [--failbreak]
+//   dotnet run -c Release --project tools/ReplayNq -- --levels <fp_..._293d16h.csv> --out trades_cs.csv [--start 2026-09-14] [--cold] [--ver 1|2|3]
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -18,7 +18,7 @@ static class Program
         string lvl = Arg(args, "--levels", null), outF = Arg(args, "--out", "trades_cs.csv");
         var start = DateTime.SpecifyKind(DateTime.Parse(Arg(args, "--start", "2026-09-14"), Inv), DateTimeKind.Utc);
         bool cold = args.Contains("--cold");
-        var cfg = new NqCfg { FailBreak = args.Contains("--failbreak") };
+        var cfg = NqCfg.ForVersion(Arg(args, "--ver", "3"));   // 1 / 2 / 3
         var bars = LoadBars(lvl, lvl.Replace(".csv", "_bars.csv"));
         int startAbs = bars.FindIndex(b => b.TimeLeft >= start);
         string cache = "";   // "" = lõi OFB không niêm phong ra file (SignalCache bỏ qua khi đường dẫn rỗng) — nhanh, kết quả như file mới

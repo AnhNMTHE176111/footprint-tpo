@@ -35,8 +35,8 @@
 | Nhóm | Lệnh | R/lệnh thật | Ngẫu nhiên trung vị | Ngẫu nhiên phần trăm 95 | Vị trí của lệnh thật |
 |---|---|---|---|---|---|
 | Tất cả | 116 | -0.049 | -0.039 | +0.179 | 47 % |
-| Fail Break | 36 | -0.061 | -0.061 | +0.300 | 50 % |
 | Break | 61 | -0.062 | +0.026 | +0.331 | 32 % |
+| Fail Break | 36 | -0.061 | -0.061 | +0.300 | 50 % |
 | Test vùng stacked | 19 | +0.015 | -0.039 | +0.499 | 58 % |
 
 ## Cột phụ (chốt trước, chỉ tham khảo, không dùng để chọn)

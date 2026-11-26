@@ -211,12 +211,12 @@ namespace OrderFlowBubbles
         public int StatDotMinDays { get; set; } = 2;            // khung giờ cần ít nhất số ngày này, chưa đủ -> dự phòng
         public int StatDotFallbackMinutes { get; set; } = 120;  // dự phòng: nến đóng trong số phút gần nhất
 
-        [InputParameter("Ô Bid/Ask lớn (đại diện chính) · Bật", 25)]
+        // 2026-11-26 rà Settings: ẨN khỏi bảng (giữ giá trị mặc định = bộ đã khớp CORVEN; người dùng không muốn chỉnh tay)
         public bool CellBigEnabled { get; set; } = true;
 
         public int CellBigBaselineBars { get; set; } = 20;
 
-        [InputParameter("Chấm Bid/Ask nhỏ · Bật", 26)]
+        [InputParameter("Chấm Bid/Ask · Bật", 26)]
         public bool CellDotEnabled { get; set; } = true;
 
         public double CellDotMedianRatio { get; set; } = 2.8;
@@ -224,7 +224,7 @@ namespace OrderFlowBubbles
         public int CellDotLocalTicks { get; set; } = 4;
 
         // Bật = chấm Bid/Ask nổ ở MỌI mức giá vượt ngưỡng (bỏ điều kiện "lớn nhất trong ±CellDotLocalTicks tick"); tắt = như cũ.
-        [InputParameter("Chấm Bid/Ask nhỏ · Nổ ở mọi mức giá (bỏ điều kiện lớn nhất quanh nó — rất dày ở NQ và từ M5, nên tắt)", 27)]
+        // 2026-11-26 rà Settings: ẨN khỏi bảng (giữ giá trị mặc định = bộ đã khớp CORVEN; người dùng không muốn chỉnh tay)
         public bool CellDotAllLevels { get; set; } = false;
 
         // chấm xanh bị che (không vẽ) nếu cùng nến có chấm đỏ cách <= số tick này (CORVEN vẽ đỏ đè xanh); < 0 = tắt che
@@ -232,7 +232,7 @@ namespace OrderFlowBubbles
 
         // sàn tuyệt đối cho giá trị của bên đang xét (chấm nhỏ)
         // Bật (mặc định) = chấm chỉ nổ khi bên đang xét >= CellBigMinSide hợp đồng (ngoài điều kiện k x trung vị). Tắt = bỏ sàn, chỉ còn ngưỡng tương đối.
-        [InputParameter("Chấm Bid/Ask nhỏ · Dùng sàn tối thiểu", 29)]
+        // 2026-11-26 rà Settings: ẨN khỏi bảng (giữ giá trị mặc định = bộ đã khớp CORVEN; người dùng không muốn chỉnh tay)
         public bool CellDotFloorEnabled { get; set; } = true;
 
         // Ô số chỉ hiện khi ô "Dùng sàn tối thiểu" bật (xem Settings bên dưới). Áp cho CẢ chế độ cũ lẫn "Tự co dãn theo khung"
@@ -240,22 +240,22 @@ namespace OrderFlowBubbles
         // Đo 2026-11-24 (research/dot_floor_2026-11-24): sàn chỉ có tác dụng ở M1 (M5 trở lên k x trung vị đã cao hơn). GC M1 so CORVEN (885 chấm):
         // sàn 7 recall 0,675 / precision 0,87; sàn 9 0,60 / 0,90 (mất chủ yếu phiên Á); sàn 12 0,45 / 0,96; sàn 15 0,31 / 0,98 -> trên 9 sót nhiều.
         // Giữ 9 (người học thấy nhiễu); 7 = ít sót nhất mà gần như không tăng nhiễu theo F1 (Fable đề xuất).
-        [InputParameter("Chấm Bid/Ask nhỏ · Sàn tối thiểu (hợp đồng; chỉ tác dụng ở M1 — 9 thưa, 7 ít sót, trên 9 sót nhiều)", 30, 1, 10000, 1, 0)]
+        [InputParameter("Chấm Bid/Ask · Sàn tối thiểu (hợp đồng, 0 = không sàn; chỉ tác dụng ở M1 — 9 thưa, 7 ít sót)", 30, 0, 10000, 1, 0)]
         public double CellBigMinSide { get; set; } = 9;
 
         // 2026-11-24 (research/adaptive_2026-11-24): MỘT công thức chấm cho mọi mã, mọi khung — w = max(4, biên độ TB / 6),
         // ngưỡng = max(k x trung vị mỗi ô, sàn), nền lấy trên N nến theo khung (xem UnifiedDots / BaselineWindow trong CellBigLogic.cs).
         // Bật = thay bộ số cũ (2,8 / ±4 / che 6) và bộ Nasdaq. Tắt = như cũ.
-        [InputParameter("Chấm Bid/Ask nhỏ · Tự co dãn theo khung (công thức chung mọi mã)", 31)]
+        // 2026-11-26 rà Settings: ẨN khỏi bảng (giữ giá trị mặc định = bộ đã khớp CORVEN; người dùng không muốn chỉnh tay)
         public bool CellDotAdaptive { get; set; } = true;
 
         // Bộ số khi tự co dãn: 0 Không sót (k 2,0 · sàn 5 · che 2), 1 Trung gian (2,4 · 5 · 2), 2 Ít nhiễu (2,8 · 9 · che max(6; 0,75 x w)).
-        [InputParameter("Chấm Bid/Ask nhỏ · Bộ số (khi tự co dãn)", 32, variants: new object[] { "Không sót (nhiều chấm nhất)", 0, "Trung gian", 1, "Ít nhiễu", 2 })]
+        // 2026-11-26 rà Settings: ẨN khỏi bảng (giữ giá trị mặc định = bộ đã khớp CORVEN; người dùng không muốn chỉnh tay)
         public int CellDotPreset { get; set; } = 0;
 
         // Nền (trung vị mỗi ô, biên độ, đuôi kiệt sức) lấy trên N = min(20, max(5, 120 phút / phút một nến)) nến: M1/M5 20, M15 8, M30/H1 5.
         // Tắt = 20 nến như cũ. Volume TB mỗi ô của luật kiệt sức cũ luôn 20 nến. Big Trade không phụ thuộc ô này.
-        [InputParameter("Nền tự co theo khung (chấm, kiệt sức)", 33)]
+        // 2026-11-26 rà Settings: ẨN khỏi bảng (giữ giá trị mặc định = bộ đã khớp CORVEN; người dùng không muốn chỉnh tay)
         public bool AdaptiveBaseline { get; set; } = true;
 
         public double BaselineWindowMinutes { get; set; } = BaselineWindow.DefaultWindowMinutes;
@@ -332,7 +332,7 @@ namespace OrderFlowBubbles
         public double ExhSumHistRatio { get; set; } = 1.1;
 
         // 2026-11-24: thêm điều kiện tổng bên soi <= số này x trung vị đuôi (đỉnh + đáy) của N nến trước. 0 = tắt (luật cũ). Xem ExhSettings.TailMedianRatio.
-        [InputParameter("Kiệt sức · Đuôi ≤ số này × trung vị đuôi các nến trước (0 = tắt)", 81, 0, 10, 0.05, 2)]
+        // 2026-11-26 rà Settings: ẨN khỏi bảng (giữ giá trị mặc định = bộ đã khớp CORVEN; người dùng không muốn chỉnh tay)
         public double ExhTailMedianRatio { get; set; } = 0.8;
 
         public int ExhSweepTicks { get; set; } = 1;
@@ -370,7 +370,7 @@ namespace OrderFlowBubbles
         // CORVEN (Meet 07/11, 0:06:54 "dùng gần thôi, đừng dùng xa"; 1:05:32 "xa tít thì không dùng"): vùng còn hiệu lực
         // mà đã kéo đủ N nến thì coi là HẾT HIỆU LỰC — dừng kéo ở nến thứ N (vẽ nhạt như vùng đã kết thúc). 0 = không giới hạn.
         // CORVEN không nêu con số; 20 nến là lựa chọn hiển thị (vùng bị chạm trung vị sau 1 nến, 95% trong 42 nến), chỉnh được.
-        [InputParameter("Stacked Imbalance · Kéo dài tối đa (nến, 0 = không giới hạn)", 91, 0, 10000, 1, 0)]
+        // 2026-11-26 rà Settings: ẨN khỏi bảng (giữ giá trị mặc định = bộ đã khớp CORVEN; người dùng không muốn chỉnh tay)
         public int ImbMaxBars { get; set; } = 20;
 
         // CORVEN: "dùng gần thôi, đừng dùng xa" → vùng còn hiệu lực nhưng đã quá N nến thì KHÔNG vẽ, không hover nữa.
@@ -471,14 +471,9 @@ namespace OrderFlowBubbles
             get
             {
                 var settings = base.Settings;
+                // ô "Sàn tối thiểu" chỉ hiện ở chế độ "Theo CORVEN" (chế độ thống kê không dùng sàn)
                 var floor = settings?.FirstOrDefault(x => x.Name == nameof(CellBigMinSide));
-                if (floor != null) floor.Relation = new SettingItemRelationVisibility(nameof(CellDotFloorEnabled), true);
-                void Rel(string child, string parent)
-                {
-                    var it = settings?.FirstOrDefault(x => x.Name == child);
-                    if (it != null) it.Relation = new SettingItemRelationVisibility(parent, true);
-                }
-                Rel(nameof(CellDotPreset), nameof(CellDotAdaptive));
+                if (floor != null) floor.Relation = new SettingItemRelationVisibility(nameof(ThresholdMode), new SelectItem("", 0));
                 // ô "Mức hiếm" chỉ hiện khi chọn "Không theo CORVEN (thống kê)"
                 var rare = settings?.FirstOrDefault(x => x.Name == nameof(StatRarePbp));
                 if (rare != null) rare.Relation = new SettingItemRelationVisibility(nameof(ThresholdMode), new SelectItem("", 1));

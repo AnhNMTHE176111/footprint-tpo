@@ -38,6 +38,8 @@ tiêu** → cùng cấu hình chạy đúng cho GC, MGC, hay feed proxy. Knob **
 
 Rê chuột vào bubble → **tooltip** tên tín hiệu + số liệu (z-score, deltaPct…).
 
+**Settings gọn (2026-11-26): 14 ô.** Chỉ còn: chế độ (Theo CORVEN / thống kê), độ dày chấm (chỉ chế độ thống kê), chấm Bid/Ask bật, sàn tối thiểu (0 = không sàn; chỉ hiện ở Theo CORVEN), nến delta, số delta, Big Trade, Big Delta line, kiệt sức, stacked imbalance, divergence, sweep, unfinished, stop-hunt. Đã ẩn (giữ mặc định): Ô lớn bật (trùng ô chấm), nổ ở mọi mức giá (tắt), dùng sàn (gộp vào sàn = 0), tự co dãn (bật), bộ số (Không sót), nền tự co (bật), đuôi kiệt sức (0,8), kéo dài vùng tối đa (20 nến).
+
 **NQ/MNQ như chart CORVEN (2026-11-26).** Footprint NQ của CORVEN gom **8 tick (2 điểm) một hàng**, hàng bắt đầu ở số điểm lẻ. **Không có ô riêng:** tự bật khi chế độ
 "Theo CORVEN" và mã là NQ/MNQ: stacked imbalance xét trên hàng 8 tick (250%, sàn 1), chấm xét trên hàng 8 tick (1,8 × trung vị mỗi hàng của 20 nến trước, lớn hơn hẳn hàng kề, không che, sàn người dùng),
 thắng "Tự co dãn" và "Nổ ở mọi mức giá". Số đo: [research/nq_rows_2026-11-26/](research/nq_rows_2026-11-26/README.md). Vàng không đổi.

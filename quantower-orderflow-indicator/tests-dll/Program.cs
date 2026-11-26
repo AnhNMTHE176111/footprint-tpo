@@ -32,7 +32,7 @@ if (o != null) {
     string Fp(double m, int mode, int pbp) { t.GetField("TestBarMinutes", F).SetValue(fpo, m); t.GetProperty("ThresholdMode").SetValue(fpo, mode); t.GetProperty("StatRarePbp").SetValue(fpo, pbp); return (string)t.GetMethod("ComputeSettingsFingerprint", F).Invoke(fpo, null); }
     // dau van tay (2026-11-25, research/bigtrade_whale_2026-11-25/SPEC.md muc 6): Big Trade "lenh ca map" = "bigtrade-whale-v1:5/8/1380/<m>"
     // thay "10|bigtrade-v1" va bo "|bta-v1:..."; che do thong ke "|stat-v2:" bo hai so Big Trade. Moi phan khac giu nguyen tung ky tu.
-    string Nw(string m) => "False|10|True|20|9|0|0|True|2.8|4|False|6|cellbig-v18|100|40|5|20|noabs-v1|True|0.3|3|0.8|True|bigvol-rows-v2:1/0/4.25/3.2/1.33/4.7|False|0.35|4|1|True|exh-rows-v1:1/0/3/0.35/0.8/2|1|True|250|3|5|False|3|1.5|3|False|8|False|True|60|60|8|3|2|5|stophunt-v8|nbase-v1:20|dotu-v2:0";
+    string Nw(string m) => "False|10|True|20|9|0|0|True|2.8|4|False|6|cellbig-v18|100|40|5|20|noabs-v1|True|0.3|3|0.8|True|bigtrade-sure-v1:5/8/1380/" + m + "|False|0.35|4|1|True|exh-rows-v1:1/0/3/0.35/0.8/2|1|True|250|3|5|False|3|1.5|3|False|8|False|True|60|60|8|3|2|5|stophunt-v8|nbase-v1:20|dotu-v2:0";
     void fc(bool ok, string name, string got) { if(!ok) fail++; Console.WriteLine($"  {(ok?"OK  ":"FAIL")} {name}" + (ok ? "" : " -> " + got)); }
     string a0 = Fp(5, 0, 200); fc(a0 == Nw("5"), "ThresholdMode = 0, m = 5: bigtrade-whale-v1:5/8/1380/5, khong con bta-v1", a0);
     string a1 = Fp(5, 1, 200); fc(a1 == Nw("5") + "|stat-v2:5/200/5/True/2/120", "ThresholdMode = 1, m = 5: them |stat-v2:5/200/5/True/2/120", a1);
@@ -43,7 +43,7 @@ if (o != null) {
     string bkOld = (string)t.GetMethod("BaseKey", F).Invoke(fpo, null);
     t.GetProperty("ThresholdMode").SetValue(fpo, 1);
     string bkNew = (string)t.GetMethod("BaseKey", F).Invoke(fpo, null);
-    fc(bkOld == "20" && bkNew == "20|stat:5/200/5/True/2/120", "BaseKey: \"20\" (bo Big Trade ca map), che do thong ke them |stat:...", bkOld + " / " + bkNew);
+    fc(bkOld == "20|bw:5" && bkNew == "20|bw:5|stat:5/200/5/True/2/120", "BaseKey: \"20|bw:5\", che do thong ke them |stat:...", bkOld + " / " + bkNew);
   }
   chk("StopHuntEnabled",true); chk("StopHuntBoxSmall",60); chk("StopHuntBoxLarge",60); chk("StopHuntBoxMaxMult",8.0); chk("StopHuntTolTicks",3); chk("StopHuntConfirmBars",2); chk("StopHuntCooldown",5);
   chk("CellBigStopHuntColor",System.Drawing.Color.MediumOrchid);
@@ -60,6 +60,16 @@ if (o != null) {
   } catch (Exception e) { Console.WriteLine("  (bo qua kiem Settings ngoai Quantower: " + (e.InnerException ?? e).GetType().Name + ")"); }
   foreach (var gn in new[] { "CellBigRowTicks", "CellBigRowOffset", "CellBigRatio", "CellDotRatio", "ExhSumRel", "CellBigMaxSideRatio", "CellBigLocalTicks", "CellBigMinImbalance", "CellBigOpacity", "BigZ", "BigVolMult", "BigTradeTopN", "BigTradeRequireRealTrades", "BigTradeSkipOnAbsorption", "CellDotTradesRatio", "AbsorptionEnabled", "AbsEffortZ", "AbsScoreMin", "AbsMaxDisplaceTicks", "AbsorptionTopN", "AbsRangeRatio", "AbsImpactZ", "AbsSwingPeriod", "AbsPocProminence", "AbsDivergencePct", "AbsTwoSidedPct", "AbsMultiBarLookback", "AbsConfirmBars", "AbsBreakTicks", "WNoResult", "WProminent", "WDivergence", "WTwoSided", "WMulti", "WSwing", "CellBigSkipOnAbsorption", "BaselineTopLevels", "BigTradeFixedContracts", "BigTradeAbsFloor", "HaloTransparency", "BigTradeMinContracts", "BigTradeAdaptiveEnabled", "BigTradeDensity", "BigTradeFloor", "BigTradeMaxPerBar", "BigTradeCeil", "BigTradeMergeDiv", "BigTradeMergeMin", "StatBtMinutes", "StatBtRarePbp" }) { bool g2 = t.GetProperty(gn) == null; if(!g2) fail++; Console.WriteLine($"  {(g2?"OK  ":"FAIL")} {gn} da bo"); }
   { bool gone = t.GetProperty("StopHuntLookback") == null; if(!gone) fail++; Console.WriteLine($"  {(gone?"OK  ":"FAIL")} StopHuntLookback da bo"); }
+}
+
+// ---- 2026-11-26 Big Trade: cỡ lệnh CHẮC CHẮN = làm tròn lên(volume / số lệnh) ----
+{
+  var bs = t.GetMethod("BigTradeSure", BindingFlags.NonPublic|BindingFlags.Static);
+  if (bs == null) { Console.WriteLine("FAIL khong thay BigTradeSure"); fail++; }
+  else {
+    void q(double v, double tr, double exp){ double r=(double)bs.Invoke(null,new object[]{v,tr}); if(r!=exp) fail++; Console.WriteLine($"  {(r==exp?"OK  ":"FAIL")} BigTradeSure({v},{tr}) = {r} (mong doi {exp})"); }
+    q(60,1,60); q(150,3,50); q(10,3,4); q(9,3,3); q(5,0,0); q(0,2,0);
+  }
 }
 
 // ---- Cỡ vẽ (px) của chấm / Big Trade: CellDrawSize(isDot, sizeFrac, barsW) ----

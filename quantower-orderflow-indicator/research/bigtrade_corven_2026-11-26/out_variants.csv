@@ -1,0 +1,10 @@
+V1 tong hang / nen TB20,4.5,GC 60/37/25 (F1 0.66),NQ_B 38/18/12 (F1 0.72),NQ_A 8/1/1 (F1 0.89),Tong 106/56/38 F1 0.69
+V2 ben lon hang / nen TB20,3.5,GC 59/20/26 (F1 0.72),NQ_B 23/8/27 (F1 0.57),NQ_A 7/0/2 (F1 0.88),Tong 89/28/55 F1 0.68
+V3 ben lon hang / nen trung vi20,4.0,GC 62/29/23 (F1 0.70),NQ_B 22/8/28 (F1 0.55),NQ_A 8/0/1 (F1 0.94),Tong 92/37/52 F1 0.67
+"V4 ben lon hang, tuyet doi (hop dong)",35.0,GC 47/19/38 (F1 0.62),NQ_B 20/16/30 (F1 0.47) [K=150 fit rieng],NQ_A 0/0/9 (F1 0.00) [K=150 fit rieng],Tong 67/35/77 F1 0.54
+V5 tong hang / TB hang cua chinh nen,3.5,GC 34/58/51 (F1 0.38),NQ_B 7/13/43 (F1 0.20),NQ_A 3/2/6 (F1 0.43),Tong 44/73/100 F1 0.34
+V6 ben lon hang / nen TB120,3.0,GC 68/39/17 (F1 0.71),NQ_B 42/67/8 (F1 0.53),NQ_A 9/2/0 (F1 0.90),Tong 119/108/25 F1 0.64
+V7 ben lon hang / nen TB5,3.0,GC 66/45/19 (F1 0.67),NQ_B 29/14/21 (F1 0.62),NQ_A 7/0/2 (F1 0.88),Tong 102/59/42 F1 0.67
+V8 hang lon nhat nen & ben lon / TB20,3.0,GC 60/19/25 (F1 0.73),NQ_B 15/7/35 (F1 0.42),NQ_A 8/0/1 (F1 0.94),Tong 83/26/61 F1 0.66
+V9 ben lon hang / (volume nen TB20),7.0,GC 44/35/41 (F1 0.54),NQ_B 11/6/39 (F1 0.33),NQ_A 4/0/5 (F1 0.62),Tong 59/41/85 F1 0.48
+"V10 tong hang, tuyet doi",45.0,GC 50/43/35 (F1 0.56),NQ_B 22/28/28 (F1 0.44) [K=250 fit rieng],NQ_A 0/0/9 (F1 0.00) [K=250 fit rieng],Tong 72/71/72 F1 0.50

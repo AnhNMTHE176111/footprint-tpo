@@ -886,7 +886,7 @@ namespace OrderFlowBubbles
                         Price = Math.Round(r.CentreTick * tick, 10), Shape = Shape.Ellipse, Color = r.Side > 0 ? BuyColor : SellColor,
                         Size = MidSize(), Transparency = SolidTransparency, Halo = false, UseBarWidth = true,
                         SizeFrac = CellBigLogic.DotSizeFrac * r.SizeMult,   // 0,60–2,1 bề ngang nến
-                        Tooltip = $"Big volume {rng}: {r.Vol.ToString("0", invb)} hợp đồng = {r.Ratio.ToString("0.0", invb)} × TB mỗi hàng 20 nến trước | {r.Bid.ToString("0", invb)} Bid {r.Ask.ToString("0", invb)} Ask",
+                        Tooltip = $"Big volume {rng}: tổng {r.Vol.ToString("0", invb)} hợp đồng = {r.Bid.ToString("0", invb)} Bid + {r.Ask.ToString("0", invb)} Ask ({r.Ratio.ToString("0.0", invb)} lần TB mỗi hàng của 20 nến trước)",
                         CellBig = true, CellDot = false, CellBid = r.Bid, CellAsk = r.Ask, CellSide = r.Side
                     });
                 }

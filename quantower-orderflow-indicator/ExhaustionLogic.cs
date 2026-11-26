@@ -194,7 +194,7 @@ namespace OrderFlowBubbles
     public static class BigVolRows
     {
         public const double K = 4.25, SizeDiv = 3.2, SizeMin = 1.33, SizeMax = 4.7;
-        public static string Key(int g, int off) => $"bigvol-rows-v1:{g}/{off}/{K}/{SizeDiv}/{SizeMin}/{SizeMax}";
+        public static string Key(int g, int off) => $"bigvol-rows-v2:{g}/{off}/{K}/{SizeDiv}/{SizeMin}/{SizeMax}";
 
         /// <summary>Các hàng Big Volume của nến (hàng tăng dần). hasBase = đã đủ nền (>= 5 nến).</summary>
         public static List<BigVolRow> Detect(IReadOnlyList<ExhLevel> levels, int g, int off, long highTick, long lowTick, bool hasBase, double rowBase)

@@ -50,6 +50,7 @@ CFG = dict(
     CLOSE_NY=(16, 59),
     USE_D=True,          # False = đối chứng "bỏ tầng D" (luật 15–18)
     USE_BIAS=True,       # False = cột phụ "không lọc bias"
+    FAIL_BREAK=False,    # 2026-11-26 người học: "bỏ fail break, chỉ đánh break cấu trúc và follow trend" (bản 2)
 )
 
 
@@ -441,7 +442,7 @@ class Machine:
         W0 = max(0, i - cfg["W"] + 1)
         busy = [r for r in self.snap if r[1] in (rp.ACTIVE, rp.PENDING)]
         for (rid, st, top, bot, tol, bside) in self.snap:
-            if st in (rp.ACTIVE, rp.PENDING):
+            if st in (rp.ACTIVE, rp.PENDING) and cfg["FAIL_BREAK"]:
                 # luật 11 Fail Break buy ở cạnh dưới / sell ở cạnh trên (+ luật 18)
                 for side in (1, -1):
                     if side > 0:
@@ -507,7 +508,7 @@ class Machine:
         b = self.b; cfg = self.cfg; n = len(b.t)
         for i in range(n):
             self.eng.feed(b.o[i], b.h[i], b.l[i], b.c[i])
-            self.snap = [(r.id, r.state, r.top * TICK, r.bottom * TICK, r.tol * TICK, r.break_side) for r in self.eng.live]
+            self.snap = [(r.id, r.state, r.top * TICK, r.bottom * TICK, r.tol * TICK, r.break_side) for r in sorted(self.eng.live, key=lambda r: r.id)]   # theo id (C# duyệt Ranges theo id)
             self._structure(i)
             self._bias(i)
             self._zones(i)

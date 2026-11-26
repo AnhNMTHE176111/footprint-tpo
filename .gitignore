@@ -38,3 +38,5 @@ benzo-trader/research/report/_replay_cs_levels.csv
 # Rac build cua perf/Golden (harness golden test)
 **/perf/Golden/bin/
 **/perf/Golden/obj/
+**/tools/*/bin/
+**/tools/*/obj/

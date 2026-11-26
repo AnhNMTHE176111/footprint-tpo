@@ -67,6 +67,10 @@ def pct_of(x, dist):
 
 if __name__ == "__main__":
     BARS, SIG = build(START)
+    V = os.environ.get("NQ_VER", "2")
+    BASE = dict(FAIL_BREAK=(V == "1"))
+    _run = run
+    run = lambda cfg=None: _run({**BASE, **(cfg or {})})
     main = run()
     T = main.trades
     days = sorted({trade_day(t) for t in BARS.t if t >= TEST_FROM})
@@ -76,6 +80,9 @@ if __name__ == "__main__":
     w("")
     w(f"- Dữ liệu: NQZ26 M1, tháng kiểm tra {days[0]} → {days[-1]} ({len(days)} ngày giao dịch). Máy trạng thái chạy từ 2026-09-14.")
     w("- Spec: [SPEC-SETUP-NQ.md](SPEC-SETUP-NQ.md), chốt trước khi chạy; chạy một lần, không chỉnh số sau khi xem.")
+    if V != "1":
+        w("- **Bản 2** (người học 2026-11-26, sau khi xem bản 1): bỏ Fail Break, chỉ còn Break và Test vùng stacked (follow trend). "
+          "Quyết định này có sau khi đã nhìn tháng kiểm tra ⇒ số dưới đây **không còn là kiểm tra mù**; cần dữ liệu mới (sau 25/11) để kiểm.")
     w(f"- Chi phí {CFG['COST']} điểm/lệnh; cùng nến chạm SL và TP tính SL; đóng lệnh 16:59 NY.")
     w("")
     w("## Tổng")
@@ -137,8 +144,8 @@ if __name__ == "__main__":
     w("| Loại | Cổng | Số lần |"); w("|---|---|---|")
     for (k, x), v in sorted(g.items(), key=lambda z: (z[0][0], -z[1])):
         w(f"| {k} | {x} | {v} |")
-    open(os.path.join(HERE, "KET-QUA-THANG-KIEM-TRA.md"), "w", encoding="utf-8").write("\n".join(out) + "\n")
-    with open(os.path.join(HERE, "trades_test.csv"), "w", newline="", encoding="utf-8") as f:
+    open(os.path.join(HERE, "KET-QUA-THANG-KIEM-TRA.md" if V == "1" else f"KET-QUA-THANG-KIEM-TRA-ban{V}.md"), "w", encoding="utf-8").write("\n".join(out) + "\n")
+    with open(os.path.join(HERE, "trades_test.csv" if V == "1" else f"trades_test_ban{V}.csv"), "w", newline="", encoding="utf-8") as f:
         cw = csv.writer(f)
         cw.writerow(["signal_utc", "entry_utc", "kind", "side", "entry", "sl", "tp", "sl_pts", "second", "bias", "big", "big_levels",
                      "session", "exit_utc", "exit", "how", "r_gross", "r", "r_tp4", "note"])

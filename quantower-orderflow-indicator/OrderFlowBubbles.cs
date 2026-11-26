@@ -1766,5 +1766,49 @@ namespace OrderFlowBubbles
             for (int b = fromIdx; b - n >= 0; b--) if (IsPivotLow(b, n)) return b;
             return -1;
         }
+
+        // ================================================================
+        //  XUẤT TÍN HIỆU cho Benzo Trader (2026-11-26): Benzo chạy lõi này qua khe TEST (TestBarSource) rồi đọc dấu của nến
+        //  ĐÃ ĐÓNG — đúng định dạng perf/Golden "--marks" + sh.csv (Python tham chiếu đọc từ đó). Chỉ đọc, không đổi trạng thái.
+        // ================================================================
+        internal enum ExportKind { DotB, DotS, BigTrade, ExhTop, ExhBottom, Zone, StopHunt }
+
+        internal readonly struct ExportMark
+        {
+            public readonly ExportKind Kind;
+            public readonly double Price, PriceHi;   // Zone: lo / hi; StopHunt: Price = mức bị quét (đúng chuỗi 0.0 của chữ rê chuột)
+            public readonly int Side;                // DotB/DotS/BigTrade: CellSide; Zone: +1 buy / −1 sell; StopHunt: +1 đỉnh / −1 đáy
+            public ExportMark(ExportKind k, double p, double hi, int side) { Kind = k; Price = p; PriceHi = hi; Side = side; }
+        }
+
+        internal void RunProcess() => Process();
+
+        private static readonly System.Text.RegularExpressions.Regex ExportShRe =
+            new(@"^Stop hunt (đỉnh|đáy) - quét (\S+) \|", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        /// <summary>Dấu của nến idx (cùng thứ tự và cùng luật lọc như perf/Golden StopHuntList). StopHunt: mỗi bóng tím một dòng (người gọi tự gộp).</summary>
+        internal List<ExportMark> ExportBar(int idx)
+        {
+            var o = new List<ExportMark>();
+            lock (_sync)
+            {
+                if (!_bubbles.TryGetValue(idx, out var list)) return o;
+                foreach (var b in list)
+                {
+                    if (b.Shape == Shape.ExhTop) o.Add(new ExportMark(ExportKind.ExhTop, b.Price, 0, 0));
+                    else if (b.Shape == Shape.ExhBottom) o.Add(new ExportMark(ExportKind.ExhBottom, b.Price, 0, 0));
+                    else if (b.Shape == Shape.Zone) o.Add(new ExportMark(ExportKind.Zone, b.Price, b.PriceHi, b.ZoneSide > 0 ? 1 : -1));
+                    if (!b.CellBig) continue;
+                    o.Add(new ExportMark(b.CellDot ? (b.CellSide < 0 ? ExportKind.DotS : ExportKind.DotB) : ExportKind.BigTrade, b.Price, 0, b.CellSide));
+                    if (b.StopHunt && b.Tooltip != null)
+                    {
+                        var m = ExportShRe.Match(b.Tooltip);
+                        if (m.Success && double.TryParse(m.Groups[2].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double lv))
+                            o.Add(new ExportMark(ExportKind.StopHunt, lv, 0, m.Groups[1].Value == "đỉnh" ? 1 : -1));
+                    }
+                }
+            }
+            return o;
+        }
     }
 }

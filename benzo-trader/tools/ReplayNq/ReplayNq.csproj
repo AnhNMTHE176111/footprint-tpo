@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Chạy chuẩn setup NQ (BenzoNq.cs, mã C# sản phẩm) trên file Footprint Export: lõi OrderFlowBubbles THẬT chạy TĂNG DẦN từng nến
+       (đúng như indicator live) → NqSig → NqMachine → CSV lệnh, để research/nq_setup_2026-11-26/parity_nq.py đối chiếu với nq_setup.py. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Optimize>true</Optimize>
+    <NoWarn>CA1416;NU1701;MSB3277;CS0649;CS0169;CS0414</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>ReplayNq</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../quantower-orderflow-indicator/OrderFlowBubbles.cs" />
+    <Compile Include="../../../quantower-orderflow-indicator/SignalCache.cs" />
+    <Compile Include="../../../quantower-orderflow-indicator/StackedImbalance.cs" />
+    <Compile Include="../../../quantower-orderflow-indicator/ExhaustionLogic.cs" />
+    <Compile Include="../../../quantower-orderflow-indicator/CellBigLogic.cs" />
+    <Compile Include="../../../quantower-orderflow-indicator/StopHuntLogic.cs" />
+    <Compile Include="../../../quantower-orderflow-indicator/RollingRobust.cs" />
+    <Compile Include="../../../quantower-orderflow-indicator/StatThreshold.cs" />
+    <Compile Include="../../../quantower-range/RangeLogic.cs" />
+    <Compile Include="../../BenzoNq.cs" />
+    <Compile Include="../../BenzoNqOfb.cs" />
+    <Compile Include="Program.cs" />
+    <Reference Include="TradingPlatform.BusinessLayer"><HintPath>$(USERPROFILE)\quantower-libs\TradingPlatform.BusinessLayer.dll</HintPath></Reference>
+    <Reference Include="System.Drawing.Common"><HintPath>$(USERPROFILE)\quantower-libs\System.Drawing.Common.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

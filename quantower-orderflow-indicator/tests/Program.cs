@@ -266,6 +266,7 @@ static class Tests
         ImportLegacyM1Only();
         _fail += PerfTests.Run();
         _fail += ExhaustionTests.Run();
+        _fail += ExhRowTests.Run();
         _fail += CellBigTests.Run();
         _fail += AdaptiveTests.Run();
         _fail += CorvenM5ParityTests.Run();

@@ -10,10 +10,13 @@ object o = null; try { o = Activator.CreateInstance(t); } catch (Exception e) { 
 if (o != null) {
   void chk(string n, object exp){ var v=t.GetProperty(n).GetValue(o); bool ok=Equals(v,exp); if(!ok) fail++; Console.WriteLine($"  {(ok?"OK  ":"FAIL")} {n} = {v} (mong doi {exp})"); }
   chk("DeltaFontSize",8); chk("ImbZoneMinPx",10); chk("ImbZoneOpacity",60); chk("BuyColor",System.Drawing.Color.FromArgb(0x4A,0x5A,0xF5)); chk("SellColor",System.Drawing.Color.FromArgb(0xE0,0x14,0x0A)); chk("DeltaYOffsetPx",8); chk("DLineEnabled",false); chk("DeltaMinBarWidthPx",6);
-  chk("CellDotAllLevels",false); chk("CellDotFloorEnabled",true); chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("ExhMinWickTicks",3); chk("ExhSumLevels",6); chk("ExhSumHistRatio",1.1); chk("BigTradeOpacity",35); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellDotMedianRatio",2.8); chk("CellDotLocalTicks",4); chk("CellDotHideBuyNearSellTicks",6); chk("CellDotEnabled",true); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true); chk("ImbMaxBars",20); chk("ImbFarBars",60);
-  chk("CellDotAdaptive",true); chk("CellDotPreset",0); chk("AdaptiveBaseline",true); chk("ExhTailMedianRatio",0.8);
+  chk("CellDotAllLevels",false); chk("CellDotFloorEnabled",true); chk("ImbalanceRatioPct",250); chk("ImbMinVolume",5.0); chk("BigTradeOpacity",35); chk("CellBigBaselineBars",20); chk("CellBigMinSide",9.0); chk("CellDotMedianRatio",2.8); chk("CellDotLocalTicks",4); chk("CellDotHideBuyNearSellTicks",6); chk("CellDotEnabled",true); chk("CellBigMergeTicks",0); chk("CellBigTopN",0); chk("BigTradeEnabled",true); chk("ExhaustionEnabled",true); chk("ImbalanceEnabled",true); chk("ImbMaxBars",20); chk("ImbFarBars",60);
+  chk("CellDotAdaptive",true); chk("CellDotPreset",0); chk("AdaptiveBaseline",true);
+  // 2026-11-26: kiet suc theo hang gia (ExhRowGrid), ve dau da bi quet KHONG mo
+  chk("ExhDimInvalidated",false);
+  { bool okp = t.GetProperty("ExhMinWickTicks")==null && t.GetProperty("ExhTailMedianRatio")==null; if(!okp) fail++; Console.WriteLine($"  {(okp?"OK  ":"FAIL")} bo tham so kiet suc cu (theo tick)"); }
   // 2026-11-26: cac o chinh tay da AN khoi Settings (giu mac dinh)
-  foreach (var hn in new[]{"CellBigEnabled","CellDotAllLevels","CellDotFloorEnabled","CellDotAdaptive","CellDotPreset","AdaptiveBaseline","ExhTailMedianRatio","ImbMaxBars"}) {
+  foreach (var hn in new[]{"CellBigEnabled","CellDotAllLevels","CellDotFloorEnabled","CellDotAdaptive","CellDotPreset","AdaptiveBaseline","ImbMaxBars"}) {
     bool okh = !props.Any(p => p.Name == hn); if(!okh) fail++; Console.WriteLine($"  {(okh?"OK  ":"FAIL")} {hn} da an khoi Settings"); }
   // ---- 2026-11-25: che do nguong "Khong theo CORVEN (thong ke)" (research/stat_anomaly_2026-11-24/SPEC.md muc 6, 8.6) ----
   chk("ThresholdMode",0); chk("StatRarePbp",200); chk("StatDotDays",5); chk("StatDotNeighbors",true); chk("StatDotMinDays",2); chk("StatDotFallbackMinutes",120);
@@ -29,7 +32,7 @@ if (o != null) {
     string Fp(double m, int mode, int pbp) { t.GetField("TestBarMinutes", F).SetValue(fpo, m); t.GetProperty("ThresholdMode").SetValue(fpo, mode); t.GetProperty("StatRarePbp").SetValue(fpo, pbp); return (string)t.GetMethod("ComputeSettingsFingerprint", F).Invoke(fpo, null); }
     // dau van tay (2026-11-25, research/bigtrade_whale_2026-11-25/SPEC.md muc 6): Big Trade "lenh ca map" = "bigtrade-whale-v1:5/8/1380/<m>"
     // thay "10|bigtrade-v1" va bo "|bta-v1:..."; che do thong ke "|stat-v2:" bo hai so Big Trade. Moi phan khac giu nguyen tung ky tu.
-    string Nw(string m) => "False|10|True|20|9|0|0|True|2.8|4|False|6|cellbig-v18|100|40|5|20|noabs-v1|True|0.3|3|0.8|True|bigtrade-whale-v1:5/8/1380/" + m + "|False|0.35|4|1|True|3|6|1.1|20|1|exh-v3|True|250|3|5|False|3|1.5|3|False|8|False|True|60|60|8|3|2|5|stophunt-v8|nbase-v1:20|dotu-v2:0|exhtail-v1:0.8";
+    string Nw(string m) => "False|10|True|20|9|0|0|True|2.8|4|False|6|cellbig-v18|100|40|5|20|noabs-v1|True|0.3|3|0.8|True|bigtrade-whale-v1:5/8/1380/" + m + "|False|0.35|4|1|True|exh-rows-v1:1/0/3/0.35/0.8/2|1|True|250|3|5|False|3|1.5|3|False|8|False|True|60|60|8|3|2|5|stophunt-v8|nbase-v1:20|dotu-v2:0";
     void fc(bool ok, string name, string got) { if(!ok) fail++; Console.WriteLine($"  {(ok?"OK  ":"FAIL")} {name}" + (ok ? "" : " -> " + got)); }
     string a0 = Fp(5, 0, 200); fc(a0 == Nw("5"), "ThresholdMode = 0, m = 5: bigtrade-whale-v1:5/8/1380/5, khong con bta-v1", a0);
     string a1 = Fp(5, 1, 200); fc(a1 == Nw("5") + "|stat-v2:5/200/5/True/2/120", "ThresholdMode = 1, m = 5: them |stat-v2:5/200/5/True/2/120", a1);

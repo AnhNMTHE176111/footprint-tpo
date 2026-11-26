@@ -118,7 +118,7 @@ namespace OrderFlowBubbles
         private StopHuntDetector _stopHunt;     // stop hunt CORVEN (chỉ nạp nến ĐÃ ĐÓNG, đúng 1 lần/nến)
         private BigTradeWhale _btWhale;         // Big Trade "lệnh cá mập": mọi lệnh đơn của 5 ngày nến có số liệu TRƯỚC (2026-11-25), cả hai chế độ
         private StatDots _statDots;             // chế độ "Không theo CORVEN (thống kê)": chấm (null khi chế độ tắt)
-        private ExhTailBaseline _exhTail;       // kiệt sức: đuôi đỉnh/đáy của N nến đóng TRƯỚC (2026-11-24)
+        private ExhRowBaseline _exhRowBase;     // kiệt sức theo HÀNG giá (2026-11-26): (volume TB mỗi hàng, tổng volume) của N nến đóng TRƯỚC
         private string _baseKey;                // N nến nền + phút một nến của Big Trade lúc dựng nền; đổi -> ResetState
         private CellBigBaseline _nqRowBase;     // NQ như CORVEN: trung vị volume mỗi HÀNG 8 tick, TB 20 nến đóng trước (chỉ mã NQ/MNQ)
         private CellBigBaseline _cellBigBase;   // mức nền Ô lớn + kiệt sức (volume TB mỗi ô, bên trội lớn nhất): TB 20 nến đóng TRƯỚC
@@ -320,24 +320,21 @@ namespace OrderFlowBubbles
         //  Đỉnh soi ASK, đáy soi BID, chỉ lấy ở RÂU nến; "nhỏ, hoặc giảm dần về 0". Vô hiệu khi một nến
         //  sau đó chỉ cần RÂU quét qua mức đó (không cần đóng nến) → tô nền mờ (hoặc ẩn).
         //  Đã BỎ định nghĩa cũ (volume nến ≤ × nến trước, delta co khỏi đỉnh intrabar, lookback swing).
-        //  Luật 2026-11-19 (fit chart M5 CORVEN, xem ExhaustionLogic.cs): râu >= 3 tick và tổng bên soi trên 6 tick từ cực trị <= 1,1 x volume TB mỗi ô của 20 nến đóng trước.
+        //  Luật 2026-11-26 (ExhRowGrid, research/exh_2026-11-26): theo HÀNG giá như chart CORVEN (NQ 8 tick, GC 2 tick, mốc lẻ); 3 hàng sát cực trị đều <= 0,35 x
+        //  volume TB mỗi hàng của 20 nến trước, volume nến >= 0,8 x TB, râu >= 2 hàng. 95 dấu CORVEN: trùng 82 / thừa 35 / sót 13 (luật cũ 64 / 209 / 31).
         //  ⚠️ Công cụ ĐÁNH DẤU để đọc chart, CHƯA kiểm định lợi thế.
         [InputParameter("Kiệt sức · Bật", 80)]
         public bool ExhaustionEnabled { get; set; } = true;
 
-        public int ExhMinWickTicks { get; set; } = 3;
-
-        public int ExhSumLevels { get; set; } = 6;
-
-        public double ExhSumHistRatio { get; set; } = 1.1;
-
-        // 2026-11-24: thêm điều kiện tổng bên soi <= số này x trung vị đuôi (đỉnh + đáy) của N nến trước. 0 = tắt (luật cũ). Xem ExhSettings.TailMedianRatio.
-        // 2026-11-26 rà Settings: ẨN khỏi bảng (giữ giá trị mặc định = bộ đã khớp CORVEN; người dùng không muốn chỉnh tay)
-        public double ExhTailMedianRatio { get; set; } = 0.8;
+        // 2026-11-26: luật theo HÀNG giá như chart CORVEN (ExhRowGrid trong ExhaustionLogic.cs) — tham số là HẰNG SỐ, không có ô chỉnh.
+        // Bỏ các ô cũ ExhMinWickTicks / ExhSumLevels / ExhSumHistRatio / ExhTailMedianRatio (luật theo từng tick).
 
         public int ExhSweepTicks { get; set; } = 1;
 
         public bool ExhHideInvalidated { get; set; } = false;
+
+        // true = vẽ mờ dấu đã bị quét (kiểu cũ). Mặc định false như CORVEN (2026-11-26).
+        public bool ExhDimInvalidated { get; set; } = false;
 
         // độ đậm (%) của tam giác kiệt sức ĐÃ HẾT HIỆU LỰC so với tam giác còn hiệu lực (tô đặc, chỉ mờ đi)
         public int ExhDeadOpacity { get; set; } = 35;
@@ -504,6 +501,9 @@ namespace OrderFlowBubbles
             return s;
         }
 
+        private string SymbolNameNow => TestBarSource != null ? TestSymbolName : Symbol?.Name;
+        private (int g, int off) ExhGridNow => ExhRowGrid.For(SymbolNameNow);
+        private string ExhKey() { var (g, off) = ExhGridNow; return ExhRowGrid.Key(g, off); }
         private bool IsNasdaqNow => SymbolPreset.IsNasdaq(TestBarSource != null ? TestSymbolName : Symbol?.Name);
         // 2026-11-26: NQ/MNQ như chart CORVEN (gom 8 tick một hàng) — TỰ BẬT khi chế độ đang chạy "Theo CORVEN" và mã là NQ/MNQ,
         // không có ô riêng (người dùng không muốn thêm ô phải chỉnh tay). Khi bật, thắng "Tự co dãn" và "Nổ ở mọi mức giá" cho NQ/MNQ.
@@ -523,7 +523,7 @@ namespace OrderFlowBubbles
                 DeltaBarEnabled, DeltaPctFloor, DeltaBarSigZ, DeltaBarVolGate,
                 BigTradeEnabled, BigTradeWhaleKey(),
                 DLineEnabled, DLineFloor, DLineZ, DLineTopN,
-                ExhaustionEnabled, ExhMinWickTicks, ExhSumLevels, ExhSumHistRatio, CellBigBaselineBars, ExhSweepTicks, "exh-v3",
+                ExhaustionEnabled, ExhKey(), ExhSweepTicks,
                 ImbalanceEnabled, ImbalanceRatioPct, ImbalanceRun, ImbMinVolume,
                 DivergenceEnabled, DivSwingLookback, DivVolPartic, DivCooldown,
                 SweepEnabled, SweepLookback, UnfinishedEnabled,
@@ -535,7 +535,6 @@ namespace OrderFlowBubbles
                 // 2026-11-24 thích nghi: mỗi phần chỉ thêm khi BẬT -> tắt hết thì dấu vân tay = bản cũ
                 + (AdaptiveBaseline ? $"|nbase-v1:{DesiredBaseBars()}" : "")
                 + (CellDotAdaptive ? $"|dotu-v2:{CellDotPreset}" : "")
-                + (ExhTailMedianRatio > 0 ? $"|exhtail-v1:{ExhTailMedianRatio}" : "")
                 // 2026-11-25 chế độ "Không theo CORVEN (thống kê)": chỉ thêm khi BẬT -> tắt thì dấu vân tay y như cũ
                 + (StatModeNow ? "|stat-v2:" + StatKey() : "");
         }
@@ -574,7 +573,7 @@ namespace OrderFlowBubbles
                 _statDots = new StatDots(sm, StatRarePbp, StatDotDays, StatDotNeighbors, StatDotMinDays, StatDotFallbackMinutes);
             }
             else _statDots = null;
-            _exhTail = new ExhTailBaseline(nb);
+            _exhRowBase = new ExhRowBaseline(nb);
             _rLvlAbsDelta = new RollingRobust(BaselineBars);
             _trackAbsDelta = DLineEnabled;
             _rBarVol = new RollingRobust(BaselineBars);
@@ -958,23 +957,23 @@ namespace OrderFlowBubbles
             var levels = new List<ExhLevel>(va.PriceLevels.Count);
             foreach (var kv in va.PriceLevels)   // Bid = SellVolume (khớp ở Bid), Ask = BuyVolume (khớp ở Ask)
                 levels.Add(new ExhLevel((long)Math.Round(kv.Key / tick), kv.Value.SellVolume, kv.Value.BuyVolume, kv.Value.Volume));
-            var s = new ExhSettings { MinWickTicks = ExhMinWickTicks, SumLevels = ExhSumLevels, SumHistRatio = ExhSumHistRatio, TailMedianRatio = ExhTailMedianRatio };
-            double histMean = 0; bool hasHist = _cellBigBase != null && _cellBigBase.TryGet(out histMean);   // TB 20 nến đóng TRƯỚC
-            double tailMed = 0; bool hasTail = _exhTail != null && _exhTail.TryGetMedian(out tailMed);        // trung vị đuôi N nến đóng TRƯỚC
+            var (g, off) = ExhGridNow;
+            double rowBase = 0, volBase = 0;
+            bool hasBase = _exhRowBase != null && _exhRowBase.TryGet(out rowBase, out volBase);   // N nến đóng TRƯỚC
             long o = (long)Math.Round(bar.Open / tick), h = (long)Math.Round(bar.High / tick);
             long l = (long)Math.Round(bar.Low / tick), c = (long)Math.Round(bar.Close / tick);
+            var (hitT, hitB) = ExhRowGrid.Detect(o, h, l, c, levels, g, off, hasBase, rowBase, volBase);
             foreach (bool top in new[] { true, false })
             {
-                var r = ExhaustionLogic.Detect(top, o, h, l, c, levels, s, hasHist, histMean, hasTail, tailMed);
-                if (!r.Hit) continue;
+                if (!(top ? hitT : hitB)) continue;
                 var b = new Bubble
                 {
                     Price = top ? bar.High : bar.Low, Shape = top ? Shape.ExhTop : Shape.ExhBottom,
                     Color = top ? ExhTopColor : ExhBottomColor, Size = MidSize(), Transparency = SolidTransparency,
-                    UseBarWidth = true, Tooltip = ExhaustionLogic.Describe(r)
+                    UseBarWidth = true, Tooltip = top ? "Kiệt sức buy" : "Kiệt sức sell"
                 };
                 list.Add(b);
-                if (isClosed) _exhRecs.Add(new ExhRec { Idx = idx, Tick = r.Tick, Top = top, B = b });
+                if (isClosed) _exhRecs.Add(new ExhRec { Idx = idx, Tick = top ? h : l, Top = top, B = b });
             }
         }
 
@@ -1328,8 +1327,9 @@ namespace OrderFlowBubbles
             // đáy = tam giác XANH mũi chỉ LÊN, cạnh nằm ở giá thấp nhất. Bị râu quét qua → tô nền mờ (hoặc ẩn).
             if (b.Shape == Shape.ExhTop || b.Shape == Shape.ExhBottom)
             {
-                bool dead = b.Confirm < 0;
-                if (dead && ExhHideInvalidated) return;
+                // 2026-11-26: CORVEN vẽ dấu đã bị quét GIỐNG HỆT dấu còn hiệu lực -> không làm mờ nữa (chữ rê chuột vẫn ghi "hết hiệu lực")
+                bool dead = b.Confirm < 0 && ExhDimInvalidated;
+                if (b.Confirm < 0 && ExhHideInvalidated) return;
                 var col = b.Shape == Shape.ExhTop ? ExhTopColor : ExhBottomColor;   // màu HIỆN TẠI (đổi màu có hiệu lực ngay)
                 float half = Math.Max(1, size) / 2f, th = Math.Max(1, size) * 0.85f;
                 float dir = b.Shape == Shape.ExhTop ? 1f : -1f;
@@ -1533,14 +1533,14 @@ namespace OrderFlowBubbles
                 {
                     _cellBigBase.Add(bmean, bmedian, CellBigLogic.BarRangeTicks(cbLevels));
                     _statDots?.AddClosedBar(bar.TimeLeft, cbLevels);   // chế độ thống kê: nộp Bid/Ask của nến vào (ngày, khung giờ), dự phòng, biên độ
-                    // nền đuôi kiệt sức: mọi nến đóng có giao dịch và high > low nộp đuôi đỉnh (Ask) + đuôi đáy (Bid), không phụ thuộc râu
-                    long hT = (long)Math.Round(bar.High / tickSz), lT = (long)Math.Round(bar.Low / tickSz);
-                    if (_exhTail != null && hT > lT)
-                    {
-                        var exLv = new List<ExhLevel>(cbLevels.Count);
-                        foreach (var c in cbLevels) exLv.Add(new ExhLevel(c.Tick, c.Sell, c.Buy, c.Vol));
-                        _exhTail.Add(ExhaustionLogic.TailSum(true, hT, exLv, ExhSumLevels), ExhaustionLogic.TailSum(false, lT, exLv, ExhSumLevels));
-                    }
+                }
+                // nền kiệt sức theo hàng: mọi nến đóng có giao dịch nộp (volume TB mỗi hàng, tổng volume) — kể cả high = low
+                if (_exhRowBase != null)
+                {
+                    var exLv = new List<ExhLevel>(cbLevels.Count);
+                    foreach (var c in cbLevels) exLv.Add(new ExhLevel(c.Tick, c.Sell, c.Buy, c.Vol));
+                    var (g, off) = ExhGridNow;
+                    if (ExhRowGrid.BarStats(exLv, g, off, out double erm, out double etot)) _exhRowBase.Add(erm, etot);
                 }
                 // Big Trade "lệnh cá mập": nộp MỌI lệnh đơn > 0 của nến (từ feed, hoặc nhật ký nếu lịch sử không có); nến không có số liệu -> không nộp
                 if (_btWhale != null)

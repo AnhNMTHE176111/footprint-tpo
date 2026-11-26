@@ -90,6 +90,118 @@ namespace OrderFlowBubbles
         { Kind = kind; Top = top; Tick = tick; ExtremeVol = ext; MeanLevelVol = mean; Seq = seq; }
     }
 
+    // ========================================================================
+    //  LUẬT KIỆT SỨC THEO HÀNG GIÁ (2026-11-26, research/exh_2026-11-26/README.md mục 5; bản Python chuẩn: ref_rule.py)
+    //  Thay luật theo từng tick ở trên trong indicator. So 95 dấu CORVEN (NQ M1 06/11, GC M1 05–06/11, GC M5 18/11):
+    //  luật cũ trùng 64 / thừa 209 / sót 31; luật này trùng 82 / thừa 35 / sót 13.
+    //   • Hàng giá như chart CORVEN: row(tick) = floor((tick - off) / G). NQ/MNQ G 8 off 4; GC/MGC G 2 off 1; mã khác G 1 off 0.
+    //   • Đỉnh soi Ask của 3 hàng từ hàng chứa High đi xuống; đáy soi Bid của 3 hàng từ hàng chứa Low đi lên (hàng trống / ngoài nến = 0).
+    //   • Có dấu khi: cả 3 hàng <= 0,35 x rowBase; tổng volume nến >= 0,8 x volBase; râu >= 2 hàng.
+    //   • rowBase = TB (tổng volume ÷ số hàng có volume) của N nến ĐÃ ĐÓNG trước; volBase = TB tổng volume nến; cần >= 5 nến.
+    // ========================================================================
+    public static class ExhRowGrid
+    {
+        public const int Rows = 3, MinWickRows = 2;
+        public const double SmallRatio = 0.35, MinBarVolRatio = 0.80;
+        public static string Key(int g, int off) => $"exh-rows-v1:{g}/{off}/{Rows}/{SmallRatio}/{MinBarVolRatio}/{MinWickRows}";
+
+        /// <summary>(G, off) của mã: NQ/MNQ (8, 4), GC/MGC (2, 1), mã khác (1, 0).</summary>
+        public static (int g, int off) For(string symbolName)
+        {
+            if (SymbolPreset.IsNasdaq(symbolName)) return (8, 4);
+            if (IsGold(symbolName)) return (2, 1);
+            return (1, 0);
+        }
+
+        /// <summary>GC / MGC (mã liên tục hoặc mã tháng: GCZ26, /GC:XCEC, MGCZ6).</summary>
+        public static bool IsGold(string symbolName)
+        {
+            if (string.IsNullOrWhiteSpace(symbolName)) return false;
+            var s = symbolName.Trim().TrimStart('/').ToUpperInvariant();
+            int colon = s.IndexOf(':'); if (colon >= 0) s = s.Substring(0, colon);
+            string rest = s.StartsWith("MGC") ? s.Substring(3) : s.StartsWith("GC") ? s.Substring(2) : null;
+            if (rest == null) return false;
+            if (rest.Length == 0) return true;
+            if ("FGHJKMNQUVXZ".IndexOf(rest[0]) < 0) return false;
+            string y = rest.Substring(1);
+            if (y.Length < 1 || y.Length > 2) return false;
+            foreach (char c in y) if (c < '0' || c > '9') return false;
+            return true;
+        }
+
+        public static long RowOf(long tick, int g, int off)
+        {
+            long x = tick - off;
+            return x >= 0 ? x / g : -((-x + g - 1) / g);   // chia làm tròn XUỐNG (đúng cả số âm)
+        }
+
+        /// <summary>Volume TB mỗi hàng có giao dịch + tổng volume của nến (chỉ ô volume > 0). false = nến không có giao dịch.</summary>
+        public static bool BarStats(IReadOnlyList<ExhLevel> levels, int g, int off, out double rowMean, out double total)
+        {
+            rowMean = 0; total = 0;
+            if (levels == null) return false;
+            var rows = new HashSet<long>();
+            foreach (var l in levels)
+                if (l.Volume > 0) { rows.Add(RowOf(l.Tick, g, off)); total += l.Volume; }
+            if (rows.Count == 0) return false;
+            rowMean = total / rows.Count;
+            return true;
+        }
+
+        /// <summary>Dò kiệt sức đỉnh + đáy của một nến (o/h/l/c theo tick). hasBase = đã đủ nền.</summary>
+        public static (bool top, bool bot) Detect(long o, long h, long l, long c, IReadOnlyList<ExhLevel> levels, int g, int off,
+                                                  bool hasBase, double rowBase, double volBase)
+        {
+            if (levels == null || h <= l || !hasBase || !(rowBase > 0)) return (false, false);
+            var ask = new Dictionary<long, double>(); var bid = new Dictionary<long, double>();
+            double tot = 0;
+            foreach (var lv in levels)
+            {
+                if (!(lv.Volume > 0)) continue;
+                long r = RowOf(lv.Tick, g, off);
+                ask[r] = (ask.TryGetValue(r, out var a) ? a : 0) + lv.Ask;
+                bid[r] = (bid.TryGetValue(r, out var b) ? b : 0) + lv.Bid;
+                tot += lv.Volume;
+            }
+            if (ask.Count == 0) return (false, false);
+            long rH = RowOf(h, g, off), rL = RowOf(l, g, off);
+            double lim = SmallRatio * rowBase;
+            double maxT = 0, maxB = 0;
+            for (int j = 0; j < Rows; j++)
+            {
+                if (rH - j >= rL && ask.TryGetValue(rH - j, out var a)) maxT = Math.Max(maxT, a);
+                if (rL + j <= rH && bid.TryGetValue(rL + j, out var b)) maxB = Math.Max(maxB, b);
+            }
+            long wT = rH - RowOf(Math.Max(o, c), g, off), wB = RowOf(Math.Min(o, c), g, off) - rL;
+            bool volOk = tot >= MinBarVolRatio * volBase;
+            return (volOk && wT >= MinWickRows && maxT <= lim, volOk && wB >= MinWickRows && maxB <= lim);
+        }
+    }
+
+    /// <summary>Nền của luật theo hàng: N nến đóng gần nhất có giao dịch, mỗi nến (volume TB mỗi hàng, tổng volume); cần >= 5 nến.</summary>
+    public sealed class ExhRowBaseline
+    {
+        public const int MinBars = 5;
+        private readonly int _n;
+        private readonly Queue<(double rowMean, double total)> _q = new Queue<(double, double)>();
+        public ExhRowBaseline(int n) { _n = Math.Max(1, n); }
+        public int Count => _q.Count;
+        public void Add(double rowMean, double total)
+        {
+            _q.Enqueue((rowMean, total));
+            while (_q.Count > _n) _q.Dequeue();
+        }
+        public bool TryGet(out double rowBase, out double volBase)
+        {
+            rowBase = volBase = 0;
+            if (_q.Count < MinBars) return false;
+            // cộng theo thứ tự hàng đợi (khớp Python sum(list) từng bit)
+            double m = 0, t = 0; foreach (var p in _q) { m += p.rowMean; t += p.total; }
+            rowBase = m / _q.Count; volBase = t / _q.Count;
+            return true;
+        }
+    }
+
     public static class ExhaustionLogic
     {
         // Trung bình volume mỗi mức giá CÓ giao dịch của nến.

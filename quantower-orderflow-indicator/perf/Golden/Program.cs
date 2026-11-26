@@ -96,6 +96,11 @@ namespace GoldenPerf
                     string shp = t.GetField("Shape", NP).GetValue(b).ToString();
                     double mpx = (double)t.GetField("Price", NP).GetValue(b);
                     if (shp == "ExhTop" || shp == "ExhBottom") { exhCount++; marks?.Add($"{bars[k].TimeLeft:yyyy-MM-dd HH:mm},{(shp == "ExhTop" ? "exhT" : "exhB")},{mpx.ToString(Inv)}"); }
+                    if (shp == "Zone" && marks != null)   // 2026-11-26: vùng stacked imbalance "zoneB/zoneS,lo-hi" (chỉ để soi, không vào hash)
+                    {
+                        int zs = (int)t.GetField("ZoneSide", NP).GetValue(b); double zh = (double)t.GetField("PriceHi", NP).GetValue(b);
+                        marks.Add($"{bars[k].TimeLeft:yyyy-MM-dd HH:mm},{(zs > 0 ? "zoneB" : "zoneS")},{mpx.ToString(Inv)}-{zh.ToString(Inv)}");
+                    }
                     bool big = (bool)t.GetField("CellBig", NP).GetValue(b);
                     if (!big) continue;
                     {

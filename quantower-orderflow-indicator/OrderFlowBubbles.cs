@@ -120,6 +120,7 @@ namespace OrderFlowBubbles
         private StatDots _statDots;             // chế độ "Không theo CORVEN (thống kê)": chấm (null khi chế độ tắt)
         private ExhTailBaseline _exhTail;       // kiệt sức: đuôi đỉnh/đáy của N nến đóng TRƯỚC (2026-11-24)
         private string _baseKey;                // N nến nền + phút một nến của Big Trade lúc dựng nền; đổi -> ResetState
+        private CellBigBaseline _nqRowBase;     // NQ như CORVEN: trung vị volume mỗi HÀNG 8 tick, TB 20 nến đóng trước (chỉ mã NQ/MNQ)
         private CellBigBaseline _cellBigBase;   // mức nền Ô lớn + kiệt sức (volume TB mỗi ô, bên trội lớn nhất): TB 20 nến đóng TRƯỚC
         private RollingRobust _rLvlAbsDelta;  // per-level |Delta| — CHỈ nạp khi DLineEnabled (chỉ Big Delta line đọc nó)
         private bool _trackAbsDelta;          // DLineEnabled tại lúc InitBaselines (ResetState)
@@ -227,7 +228,9 @@ namespace OrderFlowBubbles
 
         // Bật (mặc định) = mã NQ/MNQ tự dùng bộ số Nasdaq cho chấm: 3,5 x trung vị, lớn nhất trong ±8 tick, che xanh cách đỏ <= 12 tick
         // (thay cho CellDotMedianRatio / CellDotLocalTicks / CellDotHideBuyNearSellTicks). Mã khác (GC, MGC…) không đổi. Xem SymbolPreset trong CellBigLogic.cs.
-        [InputParameter("Chấm Bid/Ask nhỏ · Mã NQ/MNQ tự dùng bộ số Nasdaq (3,5 x · cửa sổ tự nới theo khung · che 12)", 28)]
+        // 2026-11-26: Bật = NQ/MNQ vẽ như chart CORVEN — gom 8 tick (2 điểm) một hàng cho chấm + stacked imbalance (xem NqRows trong CellBigLogic.cs).
+        // Khi bật, ô này thắng "Tự co dãn theo khung" và "Nổ ở mọi mức giá" cho mã NQ/MNQ (chế độ "Theo CORVEN"). Mã khác không đổi.
+        [InputParameter("Mã NQ/MNQ · Gom 2 điểm một hàng như chart CORVEN (chấm + stacked imbalance)", 28)]
         public bool CellDotNasdaqAuto { get; set; } = true;
 
         // chấm xanh bị che (không vẽ) nếu cùng nến có chấm đỏ cách <= số tick này (CORVEN vẽ đỏ đè xanh); < 0 = tắt che
@@ -512,8 +515,10 @@ namespace OrderFlowBubbles
             return s;
         }
 
-        // Mã hiện tại là NQ/MNQ và người dùng để bật "tự dùng bộ số Nasdaq".
-        private bool UseNasdaqPresetNow => !CellDotAdaptive && CellDotNasdaqAuto && SymbolPreset.IsNasdaq(TestBarSource != null ? TestSymbolName : Symbol?.Name);
+        private bool IsNasdaqNow => SymbolPreset.IsNasdaq(TestBarSource != null ? TestSymbolName : Symbol?.Name);
+        // 2026-11-26: NQ/MNQ như chart CORVEN (gom 8 tick một hàng). Bộ Nasdaq theo từng tick cũ (SymbolPreset) không còn đường chạy.
+        private bool NqRowModeNow => CellDotNasdaqAuto && IsNasdaqNow;
+        private bool UseNasdaqPresetNow => false;
 
         private string ComputeSettingsFingerprint()
         {
@@ -535,6 +540,7 @@ namespace OrderFlowBubbles
                 // chỉ thêm khi bộ Nasdaq đang chạy -> dấu vân tay của vàng GC giữ nguyên như cũ (bản niêm phong cũ vẫn dùng được)
                 + (CellDotFloorEnabled ? "" : "|nofloor")   // chỉ thêm khi TẮT sàn -> dấu vân tay mặc định giữ nguyên
                 + (UseNasdaqPresetNow ? $"|nq-v2:{SymbolPreset.NqDotMedianRatio}/{SymbolPreset.NqDotLocalTicks}/{SymbolPreset.NqRangePerWindowTick}/{SymbolPreset.NqDotHideBuyNearSellTicks}" : "")
+                + (NqRowModeNow ? "|" + NqRows.Key : "")
                 // 2026-11-24 thích nghi: mỗi phần chỉ thêm khi BẬT -> tắt hết thì dấu vân tay = bản cũ
                 + (AdaptiveBaseline ? $"|nbase-v1:{DesiredBaseBars()}" : "")
                 + (CellDotAdaptive ? $"|dotu-v2:{CellDotPreset}" : "")
@@ -569,6 +575,7 @@ namespace OrderFlowBubbles
             int nb = DesiredBaseBars();
             _baseKey = BaseKey();
             _cellBigBase = new CellBigBaseline(CellBigBaselineBars, nb);
+            _nqRowBase = new CellBigBaseline(CellBigBaselineBars, CellBigBaselineBars);
             _btWhale = new BigTradeWhale(BarMinutesNow);   // mọi chế độ ngưỡng
             if (StatModeNow)
             {
@@ -777,7 +784,33 @@ namespace OrderFlowBubbles
             }
 
             // 5) STACKED IMBALANCE — định nghĩa THUẦN (StackedImbalance.cs), vẽ VÙNG. Không cần "ready".
-            if (ImbalanceEnabled && hiIdx > loIdx)
+            bool nqRows = NqRowModeNow;
+            List<CellLevel> nqRowLevels = null;
+            if (nqRows)
+            {
+                var raw = new List<CellLevel>(byTick.Count);
+                foreach (var kv in byTick) raw.Add(new CellLevel(kv.Key, kv.Value.it.BuyVolume, kv.Value.it.SellVolume, kv.Value.it.Volume, kv.Value.it.Trades));
+                nqRowLevels = NqRows.Group(raw);
+            }
+            if (ImbalanceEnabled && nqRows && hiIdx > loIdx)
+            {
+                // NQ như CORVEN: hàng 8 tick; vùng từ giá đầu hàng thấp nhất tới giá đầu hàng cao nhất của chuỗi (như Sierra vẽ)
+                long loRow = NqRows.RowOf(loIdx), hiRow = NqRows.RowOf(hiIdx);
+                var (ra, rb) = NqRows.RowArrays(nqRowLevels, loRow, hiRow);
+                foreach (var z in StackedImbalanceCalc.Detect(0, 1, ra, rb, ImbalanceRatioPct, ImbalanceRun, NqRows.ImbMinVolume))
+                {
+                    double zlo = Math.Round(NqRows.RowLowTick(loRow + z.LoIdx) * tick, 6), zhi = Math.Round(NqRows.RowLowTick(loRow + z.HiIdx) * tick, 6);
+                    z.Lo = zlo; z.Hi = zhi;
+                    StackedImbalanceCalc.Classify(z, bar.Open, bar.Close);
+                    list.Add(new Bubble
+                    {
+                        Price = zlo, PriceHi = zhi, Shape = Shape.Zone, ZoneSide = z.Side, ZoneWeak = z.Weak,
+                        Color = z.Side > 0 ? ImbBuyZoneColor : ImbSellZoneColor, Size = 0, Transparency = 0,
+                        Tooltip = StackedImbalanceCalc.ZoneTooltip(z.Side, z.Levels)
+                    });
+                }
+            }
+            else if (ImbalanceEnabled && hiIdx > loIdx)
             {
                 int n = (int)(hiIdx - loIdx + 1);
                 var askArr = new double[n]; var bidArr = new double[n];
@@ -811,7 +844,13 @@ namespace OrderFlowBubbles
                 bool statDots = _statDots != null;   // chỉ khác null khi chế độ thống kê bật (đổi chế độ / khung -> BaseKey đổi -> ResetState)
                 List<CellMark> marks;
                 string statTip = null;
-                if (statDots)
+                if (nqRows && !statDots)
+                {
+                    // NQ như CORVEN: chấm xét trên HÀNG 8 tick; mức nền = trung vị volume mỗi hàng, TB 20 nến đóng trước
+                    double rowMed = 0; bool hasRowB = _nqRowBase != null && _nqRowBase.TryGetMedian(out rowMed);
+                    marks = CellBigLogic.Evaluate(nqRowLevels, hasRowB, rowMed, NqRows.DotSettings(CellDotEnabled, CellDotFloorEnabled ? CellBigMinSide : 0));
+                }
+                else if (statDots)
                 {
                     // "Không theo CORVEN (thống kê)": ngưỡng cùng khung giờ các ngày trước (hoặc dự phòng 120 phút), không sàn, không che
                     int sthr = -1; bool sfb = false;
@@ -833,10 +872,13 @@ namespace OrderFlowBubbles
                     string tip2 = m.Side > 0
                         ? $"{side} - {m.Buy:0} Ask (Bid {m.Sell:0}) | ngưỡng {thrTxt}"
                         : $"{side} - {m.Sell:0} Bid (Ask {m.Buy:0}) | ngưỡng {thrTxt}";
-                    var b2 = Solid(m.Tick * tick, Shape.Ellipse, col2, true, tip2);
+                    bool rowMark = nqRows && !statDots;
+                    double mPrice = rowMark ? NqRows.DotPrice(m.Tick, tick, bar.Low, bar.High) : m.Tick * tick;
+                    var b2 = Solid(mPrice, Shape.Ellipse, col2, true, tip2);
                     b2.SizeFrac = m.SizeFrac;
                     b2.CellBig = true; b2.CellDot = true; b2.CellBid = m.Sell; b2.CellAsk = m.Buy; b2.CellSide = m.Side;
-                    cellBigCands.Add((b2, m.Side > 0 ? m.Buy : m.Sell, m.Tick, m.Tick));
+                    long mLo = rowMark ? NqRows.RowLowTick(m.Tick) : m.Tick, mHi = rowMark ? mLo + NqRows.RowTicks - 1 : m.Tick;
+                    cellBigCands.Add((b2, m.Side > 0 ? m.Buy : m.Sell, mLo, mHi));
                 }
             }
 
@@ -1494,6 +1536,8 @@ namespace OrderFlowBubbles
             if (tickSz > 0)
             {
                 var cbLevels = va.PriceLevels.Select(kv => new CellLevel((long)Math.Round(kv.Key / tickSz), kv.Value.BuyVolume, kv.Value.SellVolume, kv.Value.Volume, kv.Value.Trades)).ToList();
+                if (_nqRowBase != null && IsNasdaqNow && CellBigLogic.BarStats(NqRows.Group(cbLevels), out double rmean, out double rmedian))
+                    _nqRowBase.Add(rmean, rmedian, 0);
                 if (CellBigLogic.BarStats(cbLevels, out double bmean, out double bmedian))
                 {
                     _cellBigBase.Add(bmean, bmedian, CellBigLogic.BarRangeTicks(cbLevels));

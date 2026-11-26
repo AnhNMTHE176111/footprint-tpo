@@ -393,6 +393,60 @@ namespace OrderFlowBubbles
     // NQ: nến M5 rộng gấp ~2,7 lần GC tính theo tick (trung vị 104 so với 39 tick) còn volume mỗi ô gần bằng (trung vị 8 so với 7,5),
     // nên giữ bộ GC thì NQ ra 1,61 chấm/nến M5, gần gấp đôi GC (0,84). Bộ Nasdaq 3,5 / ±8 / che 12 cho 0,82 chấm/nến M5 (đỏ 0,51, xanh 0,31;
     // GC 0,53 / 0,31) và 0,47 chấm/nến M1 (GC 0,46). Sàn 9 giữ nguyên. Đây là khớp MẬT ĐỘ hiển thị với GC, không phải lợi thế đã kiểm định.
+    // NQ / MNQ NHƯ CHART CORVEN (2026-11-26, research/nq_rows_2026-11-26/): footprint NQ của CORVEN gom 8 tick (2 điểm) một hàng,
+    // hàng bắt đầu ở số điểm LẺ (… 26999, 27001, 27003 …). Soi chart Sierra NQ 06/11 14:39–16:00 giờ VN:
+    //   · stacked imbalance gom 8 tick, mốc lẻ, 250%, sàn 1: ra 18 vùng, trùng 10/10 vùng CORVEN vẽ (theo từng tick sàn 5: 7 vùng, trùng 0;
+    //     gom 4 tick: 61 vùng, trùng 9/10 nhưng thừa rất nhiều).
+    //   · chấm: hàng 8 tick, k 1,8 x trung vị mỗi HÀNG (TB 20 nến trước), lớn hơn hẳn hàng kề trên/dưới, không che: trùng 59 / 95 chấm CORVEN,
+    //     thừa 13 (bộ co dãn theo từng tick hiện tại: trùng 46, thừa 52). Đoạn nến ngắn 16:12–16:22: theo từng tick 19 chấm, hàng 8 tick 1 chấm.
+    public static class NqRows
+    {
+        public const int RowTicks = 8, RowOffsetTicks = 4;
+        public const double DotMedianRatio = 1.8;
+        public const int DotLocalRows = 1, DotHide = -1;
+        public const double ImbMinVolume = 1;
+
+        /// <summary>Chỉ số hàng của một tick: hàng r gồm tick [r x 8 + 4, r x 8 + 11].</summary>
+        public static long RowOf(long tick) => CellBigLogic.FloorDiv(tick - RowOffsetTicks, RowTicks);
+        public static long RowLowTick(long row) => row * RowTicks + RowOffsetTicks;
+
+        /// <summary>Gộp các ô theo hàng 8 tick (cộng Buy/Sell/Vol/Trades). Tick của kết quả = CHỈ SỐ HÀNG, tăng dần.</summary>
+        public static List<CellLevel> Group(IEnumerable<CellLevel> levels)
+        {
+            var acc = new SortedDictionary<long, (double b, double s, double v, int t)>();
+            if (levels != null)
+                foreach (var l in levels)
+                {
+                    long r = RowOf(l.Tick);
+                    acc.TryGetValue(r, out var a);
+                    acc[r] = (a.b + l.Buy, a.s + l.Sell, a.v + l.Vol, a.t + l.Trades);
+                }
+            var res = new List<CellLevel>(acc.Count);
+            foreach (var kv in acc) res.Add(new CellLevel(kv.Key, kv.Value.b, kv.Value.s, kv.Value.v, kv.Value.t));
+            return res;
+        }
+
+        public static CellBigSettings DotSettings(bool dotEnabled, double floor) => new CellBigSettings
+        {
+            DotEnabled = dotEnabled, DotMedianRatio = DotMedianRatio, DotLocalTicks = DotLocalRows, DotHideBuyNearSellTicks = DotHide, MinSide = floor
+        };
+
+        /// <summary>Giá vẽ chấm của hàng: tâm hàng, kẹp trong [low, high] của nến.</summary>
+        public static double DotPrice(long row, double tick, double low, double high)
+            => Math.Min(high, Math.Max(low, (RowLowTick(row) + (RowTicks - 1) / 2.0) * tick));
+
+        /// <summary>Mảng Ask/Bid theo hàng từ hàng loRow tới hiRow (hàng trống = 0) cho stacked imbalance.</summary>
+        public static (double[] ask, double[] bid) RowArrays(IReadOnlyList<CellLevel> rows, long loRow, long hiRow)
+        {
+            int n = (int)(hiRow - loRow + 1);
+            var ask = new double[Math.Max(0, n)]; var bid = new double[Math.Max(0, n)];
+            foreach (var r in rows) if (r.Tick >= loRow && r.Tick <= hiRow) { ask[r.Tick - loRow] = r.Buy; bid[r.Tick - loRow] = r.Sell; }
+            return (ask, bid);
+        }
+
+        public const string Key = "nqrow-v1:8/4/1.8/1/-1/250/1";
+    }
+
     public static class SymbolPreset
     {
         public const double NqDotMedianRatio = 2.8 * 1.25;   // 3,5

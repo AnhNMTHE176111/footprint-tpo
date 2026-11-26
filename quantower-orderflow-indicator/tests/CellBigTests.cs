@@ -23,8 +23,34 @@ static class CellBigTests
 
     static int Count(List<CellMark> m, long tick, int tier) => m.Count(x => x.Tick == tick && x.Tier == tier);
 
+    // NQ như chart CORVEN: hàng 8 tick, mốc lẻ (2026-11-26)
+    static void NqRowsTests()
+    {
+        Console.WriteLine("[NqRows] hang 8 tick, moc le");
+        // NQ tick 0,25: 27001,00 = tick 108004 -> hàng [27001,00; 27002,75]
+        long t27001 = 108004;
+        Check(NqRows.RowOf(t27001) == NqRows.RowOf(t27001 + 7) && NqRows.RowOf(t27001 - 1) == NqRows.RowOf(t27001) - 1 && NqRows.RowOf(t27001 + 8) == NqRows.RowOf(t27001) + 1,
+              "27001,00..27002,75 cung hang; 26999,75 hang duoi; 27003,00 hang tren");
+        Check(NqRows.RowLowTick(NqRows.RowOf(t27001 + 5)) == t27001, "dau hang = 27001,00");
+        Check(NqRows.RowOf(3) == -1 && NqRows.RowOf(4) == 0 && NqRows.RowOf(-5) == -2, "so am / bien hang dung (floor)");
+        var g = NqRows.Group(new[] { L(t27001, 3, 1), L(t27001 + 7, 2, 4), L(t27001 + 8, 5, 0) });
+        Check(g.Count == 2 && g[0].Buy == 5 && g[0].Sell == 5 && g[0].Vol == 10 && g[1].Buy == 5 && g[0].Tick < g[1].Tick, "gop cong Ask/Bid/Vol theo hang, tang dan",
+              string.Join(";", g.Select(x => $"{x.Tick}:{x.Buy}/{x.Sell}")));
+        double dp = NqRows.DotPrice(NqRows.RowOf(t27001), 0.25, 26990, 27010);
+        Check(Math.Abs(dp - 27001.875) < 1e-9, "cham ve o tam hang 27001,875", dp.ToString());
+        Check(NqRows.DotPrice(NqRows.RowOf(t27001), 0.25, 26990, 27001.25) == 27001.25, "tam hang ngoai nen -> kep vao dinh nen");
+        var s = NqRows.DotSettings(true, 9);
+        Check(s.DotMedianRatio == 1.8 && s.DotLocalTicks == 1 && s.DotHideBuyNearSellTicks == -1 && s.MinSide == 9, "bo so cham NQ: 1,8 / +-1 hang / khong che / san nguoi dung");
+        // hàng B 20 > 1,8 x 10, lớn hơn hẳn hàng kề -> chấm; hàng kề 19 không lớn hơn hẳn -> không
+        var m = CellBigLogic.Evaluate(new[] { L(0, 20, 0), L(1, 19, 0), L(3, 25, 0), L(4, 25, 0) }, true, 10, s);
+        Check(m.Count(x => x.Side > 0) == 1 && m[0].Tick == 0, "chi hang 0 no (hang 3, 4 bang nhau khong no)", string.Join(",", m.Select(x => x.Tick)));
+        var (ra, rb) = NqRows.RowArrays(g, g[0].Tick, g[0].Tick + 2);
+        Check(ra.Length == 3 && ra[0] == 5 && ra[2] == 0 && rb[0] == 5, "mang Ask/Bid theo hang, hang trong = 0");
+    }
+
     public static int Run()
     {
+        NqRowsTests();
         Console.WriteLine("[CellBig] mac dinh (CellBigSettings)");
         var d = new CellBigSettings();
         Check(d.DotMedianRatio == 2.8 && d.DotLocalTicks == 4 && d.DotHideBuyNearSellTicks == 6 && d.MinSide == 9 && d.DotEnabled && !d.FixedMode, "mac dinh: 2,8 / +-4 / che 6 / san 9");

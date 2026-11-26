@@ -70,7 +70,7 @@ namespace DailyTpoBias
         [InputParameter("Màu mức hôm qua", 34)]
         public Color PriorColor { get; set; } = Color.FromArgb(0x90, 0x90, 0x90);
 
-        // ---------- Telegram (tổng hợp: đầu ngày + buổi chiều + trước phiên Mỹ) ----------
+        // ---------- Telegram (2026-11-26: chỉ còn tin buổi sáng = lịch tin hôm nay) ----------
         [InputParameter("Gửi Telegram", 50)]
         public bool TeleEnabled { get; set; } = false;
         [InputParameter("TG · Bot token", 51)]
@@ -79,14 +79,6 @@ namespace DailyTpoBias
         public string TeleChatId { get; set; } = "";
         [InputParameter("TG · Lệch giờ local (bar UTC→local)", 53, -12, 14, 1, 0)]
         public int TeleTzOffset { get; set; } = 7;
-        [InputParameter("TG · Phiên Mỹ mở (phút/ngày; 19:20=1160)", 54, 0, 1439, 5, 0)]
-        public int TeleUsStartMin { get; set; } = 1160;
-        [InputParameter("TG · Báo trước phiên Mỹ (phút)", 55, 5, 120, 5, 0)]
-        public int TelePreUsMin { get; set; } = 30;
-        [InputParameter("TG · Cửa sổ báo sáng sau IB (nến)", 56, 1, 20, 1, 0)]
-        public int TeleMorningGrace { get; set; } = 6;
-        [InputParameter("TG · Báo chiều (phút/ngày; 14:00=840; 0=tắt)", 57, 0, 1439, 5, 0)]
-        public int TeleAfternoonMin { get; set; } = 840;
         [InputParameter("TG · Thư mục chung (trống=mặc định)", 58)]
         public string TeleShareDir { get; set; } = "";
         [InputParameter("TG · Gửi thử ngay (bật rồi tắt)", 59)]
@@ -218,12 +210,6 @@ namespace DailyTpoBias
             _tele.ChatId = TeleChatId?.Trim() ?? "";
             _tele.ShareDir = TeleShareDir ?? "";
             _tele.TzOffset = TeleTzOffset;
-            _tele.UsStartMin = TeleUsStartMin;
-            _tele.PreUsMin = TelePreUsMin;
-            _tele.MorningGraceBars = TeleMorningGrace;
-            _tele.AfternoonMin = TeleAfternoonMin;
-            _tele.IbBars = IbBars;
-            _tele.GapMinutes = GapMinutes;
         }
 
         private RenderState ComputeBias(SessionProfile dev, SessionProfile prior, double tick,

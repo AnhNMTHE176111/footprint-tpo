@@ -46,7 +46,48 @@ static partial class Tests
         Check(!ClusterZones.ShouldAlert(z2, now, 30, new HashSet<string>(), "NQZ26"), "vung chua cham -> khong bao");
         var z3 = new CzZone { Lo = 1, Hi = 2, Side = 1, Touch = 2, Live = true, EpT = now.AddMinutes(-5), Days = { t0 } };
         Check(ClusterZones.ShouldAlert(z3, now, 30, sent, "NQZ26"), "lan cham thu 2 (nen khac) -> bao rieng");
-        Check(ClusterZones.Label(z, 7) == "Cụm vol 21/11 · hỗ trợ · đang chạm lần 1", "nhan vung", ClusterZones.Label(z, 7));
+        Check(ClusterZones.Label(z, 7) == "HVN ngày 21/11 · hỗ trợ · đang chạm lần 1", "nhan vung", ClusterZones.Label(z, 7));
+
+        // gọi tên vùng: mức khác nằm trong vùng (± 0,1 U15) được ghép tên, mức xa thì không
+        var zr = new CzZone { Lo = 25540, Hi = 25610, Side = -1, Touch = 1, Live = true, EpT = now, Days = { t0, t0.AddDays(1) } };
+        var ex = new List<(string, double, double)> { ("HVN tuần", 25600, 25650), ("VWAP tuần", 25615, 25615), ("VWAP ngày", 25700, 25700) };
+        zr.Desc = ClusterZones.Describe(zr, ex, 100, 7);
+        Check(zr.Desc == "HVN ngày 21/11 + 22/11 + HVN tuần + VWAP tuần", "ten vung ghep HVN tuan + VWAP tuan (VWAP ngay xa -> khong ghep)", zr.Desc);
+        string msg = ClusterZones.AlertText("NQZ26", zr, x => x.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), 7);
+        Check(msg == "NQZ26: giá chạm vùng kháng cự 25540.00–25610.00 – HVN ngày 21/11 + 22/11 + HVN tuần + VWAP tuần, canh sell", "tin cham vung khang cu -> canh sell", msg);
+        z.Desc = null;
+        Check(ClusterZones.AlertText("GCZ26", z, x => x.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), 7).EndsWith(", canh buy"), "tin cham vung ho tro -> canh buy");
+
+        Console.WriteLine("\n[5c] Tin buoi sang - gio VN, gio mua he / mua dong My");
+        var ny = NewsCalendar.NewYork();
+        Check(ny != null, "may co mui gio New York");
+        // feed thật dạng Forex Factory: tuần 23–27/11/2026 (sau khi Mỹ lùi giờ 01/11) + một tin mùa hè để so
+        string feed = "[{\"title\":\"Core PCE Price Index m/m\",\"country\":\"USD\",\"date\":\"2026-11-25T08:30:00-05:00\",\"impact\":\"High\",\"forecast\":\"0.2%\",\"previous\":\"0.2%\"},"
+                    + "{\"title\":\"Bank Holiday\",\"country\":\"USD\",\"date\":\"2026-11-26T08:00:00-05:00\",\"impact\":\"Holiday\",\"forecast\":\"\",\"previous\":\"\"},"
+                    + "{\"title\":\"FOMC Statement\",\"country\":\"USD\",\"date\":\"2026-11-25T14:00:00-05:00\",\"impact\":\"High\",\"forecast\":\"\",\"previous\":\"\"},"
+                    + "{\"title\":\"BOJ Core CPI y/y\",\"country\":\"JPY\",\"date\":\"2026-11-25T00:00:00-05:00\",\"impact\":\"Low\",\"forecast\":\"\",\"previous\":\"\"}]";
+        var evs = NewsCalendar.Parse(feed, 7);
+        Check(evs.Count == 3, "loc tin: giu USD cao/vua + ngay nghi le My, bo JPY thap", evs.Count.ToString());
+        var mUtc = new DateTime(2026, 11, 25, 0, 0, 0, DateTimeKind.Utc);        // 07:00 VN thứ Tư 25/11
+        var ml = NewsCalendar.MorningLines(evs, mUtc, 7, ny, out bool mis);
+        string all = string.Join("\n", ml);
+        Check(all.Contains("• 20:30 ") && all.Contains("Core PCE"), "mua dong: 8:30 New York = 20:30 VN", all);
+        Check(all.Contains("02:00 (rạng sáng 26/11)") && all.Contains("FOMC"), "14:00 New York = 02:00 VN hom sau, ghi ro rang sang", all);
+        Check(all.Contains("UTC−5 (giờ mùa đông)") && all.Contains("= 20:30 VN"), "dong gio New York mua dong", ml.Count > 1 ? ml[1] : "");
+        Check(!mis, "do lech feed khop mui gio New York");
+        var ml2 = NewsCalendar.MorningLines(evs, new DateTime(2026, 11, 26, 0, 0, 0, DateTimeKind.Utc), 7, ny, out _);
+        Check(ml2.Any(x => x.Contains("Mỹ nghỉ lễ")) && ml2.Any(x => x.Contains("Không có tin")), "26/11: bao My nghi le + khong co tin", string.Join(" | ", ml2));
+        // mùa hè: 8:30 New York = 19:30 VN
+        var evS = NewsCalendar.Parse("[{\"title\":\"CPI m/m\",\"country\":\"USD\",\"date\":\"2026-07-15T08:30:00-04:00\",\"impact\":\"High\",\"forecast\":\"\",\"previous\":\"\"}]", 7);
+        var mlS = NewsCalendar.MorningLines(evS, new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc), 7, ny, out bool misS);
+        Check(string.Join("\n", mlS).Contains("• 19:30 ") && string.Join("\n", mlS).Contains("UTC−4 (giờ mùa hè)") && !misS, "mua he: 8:30 New York = 19:30 VN", string.Join(" | ", mlS));
+        // tuần đổi giờ: thứ Hai 02/11/2026 (Mỹ vừa lùi giờ 01/11) — feed ghi −05:00 thì khớp; feed ghi nhầm −04:00 thì cảnh báo
+        var evX = NewsCalendar.Parse("[{\"title\":\"ISM Manufacturing PMI\",\"country\":\"USD\",\"date\":\"2026-11-02T10:00:00-04:00\",\"impact\":\"High\",\"forecast\":\"\",\"previous\":\"\"}]", 7);
+        NewsCalendar.MorningLines(evX, new DateTime(2026, 11, 2, 0, 0, 0, DateTimeKind.Utc), 7, ny, out bool misX);
+        Check(misX, "feed ghi sai do lech gio (−4 sau khi My da lui gio) -> canh bao");
+        // lịch tuần cũ (tin cuối đã qua > 12 giờ, vd sáng thứ Hai) ⇒ chưa sẵn sàng, chờ tải lịch mới
+        Check(!NewsCalendar.CoversNow(evs, new DateTime(2026, 11, 30, 0, 0, 0, DateTimeKind.Utc)) && NewsCalendar.CoversNow(evs, mUtc),
+              "lich tuan cu sang thu Hai -> cho tai lai; giua tuan -> dung duoc");
 
         Console.WriteLine("\n[5b] Vung cum vol - C# = Python (cz_ref.py) tren ca that NQZ26 + GCZ26");
         foreach (var name in new[] { "cz_nqy.json", "cz_gc.json" })

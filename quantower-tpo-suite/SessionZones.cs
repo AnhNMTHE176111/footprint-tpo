@@ -77,7 +77,7 @@ namespace SessionZonesNs
         // ---------- Giờ ----------
         [InputParameter("Lệch giờ so với UTC (Việt Nam = 7)", 30, -12, 14, 1, 0)]
         public int TzOffset { get; set; } = 7;
-        // ---------- Telegram (tổng hợp: đầu ngày + buổi chiều + trước phiên Mỹ) ----------
+        // ---------- Telegram (2026-11-26: tin buổi sáng = lịch tin hôm nay + báo khi giá chạm vùng cụm vol) ----------
         [InputParameter("Gửi Telegram", 40)]
         public bool TeleEnabled { get; set; } = false;
         [InputParameter("Bot token", 41)]
@@ -89,7 +89,7 @@ namespace SessionZonesNs
         public bool TeleIsSender { get; set; } = false;
         [InputParameter("Gửi thử ngay (bật rồi tắt)", 44)]
         public bool TeleTestNow { get; set; } = false;
-        [InputParameter("Kèm lịch tin Forex Factory", 45)]
+        [InputParameter("Báo lịch tin buổi sáng (Forex Factory, giờ VN)", 45)]
         public bool TeleShowNews { get; set; } = true;
         [InputParameter("Báo Telegram khi giá chạm vùng cụm vol (1 tin mỗi lần chạm)", 46)]
         public bool TeleTouchAlert { get; set; } = true;
@@ -108,10 +108,6 @@ namespace SessionZonesNs
         private const int MaxZones = 5;
         private const int WeekGapHours = 30;          // nghỉ > 30 giờ ⇒ tuần mới
         private const double MinSpliceJumpPrices = 20.0;   // chỗ nối hợp đồng: nhảy ≥ 20 "giá" (× 10 × tick)
-        private const int TeleUsStartMin = 1160;      // 19:20
-        private const int TelePreUsMin = 30;
-        private const int TeleMorningGrace = 6;
-        private const int TeleAfternoonMin = 840;     // 14:00
         private const string TeleShareDir = "";       // thư mục mặc định
         private static readonly Color LvnColor = Color.FromArgb(0x90, 0x90, 0x90);
 
@@ -340,7 +336,7 @@ namespace SessionZonesNs
                 }
 
                 // ---- VÙNG CỤM VOL (chưa kiểm định): profile cố định từng phiên ngày (M30) + trạng thái trên nến M15 phụ.
-                List<CzZone> cz = ShowClusterZones || TeleTouchAlert ? ClusterStructure(hd, rowStep) : null;
+                List<CzZone> cz = ShowClusterZones || TeleTouchAlert ? ClusterStructure(hd, rowStep, vwapDay, vwapWeek) : null;
 
                 lock (_sync) _render = new ZoneRenderState { Zones = zones, Strong = strong, HvnBoxes = hvnBoxes, Note = note, NowPrice = nowPrice, Tick = tick,
                                                              Cluster = ShowClusterZones ? cz : null };
@@ -416,7 +412,7 @@ namespace SessionZonesNs
         }
 
         // Vùng cụm vol tại nến M15 cuối. Hàng profile mỗi phiên ngày lấy từ M30 (đệm theo giờ nến đầu + số nến).
-        private List<CzZone> ClusterStructure(HistoricalData hd30, double rowStep)
+        private List<CzZone> ClusterStructure(HistoricalData hd30, double rowStep, double vwapDay, double vwapWeek)
         {
             var h15 = _hd15;
             if (h15 == null || h15.Count < 10) return null;
@@ -441,8 +437,31 @@ namespace SessionZonesNs
                 }
                 days.Add(new CzDay { T0 = fb.TimeLeft, N30 = to - from + 1, Prices = rows.pr, Vols = rows.v });
             }
+            // HVN tuần = cụm nặng nhất của tuần đã đóng gần nhất (chỉ để gọi tên vùng, không thêm vùng).
+            (double[] pr, double[] v) wRows = (null, null);
+            var weeks = ProfileEngine.WeekSpans(hd30, WeekGapHours);
+            if (weeks.Count >= 2 && hd30[weeks[weeks.Count - 2].fr, SeekOriginHistory.Begin] is HistoryItemBar wb)
+            {
+                var (wf, wt) = weeks[weeks.Count - 2];
+                string wkey = "w|" + wb.TimeLeft.Ticks + "|" + (wt - wf + 1) + "|" + rowStep;
+                keep.Add(wkey);
+                if (!_czRows.TryGetValue(wkey, out wRows))
+                {
+                    var r = ProfileEngine.RowsOver(hd30, wf, wt, rowStep, UseVolume);
+                    wRows = (r.Keys.ToArray(), r.Values.ToArray());
+                    _czRows[wkey] = wRows;
+                }
+            }
             foreach (var old in _czRows.Keys.Where(x => !keep.Contains(x)).ToList()) _czRows.Remove(old);
-            return ClusterZones.Compute(bars, days, rowStep, new CzParams(), out _);
+            var cp = new CzParams();
+            var res = ClusterZones.Compute(bars, days, rowStep, cp, out double u);
+            var extras = new List<(string, double, double)>();
+            var wc = wRows.pr != null ? ClusterZones.Cluster(wRows.pr, wRows.v, u, rowStep, cp) : null;
+            if (wc.HasValue) extras.Add(("HVN tuần", wc.Value.lo, wc.Value.hi));
+            if (vwapWeek > 0) extras.Add(("VWAP tuần", vwapWeek, vwapWeek));
+            if (vwapDay > 0) extras.Add(("VWAP ngày", vwapDay, vwapDay));
+            foreach (var z in res) z.Desc = ClusterZones.Describe(z, extras, u, TzOffset);
+            return res;
         }
 
         private void ConfigTele()
@@ -455,12 +474,6 @@ namespace SessionZonesNs
             _tele.ChatId = TeleChatId?.Trim() ?? "";
             _tele.ShareDir = TeleShareDir ?? "";
             _tele.TzOffset = TzOffset;          // dùng lệch giờ sẵn có của M30
-            _tele.UsStartMin = TeleUsStartMin;
-            _tele.PreUsMin = TelePreUsMin;
-            _tele.MorningGraceBars = TeleMorningGrace;
-            _tele.AfternoonMin = TeleAfternoonMin;
-            _tele.IbBars = 2;                   // M30 không có input IB → coi IB = 2 nến (1h)
-            _tele.GapMinutes = GapMinutes;
         }
 
         // quan hệ B vs A: 1=EXTEND_UP, -1=EXTEND_DN, 0=INSIDE/overlap

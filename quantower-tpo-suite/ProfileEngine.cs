@@ -620,6 +620,8 @@ namespace TpoSuite
         {
             public string Title = "", Ccy = "", Impact = "", Forecast = "", Previous = "";
             public DateTime WhenVn;      // giờ Việt Nam
+            public DateTime Utc;         // giờ tuyệt đối (từ chuỗi giờ + độ lệch của feed)
+            public int OffMin = int.MinValue;   // độ lệch feed ghi kèm (phút so với UTC; giờ New York: −300 mùa đông, −240 mùa hè)
             public bool AllDay;
         }
 
@@ -636,7 +638,8 @@ namespace TpoSuite
             lock (Gate)
             {
                 if (_loading) return;
-                if ((DateTime.UtcNow - _cacheUtc).TotalMinutes < 60 && _cache != null) return;
+                // cache còn hạn 60' — trừ khi là lịch TUẦN CŨ (tin cuối cùng đã qua > 12 giờ, vd sáng thứ Hai) thì 10' thử lại
+                if (_cache != null && (DateTime.UtcNow - _cacheUtc).TotalMinutes < (CoversNow(_cache, DateTime.UtcNow) ? 60 : 10)) return;
                 if (_cache == null && TryLoadDisk(dir, tzOffset)) return;   // khởi động: dùng file cũ trước
                 _loading = true;
             }
@@ -675,8 +678,22 @@ namespace TpoSuite
             catch { return false; }
         }
 
+        // Lịch có phải của tuần đang chạy không: tin muộn nhất chưa qua quá 12 giờ.
+        public static bool CoversNow(IList<Ev> evs, DateTime nowUtc)
+            => evs != null && evs.Count > 0 && evs.Max(e => e.Utc) >= nowUtc.AddHours(-12);
+
+        public static bool Ready(DateTime nowUtc) { lock (Gate) return CoversNow(_cache, nowUtc); }
+
+        // Múi giờ New York (Windows: "Eastern Standard Time", Linux: "America/New_York"); null nếu máy không có.
+        public static TimeZoneInfo NewYork()
+        {
+            foreach (var id in new[] { "Eastern Standard Time", "America/New_York" })
+                try { return TimeZoneInfo.FindSystemTimeZoneById(id); } catch { }
+            return null;
+        }
+
         // ---- Parser JSON tối giản: feed là mảng object, mọi giá trị đều là chuỗi ----
-        private static List<Ev> Parse(string json, int tzOffset)
+        public static List<Ev> Parse(string json, int tzOffset)
         {
             var res = new List<Ev>();
             if (string.IsNullOrEmpty(json)) return res;
@@ -690,7 +707,7 @@ namespace TpoSuite
                 var fields = ReadFields(json.Substring(s + 1, e - s - 1));
                 i = e + 1;
                 string ccy = Get(fields, "country"), imp = Get(fields, "impact");
-                bool keep = (ccy == "USD" && (imp == "High" || imp == "Medium"))
+                bool keep = (ccy == "USD" && (imp == "High" || imp == "Medium" || imp == "Holiday"))
                          || ((ccy == "EUR" || ccy == "GBP") && imp == "High");
                 if (!keep) continue;
                 string date = Get(fields, "date");
@@ -699,10 +716,14 @@ namespace TpoSuite
                     Title = Get(fields, "title"), Ccy = ccy, Impact = imp,
                     Forecast = Get(fields, "forecast"), Previous = Get(fields, "previous")
                 };
-                if (DateTimeOffset.TryParse(date, out var dto))
-                    ev.WhenVn = dto.UtcDateTime.AddHours(tzOffset);
-                else if (DateTime.TryParse(date.Length >= 10 ? date.Substring(0, 10) : date, out var d0))
-                { ev.WhenVn = d0; ev.AllDay = true; }
+                // Feed ghi giờ New York KÈM độ lệch (vd 2026-11-25T08:30:00-05:00) ⇒ đổi sang UTC bằng chính độ lệch đó,
+                // không tự cộng trừ giờ mùa hè/đông. Ngày nghỉ (Holiday) coi là cả ngày.
+                if (DateTimeOffset.TryParse(date, System.Globalization.CultureInfo.InvariantCulture,
+                                            System.Globalization.DateTimeStyles.None, out var dto))
+                {
+                    ev.Utc = dto.UtcDateTime; ev.OffMin = (int)Math.Round(dto.Offset.TotalMinutes);
+                    ev.WhenVn = ev.Utc.AddHours(tzOffset); ev.AllDay = imp == "Holiday";
+                }
                 else continue;
                 res.Add(ev);
             }
@@ -781,81 +802,76 @@ namespace TpoSuite
             return false;
         }
 
-        // Dòng lịch tin chèn vào tin Telegram. preUsOnly = chỉ tin còn LẠI từ giờ trở đi.
-        public static List<string> Lines(DateTime nowVn, bool preUsOnly)
+        // TIN BUỔI SÁNG (2026-11-26): chỉ báo hôm nay có tin hay không và tin lúc mấy giờ (giờ VN), cho 24 giờ tới.
+        // Giờ VN tính từ giờ UTC tuyệt đối của feed. Kiểm chéo: độ lệch feed ghi kèm phải đúng độ lệch New York tại
+        // giờ đó (theo luật giờ mùa hè Mỹ của máy) — lệch ⇒ thêm dòng cảnh báo. ny = null ⇒ bỏ kiểm chéo.
+        public static List<string> MorningLines(IList<Ev> evs, DateTime nowUtc, int tzOffset, TimeZoneInfo ny, out bool tzMismatch)
         {
+            tzMismatch = false;
             var outp = new List<string>();
-            List<Ev> src;
-            lock (Gate) src = _cache;
-            if (src == null) return outp;
-            var day = nowVn.Date;
-            var sel = new List<Ev>();
-            foreach (var e in src)
+            var nowVn = nowUtc.AddHours(tzOffset);
+            outp.Add($"☀️ LỊCH TIN {nowVn:dd/MM} (giờ VN, 24 giờ tới)");
+            if (ny != null)
             {
-                if (e.WhenVn.Date != day) continue;
-                if (preUsOnly && !e.AllDay && e.WhenVn < nowVn) continue;
-                sel.Add(e);
+                var off = ny.GetUtcOffset(nowUtc);
+                bool dst = ny.IsDaylightSavingTime(nowUtc);
+                var t830 = new DateTime(2000, 1, 1, 8, 30, 0).Add(-off).AddHours(tzOffset);
+                outp.Add($"Giờ New York đang UTC{(off < TimeSpan.Zero ? "−" : "+")}{Math.Abs(off.TotalHours):0} ({(dst ? "giờ mùa hè" : "giờ mùa đông")}): tin 8:30 sáng Mỹ = {t830:HH:mm} VN.");
             }
-            if (sel.Count == 0)
+            var sel = new List<Ev>(); var hol = new List<Ev>();
+            foreach (var e in evs ?? new List<Ev>())
             {
-                outp.Add(preUsOnly ? "📅 TIN: không còn tin Mỹ nào hôm nay → chạy theo dòng lệnh."
-                                   : "📅 TIN HÔM NAY: không có tin USD đáng kể.");
-                return outp;
+                if (e.AllDay) { if (e.Ccy == "USD" && e.Utc >= nowUtc.AddHours(-12) && e.Utc < nowUtc.AddHours(24)) hol.Add(e); continue; }
+                if (e.Utc >= nowUtc && e.Utc < nowUtc.AddHours(24)) sel.Add(e);
+                if (ny != null && e.OffMin != int.MinValue && e.OffMin != (int)Math.Round(ny.GetUtcOffset(e.Utc).TotalMinutes)) tzMismatch = true;
             }
-            outp.Add(preUsOnly ? "📅 TIN CÒN LẠI HÔM NAY:" : "📅 TIN HÔM NAY:");
-            foreach (var e in sel)
+            foreach (var h in hol) outp.Add($"🇺🇸 Mỹ nghỉ lễ ({h.Title}) — thanh khoản mỏng.");
+            if (sel.Count == 0) outp.Add("Không có tin USD / EUR / GBP đáng kể.");
+            foreach (var e in sel.OrderBy(x => x.Utc))
             {
-                string hhmm = e.AllDay ? "cả ngày" : e.WhenVn.ToString("HH:mm");
+                var vn = e.Utc.AddHours(tzOffset);
+                string when = vn.Date == nowVn.Date ? vn.ToString("HH:mm") : vn.ToString("HH:mm") + $" (rạng sáng {vn:dd/MM})";
                 string fc = string.IsNullOrEmpty(e.Forecast) ? "-" : e.Forecast;
                 string pv = string.IsNullOrEmpty(e.Previous) ? "-" : e.Previous;
-                outp.Add($"  {hhmm} {Label(e)} {e.Title} (dự báo {fc} / trước {pv})");
+                outp.Add($"• {when} {Label(e)} {e.Title} (dự báo {fc} / trước {pv})");
             }
-            outp.Add("  ⚠ Né 15' trước–sau mốc tin: không vào lệnh mới, siết SL.");
+            if (tzMismatch) outp.Add("⚠ Giờ trong lịch tin không khớp múi giờ New York — kiểm lại trên forexfactory.com.");
             return outp;
+        }
+
+        public static List<string> MorningLines(DateTime nowUtc, int tzOffset, out bool tzMismatch)
+        {
+            List<Ev> src; lock (Gate) src = _cache;
+            return MorningLines(src, nowUtc, tzOffset, NewYork(), out tzMismatch);
         }
     }
 
-    // ---- Gửi "tổng hợp" lên Telegram (dùng chung cho DailyTpoBias + M30SessionZones) --------
-    //  Mỗi indicator GHI phần của mình ra file chung (sec_<symbol>_<kind>.txt). Indicator nào
-    //  có bot token + chat id sẽ GỘP các phần (bias + zone) thành 1 tin và bắn tại 3 mốc/ngày:
-    //    • MORNING   : ngày phát triển vừa đủ nến qua IB (đủ bias) — cửa sổ vài nến sau IB.
-    //    • AFTERNOON : mốc giờ cố định buổi chiều (mặc định 14:00 VN — quanh giờ Âu vào).
-    //    • PREUS     : trước giờ phiên Mỹ mở PreUsMin phút.
-    //  Chống gửi trùng bằng FILE KHOÁ tạo NGUYÊN TỬ (FileMode.CreateNew) theo ngày+mốc → dù
-    //  cả 2 indicator (hoặc 2 chart) cùng cầm token cũng chỉ 1 tin/mốc/ngày. Chỉ chạy khi dữ
-    //  liệu LIVE (nến cuối gần giờ thực → chart lịch sử không bắn nhầm). HTTP chạy nền (Task).
+    // ---- Telegram (dùng chung cho DailyTpoBias + SessionZones) — 2026-11-26 -----------------------------------
+    //  Bỏ 3 tin tổng hợp (sáng / chiều / trước phiên Mỹ). Chỉ còn:
+    //    • TIN BUỔI SÁNG (07:00–11:00 VN, thứ Hai–thứ Sáu): hôm nay có tin không, tin lúc mấy giờ (NewsCalendar.MorningLines).
+    //    • BÁO CHẠM VÙNG (SendOnce, gọi từ SessionZones).
+    //  Chống gửi trùng bằng FILE KHOÁ tạo NGUYÊN TỬ (FileMode.CreateNew) → nhiều chart / 2 indicator cùng cầm token cũng chỉ
+    //  1 tin. HTTP chạy nền (Task).
     internal sealed class TeleReport
     {
         public bool Enabled, TestNow;
-        // Nhiều chart/tab có thể cùng add 1 indicator trên cùng symbol (vd SessionZones
-        // gắn cả M30 + 2 tab M1) — mỗi instance đều cố gắng bắn Telegram, dễ ra NHIỀU tin
-        // cùng lúc nếu cấu hình (TzOffset/GapMinutes) lệch nhau giữa các tab dù cùng
-        // symbol → khoá lock khác nhau. Chỉ 1 instance (bật IsSender=true) mới thực sự
-        // kiểm mốc + gửi; các instance khác vẫn ghi section (để Compose gộp) nhưng
-        // không tự bắn tin.
+        // Chỉ 1 instance (bật IsSender=true) mới thực sự gửi.
         public bool IsSender = true;
         public string BotToken = "", ChatId = "", ShareDir = "";
         public int TzOffset = 7;
-        public int UsStartMin = 1160;      // 19:20 VN (COMEX vàng mở pit)
-        public int PreUsMin = 30;
-        public int AfternoonMin = 840;     // 14:00 VN — tổng hợp giữa ngày (0 = tắt)
-        public int MorningGraceBars = 6;   // sau IB còn được bắn "báo sáng" trong bao nhiêu nến
-        public int IbBars = 2;
-        public int GapMinutes = 75;
-        public int FreshMinutes = 15;      // section/nến cũ hơn ngần này coi như KHÔNG live
-        public bool ShowNews = true;       // kèm lịch tin Forex Factory (đầu ngày + trước phiên Mỹ)
+        public bool ShowNews = true;       // tin buổi sáng
+        public int MorningFromMin = 420, MorningToMin = 660;   // 07:00–11:00 VN; 10:45 chưa tải được lịch ⇒ báo lỗi
 
         private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-        private long _lastPubTicks, _lastCheckTicks;
+        private long _lastCheckTicks;
         private bool _lastTest;
 
-        // Gọi 1 lần cuối mỗi Process(): ghi section của indicator này + kiểm mốc để gửi.
+        // Gọi 1 lần cuối mỗi Process(): kiểm mốc tin buổi sáng. (hd, symbol, kind, lines giữ cho tương thích, không dùng.)
         public void Run(HistoricalData hd, string symbol, string kind, IReadOnlyList<string> lines)
         {
-            if (!Enabled || hd == null) return;
+            if (!Enabled) return;
             try
             {
-                PublishSection(symbol, kind, lines);
                 if (!IsSender) return;
                 if (ShowNews) NewsCalendar.Refresh(Dir(), TzOffset, Log);   // tải nền, có cache 1h
                 if (string.IsNullOrWhiteSpace(BotToken) || string.IsNullOrWhiteSpace(ChatId)) return;
@@ -863,7 +879,7 @@ namespace TpoSuite
                 long now = DateTime.UtcNow.Ticks;
                 if (now - _lastCheckTicks < 15 * TimeSpan.TicksPerSecond) return;   // ~15s/lần
                 _lastCheckTicks = now;
-                CheckTriggers(hd, symbol);
+                CheckMorningNews();
             }
             catch (Exception ex) { Log("LỖI Run: " + ex.Message); }
         }
@@ -879,7 +895,7 @@ namespace TpoSuite
             if (!Enabled) { Log("BỎ QUA: chưa bật 'Gửi Telegram'"); return; }
             if (string.IsNullOrWhiteSpace(BotToken) || string.IsNullOrWhiteSpace(ChatId)) { Log("BỎ QUA: thiếu token hoặc chat_id"); return; }
             Log("TEST → đang gửi HTTP...");
-            SendAsync(Compose(symbol, "🔔 TEST — bot TPO chạy OK", "MORNING"), null);
+            SendAsync("🔔 TEST — bot TPO chạy OK · " + (symbol ?? ""), null);
         }
 
         // ===== Dùng cho indicator KHÁC (vd RunnerSignal): gửi 1 tin THÔ, KHÔNG đụng section/lock TPO =====
@@ -948,93 +964,32 @@ namespace TpoSuite
             return sb.ToString();
         }
 
-        private void PublishSection(string symbol, string kind, IReadOnlyList<string> lines)
+        // Tin buổi sáng: một lần mỗi ngày (khoá file theo ngày VN), thứ Hai–thứ Sáu, trong khung MorningFromMin–MorningToMin.
+        // Chưa có lịch của tuần đang chạy thì chờ; tới 10:45 vẫn chưa có ⇒ gửi báo không tải được.
+        private void CheckMorningNews()
         {
-            if (lines == null || lines.Count == 0) return;
-            long now = DateTime.UtcNow.Ticks;
-            if (now - _lastPubTicks < 30 * TimeSpan.TicksPerSecond) return;   // giảm ghi đĩa
-            _lastPubTicks = now;
-            var sb = new StringBuilder();
-            foreach (var l in lines) sb.Append(l).Append('\n');
-            try { File.WriteAllText(Path.Combine(Dir(), $"sec_{Safe(symbol)}_{kind}.txt"), sb.ToString()); } catch { }
-        }
-
-        private void CheckTriggers(HistoricalData hd, string symbol)
-        {
-            int n = hd.Count; if (n == 0) return;
-            // Dữ liệu có LIVE không? Nến cuối phải gần giờ thực (nến M30 đang tạo cũ tối đa ~30').
-            if (hd[n - 1, SeekOriginHistory.Begin] is not HistoryItemBar lastBar) return;
-            if ((DateTime.UtcNow - lastBar.TimeLeft).TotalMinutes > 60) return;
-
-            var groups = ProfileEngine.GroupByGap(hd, GapMinutes);
-            if (groups.Count == 0) return;
-            var dg = groups[groups.Count - 1];                 // ngày đang phát triển
-            int devBars = dg.to - dg.from + 1;
-            if (hd[dg.from, SeekOriginHistory.Begin] is not HistoryItemBar firstBar) return;
-            string dayKey = firstBar.TimeLeft.AddHours(TzOffset).ToString("yyyyMMdd");
-            int nowMin = (int)DateTime.UtcNow.AddHours(TzOffset).TimeOfDay.TotalMinutes;
-
-            // MORNING — IB xong, còn trong cửa sổ vài nến sau IB (mở chart giữa ngày sẽ KHÔNG bắn)
-            if (devBars >= IbBars && devBars <= IbBars + MorningGraceBars)
-                TrySend(symbol, dayKey, "MORNING", "☀️ TỔNG HỢP ĐẦU NGÀY");
-
-            // AFTERNOON — mốc giờ cố định buổi chiều, cửa sổ 20' (0 = tắt)
-            if (AfternoonMin > 0 && nowMin >= AfternoonMin && nowMin <= AfternoonMin + 20)
-                TrySend(symbol, dayKey, "AFTERNOON", "🌤 TỔNG HỢP BUỔI CHIỀU");
-
-            // PREUS — trong 20' kể từ mốc (giờ phiên Mỹ − PreUsMin)
-            int trig = UsStartMin - PreUsMin;
-            if (nowMin >= trig && nowMin <= trig + 20)
-                TrySend(symbol, dayKey, "PREUS", "🇺🇸 CHUẨN BỊ PHIÊN MỸ (30')");
-        }
-
-        private void TrySend(string symbol, string dayKey, string slot, string header)
-        {
-            string lockPath = Path.Combine(Dir(), $"sent_{Safe(symbol)}_{dayKey}_{slot}.lock");
+            if (!ShowNews) return;
+            var nowUtc = DateTime.UtcNow;
+            var vn = nowUtc.AddHours(TzOffset);
+            if (vn.DayOfWeek == DayOfWeek.Saturday || vn.DayOfWeek == DayOfWeek.Sunday) return;
+            int m = (int)vn.TimeOfDay.TotalMinutes;
+            if (m < MorningFromMin || m > MorningToMin) return;
+            bool ready = NewsCalendar.Ready(nowUtc);
+            if (!ready && m < MorningToMin - 15) return;
+            string lockPath = Path.Combine(Dir(), $"sent_news_{vn:yyyyMMdd}.lock");
             if (File.Exists(lockPath)) return;
             try { using (new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { } }
-            catch { return; }   // ai đó đã chiếm mốc này
-            Log($"{slot} → đang gửi (ngày {dayKey})");
-            SendAsync(Compose(symbol, header, slot), lockPath);   // gửi lỗi → xoá khoá để lần sau thử lại
-        }
-
-        private string Compose(string symbol, string header, string slot)
-        {
-            var sb = new StringBuilder();
-            sb.Append(header).Append(" · ").Append(symbol ?? "").Append(" · ")
-              .Append(DateTime.UtcNow.AddHours(TzOffset).ToString("dd/MM HH:mm")).Append('\n');
-            sb.Append("————————————\n");
-            string dir = Dir();
-            bool any = false;
-            foreach (var kind in new[] { "bias", "zone" })   // bias trước, zone sau
+            catch { return; }
+            string text;
+            if (ready)
             {
-                string path = Path.Combine(dir, $"sec_{Safe(symbol)}_{kind}.txt");
-                if (!File.Exists(path)) continue;
-                try
-                {
-                    if ((DateTime.UtcNow - new FileInfo(path).LastWriteTimeUtc).TotalMinutes > FreshMinutes) continue;
-                    string body = File.ReadAllText(path).TrimEnd();
-                    if (body.Length == 0) continue;
-                    if (any) sb.Append('\n');
-                    sb.Append(body).Append('\n');
-                    any = true;
-                }
-                catch { }
+                var lines = NewsCalendar.MorningLines(nowUtc, TzOffset, out bool mis);
+                if (mis) Log("lịch tin: độ lệch giờ feed không khớp múi giờ New York");
+                text = string.Join("\n", lines);
             }
-            if (!any) sb.Append("(chưa có dữ liệu bias/vùng — mở indicator lên chart)");
-
-            // Lịch tin: đầu ngày liệt kê cả ngày; trước phiên Mỹ chỉ nhắc tin CÒN LẠI.
-            // Mốc buổi chiều bỏ qua cho tin gọn.
-            if (ShowNews && (slot == "MORNING" || slot == "PREUS"))
-            {
-                var news = NewsCalendar.Lines(DateTime.UtcNow.AddHours(TzOffset), slot == "PREUS");
-                if (news.Count > 0)
-                {
-                    sb.Append("\n————————————\n");
-                    foreach (var l in news) sb.Append(l).Append('\n');
-                }
-            }
-            return sb.ToString().TrimEnd();
+            else text = $"☀️ LỊCH TIN {vn:dd/MM}: chưa tải được lịch tuần này từ Forex Factory — tự kiểm tra trên forexfactory.com.";
+            Log("TIN SÁNG → đang gửi");
+            SendAsync(text, lockPath);
         }
 
         private void SendAsync(string text, string lockPathOnFail)
@@ -2264,6 +2219,7 @@ namespace TpoSuite
         public bool Live;                  // đang trong lần chạm
         public DateTime? EpT;              // nến M15 bắt đầu lần chạm đang diễn ra
         public List<DateTime> Days = new List<DateTime>();
+        public string Desc;                // thành phần vùng, vd "HVN ngày 24/11 + HVN tuần + VWAP tuần" (Describe)
     }
 
     public static class ClusterZones
@@ -2408,11 +2364,23 @@ namespace TpoSuite
 
         public static string SideText(int side) => side > 0 ? "hỗ trợ" : "kháng cự";
 
-        // Nhãn trên chart: "Cụm vol 24/11 · hỗ trợ · chờ chạm lần 1" (đang chạm: "đang chạm lần 1").
+        // Thành phần vùng: "HVN ngày 24/11 + 23/11", cộng các mức khác nằm trong vùng (± 0,1 U15), theo thứ tự extras
+        // (vd HVN tuần, VWAP tuần, VWAP ngày). Mức dạng đường: lo = hi.
+        public static string Describe(CzZone z, IList<(string name, double lo, double hi)> extras, double u, int tzOffset)
+        {
+            var parts = new List<string> { "HVN ngày " + string.Join(" + ", z.Days.Select(d => d.AddHours(tzOffset).ToString("dd/MM"))) };
+            double tol = double.IsNaN(u) ? 0 : 0.1 * u;
+            if (extras != null)
+                foreach (var x in extras)
+                    if (!double.IsNaN(x.lo) && !double.IsNaN(x.hi) && x.lo <= z.Hi + tol && x.hi >= z.Lo - tol && !parts.Contains(x.name)) parts.Add(x.name);
+            return string.Join(" + ", parts);
+        }
+
+        // Nhãn trên chart: "HVN ngày 24/11 + VWAP tuần · hỗ trợ · chờ chạm lần 1" (đang chạm: "đang chạm lần 1").
         public static string Label(CzZone z, int tzOffset)
         {
-            string ds = string.Join("+", z.Days.Select(d => d.AddHours(tzOffset).ToString("dd/MM")));
-            return $"Cụm vol {ds} · {SideText(z.Side)} · {(z.Live ? "đang chạm" : "chờ chạm")} lần {z.Touch}";
+            string desc = z.Desc ?? Describe(z, null, double.NaN, tzOffset);
+            return $"{desc} · {SideText(z.Side)} · {(z.Live ? "đang chạm" : "chờ chạm")} lần {z.Touch}";
         }
 
         // Khoá chống gửi trùng cho một lần chạm: symbol + phía + nến M15 bắt đầu lần chạm.
@@ -2428,11 +2396,11 @@ namespace TpoSuite
             return key != null && (sent == null || !sent.Contains(key));
         }
 
+        // Tin chạm vùng (mẫu người dùng 2026-11-26): "NQZ26: giá chạm vùng kháng cự 25540–25610 – HVN tuần + VWAP tuần, canh sell".
         public static string AlertText(string symbol, CzZone z, Func<double, string> fmt, int tzOffset)
         {
-            string ds = string.Join(", ", z.Days.Select(d => d.AddHours(tzOffset).ToString("dd/MM")));
-            return $"🎯 {symbol}: giá chạm vùng cụm vol {fmt(z.Lo)}–{fmt(z.Hi)} ({SideText(z.Side)}, lần {z.Touch}) · cụm ngày {ds}.\n"
-                 + "Canh phản ứng tại mép vùng — chưa kiểm định, không phải tín hiệu vào lệnh.";
+            string desc = z.Desc ?? Describe(z, null, double.NaN, tzOffset);
+            return $"{symbol}: giá chạm vùng {SideText(z.Side)} {fmt(z.Lo)}–{fmt(z.Hi)} – {desc}, canh {(z.Side > 0 ? "buy" : "sell")}";
         }
     }
 }

@@ -116,6 +116,29 @@ static class Tests
         ed.Down(100, m.Y(28190), true, m, out cap); ed.Down(100, m.Y(28230), true, m, out cap);
         Check(ed.Items.Count == 1 && ed.Items[0].Side == 1 && VlFmt.RrText(ed.Items[0]) == "R:R 1 : 3,00", "long R:R 3");
 
+        // 10) đường giá chạy theo lệnh + phía tô đậm (long vào 28200, SL 28190, TP 28230)
+        var L = ed.Items[0];
+        var t = L.T0;
+        var bars = new[] {
+            new VlBar(t.AddMinutes(-1), 28250, 28100, 28200),     // trước T0: bỏ qua
+            new VlBar(t, 28205, 28195, 28202),
+            new VlBar(t.AddMinutes(1), 28215, 28200, 28212),
+            new VlBar(t.AddMinutes(2), 28231, 28210, 28225),      // chạm TP
+            new VlBar(t.AddMinutes(3), 28240, 28100, 28120) };
+        var r = VlTrack.Run(L, bars);
+        Check(r.Ok && r.Hit == 1 && r.EndPrice == 28230 && r.EndT == t.AddMinutes(2), "đường giá dừng ở nến chạm TP", $"{r.Hit} {r.EndPrice} {r.EndT}");
+        var r2 = VlTrack.Run(L, new[] { bars[1], bars[2] });
+        Check(r2.Ok && r2.Hit == 0 && r2.EndPrice == 28212 && r2.EndT == t.AddMinutes(1), "chưa chạm: dừng ở giá đóng nến cuối");
+        var r3 = VlTrack.Run(L, new[] { new VlBar(t, 28235, 28185, 28200) });
+        Check(r3.Hit == -1 && r3.EndPrice == 28190, "cùng nến chạm SL và TP: tính SL");
+        Check(!VlTrack.Run(L, new[] { bars[0] }).Ok, "chưa có nến từ T0: không vẽ");
+        Check(r.Side(L) == 1 && r2.Side(L) == 1 && r3.Side(L) == -1, "phía tô đậm: chạm TP/đang lãi = vùng TP, chạm SL = vùng SL");
+        var S = new VlPos { Side = -1, Entry = 100, Sl = 105, Tp = 90, T0 = t, T1 = t.AddMinutes(30) };
+        Check(VlTrack.Run(S, new[] { new VlBar(t, 101, 95, 96), new VlBar(t.AddMinutes(1), 106, 96, 104) }).Hit == -1, "short chạm SL khi giá cao ≥ SL");
+        var rs = VlTrack.Run(S, new[] { new VlBar(t, 101, 97, 98) });
+        Check(rs.Hit == 0 && rs.Side(S) == 1, "short đang lãi (giá đóng dưới giá vào) = tô vùng TP");
+        Check(!VlTrack.Run(S, new[] { new VlBar(t.AddMinutes(31), 101, 80, 96) }).Ok, "nến sau T1 không tính");
+
         Console.WriteLine($"\n{_ok} OK, {_fail} FAIL");
         return _fail == 0 ? 0 : 1;
     }

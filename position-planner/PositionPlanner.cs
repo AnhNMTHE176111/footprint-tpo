@@ -204,6 +204,14 @@ namespace PositionPlannerNs
                 var path = VlTrack.Run(p, bars);
                 if (path.Ok)
                 {
+                    // tô đậm vùng giá đã chạy (như TradingView): từ giá vào tới giá cuối, từ T0 tới nến cuối/nến chạm
+                    int ps = path.Side(p);
+                    if (ps != 0)
+                    {
+                        float xe = Math.Min(m.X(path.EndT), g.X1), ye = m.Y(path.EndPrice);
+                        using var bf = new SolidBrush(Color.FromArgb(90, ps > 0 ? CTp : CSl));
+                        gr.FillRectangle(bf, g.X0, Math.Min(g.YE, ye), Math.Max(1, xe - g.X0), Math.Abs(ye - g.YE));
+                    }
                     using var pe = new Pen(Color.FromArgb(200, 110, 110, 120), 1.5f) { DashStyle = DashStyle.Dash };
                     gr.DrawLine(pe, g.X0, g.YE, m.X(path.EndT), m.Y(path.EndPrice));
                 }

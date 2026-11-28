@@ -51,6 +51,8 @@ namespace PositionPlannerNs
         public bool Ok;
         public DateTime EndT; public double EndPrice;
         public int Hit;              // +1 chạm TP, -1 chạm SL, 0 chưa chạm
+        /// <summary>+1 giá cuối đang ở phía lãi (tô đậm vùng TP), -1 phía lỗ (tô đậm vùng SL), 0 đúng giá vào.</summary>
+        public int Side(VlPos p) => Math.Sign((EndPrice - p.Entry) * p.Side);
     }
 
     public static class VlTrack

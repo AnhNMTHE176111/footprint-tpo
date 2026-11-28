@@ -1,4 +1,4 @@
-// Test cho PlannerCore (không cần Quantower). Chạy: dotnet run --project ve-lenh/tests
+// Test cho PlannerCore (không cần Quantower). Chạy: dotnet run --project position-planner/tests
 using System;
 using PositionPlannerNs;
 
@@ -73,14 +73,32 @@ static class Tests
         Check(p.T1 == p.T0.AddMinutes(1), "bề ngang tối thiểu 1 nến");
         ed.Down(m.X(p.T1), g.YE, true, m, out cap); ed.Move(m.X(p.T0) + 300, g.YE, m); ed.Up();
 
-        // 5) điểm giữa-trái: kéo cao thấp + ngang, giữ bề ngang, SL/TP đứng yên
+        // 5) điểm giữa-trái: co giãn giá vào + mép trái; SL/TP/mép phải đứng yên tới khi bị vượt qua thì bị đẩy theo
         g = VlEditor.Geo(p, m);
-        var dur = p.T1 - p.T0;
+        var t1b = p.T1;
         ed.Down(g.X0, g.YE, true, m, out cap); ed.Move(g.X0 + 50, m.Y(28210), m); ed.Up();
-        Check(p.Entry == 28210 && p.T0 == t0.AddMinutes(5) && p.T1 - p.T0 == dur && p.Sl == 28240 && p.Tp == 28180, "điểm giữa-trái dời giá vào + thời gian", $"{p.Entry} {p.T0}");
+        Check(p.Entry == 28210 && p.T0 == t0.AddMinutes(5) && p.T1 == t1b && p.Sl == 28240 && p.Tp == 28180, "điểm giữa-trái co giãn: mép phải, SL, TP đứng yên", $"{p.Entry} {p.T0} {p.T1}");
         g = VlEditor.Geo(p, m);
-        ed.Down(g.X0, g.YE, true, m, out cap); ed.Move(g.X0, m.Y(28300), m); ed.Up();
-        Check(p.Entry == 28239.75, "giá vào bị kẹp trong khoảng SL–TP", p.Entry.ToString());
+        ed.Down(g.X0, g.YE, true, m, out cap); ed.Move(g.X0, m.Y(28300), m);
+        Check(p.Entry == 28300 && p.Sl == 28300.25 && p.Tp == 28180, "kéo giá vào vượt SL: SL bị đẩy theo", $"{p.Entry} {p.Sl}");
+        ed.Move(g.X0, m.Y(28150), m);
+        Check(p.Entry == 28150 && p.Sl == 28240 && p.Tp == 28149.75, "kéo giá vào vượt TP: TP bị đẩy theo, SL về chỗ cũ", $"{p.Sl} {p.Tp}");
+        ed.Move(g.X1 + 50, m.Y(28210), m);
+        Check(p.T0 == m.Time(g.X1 + 50) && p.T1 == p.T0.AddMinutes(1) && p.Tp == 28180, "kéo mép trái vượt mép phải: mép phải bị đẩy theo");
+        ed.Move(g.X0, m.Y(28210), m); ed.Up();
+        Check(p.T0 == t0.AddMinutes(5) && p.T1 == t1b && p.Entry == 28210, "kéo về: mép phải về chỗ cũ");
+
+        // 5b) giữ + kéo thân hộp: dời cả lệnh đi khắp chart
+        g = VlEditor.Geo(p, m);
+        float bx = (g.X0 + g.X1) / 2, by = (g.YE + g.YTp) / 2;
+        ed.Down(bx, by, true, m, out cap);
+        Check(cap && ed.Mode == VlMode.Drag, "bấm giữ thân hộp = bắt đầu dời lệnh");
+        ed.Move(bx + 100, by - 40, m); ed.Up();
+        Check(p.Entry == 28220 && p.Sl == 28250 && p.Tp == 28190 && p.T0 == t0.AddMinutes(15) && p.T1 == t1b.AddMinutes(10), "dời cả lệnh: giá + thời gian cùng dịch, giữ khoảng SL/TP", $"{p.Entry} {p.Sl} {p.Tp} {p.T0}");
+        g = VlEditor.Geo(p, m);
+        bx = (g.X0 + g.X1) / 2; by = (g.YE + g.YTp) / 2;
+        ed.Down(bx, by, true, m, out cap); ed.Move(bx - 100, by + 40, m); ed.Up();
+        Check(p.Entry == 28210 && p.T0 == t0.AddMinutes(5), "dời lệnh về chỗ cũ");
 
         // 6) bấm chỗ trống không nuốt chuột của chart
         Check(ed.SelectedId == p.Id && ed.ShowLabels(p), "lệnh vừa đặt đang được chọn, hiện nhãn");
@@ -90,11 +108,13 @@ static class Tests
         ed.Move(900, 900, m);
         Check(!ed.ShowLabels(p), "bỏ chọn + chuột không rê lên lệnh: ẩn nhãn");
         g = VlEditor.Geo(p, m);
-        Check(!ed.Down(g.X0, g.YSl, true, m, out cap) || ed.Mode != VlMode.Drag, "lệnh chưa chọn: điểm kéo không hoạt động (chỉ chọn)");
+        ed.Down(g.X0, g.YSl, true, m, out cap); ed.Move(g.X0, g.YSl - 40, m);
+        Check(p.Sl == 28250 && p.Entry == 28220, "lệnh chưa chọn: điểm SL chưa hoạt động, kéo = dời cả lệnh", $"{p.Sl} {p.Entry}");
+        ed.Move(g.X0, g.YSl, m);
         ed.Up(); ed.SelectedId = -1;
         ed.Move((g.X0 + g.X1) / 2, (g.YE + g.YTp) / 2, m);
         Check(ed.ShowLabels(p), "rê chuột lên thân hộp: hiện nhãn");
-        Check(ed.Down((g.X0 + g.X1) / 2, (g.YE + g.YTp) / 2, true, m, out cap) && ed.SelectedId == p.Id && ed.Mode == VlMode.Idle, "bấm thân hộp = chọn, không kéo");
+        Check(ed.Down((g.X0 + g.X1) / 2, (g.YE + g.YTp) / 2, true, m, out cap) && ed.SelectedId == p.Id && ed.Up() && ed.Mode == VlMode.Idle && p.Entry == 28210 && p.T0 == t0.AddMinutes(5), "bấm thân hộp không kéo = chỉ chọn, lệnh không dời");
 
         // 7) lưu / nạp
         var back = VlFmt.Load(VlFmt.Save(ed.Items));

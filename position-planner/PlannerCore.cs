@@ -157,7 +157,7 @@ namespace PositionPlannerNs
 
         private long _nextId = 1;
         private VlPos _drag; private VlPart _dragPart;
-        private TimeSpan _dragDur; private float _grabDx;
+        private VlPos _orig; private float _grabX, _grabDx; private double _grabPr;
 
         public void SetItems(IEnumerable<VlPos> items)
         {
@@ -263,8 +263,8 @@ namespace PositionPlannerNs
                 if (part == VlPart.None) continue;
                 if (part == VlPart.Close) { Items.RemoveAt(i); Dirty = true; SelectedId = -1; HoverId = -1; HoverPart = VlPart.None; Redraw = true; return true; }
                 if (SelectedId != p.Id) { SelectedId = p.Id; Redraw = true; }
-                if (part == VlPart.Body) return true;      // bấm vào thân hộp = chọn lệnh (hiện nhãn + điểm kéo)
-                _drag = p; _dragPart = part; _dragDur = p.T1 - p.T0; _grabDx = x - m.X(p.T0);
+                // thân hộp: bấm = chọn, giữ + kéo = dời cả lệnh
+                _drag = p; _dragPart = part; _orig = p.Clone(); _grabX = x; _grabDx = x - m.X(p.T0); _grabPr = m.Price(y);
                 Mode = VlMode.Drag; capture = true;
                 return true;
             }
@@ -300,16 +300,28 @@ namespace PositionPlannerNs
                 {
                     var p = _drag;
                     double pr = m.Price(y);
+                    var o = _orig;
                     switch (_dragPart)
                     {
                         case VlPart.Sl: p.Sl = Snap(ClampSl(p.Side, p.Entry, pr)); break;
                         case VlPart.Tp: p.Tp = Snap(ClampTp(p.Side, p.Entry, pr)); break;
                         case VlPart.Entry:
                         {
-                            // giá vào nằm giữa SL và TP (cách mỗi bên ≥ 1 tick)
-                            double lo = Math.Min(p.Sl, p.Tp) + Tick, hi = Math.Max(p.Sl, p.Tp) - Tick;
-                            p.Entry = Snap(Math.Max(lo, Math.Min(hi, pr)));
-                            p.T0 = m.Time(x - _grabDx); p.T1 = p.T0 + _dragDur;
+                            // co giãn: đổi giá vào + mép trái; SL/TP/mép phải đứng yên, chỉ bị đẩy theo khi giá vào/mép trái vượt qua
+                            p.Entry = Snap(pr);
+                            p.Sl = Snap(ClampSl(p.Side, p.Entry, o.Sl));
+                            p.Tp = Snap(ClampTp(p.Side, p.Entry, o.Tp));
+                            p.T0 = m.Time(x - _grabDx);
+                            var minT1 = p.T0 + m.Bar;
+                            p.T1 = o.T1 < minT1 ? minT1 : o.T1;
+                            break;
+                        }
+                        case VlPart.Body:
+                        {
+                            // dời cả lệnh, giữ nguyên khoảng SL/TP và bề ngang
+                            double d = Snap(pr - _grabPr);
+                            p.Entry = Snap(o.Entry + d); p.Sl = Snap(o.Sl + d); p.Tp = Snap(o.Tp + d);
+                            p.T0 = m.Time(m.X(o.T0) + (x - _grabX)); p.T1 = p.T0 + (o.T1 - o.T0);
                             break;
                         }
                         case VlPart.Right:
@@ -339,7 +351,7 @@ namespace PositionPlannerNs
         public bool Up()
         {
             if (Mode != VlMode.Drag) return false;
-            Mode = VlMode.Idle; _drag = null; _dragPart = VlPart.None;
+            Mode = VlMode.Idle; _drag = null; _orig = null; _dragPart = VlPart.None;
             return true;
         }
 

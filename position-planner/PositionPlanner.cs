@@ -1,11 +1,12 @@
 // ============================================================================
-//  VeLenh — indicator "Vẽ Lệnh" cho Optimus Flow (lớp dán Quantower)
+//  PositionPlanner — indicator "Position Planner" cho Optimus Flow (lớp dán Quantower)
 // ============================================================================
 //  Thanh nút góc dưới-trái: ▲ Long · ▼ Short · Xoá hết. Bấm Long/Short rồi bấm 3 lần trên chart: giá vào → SL → TP.
-//  4 điểm kéo (xem VeLenhCore.cs). ✕ cạnh góc hộp để xoá. Lệnh được lưu theo mã ở %LOCALAPPDATA%\VeLenh\<mã>.txt.
+//  Bấm vào hộp để chọn (hiện nhãn, 4 điểm kéo, ✕), bấm ra ngoài thì nhãn ẩn. Nét đứt = giá chạy theo lệnh tới khi chạm SL/TP.
+//  Lệnh được lưu theo mã ở %LOCALAPPDATA%\PositionPlanner\<mã>.txt (tự chép từ thư mục VeLenh cũ nếu có).
 //  Không có ô Settings nào.
 // ============================================================================
-namespace VeLenhNs
+namespace PositionPlannerNs
 {
     using System;
     using System.Collections.Generic;
@@ -48,7 +49,7 @@ namespace VeLenhNs
         }
     }
 
-    public class VeLenh : Indicator
+    public class PositionPlanner : Indicator
     {
         private readonly object _lk = new();
         private readonly VlEditor _ed = new();
@@ -57,9 +58,9 @@ namespace VeLenhNs
 
         private static readonly Color CTp = Color.FromArgb(0, 150, 120), CSl = Color.FromArgb(225, 40, 40), CHandle = Color.FromArgb(100, 100, 255);
 
-        public VeLenh() : base()
+        public PositionPlanner() : base()
         {
-            Name = "Vẽ Lệnh";
+            Name = "Position Planner";
             Description = "Công cụ vẽ lệnh Long/Short: SL, TP tính bằng điểm (1 điểm = 1,0 giá) và R:R. Bấm nút góc dưới-trái để vẽ, kéo 4 điểm để chỉnh, ✕ để xoá.";
             SeparateWindow = false;
         }
@@ -71,8 +72,10 @@ namespace VeLenhNs
                 _ed.Tick = Symbol?.TickSize > 0 ? Symbol.TickSize : 0.25;
                 string sym = Symbol?.Name ?? "chart";
                 foreach (var ch in Path.GetInvalidFileNameChars()) sym = sym.Replace(ch, '_');
-                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VeLenh");
+                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PositionPlanner");
                 _file = Path.Combine(dir, sym + ".txt");
+                var old = Path.Combine(Path.GetDirectoryName(dir), "VeLenh", sym + ".txt");
+                try { if (!File.Exists(_file) && File.Exists(old)) { Directory.CreateDirectory(dir); File.Copy(old, _file); } } catch { }
                 try { if (File.Exists(_file)) _ed.SetItems(VlFmt.Load(File.ReadAllText(_file))); } catch { }
             }
         }
@@ -124,6 +127,8 @@ namespace VeLenhNs
                 var m = MakeMap(); if (m == null) return;
                 bool used, cap;
                 lock (_lk) { used = _ed.Down(e.X, e.Y, e.Button == NativeMouseButtons.Left, m, out cap); SaveIfDirty(); }
+                bool rd; lock (_lk) { rd = _ed.Redraw; _ed.Redraw = false; }
+                if (rd) e.NeedRedraw = true;
                 if (!used) return;
                 e.Handled = true; e.NeedRedraw = true;
                 if (cap) e.NeedMouseCapture = true;
@@ -173,8 +178,9 @@ namespace VeLenhNs
                 using var fBtn = new Font("Segoe UI", 9.5f, FontStyle.Bold);
                 lock (_lk)
                 {
-                    foreach (var p in _ed.Items) DrawPos(gr, m, p, fLbl, false);
-                    if (_ed.Draft != null) DrawPos(gr, m, _ed.Draft, fLbl, true);
+                    var bars = BarsFrom(_ed.Items);
+                    foreach (var p in _ed.Items) DrawPos(gr, m, p, fLbl, false, bars);
+                    if (_ed.Draft != null) DrawPos(gr, m, _ed.Draft, fLbl, true, null);
                     _ed.LayoutButtons(clip.Left + 8, clip.Bottom - 34);
                     DrawButtons(gr, fBtn);
                 }
@@ -183,7 +189,7 @@ namespace VeLenhNs
             catch { }
         }
 
-        private void DrawPos(Graphics gr, IVlMap m, VlPos p, Font f, bool draft)
+        private void DrawPos(Graphics gr, IVlMap m, VlPos p, Font f, bool draft, List<VlBar> bars)
         {
             var g = VlEditor.Geo(p, m);
             float w = Math.Max(2, g.X1 - g.X0);
@@ -193,13 +199,25 @@ namespace VeLenhNs
             using (var pe = new Pen(Color.FromArgb(200, CSl), 1.5f)) gr.DrawLine(pe, g.X0, g.YSl, g.X1, g.YSl);
             using (var pe = new Pen(Color.FromArgb(220, 120, 120, 120), 1.5f)) gr.DrawLine(pe, g.X0, g.YE, g.X1, g.YE);
 
+            if (bars != null)
+            {
+                var path = VlTrack.Run(p, bars);
+                if (path.Ok)
+                {
+                    using var pe = new Pen(Color.FromArgb(200, 110, 110, 120), 1.5f) { DashStyle = DashStyle.Dash };
+                    gr.DrawLine(pe, g.X0, g.YE, m.X(path.EndT), m.Y(path.EndPrice));
+                }
+            }
+
+            bool sel = !draft && _ed.SelectedId == p.Id;
+            if (!draft && !_ed.ShowLabels(p)) return;
             float cx = g.X0 + w / 2f;
             bool tpUp = g.YTp < g.YE;
             Label(gr, f, VlFmt.TpText(p), CTp, cx, tpUp ? g.YTp - 4 : g.YTp + 4, tpUp);
             Label(gr, f, VlFmt.SlText(p), CSl, cx, tpUp ? g.YSl + 4 : g.YSl - 4, !tpUp);
             Label(gr, f, VlFmt.RrText(p), Color.FromArgb(235, 45, 45, 55), cx, g.YE, null);
 
-            if (draft) return;
+            if (!sel) return;
             bool hov = _ed.HoverId == p.Id;
             Handle(gr, g.HTp, hov && _ed.HoverPart == VlPart.Tp);
             Handle(gr, g.HSl, hov && _ed.HoverPart == VlPart.Sl);
@@ -212,6 +230,23 @@ namespace VeLenhNs
                 gr.DrawLine(pe, c.X + 4, c.Y + 4, c.Right - 4, c.Bottom - 4);
                 gr.DrawLine(pe, c.Right - 4, c.Y + 4, c.X + 4, c.Bottom - 4);
             }
+        }
+
+        /// <summary>Nến (tăng dần) từ T0 sớm nhất của các lệnh tới nến cuối.</summary>
+        private List<VlBar> BarsFrom(List<VlPos> items)
+        {
+            var list = new List<VlBar>();
+            if (items.Count == 0 || Count < 1) return list;
+            var t0 = DateTime.MaxValue;
+            foreach (var p in items) if (p.T0 < t0) t0 = p.T0;
+            for (int k = 0; k < Count; k++)
+            {
+                var t = Time(k);
+                if (t < t0) break;
+                list.Add(new VlBar(t, High(k), Low(k), Close(k)));
+            }
+            list.Reverse();
+            return list;
         }
 
         /// <summary>Nhãn nền đặc, chữ trắng, căn giữa theo cx. above: true = nằm trên y, false = dưới y, null = giữa y.</summary>

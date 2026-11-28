@@ -3,9 +3,9 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>disable</Nullable>
-    <AssemblyName>VeLenhTests</AssemblyName>
+    <AssemblyName>PlannerTests</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../VeLenhCore.cs" />
+    <Compile Include="../PlannerCore.cs" />
   </ItemGroup>
 </Project>

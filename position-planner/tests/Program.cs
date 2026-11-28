@@ -1,6 +1,6 @@
-// Test cho VeLenhCore (không cần Quantower). Chạy: dotnet run --project ve-lenh/tests
+// Test cho PlannerCore (không cần Quantower). Chạy: dotnet run --project ve-lenh/tests
 using System;
-using VeLenhNs;
+using PositionPlannerNs;
 
 sealed class LinMap : IVlMap
 {
@@ -83,7 +83,18 @@ static class Tests
         Check(p.Entry == 28239.75, "giá vào bị kẹp trong khoảng SL–TP", p.Entry.ToString());
 
         // 6) bấm chỗ trống không nuốt chuột của chart
+        Check(ed.SelectedId == p.Id && ed.ShowLabels(p), "lệnh vừa đặt đang được chọn, hiện nhãn");
+        ed.Redraw = false;
         Check(!ed.Down(900, 900, true, m, out cap), "bấm chỗ trống để chart xử lý");
+        Check(ed.SelectedId == -1 && ed.Redraw, "bấm ra ngoài bỏ chọn, cần vẽ lại");
+        ed.Move(900, 900, m);
+        Check(!ed.ShowLabels(p), "bỏ chọn + chuột không rê lên lệnh: ẩn nhãn");
+        g = VlEditor.Geo(p, m);
+        Check(!ed.Down(g.X0, g.YSl, true, m, out cap) || ed.Mode != VlMode.Drag, "lệnh chưa chọn: điểm kéo không hoạt động (chỉ chọn)");
+        ed.Up(); ed.SelectedId = -1;
+        ed.Move((g.X0 + g.X1) / 2, (g.YE + g.YTp) / 2, m);
+        Check(ed.ShowLabels(p), "rê chuột lên thân hộp: hiện nhãn");
+        Check(ed.Down((g.X0 + g.X1) / 2, (g.YE + g.YTp) / 2, true, m, out cap) && ed.SelectedId == p.Id && ed.Mode == VlMode.Idle, "bấm thân hộp = chọn, không kéo");
 
         // 7) lưu / nạp
         var back = VlFmt.Load(VlFmt.Save(ed.Items));
@@ -94,6 +105,7 @@ static class Tests
         g = VlEditor.Geo(p, m);
         Check(ed.Down(g.Close.X + 3, g.Close.Y + 3, true, m, out cap) && ed.Items.Count == 0, "bấm ✕ xoá lệnh");
         ed.SetItems(back);
+        Check(ed.SelectedId == -1, "sau ✕ không còn lệnh chọn");
         ed.Down(ed.Buttons[2].Box.X + 2, ed.Buttons[2].Box.Y + 2, true, m, out cap);
         Check(ed.Items.Count == 0, "Xoá hết");
 

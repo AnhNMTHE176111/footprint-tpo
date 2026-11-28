@@ -1,5 +1,5 @@
 // ============================================================================
-//  VeLenhCore — lõi thuần của công cụ "Vẽ Lệnh" (không phụ thuộc Quantower, test được bằng tests/)
+//  PlannerCore — lõi thuần của công cụ "Position Planner" (không phụ thuộc Quantower, test được bằng tests/)
 // ============================================================================
 //  Một lệnh = giá vào, SL, TP, thời gian bắt đầu T0 và kết thúc T1 (bề ngang hộp).
 //  4 điểm kéo:
@@ -7,9 +7,9 @@
 //    • trên-trái / dưới-trái (TP hoặc SL): chỉ kéo CAO THẤP
 //    • giữa-phải: chỉ kéo NGANG (đổi T1 = bề ngang)
 //  Nhãn: "SL 15 điểm", "TP 35,25 điểm", "R:R 1 : 2,35". 1 điểm = 1,0 giá.
-//  ĐƯỢC CONCAT với VeLenh.cs khi build → mọi `using` nằm BÊN TRONG namespace.
+//  ĐƯỢC CONCAT với PositionPlanner.cs khi build → mọi `using` nằm BÊN TRONG namespace.
 // ============================================================================
-namespace VeLenhNs
+namespace PositionPlannerNs
 {
     using System;
     using System.Collections.Generic;
@@ -39,7 +39,42 @@ namespace VeLenhNs
         TimeSpan Bar { get; }
     }
 
-    public enum VlPart { None, Entry, Sl, Tp, Right, Close }
+    public struct VlBar
+    {
+        public DateTime T; public double H, L, C;
+        public VlBar(DateTime t, double h, double l, double c) { T = t; H = h; L = l; C = c; }
+    }
+
+    /// <summary>Đường giá chạy theo lệnh: từ (T0, giá vào) tới nến chạm SL/TP, hoặc nến cuối trong hộp (giá đóng).</summary>
+    public struct VlPath
+    {
+        public bool Ok;
+        public DateTime EndT; public double EndPrice;
+        public int Hit;              // +1 chạm TP, -1 chạm SL, 0 chưa chạm
+    }
+
+    public static class VlTrack
+    {
+        /// <summary>bars tăng dần theo thời gian. Xét các nến có T0 ≤ T ≤ T1. Cùng nến chạm cả SL và TP → tính SL (thận trọng).</summary>
+        public static VlPath Run(VlPos p, IReadOnlyList<VlBar> bars)
+        {
+            var r = new VlPath();
+            foreach (var b in bars)
+            {
+                if (b.T < p.T0) continue;
+                if (b.T > p.T1) break;
+                bool sl = p.Side > 0 ? b.L <= p.Sl : b.H >= p.Sl;
+                bool tp = p.Side > 0 ? b.H >= p.Tp : b.L <= p.Tp;
+                r.Ok = true; r.EndT = b.T;
+                if (sl) { r.Hit = -1; r.EndPrice = p.Sl; return r; }
+                if (tp) { r.Hit = 1; r.EndPrice = p.Tp; return r; }
+                r.EndPrice = b.C;
+            }
+            return r;
+        }
+    }
+
+    public enum VlPart { None, Entry, Sl, Tp, Right, Close, Body }
     public enum VlMode { Idle, PlaceEntry, PlaceSl, PlaceTp, Drag }
 
     public static class VlFmt
@@ -156,16 +191,25 @@ namespace VeLenhNs
 
         private static bool Near(PointF h, float x, float y) => (h.X - x) * (h.X - x) + (h.Y - y) * (h.Y - y) <= HitR * HitR;
 
-        public static VlPart HitTest(VlPos p, IVlMap m, float x, float y)
+        /// <summary>selected = lệnh đang chọn (mới có điểm kéo + ✕); lệnh khác chỉ bấm/rê được vào thân hộp.</summary>
+        public static VlPart HitTest(VlPos p, IVlMap m, float x, float y, bool selected)
         {
             var g = Geo(p, m);
-            if (g.Close.Contains(x, y)) return VlPart.Close;
-            if (Near(g.HEntry, x, y)) return VlPart.Entry;
-            if (Near(g.HSl, x, y)) return VlPart.Sl;
-            if (Near(g.HTp, x, y)) return VlPart.Tp;
-            if (Near(g.HRight, x, y)) return VlPart.Right;
+            if (selected)
+            {
+                if (g.Close.Contains(x, y)) return VlPart.Close;
+                if (Near(g.HEntry, x, y)) return VlPart.Entry;
+                if (Near(g.HSl, x, y)) return VlPart.Sl;
+                if (Near(g.HTp, x, y)) return VlPart.Tp;
+                if (Near(g.HRight, x, y)) return VlPart.Right;
+            }
+            if (x >= Math.Min(g.X0, g.X1) && x <= Math.Max(g.X0, g.X1) && y >= g.Top && y <= g.Bot) return VlPart.Body;
             return VlPart.None;
         }
+
+        public long SelectedId = -1;
+        /// <summary>Hiện nhãn khi lệnh đang chọn hoặc chuột đang rê lên nó.</summary>
+        public bool ShowLabels(VlPos p) => p.Id == SelectedId || p.Id == HoverId;
 
         // giá đặt SL/TP phải nằm đúng phía so với giá vào (cách ít nhất 1 tick)
         private double ClampSl(int side, double entry, double v) => side > 0 ? Math.Min(v, entry - Tick) : Math.Max(v, entry + Tick);
@@ -183,7 +227,7 @@ namespace VeLenhNs
             foreach (var b in Buttons)
             {
                 if (!b.Box.Contains(x, y)) continue;
-                if (b.Key == "clear") { Cancel(); if (Items.Count > 0) { Items.Clear(); Dirty = true; } }
+                if (b.Key == "clear") { Cancel(); SelectedId = -1; if (Items.Count > 0) { Items.Clear(); Dirty = true; } }
                 else { int s = b.Key == "long" ? 1 : -1; if (Mode == VlMode.PlaceEntry && PendingSide == s) Cancel(); else { Cancel(); PendingSide = s; Mode = VlMode.PlaceEntry; } }
                 return true;
             }
@@ -206,21 +250,35 @@ namespace VeLenhNs
                     return true;
                 case VlMode.PlaceTp:
                     Draft.Tp = Snap(ClampTp(Draft.Side, Draft.Entry, m.Price(y)));
-                    Items.Add(Draft); Draft = null; Mode = VlMode.Idle; PendingSide = 0; Dirty = true;
+                    Items.Add(Draft); SelectedId = Draft.Id; Draft = null; Mode = VlMode.Idle; PendingSide = 0; Dirty = true;
                     return true;
             }
-            // Idle: điểm kéo / nút xoá của lệnh trên cùng (vẽ sau cùng = trên cùng)
-            for (int i = Items.Count - 1; i >= 0; i--)
+            // Idle: lệnh đang chọn xét trước (điểm kéo, ✕), rồi thân hộp các lệnh khác (vẽ sau = trên cùng)
+            foreach (int i in HitOrder())
             {
                 var p = Items[i];
-                var part = HitTest(p, m, x, y);
+                var part = HitTest(p, m, x, y, p.Id == SelectedId);
                 if (part == VlPart.None) continue;
-                if (part == VlPart.Close) { Items.RemoveAt(i); Dirty = true; HoverId = -1; HoverPart = VlPart.None; return true; }
+                if (part == VlPart.Close) { Items.RemoveAt(i); Dirty = true; SelectedId = -1; HoverId = -1; HoverPart = VlPart.None; Redraw = true; return true; }
+                if (SelectedId != p.Id) { SelectedId = p.Id; Redraw = true; }
+                if (part == VlPart.Body) return true;      // bấm vào thân hộp = chọn lệnh (hiện nhãn + điểm kéo)
                 _drag = p; _dragPart = part; _dragDur = p.T1 - p.T0; _grabDx = x - m.X(p.T0);
                 Mode = VlMode.Drag; capture = true;
                 return true;
             }
+            // bấm ra ngoài: bỏ chọn (nhãn ẩn đi) nhưng vẫn để chart xử lý cú bấm
+            if (SelectedId != -1) { SelectedId = -1; Redraw = true; }
             return false;
+        }
+
+        /// <summary>true khi chọn/bỏ chọn đổi mà Down trả false — lớp dán cần vẽ lại.</summary>
+        public bool Redraw;
+
+        private IEnumerable<int> HitOrder()
+        {
+            int sel = Items.FindIndex(q => q.Id == SelectedId);
+            if (sel >= 0) yield return sel;
+            for (int i = Items.Count - 1; i >= 0; i--) if (i != sel) yield return i;
         }
 
         /// <summary>Di chuột. Trả (handled, redraw).</summary>
@@ -266,10 +324,10 @@ namespace VeLenhNs
             }
             // Idle: hover để tô to điểm kéo
             long hid = -1; var hp = VlPart.None;
-            for (int i = Items.Count - 1; i >= 0 && hp == VlPart.None; i--)
+            foreach (int i in HitOrder())
             {
-                var part = HitTest(Items[i], m, x, y);
-                if (part != VlPart.None) { hid = Items[i].Id; hp = part; }
+                var part = HitTest(Items[i], m, x, y, Items[i].Id == SelectedId);
+                if (part != VlPart.None) { hid = Items[i].Id; hp = part; break; }
             }
             bool ch = hid != HoverId || hp != HoverPart;
             HoverId = hid; HoverPart = hp;
